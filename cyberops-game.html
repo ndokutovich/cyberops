@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0e1a">
+    <title>CyberOps: Syndicate</title>
+    <link rel="stylesheet" href="cyberops-game.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="game-title">CyberOps: Syndicate</div>
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="mainMenu">
+        <div class="game-title">CyberOps: Syndicate</div>
+        <div class="subtitle">Tactical Cyberpunk Action</div>
+        <button class="menu-button" id="campaignButton" onclick="game.startCampaign()">START CAMPAIGN</button>
+        <button class="menu-button" id="continueButton" onclick="game.continueCampaign()" style="display: none;">CONTINUE CAMPAIGN</button>
+        <button class="menu-button" onclick="game.selectMission()">MISSION SELECT</button>
+        <button class="menu-button" onclick="game.showSettings()">SETTINGS</button>
+    </div>
+
+    <!-- Mission Briefing -->
+    <div id="missionBriefing">
+        <div class="briefing-header">MISSION BRIEFING</div>
+        <div class="briefing-content">
+            <h3 id="missionTitle">Mission Title</h3>
+            <p id="missionDesc">Mission description...</p>
+            
+            <h4 style="margin-top: 20px; color: #00ffff;">OBJECTIVES:</h4>
+            <div id="objectivesList"></div>
+            
+            <h4 style="margin-top: 20px; color: #00ffff;">SELECT SQUAD:</h4>
+            <div class="squad-selection" id="squadSelection"></div>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button class="menu-button" onclick="game.backToMenuFromBriefing()">BACK</button>
+            <button class="menu-button" onclick="game.startMission()">DEPLOY</button>
+        </div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Game HUD -->
+    <div id="gameHUD">
+        <div class="hud-top">
+            <div class="mission-timer" id="missionTimer">00:00</div>
+            <div class="objective-tracker" id="objectiveTracker">Loading...</div>
+            <button class="pause-button" onclick="game.togglePause()">⏸</button>
+        </div>
+
+        <div class="squad-health" id="squadHealth"></div>
+
+        <div class="minimap">
+            <div class="minimap-content" id="minimapContent"></div>
+        </div>
+
+        <div class="action-bar">
+            <div class="action-button" onclick="game.useAbility(0)">
+                <span>👆</span>
+                <div class="cooldown-overlay" id="cooldown0"></div>
+            </div>
+            <div class="action-button" onclick="game.useAbility(1)">
+                <span>🎯</span>
+                <div class="cooldown-overlay" id="cooldown1"></div>
+            </div>
+            <div class="action-button" onclick="game.useAbility(2)">
+                <span>💣</span>
+                <div class="cooldown-overlay" id="cooldown2"></div>
+            </div>
+            <div class="action-button" onclick="game.useAbility(3)">
+                <span>💻</span>
+                <div class="cooldown-overlay" id="cooldown3"></div>
+            </div>
+            <div class="action-button" onclick="game.useAbility(4)">
+                <span>🛡️</span>
+                <div class="cooldown-overlay" id="cooldown4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory/Defeat Screen -->
+    <div id="endScreen" class="end-screen">
+        <div id="endTitle" class="end-title">MISSION COMPLETE</div>
+        <div class="end-stats">
+            <div class="stat-row">
+                <span>Time:</span>
+                <span id="endTime">00:00</span>
+            </div>
+            <div class="stat-row">
+                <span>Enemies Defeated:</span>
+                <span id="endEnemies">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Objectives:</span>
+                <span id="endObjectives">0/0</span>
+            </div>
+            <div class="stat-row">
+                <span>Squad Status:</span>
+                <span id="endSquad">All Alive</span>
+            </div>
+        </div>
+        <button class="menu-button" onclick="game.nextMission()">CONTINUE</button>
+    </div>
+
+    <script src="cyberops-game.js"></script>
+</body>
+</html>
