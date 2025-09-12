@@ -6,13 +6,15 @@ class CyberOpsGame {
         this.setupCanvas();
         
         // Game State
-        this.currentScreen = 'menu';
+        this.currentScreen = 'splash';
         this.isPaused = false;
         this.currentMission = null;
         this.currentMissionIndex = 0;
         this.missionTimer = 0;
         this.selectedAgents = [];
         this.completedMissions = [];
+        this.totalCampaignTime = 0;
+        this.totalEnemiesDefeated = 0;
         
         // Isometric Settings
         this.tileWidth = 64;
@@ -77,8 +79,9 @@ class CyberOpsGame {
     
     init() {
         this.setupEventListeners();
-        this.hideLoading();
-        this.updateMenuState();
+        // Hide main menu initially during splash screens
+        document.getElementById('mainMenu').style.display = 'none';
+        this.showSplashScreens();
         this.gameLoop();
     }
     
@@ -460,21 +463,51 @@ class CyberOpsGame {
     }
     
     selectMission() {
-        let msg = "Available Missions:\n\n";
-        this.missions.forEach((m, i) => {
-            const status = this.completedMissions.includes(m.id) ? "✓" : 
-                          i <= this.currentMissionIndex ? "◉" : "🔒";
-            msg += `${status} Mission ${m.id}: ${m.title}\n`;
+        this.showMissionSelectDialog();
+    }
+
+    showMissionSelectDialog() {
+        const missionList = document.getElementById('missionList');
+        missionList.innerHTML = '';
+        
+        this.missions.forEach((mission, index) => {
+            const missionDiv = document.createElement('div');
+            missionDiv.className = 'mission-option';
+            
+            const isCompleted = this.completedMissions.includes(mission.id);
+            const isAvailable = index <= this.currentMissionIndex;
+            const isLocked = !isAvailable;
+            
+            if (isLocked) {
+                missionDiv.classList.add('locked');
+            }
+            
+            missionDiv.innerHTML = `
+                <div class="mission-info">
+                    <div class="mission-name">Mission ${mission.id}: ${mission.title}</div>
+                    <div class="mission-desc">${mission.description.substring(0, 100)}...</div>
+                </div>
+                <div class="mission-status ${isCompleted ? 'completed' : isAvailable ? 'available' : 'locked'}">
+                    ${isCompleted ? '✓' : isAvailable ? '◉' : '🔒'}
+                </div>
+            `;
+            
+            if (isAvailable) {
+                missionDiv.onclick = () => {
+                    this.closeMissionSelect();
+                    document.getElementById('mainMenu').style.display = 'none';
+                    this.showMissionBriefing(mission);
+                };
+            }
+            
+            missionList.appendChild(missionDiv);
         });
         
-        const choice = prompt(msg + "\nEnter mission number:");
-        if (choice) {
-            const idx = parseInt(choice) - 1;
-            if (idx >= 0 && idx <= this.currentMissionIndex) {
-                document.getElementById('mainMenu').style.display = 'none';
-                this.showMissionBriefing(this.missions[idx]);
-            }
-        }
+        document.getElementById('missionSelectDialog').classList.add('show');
+    }
+
+    closeMissionSelect() {
+        document.getElementById('missionSelectDialog').classList.remove('show');
     }
     
     showMissionBriefing(mission) {
@@ -527,7 +560,11 @@ class CyberOpsGame {
     
     startMission() {
         if (this.selectedAgents.length === 0) {
-            alert('Select at least one agent!');
+            this.showHudDialog(
+                'DEPLOYMENT ERROR',
+                '⚠️ Mission deployment failed!<br><br>You must select at least one agent before deployment.<br><br>Select your squad from the agent roster and try again.',
+                [{ text: 'UNDERSTOOD', action: 'close' }]
+            );
             return;
         }
         
@@ -795,10 +832,6 @@ class CyberOpsGame {
             if (!this.completedMissions.includes(this.currentMission.id)) {
                 this.completedMissions.push(this.currentMission.id);
             }
-            
-            if (this.currentMissionIndex < this.missions.length - 1) {
-                this.currentMissionIndex++;
-            }
         }
         
         document.getElementById('endScreen').style.display = 'none';
@@ -807,25 +840,156 @@ class CyberOpsGame {
         this.currentScreen = 'menu';
         this.updateMenuState();
         
-        if (victory && this.currentMissionIndex < this.missions.length) {
+        // Check if there are more missions available BEFORE incrementing
+        if (victory && this.currentMissionIndex < this.missions.length - 1) {
+            // There's a next mission available - increment mission index
+            this.currentMissionIndex++;
             setTimeout(() => {
-                if (confirm(`Well done! Ready for Mission ${this.currentMissionIndex + 1}?`)) {
-                    this.continueCampaign();
-                }
+                this.showMissionProgress(
+                    `Excellent work, Commander!<br><br>Mission ${this.currentMissionIndex} has been completed successfully.<br><br>Are you ready to proceed to Mission ${this.currentMissionIndex + 1}?`,
+                    () => this.continueCampaign()
+                );
             }, 100);
-        } else if (victory && this.currentMissionIndex >= this.missions.length - 1) {
-            alert('🎉 All missions completed! More content coming soon!');
+        } else if (victory) {
+            // All missions completed - show completion screen  
+            this.showGameCompleteScreen();
         }
     }
     
     showSettings() {
-        alert('Settings: Sound, Graphics, and Controls options coming soon!');
+        this.showHudDialog(
+            'SYSTEM SETTINGS',
+            'Settings panel is currently under development.<br><br>Available options will include:<br>• Audio Controls<br>• Graphics Quality<br>• Control Mapping<br>• Game Preferences',
+            [{ text: 'OK', action: 'close' }]
+        );
+    }
+
+    // HUD Dialog System
+    showHudDialog(title, message, buttons) {
+        document.getElementById('dialogTitle').textContent = title;
+        document.getElementById('dialogBody').innerHTML = message;
+        
+        const actionsDiv = document.getElementById('dialogActions');
+        actionsDiv.innerHTML = '';
+        
+        buttons.forEach(btn => {
+            const button = document.createElement('button');
+            button.className = 'menu-button';
+            button.textContent = btn.text;
+            button.onclick = () => {
+                if (btn.action === 'close') {
+                    this.closeDialog();
+                } else if (typeof btn.action === 'function') {
+                    btn.action();
+                    this.closeDialog();
+                }
+            };
+            actionsDiv.appendChild(button);
+        });
+        
+        document.getElementById('hudDialog').classList.add('show');
+    }
+
+    closeDialog() {
+        document.getElementById('hudDialog').classList.remove('show');
+    }
+
+    showMissionProgress(message, onConfirm) {
+        this.showHudDialog(
+            'MISSION COMPLETE',
+            `<div style="text-align: center; font-size: 1.1em; color: #00ff00;">✅ MISSION ACCOMPLISHED</div><br>${message}`,
+            [
+                { text: 'CONTINUE', action: onConfirm },
+                { text: 'MAIN MENU', action: () => this.backToMainMenu() }
+            ]
+        );
+    }
+
+    showGameCompleteScreen() {
+        // Hide other screens
+        document.getElementById('endScreen').style.display = 'none';
+        document.getElementById('gameHUD').style.display = 'none';
+        document.getElementById('mainMenu').style.display = 'none';
+        
+        // Calculate final stats
+        const totalMinutes = Math.floor(this.totalCampaignTime / 3600);
+        const totalSeconds = Math.floor((this.totalCampaignTime % 3600) / 60);
+        const timeString = `${String(totalMinutes).padStart(2, '0')}:${String(totalSeconds).padStart(2, '0')}`;
+        
+        // Update stats display
+        document.getElementById('finalMissions').textContent = `${this.completedMissions.length}/${this.missions.length}`;
+        document.getElementById('finalTime').textContent = timeString;
+        document.getElementById('finalEnemies').textContent = this.totalEnemiesDefeated;
+        
+        // Show completion screen
+        document.getElementById('gameCompleteScreen').style.display = 'flex';
+        this.currentScreen = 'complete';
+    }
+
+    showCredits() {
+        document.getElementById('gameCompleteScreen').style.display = 'none';
+        document.getElementById('creditsScreen').style.display = 'flex';
+        this.currentScreen = 'credits';
+    }
+
+    restartCampaign() {
+        // Reset all progress
+        this.currentMissionIndex = 0;
+        this.completedMissions = [];
+        this.totalCampaignTime = 0;
+        this.totalEnemiesDefeated = 0;
+        
+        // Hide completion screen and start new campaign
+        document.getElementById('gameCompleteScreen').style.display = 'none';
+        this.showMissionBriefing(this.missions[0]);
+    }
+
+    backToMainMenu() {
+        // Hide all screens
+        document.getElementById('gameCompleteScreen').style.display = 'none';
+        document.getElementById('creditsScreen').style.display = 'none';
+        document.getElementById('endScreen').style.display = 'none';
+        document.getElementById('gameHUD').style.display = 'none';
+        
+        // Show main menu
+        document.getElementById('mainMenu').style.display = 'flex';
+        this.currentScreen = 'menu';
+        this.updateMenuState();
     }
     
-    hideLoading() {
+    showSplashScreens() {
+        // Hide main menu during entire splash sequence
+        document.getElementById('mainMenu').style.display = 'none';
+        
+        // Show company logo
+        const companyLogo = document.getElementById('companyLogo');
+        companyLogo.classList.add('show');
+        
         setTimeout(() => {
-            document.getElementById('loadingScreen').style.display = 'none';
-        }, 1500);
+            companyLogo.classList.remove('show');
+            companyLogo.style.display = 'none';
+            
+            // Show studio logo
+            const studioLogo = document.getElementById('studioLogo');
+            studioLogo.classList.add('show');
+            
+            setTimeout(() => {
+                studioLogo.classList.remove('show');
+                studioLogo.style.display = 'none';
+                
+                // Show loading screen
+                const loadingScreen = document.getElementById('loadingScreen');
+                loadingScreen.style.display = 'flex';
+                
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    // Now show main menu after all splash screens complete
+                    document.getElementById('mainMenu').style.display = 'flex';
+                    this.currentScreen = 'menu';
+                    this.updateMenuState();
+                }, 1500);
+            }, 3000);  // Changed to 3 seconds
+        }, 3000);  // Changed to 3 seconds
     }
     
     // Game Loop
@@ -1047,6 +1211,13 @@ class CyberOpsGame {
     
     endMission(victory) {
         this.isPaused = true;
+        
+        // Update campaign statistics
+        if (victory) {
+            this.totalCampaignTime += this.missionTimer;
+            // Count total available enemies for completed missions, not just killed ones
+            this.totalEnemiesDefeated += this.currentMission.enemies;
+        }
         
         document.getElementById('endTitle').textContent = victory ? 'MISSION COMPLETE' : 'MISSION FAILED';
         document.getElementById('endTitle').className = 'end-title ' + (victory ? 'victory' : 'defeat');

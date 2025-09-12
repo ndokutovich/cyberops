@@ -10,6 +10,22 @@
     <link rel="stylesheet" href="cyberops-game.css">
 </head>
 <body>
+    <!-- Company Logo Splash -->
+    <div id="companyLogo" class="splash-screen">
+        <div class="logo-container">
+            <div class="company-name">NEXUS INTERACTIVE</div>
+            <div class="logo-subtitle">Presents</div>
+        </div>
+    </div>
+
+    <!-- Game Studio Splash -->
+    <div id="studioLogo" class="splash-screen">
+        <div class="logo-container">
+            <div class="studio-name">CYBER DYNAMICS</div>
+            <div class="logo-subtitle">Game Studio</div>
+        </div>
+    </div>
+
     <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-screen">
         <div class="game-title">CyberOps: Syndicate</div>
@@ -109,7 +125,98 @@
                 <span id="endSquad">All Alive</span>
             </div>
         </div>
-        <button class="menu-button" onclick="game.nextMission()">CONTINUE</button>
+        <button class="menu-button" onclick="game.nextMission()">NEXT MISSION</button>
+    </div>
+
+    <!-- Game Complete Screen -->
+    <div id="gameCompleteScreen" class="game-complete-screen">
+        <div class="complete-title">🎉 MISSION ACCOMPLISHED! 🎉</div>
+        <div class="complete-content">
+            <div class="complete-message">
+                <h2>Congratulations, Commander!</h2>
+                <p>You have successfully completed all available missions in CyberOps: Syndicate.</p>
+                <p>The Syndicate threat has been neutralized, and the city is safe once again.</p>
+            </div>
+            <div class="final-stats">
+                <h3>Final Campaign Statistics:</h3>
+                <div class="stat-row">
+                    <span>Missions Completed:</span>
+                    <span id="finalMissions">2/2</span>
+                </div>
+                <div class="stat-row">
+                    <span>Total Time:</span>
+                    <span id="finalTime">00:00</span>
+                </div>
+                <div class="stat-row">
+                    <span>Total Enemies Neutralized:</span>
+                    <span id="finalEnemies">0</span>
+                </div>
+            </div>
+        </div>
+        <div class="complete-actions">
+            <button class="menu-button" onclick="game.showCredits()">CREDITS</button>
+            <button class="menu-button" onclick="game.restartCampaign()">PLAY AGAIN</button>
+            <button class="menu-button" onclick="game.backToMainMenu()">MAIN MENU</button>
+        </div>
+    </div>
+
+    <!-- Credits Screen -->
+    <div id="creditsScreen" class="credits-screen">
+        <div class="credits-title">CREDITS</div>
+        <div class="credits-content">
+            <div class="credits-section">
+                <h3>Game Design & Development</h3>
+                <p>CyberOps Development Team</p>
+            </div>
+            <div class="credits-section">
+                <h3>Art & Graphics</h3>
+                <p>Isometric Graphics Engine</p>
+                <p>Cyberpunk UI Design</p>
+            </div>
+            <div class="credits-section">
+                <h3>Special Thanks</h3>
+                <p>To all the players who helped test and improve the game</p>
+            </div>
+            <div class="credits-section">
+                <h3>More Content Coming Soon!</h3>
+                <p>Stay tuned for additional missions, agents, and features</p>
+            </div>
+        </div>
+        <button class="menu-button" onclick="game.backToMainMenu()">BACK TO MENU</button>
+    </div>
+
+    <!-- HUD Dialog System -->
+    <div id="hudDialog" class="hud-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <div class="dialog-title" id="dialogTitle">SYSTEM MESSAGE</div>
+                <div class="dialog-close" onclick="game.closeDialog()">[X]</div>
+            </div>
+            <div class="dialog-body" id="dialogBody">
+                Message content goes here...
+            </div>
+            <div class="dialog-actions" id="dialogActions">
+                <!-- Buttons will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mission Selection Dialog -->
+    <div id="missionSelectDialog" class="hud-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <div class="dialog-title">MISSION SELECTION</div>
+                <div class="dialog-close" onclick="game.closeMissionSelect()">[X]</div>
+            </div>
+            <div class="dialog-body">
+                <div class="mission-list" id="missionList">
+                    <!-- Mission options will be populated here -->
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="menu-button" onclick="game.closeMissionSelect()">CANCEL</button>
+            </div>
+        </div>
     </div>
 
     <script src="cyberops-game.js"></script>
