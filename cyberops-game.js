@@ -825,36 +825,7 @@ class CyberOpsGame {
         document.getElementById('mainMenu').style.display = 'flex';
     }
     
-    nextMission() {
-        const victory = document.getElementById('endTitle').textContent.includes('COMPLETE');
-        
-        if (victory) {
-            if (!this.completedMissions.includes(this.currentMission.id)) {
-                this.completedMissions.push(this.currentMission.id);
-            }
-        }
-        
-        document.getElementById('endScreen').style.display = 'none';
-        document.getElementById('gameHUD').style.display = 'none';
-        document.getElementById('mainMenu').style.display = 'flex';
-        this.currentScreen = 'menu';
-        this.updateMenuState();
-        
-        // Check if there are more missions available BEFORE incrementing
-        if (victory && this.currentMissionIndex < this.missions.length - 1) {
-            // There's a next mission available - increment mission index
-            this.currentMissionIndex++;
-            setTimeout(() => {
-                this.showMissionProgress(
-                    `Excellent work, Commander!<br><br>Mission ${this.currentMissionIndex} has been completed successfully.<br><br>Are you ready to proceed to Mission ${this.currentMissionIndex + 1}?`,
-                    () => this.continueCampaign()
-                );
-            }, 100);
-        } else if (victory) {
-            // All missions completed - show completion screen  
-            this.showGameCompleteScreen();
-        }
-    }
+    // Removed - replaced by intermission dialog system
     
     showSettings() {
         this.showHudDialog(
@@ -894,15 +865,103 @@ class CyberOpsGame {
         document.getElementById('hudDialog').classList.remove('show');
     }
 
-    showMissionProgress(message, onConfirm) {
-        this.showHudDialog(
-            'MISSION COMPLETE',
-            `<div style="text-align: center; font-size: 1.1em; color: #00ff00;">✅ MISSION ACCOMPLISHED</div><br>${message}`,
-            [
-                { text: 'CONTINUE', action: onConfirm },
-                { text: 'MAIN MENU', action: () => this.backToMainMenu() }
-            ]
-        );
+    showIntermissionDialog(victory) {
+        // Hide game HUD
+        document.getElementById('gameHUD').style.display = 'none';
+        
+        // Update dialog title and message
+        const title = victory ? 'MISSION COMPLETE' : 'MISSION FAILED';
+        const statusIcon = victory ? '✅' : '❌';
+        const statusText = victory ? 'MISSION ACCOMPLISHED' : 'MISSION FAILED';
+        const statusColor = victory ? '#00ff00' : '#ff0000';
+        
+        document.getElementById('intermissionTitle').textContent = title;
+        document.querySelector('.status-icon').textContent = statusIcon;
+        document.querySelector('.status-text').textContent = statusText;
+        document.querySelector('.status-text').style.color = statusColor;
+        document.querySelector('.status-text').style.textShadow = `0 0 10px ${statusColor}`;
+        
+        // Update mission statistics
+        document.getElementById('intermissionTime').textContent = document.getElementById('missionTimer').textContent;
+        document.getElementById('intermissionEnemies').textContent = 
+            this.enemies.filter(e => !e.alive).length + '/' + this.enemies.length;
+        
+        let completedObj = 0;
+        if (this.currentMission.id === 1) {
+            if (this.enemies.every(e => !e.alive)) completedObj++;
+            if (victory) completedObj++;
+            if (this.agents.filter(a => a.alive).length >= 2) completedObj++;
+        } else {
+            completedObj = this.map.terminals.filter(t => t.hacked).length;
+            if (victory) completedObj++;
+        }
+        
+        document.getElementById('intermissionObjectives').textContent = 
+            `${completedObj}/${this.currentMission.objectives.length}`;
+        document.getElementById('intermissionSquad').textContent = 
+            `${this.agents.filter(a => a.alive).length}/${this.agents.length} Survived`;
+        
+        // Create action buttons based on mission outcome and progress
+        const actionsContainer = document.getElementById('intermissionActions');
+        actionsContainer.innerHTML = '';
+        
+        if (victory && this.currentMissionIndex < this.missions.length - 1) {
+            // There's a next mission - show Continue button
+            this.currentMissionIndex++;
+            const continueBtn = document.createElement('button');
+            continueBtn.className = 'menu-button';
+            continueBtn.textContent = 'CONTINUE';
+            continueBtn.onclick = () => this.continueToNextMission();
+            actionsContainer.appendChild(continueBtn);
+        } else if (victory) {
+            // All missions completed - show Game Complete
+            const completeBtn = document.createElement('button');
+            completeBtn.className = 'menu-button';
+            completeBtn.textContent = 'FINISH';
+            completeBtn.onclick = () => this.finishCampaign();
+            actionsContainer.appendChild(completeBtn);
+        }
+        
+        // Always show Try Again button
+        const tryAgainBtn = document.createElement('button');
+        tryAgainBtn.className = 'menu-button';
+        tryAgainBtn.textContent = 'TRY AGAIN';
+        tryAgainBtn.onclick = () => this.tryAgainMission();
+        actionsContainer.appendChild(tryAgainBtn);
+        
+        // Always show Main Menu button
+        const mainMenuBtn = document.createElement('button');
+        mainMenuBtn.className = 'menu-button';
+        mainMenuBtn.textContent = 'MAIN MENU';
+        mainMenuBtn.onclick = () => this.backToMainMenuFromIntermission();
+        actionsContainer.appendChild(mainMenuBtn);
+        
+        // Show the dialog
+        document.getElementById('intermissionDialog').classList.add('show');
+    }
+    
+    continueToNextMission() {
+        document.getElementById('intermissionDialog').classList.remove('show');
+        // Load next mission briefing
+        this.loadMission(this.currentMissionIndex);
+        this.showBriefing();
+    }
+    
+    tryAgainMission() {
+        document.getElementById('intermissionDialog').classList.remove('show');
+        // Restart current mission
+        this.loadMission(this.currentMissionIndex);
+        this.startMission();
+    }
+    
+    finishCampaign() {
+        document.getElementById('intermissionDialog').classList.remove('show');
+        this.showGameCompleteScreen();
+    }
+    
+    backToMainMenuFromIntermission() {
+        document.getElementById('intermissionDialog').classList.remove('show');
+        this.backToMainMenu();
     }
 
     showGameCompleteScreen() {
@@ -945,11 +1004,14 @@ class CyberOpsGame {
     }
 
     backToMainMenu() {
-        // Hide all screens
+        // Hide all screens and dialogs
         document.getElementById('gameCompleteScreen').style.display = 'none';
         document.getElementById('creditsScreen').style.display = 'none';
         document.getElementById('endScreen').style.display = 'none';
         document.getElementById('gameHUD').style.display = 'none';
+        document.getElementById('intermissionDialog').classList.remove('show');
+        document.getElementById('hudDialog').classList.remove('show');
+        document.getElementById('missionSelectDialog').classList.remove('show');
         
         // Show main menu
         document.getElementById('mainMenu').style.display = 'flex';
@@ -974,22 +1036,104 @@ class CyberOpsGame {
             studioLogo.classList.add('show');
             
             setTimeout(() => {
-                studioLogo.classList.remove('show');
-                studioLogo.style.display = 'none';
-                
-                // Show loading screen
-                const loadingScreen = document.getElementById('loadingScreen');
-                loadingScreen.style.display = 'flex';
+                // Add explode fade-out effect
+                studioLogo.classList.add('fade-out-explode');
                 
                 setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                    // Now show main menu after all splash screens complete
-                    document.getElementById('mainMenu').style.display = 'flex';
-                    this.currentScreen = 'menu';
-                    this.updateMenuState();
-                }, 1500);
-            }, 3000);  // Changed to 3 seconds
-        }, 3000);  // Changed to 3 seconds
+                    studioLogo.classList.remove('show', 'fade-out-explode');
+                    studioLogo.style.display = 'none';
+                    
+                    // Show loading screen
+                    const loadingScreen = document.getElementById('loadingScreen');
+                    loadingScreen.style.display = 'flex';
+                    
+                    // Start progress bar animation
+                    this.animateProgressBar(() => {
+                        // After flash effect completes in animateProgressBar
+                        loadingScreen.style.display = 'none';
+                        
+                        // Show main menu with fade-in effect
+                        const mainMenu = document.getElementById('mainMenu');
+                        mainMenu.style.display = 'flex';
+                        mainMenu.style.opacity = '0';
+                        mainMenu.classList.remove('fade-in-from-flash'); // Reset
+                        
+                        setTimeout(() => {
+                            mainMenu.classList.add('fade-in-from-flash');
+                        }, 50);
+                        
+                        this.currentScreen = 'menu';
+                        this.updateMenuState();
+                        
+                        // Clean up after animation
+                        setTimeout(() => {
+                            mainMenu.classList.remove('fade-in-from-flash');
+                            mainMenu.style.opacity = '';
+                        }, 2600); // Match new animation duration
+                    });
+                }, 800); // Fade-out duration
+            }, 3000);  // 3 seconds
+        }, 3000);  // 3 seconds
+    }
+    
+    animateProgressBar(callback) {
+        const progressBar = document.querySelector('.loading-progress');
+        const gameTitle = document.querySelector('.loading-screen .game-title');
+        
+        // Reset progress bar
+        progressBar.style.width = '0%';
+        progressBar.style.transition = 'width 3s ease-out';
+        
+        // Start progress animation
+        setTimeout(() => {
+            progressBar.style.width = '100%';
+        }, 100);
+        
+        // After progress completes, trigger beam effect
+        setTimeout(() => {
+            // Add beam effect to game title
+            if (gameTitle) {
+                gameTitle.classList.add('beam-sweep');
+                
+                // After beam completes, trigger flash effect
+                setTimeout(() => {
+                    gameTitle.classList.remove('beam-sweep');
+                    
+                    // Trigger flash/blind effect
+                    this.triggerFlashTransition(() => {
+                        if (callback) callback();
+                    });
+                }, 1000); // Beam animation duration
+            } else {
+                if (callback) callback();
+            }
+        }, 3000); // Progress bar duration
+    }
+    
+    triggerFlashTransition(callback) {
+        // Create flash overlay
+        const flashOverlay = document.createElement('div');
+        flashOverlay.className = 'flash-overlay';
+        document.body.appendChild(flashOverlay);
+        
+        // Trigger flash animation
+        setTimeout(() => {
+            flashOverlay.classList.add('flash-active');
+            
+            // Right after flash peaks, immediately hide loading and show menu
+            setTimeout(() => {
+                // Call callback immediately (hides loading, shows menu)
+                if (callback) callback();
+                
+                // Then start flash fade out
+                flashOverlay.classList.add('flash-fade-out');
+                
+                // Remove overlay after fade completes
+                setTimeout(() => {
+                    document.body.removeChild(flashOverlay);
+                }, 150); // Quick fade out
+            }, 200); // Flash peak duration
+        }, 50); // Brief delay before flash starts
     }
     
     // Game Loop
@@ -1217,31 +1361,17 @@ class CyberOpsGame {
             this.totalCampaignTime += this.missionTimer;
             // Count total available enemies for completed missions, not just killed ones
             this.totalEnemiesDefeated += this.currentMission.enemies;
+            
+            // Add to completed missions
+            if (!this.completedMissions.includes(this.currentMission.id)) {
+                this.completedMissions.push(this.currentMission.id);
+            }
         }
         
-        document.getElementById('endTitle').textContent = victory ? 'MISSION COMPLETE' : 'MISSION FAILED';
-        document.getElementById('endTitle').className = 'end-title ' + (victory ? 'victory' : 'defeat');
-        
-        document.getElementById('endTime').textContent = document.getElementById('missionTimer').textContent;
-        document.getElementById('endEnemies').textContent = 
-            this.enemies.filter(e => !e.alive).length + '/' + this.enemies.length;
-        
-        let completedObj = 0;
-        if (this.currentMission.id === 1) {
-            if (this.enemies.every(e => !e.alive)) completedObj++;
-            if (victory) completedObj++;
-            if (this.agents.filter(a => a.alive).length >= 2) completedObj++;
-        } else {
-            completedObj = this.map.terminals.filter(t => t.hacked).length;
-            if (victory) completedObj++;
-        }
-        
-        document.getElementById('endObjectives').textContent = 
-            `${completedObj}/${this.currentMission.objectives.length}`;
-        document.getElementById('endSquad').textContent = 
-            `${this.agents.filter(a => a.alive).length}/${this.agents.length} Survived`;
-        
-        document.getElementById('endScreen').style.display = 'flex';
+        // Show intermission dialog instead of end screen
+        setTimeout(() => {
+            this.showIntermissionDialog(victory);
+        }, 1000); // Brief delay for dramatic effect
     }
     
     // Rendering

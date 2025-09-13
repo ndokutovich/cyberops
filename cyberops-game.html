@@ -125,7 +125,7 @@
                 <span id="endSquad">All Alive</span>
             </div>
         </div>
-        <button class="menu-button" onclick="game.nextMission()">NEXT MISSION</button>
+        <!-- Button removed - replaced by intermission dialog -->
     </div>
 
     <!-- Game Complete Screen -->
@@ -215,6 +215,42 @@
             </div>
             <div class="dialog-actions">
                 <button class="menu-button" onclick="game.closeMissionSelect()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mission Intermission Dialog -->
+    <div id="intermissionDialog" class="hud-dialog">
+        <div class="dialog-content intermission-content">
+            <div class="dialog-header">
+                <div class="dialog-title" id="intermissionTitle">MISSION COMPLETE</div>
+                        </div>
+            <div class="dialog-body">
+                <div class="intermission-message" id="intermissionMessage">
+                    <div class="status-icon">✅</div>
+                    <div class="status-text">MISSION ACCOMPLISHED</div>
+                </div>
+                <div class="intermission-stats">
+                    <div class="stat-row">
+                        <span>Time:</span>
+                        <span id="intermissionTime">00:00</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Enemies Neutralized:</span>
+                        <span id="intermissionEnemies">0/0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Objectives Completed:</span>
+                        <span id="intermissionObjectives">0/0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Squad Status:</span>
+                        <span id="intermissionSquad">All Survived</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-actions intermission-actions" id="intermissionActions">
+                <!-- Buttons will be dynamically added here -->
             </div>
         </div>
     </div>
