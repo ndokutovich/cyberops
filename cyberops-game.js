@@ -6,6 +6,9 @@ class CyberOpsGame {
         this.DEMOSCENE_IDLE_TIMEOUT = 15000; // 15 seconds of idle time before demoscene starts
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        
+        // Initialize HUD elements
+        this.gameHUD = document.getElementById('gameHUD');
         this.setupCanvas();
         
         // Enable audio on first user interaction
@@ -34,8 +37,68 @@ class CyberOpsGame {
         this.activeAgents = [];
         this.weapons = [];
         this.equipment = [];
+        this.completedResearch = [];
         
-        // Isometric Settings
+        // EARLY INITIALIZE: Initialize missions immediately in constructor
+        this.missions = [];
+        console.log('🏗️ Early missions array initialized');
+        
+        // Isometric Settings - CRITICAL: Initialize camera here to prevent NaN
+        this.tileWidth = 64;
+        this.tileHeight = 32;
+        this.cameraX = 0;
+        this.cameraY = 0;
+        this.zoom = 1;
+        console.log('🎥 Camera initialized:', { cameraX: this.cameraX, cameraY: this.cameraY, tileWidth: this.tileWidth, tileHeight: this.tileHeight });
+        
+        // Input State
+        this.touches = {};
+        this.lastTouchDistance = 0;
+        this.isDragging = false;
+        this.mouseDown = false;
+        
+        // Game Objects
+        this.agents = [];
+        this.enemies = [];
+        this.projectiles = [];
+        this.effects = [];
+        this.animatingTiles = [];
+        
+        // Map data
+        this.map = null;
+        
+        // 3D System
+        this.scene3D = null;
+        this.camera3D = null;
+        this.renderer3D = null;
+        this.canvas3D = null;
+        this.container3D = document.getElementById('game3DContainer');
+        this.hud3D = document.getElementById('game3DHUD');
+        this.controls3D = null;
+        this.is3DMode = false;
+        this.cameraMode = 'tactical'; // 'tactical', 'third', 'first'
+        
+        // Track selectedAgent changes
+        this._selectedAgent = null;
+        console.log('🏗️ Constructor: _selectedAgent initialized as null');
+        
+        // CRITICAL: Add protection against accidental clearing
+        this.selectionProtection = true;
+        this.keys3D = {
+            W: false, A: false, S: false, D: false,
+            mouse: { x: 0, y: 0, deltaX: 0, deltaY: 0 }
+        };
+        this.world3D = {
+            agents: [],
+            enemies: [],
+            walls: [],
+            terminals: [],
+            ground: null
+        };
+    }
+    
+    setupCanvas() {
+        // Isometric Settings  
         this.tileWidth = 64;
         this.tileHeight = 32;
         this.cameraX = 0;
@@ -53,64 +116,102 @@ class CyberOpsGame {
         this.enemies = [];
         this.projectiles = [];
         this.effects = [];
-        this.map = null;
+        this.animatingTiles = [];
         
-        // Mission Data
-        this.missions = [
-            {
-                id: 1,
-                title: "First Strike",
-                description: "Intelligence has identified a rogue AI facility in the industrial sector. Your mission is to infiltrate the compound and eliminate all hostile units.",
-                objectives: [
-                    "Eliminate all enemy units",
-                    "Reach the extraction point",
-                    "Keep at least 2 agents alive"
-                ],
-                map: this.generateMap1(),
-                enemies: 5,
-                difficulty: 'easy'
-            },
-            {
-                id: 2,
-                title: "Data Heist",
-                description: "A corporate data center contains critical intelligence on Project Nexus. Infiltrate the facility, hack the mainframe, and extract.",
-                objectives: [
-                    "Hack 3 terminals",
-                    "Reach the extraction point",
-                    "Optional: Remain undetected"
-                ],
-                map: this.generateMap2(),
-                enemies: 8,
-                difficulty: 'medium'
-            }
-        ];
+        // Audio system
+        this.gameAudio = null;
+        this.levelMusicElements = {};
+        this.currentLevelMusic = null;
+        this.currentLevelMusicElement = null;
+        this.creditsAudio = null;
+        this.creditsPlaying = false;
+        this.levelMusicNode = null;
+        this.creditsMusicNode = null;
+        this.levelMusicInterval = null;
+        this.splashSkipped = false;
+        this.audioEnabled = false;
+        this.audioElementsInitialized = false;
         
-        // Agent Templates
-        this.agentTemplates = [
-            { name: "Ghost", health: 100, speed: 5, damage: 25, ability: "cloak" },
-            { name: "Tank", health: 150, speed: 3, damage: 20, ability: "shield" },
-            { name: "Hacker", health: 80, speed: 4, damage: 15, ability: "hack" },
-            { name: "Assault", health: 100, speed: 4, damage: 30, ability: "burst" }
-        ];
-        
+        this.setupCanvas();
+        this.loadMissionData();
         this.initializeHub();
-        this.init();
+        this.init3D();
+        
+        console.log('🏗️ Constructor completed - checking key data:');
+        console.log('- missions:', this.missions ? this.missions.length : 'undefined');
+        console.log('- activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
+        console.log('- completedMissions:', this.completedMissions ? this.completedMissions.length : 'undefined');
+        
+        // CRITICAL CHECK: Make sure missions are really defined
+        if (!this.missions) {
+            console.error('🚨 CRITICAL ERROR: Constructor finished but this.missions is STILL undefined!');
+            console.log('🔧 Force calling initializeHub() again as emergency fix...');
+            this.initializeHub();
+        }
+    }
+    
+    initializeAudio() {
+        console.log('🎵 Initializing audio system...');
+        
+        // Initialize HTML5 audio elements
+        this.gameAudio = document.getElementById('gameMusic');
+        this.creditsAudio = document.getElementById('creditsMusic');
+        
+        // Initialize level music elements
+        this.levelMusicElements = {};
+        for (let i = 1; i <= 5; i++) {
+            this.levelMusicElements[i] = document.getElementById(`levelMusic${i}`);
+        }
+        
+        console.log('🔍 Audio elements initialized:');
+        console.log('- gameAudio:', !!this.gameAudio);
+        console.log('- creditsAudio:', !!this.creditsAudio);
+        console.log('- levelMusicElements count:', Object.keys(this.levelMusicElements).length);
+        
+        // Check for saved audio permission
+        const savedPermission = sessionStorage.getItem('cyberops_audio_enabled');
+        if (savedPermission === 'true') {
+            console.log('Audio permission found in session, enabling immediately...');
+            this.audioEnabled = true;
+            this.enableAudioOnInteraction();
+        }
+    }
+    
+    setupCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        
+        window.addEventListener('resize', () => {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+        });
+    }
+    
+    loadMissionData() {
+        console.log('📋 Loading mission data... (stub - missions loaded in initializeHub)');
+        
+        // Missions are now loaded in initializeHub() to ensure proper initialization order
+        // This avoids conflicts between loadMissionData and initializeHub
     }
     
     initializeHub() {
+        console.log('🏢 Initializing Syndicate Hub...');
+        
         // Initialize available agents with skills
         this.availableAgents = [
             { id: 1, name: 'Alex "Shadow" Chen', specialization: 'stealth', skills: ['stealth', 'melee'], cost: 1000, hired: true, health: 90, speed: 5, damage: 18 },
             { id: 2, name: 'Maya "Code" Rodriguez', specialization: 'hacker', skills: ['hacker', 'electronics'], cost: 1200, hired: true, health: 70, speed: 4, damage: 12 },
             { id: 3, name: 'Jake "Tank" Morrison', specialization: 'assault', skills: ['assault', 'heavy_weapons'], cost: 1100, hired: true, health: 140, speed: 3, damage: 25 },
-            { id: 4, name: 'Lisa "Ghost" Park', specialization: 'sniper', skills: ['sniper', 'stealth'], cost: 1300, hired: false, health: 85, speed: 4, damage: 35 },
+            { id: 4, name: 'Lisa "Ghost" Park', specialization: 'sniper', skills: ['sniper', 'stealth'], cost: 1300, hired: true, health: 85, speed: 4, damage: 35 },
             { id: 5, name: 'Rico "Boom" Santos', specialization: 'demolition', skills: ['demolition', 'assault'], cost: 1250, hired: false, health: 110, speed: 3, damage: 22 },
             { id: 6, name: 'Zoe "Wire" Kim', specialization: 'hacker', skills: ['hacker', 'drone_control'], cost: 1400, hired: false, health: 75, speed: 4, damage: 15 }
         ];
         
         // Set up initial active agents (first 4 hired) - restore original 4 agents
-        this.availableAgents[3].hired = true; // Hire the 4th agent (Lisa "Ghost" Park)
         this.activeAgents = this.availableAgents.filter(agent => agent.hired);
+        
+        console.log('✅ Active agents restored:', this.activeAgents.length, 'agents hired');
+        console.log('🎯 Active agents:', this.activeAgents.map(a => a.name));
         
         // Initialize weapons and equipment
         this.weapons = [
@@ -127,7 +228,7 @@ class CyberOpsGame {
             { id: 4, name: 'Stealth Suit', type: 'equipment', cost: 800, owned: 1, stealthBonus: 25 }
         ];
         
-        // Update missions with expanded content
+        // Update missions with expanded content (restore 5 missions instead of 2)
         this.missions = [
             {
                 id: 1,
@@ -180,11 +281,22 @@ class CyberOpsGame {
                 rewards: { credits: 5000, researchPoints: 200, worldControl: 25 }
             }
         ];
+        
+        console.log('🏢 Hub initialized successfully:', {
+            availableAgents: this.availableAgents.length,
+            activeAgents: this.activeAgents.length,  
+            weapons: this.weapons.length,
+            equipment: this.equipment.length,
+            missions: this.missions.length
+        });
+        
+        console.log('✅ MISSIONS CHECK: this.missions is now', this.missions ? 'DEFINED' : 'STILL UNDEFINED');
     }
     
     init() {
         this.setupEventListeners();
         this.initializeAudio();
+        
         // Hide all game screens initially
         document.getElementById('mainMenu').style.display = 'none';
         document.querySelectorAll('.splash-screen').forEach(screen => {
@@ -193,6 +305,15 @@ class CyberOpsGame {
         
         // Show initial start screen first
         this.showInitialScreen();
+        
+        // Add debug info for game state
+        setInterval(() => {
+            if (this.currentScreen === 'game') {
+                console.log('🎮 Game state check - Selected agent:', this._selectedAgent ? this._selectedAgent.name : 'none', 
+                           'Screen:', this.currentScreen, 'Total agents:', this.agents?.length || 0, 'Alive agents:', 
+                           this.agents?.filter(a => a.alive).length || 0);
+            }
+        }, 5000); // Log every 5 seconds when in game
         this.gameLoop();
     }
     
@@ -223,6 +344,114 @@ class CyberOpsGame {
         
         // Prevent context menu
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        // Keyboard Events for 3D mode - CONSOLIDATED E KEY HANDLING
+        document.addEventListener('keydown', (e) => {
+            // 3D Mode Controls - E Key
+            if (e.code === 'KeyE' && this.currentScreen === 'game') {
+                console.log('🔑 E key detected! Checking conditions...');
+                console.log('  - currentScreen:', this.currentScreen);
+                console.log('  - _selectedAgent exists:', !!this._selectedAgent);
+                console.log('  - _selectedAgent details:', this._selectedAgent ? this._selectedAgent.name : 'none');
+                console.log('  - 3D system available:', !!this.scene3D);
+                
+                // DEBUG: Check 3D system components
+                if (!this.scene3D) {
+                    console.log('🔍 3D System Debug:');
+                    console.log('  - scene3D:', !!this.scene3D);
+                    console.log('  - renderer3D:', !!this.renderer3D);
+                    console.log('  - camera3D:', !!this.camera3D);
+                    console.log('  - init3D called?', 'checking...');
+                }
+                
+                if (this._selectedAgent && this.scene3D) {
+                    console.log('✅ All conditions met! Switching camera mode...');
+                    this.switchCameraMode();
+                    e.preventDefault();
+                    return;
+                } else {
+                    console.log('❌ Conditions not met for camera switch:');
+                    if (!this._selectedAgent) console.log('  - No agent selected - auto-selecting first agent');
+                    if (!this.scene3D) console.log('  - 3D system not available');
+                    
+                    // Auto-select first agent if none selected
+                    if (!this._selectedAgent && this.agents && this.agents.length > 0) {
+                        const firstAlive = this.agents.find(a => a.alive);
+                        if (firstAlive) {
+                            this._selectedAgent = firstAlive;
+                            firstAlive.selected = true;
+                            console.log('🎯 Auto-selected first alive agent for E key:', firstAlive.name);
+                            // Try switching mode again
+                            if (this.scene3D) {
+                                this.switchCameraMode();
+                                e.preventDefault();
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Quick agent selection with Tab key
+            if (e.code === 'Tab') {
+                e.preventDefault();
+                if (this.currentScreen === 'game' && this.agents && this.agents.length > 0) {
+                    const aliveAgents = this.agents.filter(a => a.alive);
+                    if (aliveAgents.length > 0) {
+                        // Cycle through agents
+                        const currentIndex = this._selectedAgent ? aliveAgents.indexOf(this._selectedAgent) : -1;
+                        const nextIndex = (currentIndex + 1) % aliveAgents.length;
+                        console.log('🔧 SETTING _selectedAgent via Tab to:', aliveAgents[nextIndex].name);
+                        this._selectedAgent = aliveAgents[nextIndex]; // Direct assignment
+                        console.log('🔄 Agent selected with Tab:', this._selectedAgent.name);
+                        console.log('💡 Now press E to switch camera modes!');
+                    }
+                }
+                return;
+            }
+            
+            // WASD for 3D movement
+            if (this.is3DMode) {
+                switch(e.code) {
+                    case 'KeyW': this.keys3D.W = true; break;
+                    case 'KeyA': this.keys3D.A = true; break;
+                    case 'KeyS': this.keys3D.S = true; break;
+                    case 'KeyD': this.keys3D.D = true; break;
+                }
+            }
+            
+            if (this.currentScreen !== 'game') return;
+            
+            if (e.code === 'Escape') {
+                this.togglePause();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (this.is3DMode) {
+                switch(e.code) {
+                    case 'KeyW': this.keys3D.W = false; break;
+                    case 'KeyA': this.keys3D.A = false; break;
+                    case 'KeyS': this.keys3D.S = false; break;
+                    case 'KeyD': this.keys3D.D = false; break;
+                }
+            }
+        });
+        
+        // Mouse handling for 3D shooting
+        this.mouseClicked = false;
+        this.mouseX = 0;
+        this.mouseY = 0;
+        this.lastMouseX = 0;
+        this.lastMouseY = 0;
+        
+        document.addEventListener('mousedown', (e) => {
+            if (this.is3DMode) {
+                this.mouseClicked = true;
+                this.mouseX = e.clientX;
+                this.mouseY = e.clientY;
+            }
+        });
     }
     
     // Touch Handlers
@@ -315,6 +544,10 @@ class CyberOpsGame {
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
         this.isDragging = false;
+        
+        // Simplified mousedown - just track mouse state
+        console.log('🖱️ Mouse down detected! Screen:', this.currentScreen);
+        // All selection and movement logic moved to handleTap in mouseup
     }
     
     handleMouseMove(e) {
@@ -341,7 +574,9 @@ class CyberOpsGame {
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (!this.isDragging && distance < 10) {
+                // SIMPLIFIED: Just use handleTap for everything!
                 this.handleTap(e.clientX, e.clientY);
+                console.log('🖱️ Mouse UP: Using single handleTap for both selection and movement');
             }
         }
         this.mouseDown = false;
@@ -357,7 +592,7 @@ class CyberOpsGame {
     handleTap(x, y) {
         if (this.currentScreen !== 'game' || this.isPaused) return;
         
-        // Check if clicking on HUD elements
+        // Check if clicking on HUD elements - allow HUD agent selection
         const squadHealth = document.getElementById('squadHealth');
         const rect = squadHealth.getBoundingClientRect();
         
@@ -369,37 +604,85 @@ class CyberOpsGame {
                 const agent = this.agents[barIndex];
                 if (agent && agent.alive) {
                     this.selectAgent(agent);
+                    console.log(`✅ Agent selected via HUD: ${agent.name}`);
                     return;
                 }
             }
         }
         
-        // Convert to world coordinates
-        const worldPos = this.screenToWorld(x, y);
+        // Convert to canvas coordinates for agent selection
+        const rect2 = this.canvas.getBoundingClientRect();
+        const canvasX = x - rect2.left;
+        const canvasY = y - rect2.top;
         
-        // Check if clicking on an agent
-        let agentClicked = false;
-        for (let agent of this.agents) {
-            if (!agent.alive) continue;
-            const dist = Math.sqrt(
-                Math.pow(agent.x - worldPos.x, 2) + 
-                Math.pow(agent.y - worldPos.y, 2)
-            );
-            if (dist < 1.5) {
-                this.selectAgent(agent);
-                agentClicked = true;
-                break;
+        console.log('🎯 SIMPLIFIED TAP: Checking for agent selection at canvas coords:', canvasX, canvasY);
+        
+        // PRECISE AGENT SHAPE DETECTION (instead of distance)
+        let selectedAgent = null;
+        
+        if (this.agents && this.agents.length > 0) {
+            for (const agent of this.agents) {
+                if (!agent.alive) continue;
+                
+                const screenPos = this.worldToScreen(agent.x, agent.y);
+                
+                // Define agent sprite bounds (actual visual size)
+                const agentWidth = 32;   // Agent sprite width
+                const agentHeight = 48;  // Agent sprite height (taller for isometric)
+                
+                // Agent bounds (centered on screen position)
+                const left = screenPos.x - agentWidth / 2;
+                const right = screenPos.x + agentWidth / 2;
+                const top = screenPos.y - agentHeight / 2;
+                const bottom = screenPos.y + agentHeight / 2;
+                
+                // Check if click is within agent sprite bounds
+                const isInBounds = (canvasX >= left && canvasX <= right && 
+                                  canvasY >= top && canvasY <= bottom);
+                
+                const distance = Math.sqrt((canvasX - screenPos.x) ** 2 + (canvasY - screenPos.y) ** 2);
+                
+                console.log(`🔍 Agent ${agent.name}:`, {
+                    distance: Math.round(distance),
+                    bounds: { left: Math.round(left), right: Math.round(right), 
+                             top: Math.round(top), bottom: Math.round(bottom) },
+                    click: { x: canvasX, y: canvasY },
+                    inBounds: isInBounds ? '✅ YES' : '❌ NO'
+                });
+                
+                // If click is within sprite bounds, this agent is selected
+                if (isInBounds) {
+                    selectedAgent = agent;
+                    console.log(`🎯 PRECISE HIT: ${agent.name} sprite bounds!`);
+                    break; // First hit wins (prevents overlapping selections)
+                }
             }
         }
         
-        // If no agent clicked, move selected agent
-        if (!agentClicked) {
-            this.showTouchIndicator(x, y);
-            const selected = this.agents.find(a => a.selected);
-            if (selected && selected.alive) {
-                selected.targetX = worldPos.x;
-                selected.targetY = worldPos.y;
-            }
+        // If clicked exactly on an agent sprite, select it
+        if (selectedAgent) {
+            // Clear all selections first  
+            this.agents.forEach(a => a.selected = false);
+            
+            // Select the precisely clicked agent
+            selectedAgent.selected = true;
+            this._selectedAgent = selectedAgent;
+            
+            console.log(`✅ TAP SELECTED: ${selectedAgent.name} (precise sprite hit)`);
+            return; // Don't move if we selected an agent
+        }
+        
+        // If no agent selected, move the currently selected agent
+        const worldPos = this.screenToWorld(x, y);
+        this.showTouchIndicator(x, y);
+        
+        const selected = this.agents.find(a => a.selected);
+        if (selected && selected.alive) {
+            selected.targetX = worldPos.x;
+            selected.targetY = worldPos.y;
+            console.log(`🚶 TAP MOVEMENT: Moving ${selected.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+        } else {
+            console.log(`❌ No agent selected for movement`);
         }
     }
     
@@ -760,9 +1043,20 @@ class CyberOpsGame {
     }
     
     startCampaign() {
+        console.log('🚀 startCampaign() called - checking missions before showing hub...');
+        console.log('- this.missions exists:', !!this.missions);
+        console.log('- this.missions length:', this.missions ? this.missions.length : 'UNDEFINED');
+        
         this.clearDemosceneTimer(); // Clear timer when user takes action
         this.currentMissionIndex = 0;
         this.completedMissions = [];
+        
+        // EMERGENCY CHECK: Make sure missions are initialized before showing hub
+        if (!this.missions || this.missions.length === 0) {
+            console.error('🚨 EMERGENCY in startCampaign: missions not initialized! Calling initializeHub...');
+            this.initializeHub();
+        }
+        
         this.showSyndicateHub();
     }
     
@@ -943,6 +1237,48 @@ class CyberOpsGame {
             
             this.agents.push(agent);
         });
+        
+            // Auto-select first agent for better UX
+            if (this.agents.length > 0) {
+                this.agents.forEach(a => a.selected = false);
+                
+                // Select first agent by default
+                const firstAgent = this.agents[0];
+                firstAgent.selected = true;
+                this._selectedAgent = firstAgent;
+                
+                console.log('🎯 Auto-selected first agent for better UX:', firstAgent.name);
+                console.log('👥 Available agents:', this.agents.map(a => a.name));
+                console.log('✅ Press E to switch camera modes, Tab to change agents');
+            
+            // CRITICAL: Center camera on agents when mission starts to prevent NaN camera positions
+            console.log('🎥 Before camera centering - cameraX:', this.cameraX, 'cameraY:', this.cameraY);
+            
+            // Calculate center point of all agents
+            if (this.agents && this.agents.length > 0) {
+                let totalX = 0;
+                let totalY = 0;
+                this.agents.forEach(agent => {
+                    totalX += agent.x;
+                    totalY += agent.y;
+                });
+                
+                // Center camera on average agent position
+                this.cameraX = Math.floor(totalX / this.agents.length - this.canvas.width / (2 * this.tileWidth));
+                this.cameraY = Math.floor(totalY / this.agents.length - this.canvas.height / (2 * this.tileHeight));
+                
+                console.log('🎥 Manual camera centering completed - agents average pos:', {
+                    avgX: totalX / this.agents.length,
+                    avgY: totalY / this.agents.length,
+                    cameraX: this.cameraX,
+                    cameraY: this.cameraY
+                });
+            }
+            
+            console.log('🎥 After camera centering - cameraX:', this.cameraX, 'cameraY:', this.cameraY);
+        } else {
+            console.log('⚠️ No agents available to select!');
+        }
         
         // Spawn enemies
         for (let i = 0; i < this.currentMission.enemies; i++) {
@@ -1642,6 +1978,17 @@ class CyberOpsGame {
     }
     
     updateHubStats() {
+        console.log('🔍 updateHubStats called - checking data:');
+        console.log('- this.missions:', this.missions ? this.missions.length : 'UNDEFINED');
+        console.log('- this.activeAgents:', this.activeAgents ? this.activeAgents.length : 'UNDEFINED');
+        console.log('- this.completedMissions:', this.completedMissions ? this.completedMissions.length : 'UNDEFINED');
+        
+        // EMERGENCY FIX: If missions is undefined, initialize it immediately
+        if (!this.missions) {
+            console.error('🚨 EMERGENCY: this.missions is undefined! Initializing now...');
+            this.initializeHub();
+        }
+        
         // Update resource displays
         document.getElementById('hubCredits').textContent = this.credits.toLocaleString();
         document.getElementById('hubResearchPoints').textContent = this.researchPoints;
@@ -2544,22 +2891,38 @@ class CyberOpsGame {
         this.audioEnabled = true;
         
         try {
-            // Create AudioContext after user interaction
-            console.log('Creating AudioContext after user interaction...');
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // Generate music data
-            this.generateSplashMusic();
-            this.generateMainMenuMusic();
-            
-            console.log('AudioContext created successfully!');
+            // Create AudioContext after user interaction (only once)
+            if (!this.audioContext) {
+                console.log('Creating AudioContext after user interaction...');
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Generate music data
+                this.generateSplashMusic();
+                this.generateMainMenuMusic();
+                
+                console.log('AudioContext created successfully!');
+            }
             console.log('Audio context state:', this.audioContext.state);
+            
+            // Initialize audio elements if not done yet
+            if (!this.audioElementsInitialized) {
+                console.log('🎵 Initializing audio elements...');
+                this.gameAudio = document.getElementById('gameMusic');
+                this.creditsAudio = document.getElementById('creditsMusic');
+                
+                // Initialize level music elements
+                this.levelMusicElements = {};
+                for (let i = 1; i <= 5; i++) {
+                    this.levelMusicElements[i] = document.getElementById(`levelMusic${i}`);
+                }
+                this.audioElementsInitialized = true;
+            }
             
             // Debug audio elements
             console.log('Checking audio elements:');
-            console.log('gameAudio:', this.gameAudio);
-            console.log('creditsAudio:', this.creditsAudio);
-            console.log('levelMusicElements:', this.levelMusicElements);
+            console.log('gameAudio:', !!this.gameAudio);
+            console.log('creditsAudio:', !!this.creditsAudio);
+            console.log('levelMusicElements count:', Object.keys(this.levelMusicElements).length);
             
             // Store permission for this session
             sessionStorage.setItem('cyberops_audio_enabled', 'true');
@@ -4575,10 +4938,685 @@ class CyberOpsGame {
         
         ctx.restore();
     }
+    
+    // 3D SYSTEM IMPLEMENTATION
+    
+    init3D() {
+        if (!window.THREE) {
+            console.warn('Three.js not loaded, 3D features disabled');
+            console.log('Available globals:', Object.keys(window).filter(k => k.includes('THREE') || k.includes('three')));
+            return;
+        }
+        
+        console.log('🎮 Initializing 3D system...', 'THREE version:', THREE.REVISION);
+        
+        // Create scene
+        this.scene3D = new THREE.Scene();
+        this.scene3D.background = new THREE.Color(0x0a0e1a);
+        this.scene3D.fog = new THREE.Fog(0x0a0e1a, 10, 50);
+        
+        // Create cameras
+        this.camera3D = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        // Create renderer
+        this.renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        this.renderer3D.setSize(window.innerWidth, window.innerHeight);
+        this.renderer3D.shadowMap.enabled = true;
+        this.renderer3D.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Add to container
+        this.container3D.appendChild(this.renderer3D.domElement);
+        this.canvas3D = this.renderer3D.domElement;
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+        this.scene3D.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0x00ffff, 0.8);
+        directionalLight.position.set(10, 20, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        this.scene3D.add(directionalLight);
+        
+        // Additional atmospheric lighting
+        const pinkLight = new THREE.PointLight(0xff00ff, 0.5, 30);
+        pinkLight.position.set(-5, 10, -5);
+        this.scene3D.add(pinkLight);
+        
+        console.log('✅ 3D system initialized successfully');
+    }
+    
+    switchCameraMode() {
+        console.log('🎬 switchCameraMode called!');
+        console.log('  - scene3D exists:', !!this.scene3D);
+        console.log('  - selectedAgent exists:', !!this._selectedAgent);
+        
+        if (!this.scene3D || !this._selectedAgent) {
+            console.log('❌ Cannot switch camera mode:');
+            if (!this.scene3D) console.log('  - No 3D scene');
+            if (!this._selectedAgent) console.log('  - No selected agent');
+            return;
+        }
+        
+        const modes = ['tactical', 'third', 'first'];
+        const currentIndex = modes.indexOf(this.cameraMode);
+        const nextIndex = (currentIndex + 1) % modes.length;
+        const oldMode = this.cameraMode;
+        this.cameraMode = modes[nextIndex];
+        
+        console.log('🎬 Camera mode switched:', oldMode, '→', this.cameraMode);
+        
+        // Ensure we have an agent selected for 3D modes
+        if ((this.cameraMode === 'third' || this.cameraMode === 'first') && !this._selectedAgent) {
+            // Auto-select the first available alive agent
+            const aliveAgent = this.agents.find(agent => agent.alive);
+            if (aliveAgent) {
+                // Clear previous selections
+                this.agents.forEach(a => a.selected = false);
+                this._selectedAgent = aliveAgent;
+                aliveAgent.selected = true;
+                console.log('🎯 Auto-selected agent for 3D mode:', aliveAgent.name);
+            }
+        }
+        
+        // Update mode indicator
+        const indicator = document.getElementById('modeIndicator');
+        if (indicator) {
+            indicator.textContent = this.cameraMode.toUpperCase();
+        }
+        
+        // Switch between 2D and 3D
+        if (this.cameraMode === 'tactical') {
+            this.disable3DMode();
+        } else {
+            this.enable3DMode();
+        }
+        
+        this.update3DCamera();
+    }
+    
+    enable3DMode() {
+        if (!this.scene3D) {
+            console.log('❌ Cannot enable 3D mode - no scene3D');
+            return;
+        }
+        
+        console.log('🎮 Enabling 3D mode...', 'Camera mode:', this.cameraMode);
+        
+        this.is3DMode = true;
+        this.canvas.style.display = 'none';
+        this.container3D.style.display = 'block';
+        this.container3D.style.pointerEvents = 'auto';
+        this.hud3D.style.display = 'block';
+        
+        // Hide 2D HUD
+        if (this.gameHUD) {
+            this.gameHUD.style.display = 'none';
+        }
+        
+        // Create/update 3D world
+        this.create3DWorld();
+        
+        // Update 3D HUD with current agent info
+        this.update3DHUD();
+        
+        // Setup pointer lock for FPS mode
+        if (this.cameraMode === 'first') {
+            this.setupPointerLock();
+        }
+        
+        console.log('✅ 3D mode enabled');
+    }
+    
+    disable3DMode() {
+        console.log('🎮 Disabling 3D mode...', 'Camera mode:', this.cameraMode);
+        
+        this.is3DMode = false;
+        this.canvas.style.display = 'block';
+        this.container3D.style.display = 'none';
+        this.container3D.style.pointerEvents = 'none';
+        this.hud3D.style.display = 'none';
+        
+        // Show 2D HUD
+        if (this.gameHUD) {
+            this.gameHUD.style.display = 'block';
+        }
+        
+        // Exit pointer lock
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
+        }
+        
+        console.log('✅ 3D mode disabled');
+    }
+    
+    create3DWorld() {
+        if (!this.scene3D || !this.currentMission) return;
+        
+        console.log('🌍 Creating 3D world from 2D map...');
+        
+        // Clear existing 3D objects
+        Object.values(this.world3D).forEach(array => {
+            if (Array.isArray(array)) {
+                array.forEach(obj => this.scene3D.remove(obj));
+                array.length = 0;
+            } else if (array) {
+                this.scene3D.remove(array);
+            }
+        });
+        
+        // Create ground
+        this.createGround();
+        
+        // Create walls and obstacles
+        this.createWalls();
+        
+        // Create agents
+        this.createAgents3D();
+        
+        // Create enemies
+        this.createEnemies3D();
+        
+        // Create terminals and objectives
+        this.createObjectives3D();
+        
+        console.log('✅ 3D world created');
+    }
+    
+    createGround() {
+        const mapWidth = this.currentMission.map[0].length;
+        const mapHeight = this.currentMission.map.length;
+        
+        const geometry = new THREE.PlaneGeometry(mapWidth * 2, mapHeight * 2);
+        const material = new THREE.MeshLambertMaterial({ 
+            color: 0x1a1a2e,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        const ground = new THREE.Mesh(geometry, material);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.1;
+        ground.receiveShadow = true;
+        
+        this.scene3D.add(ground);
+        this.world3D.ground = ground;
+    }
+    
+    createWalls() {
+        const map = this.currentMission.map;
+        
+        for (let y = 0; y < map.length; y++) {
+            for (let x = 0; x < map[y].length; x++) {
+                const cell = map[y][x];
+                
+                if (cell === 1) { // Wall
+                    const geometry = new THREE.BoxGeometry(1.8, 3, 1.8);
+                    const material = new THREE.MeshLambertMaterial({ 
+                        color: 0x2a2a4e,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    
+                    const wall = new THREE.Mesh(geometry, material);
+                    wall.position.set(x * 2 - map[0].length, 1.5, y * 2 - map.length);
+                    wall.castShadow = true;
+                    wall.receiveShadow = true;
+                    
+                    this.scene3D.add(wall);
+                    this.world3D.walls.push(wall);
+                }
+            }
+        }
+    }
+    
+    createAgents3D() {
+        this.agents.forEach((agent, index) => {
+            if (!agent.alive) return;
+            
+        // Create agent geometry (fallback for older Three.js versions)
+        const geometry = THREE.CapsuleGeometry ? 
+            new THREE.CapsuleGeometry(0.3, 1.5, 4, 8) : 
+            new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: agent === this.selectedAgent ? 0x00ffff : 0x00ff00
+            });
+            
+            const agentMesh = new THREE.Mesh(geometry, material);
+            agentMesh.position.set(
+                agent.x * 0.1 - this.currentMission.map[0].length * 0.1, 
+                1, 
+                agent.y * 0.1 - this.currentMission.map.length * 0.1
+            );
+            agentMesh.castShadow = true;
+            
+            // Add agent data
+            agentMesh.userData = { type: 'agent', index: index, agent: agent };
+            
+            this.scene3D.add(agentMesh);
+            this.world3D.agents.push(agentMesh);
+        });
+    }
+    
+    createEnemies3D() {
+        this.enemies.forEach((enemy, index) => {
+            if (!enemy.alive) return;
+            
+        // Create enemy geometry (fallback for older Three.js versions)
+        const geometry = THREE.CapsuleGeometry ? 
+            new THREE.CapsuleGeometry(0.3, 1.5, 4, 8) : 
+            new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+        const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+            
+            const enemyMesh = new THREE.Mesh(geometry, material);
+            enemyMesh.position.set(
+                enemy.x * 0.1 - this.currentMission.map[0].length * 0.1, 
+                1, 
+                enemy.y * 0.1 - this.currentMission.map.length * 0.1
+            );
+            enemyMesh.castShadow = true;
+            
+            enemyMesh.userData = { type: 'enemy', index: index, enemy: enemy };
+            
+            this.scene3D.add(enemyMesh);
+            this.world3D.enemies.push(enemyMesh);
+        });
+    }
+    
+    createObjectives3D() {
+        // Create terminals
+        if (this.currentMission.terminals) {
+            this.currentMission.terminals.forEach((terminal, index) => {
+                if (terminal.hacked) return;
+                
+                const geometry = new THREE.BoxGeometry(0.8, 1.5, 0.4);
+                const material = new THREE.MeshLambertMaterial({ 
+                    color: 0x0088ff,
+                    emissive: 0x002244
+                });
+                
+                const terminalMesh = new THREE.Mesh(geometry, material);
+                terminalMesh.position.set(
+                    terminal.x * 0.1 - this.currentMission.map[0].length * 0.1,
+                    0.75,
+                    terminal.y * 0.1 - this.currentMission.map.length * 0.1
+                );
+                terminalMesh.castShadow = true;
+                
+                terminalMesh.userData = { type: 'terminal', index: index, terminal: terminal };
+                
+                this.scene3D.add(terminalMesh);
+                this.world3D.terminals.push(terminalMesh);
+            });
+        }
+    }
+    
+    update3DCamera() {
+        if (!this.scene3D || !this._selectedAgent) return;
+        
+        const agent = this._selectedAgent;
+        const agentPos = new THREE.Vector3(
+            agent.x * 0.1 - this.currentMission.map[0].length * 0.1,
+            1,
+            agent.y * 0.1 - this.currentMission.map.length * 0.1
+        );
+        
+        switch(this.cameraMode) {
+            case 'third':
+                // Third person camera - behind and above agent
+                this.camera3D.position.set(
+                    agentPos.x - 3,
+                    agentPos.y + 2,
+                    agentPos.z + 3
+                );
+                this.camera3D.lookAt(agentPos);
+                break;
+                
+            case 'first':
+                // First person camera - at agent's eye level
+                this.camera3D.position.set(
+                    agentPos.x,
+                    agentPos.y + 0.6,
+                    agentPos.z
+                );
+                
+                // Mouse look in FPS mode (simplified)
+                if (this.keys3D.mouse.deltaX !== 0 || this.keys3D.mouse.deltaY !== 0) {
+                    const sensitivity = 0.002;
+                    this.camera3D.rotation.y -= this.keys3D.mouse.deltaX * sensitivity;
+                    this.camera3D.rotation.x -= this.keys3D.mouse.deltaY * sensitivity;
+                    this.camera3D.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, this.camera3D.rotation.x));
+                    
+                    // Reset mouse deltas
+                    this.keys3D.mouse.deltaX = 0;
+                    this.keys3D.mouse.deltaY = 0;
+                }
+                break;
+        }
+    }
+    
+    setupPointerLock() {
+        if (!this.canvas3D) return;
+        
+        // Simple mouse look without PointerLock API (for better compatibility)
+        let isMouseDown = false;
+        
+        this.canvas3D.addEventListener('mousedown', (e) => {
+            if (this.cameraMode === 'first') {
+                isMouseDown = true;
+                this.canvas3D.style.cursor = 'none';
+            }
+        });
+        
+        this.canvas3D.addEventListener('mouseup', () => {
+            isMouseDown = false;
+            this.canvas3D.style.cursor = 'default';
+        });
+        
+        this.canvas3D.addEventListener('mousemove', (e) => {
+            if (isMouseDown && this.cameraMode === 'first') {
+                this.keys3D.mouse.deltaX = e.movementX || (e.pageX - this.lastMouseX);
+                this.keys3D.mouse.deltaY = e.movementY || (e.pageY - this.lastMouseY);
+                this.lastMouseX = e.pageX;
+                this.lastMouseY = e.pageY;
+            }
+        });
+        
+        this.canvas3D.addEventListener('mouseleave', () => {
+            isMouseDown = false;
+            this.canvas3D.style.cursor = 'default';
+        });
+    }
+    
+    update3D() {
+        if (!this.is3DMode || !this._selectedAgent) return;
+        
+        // Update agent position based on WASD
+        if (this.keys3D.W || this.keys3D.A || this.keys3D.S || this.keys3D.D) {
+            this.updateAgent3DMovement();
+        }
+        
+        // Update camera
+        this.update3DCamera();
+        
+        // Sync 2D positions with 3D positions
+        this.sync3DTo2D();
+        
+        // Handle 3D shooting
+        this.handle3DShooting();
+    }
+    
+    updateAgent3DMovement() {
+        const agent = this._selectedAgent;
+        const speed = 100; // pixels per second in 2D space
+        const deltaTime = 1/60; // assuming 60fps
+        
+        let moveX = 0;
+        let moveY = 0;
+        
+        // Movement relative to camera direction in FPS mode
+        if (this.cameraMode === 'first') {
+            const forward = new THREE.Vector3(0, 0, -1);
+            const right = new THREE.Vector3(1, 0, 0);
+            
+            forward.applyQuaternion(this.camera3D.quaternion);
+            right.applyQuaternion(this.camera3D.quaternion);
+            
+            if (this.keys3D.W) {
+                moveX += forward.x * speed * deltaTime;
+                moveY += forward.z * speed * deltaTime;
+            }
+            if (this.keys3D.S) {
+                moveX -= forward.x * speed * deltaTime;
+                moveY -= forward.z * speed * deltaTime;
+            }
+            if (this.keys3D.A) {
+                moveX -= right.x * speed * deltaTime;
+                moveY -= right.z * speed * deltaTime;
+            }
+            if (this.keys3D.D) {
+                moveX += right.x * speed * deltaTime;
+                moveY += right.z * speed * deltaTime;
+            }
+        } else {
+            // Simple movement in TPS mode
+            if (this.keys3D.W) moveY -= speed * deltaTime;
+            if (this.keys3D.S) moveY += speed * deltaTime;
+            if (this.keys3D.A) moveX -= speed * deltaTime;
+            if (this.keys3D.D) moveX += speed * deltaTime;
+        }
+        
+        // Apply movement
+        const newX = agent.x + moveX;
+        const newY = agent.y + moveY;
+        
+        // Check collision (reuse existing collision detection)
+        if (this.isValidPosition(newX, agent.y)) {
+            agent.x = newX;
+        }
+        if (this.isValidPosition(agent.x, newY)) {
+            agent.y = newY;
+        }
+        
+        // Update 3D mesh position
+        const agentMesh = this.world3D.agents.find(mesh => mesh.userData.agent === agent);
+        if (agentMesh) {
+            agentMesh.position.set(
+                agent.x * 0.1 - this.currentMission.map[0].length * 0.1,
+                1,
+                agent.y * 0.1 - this.currentMission.map.length * 0.1
+            );
+        }
+    }
+    
+    handle3DShooting() {
+        // Handle mouse clicks for shooting in 3D mode
+        if (this.mouseClicked && this.is3DMode && this._selectedAgent) {
+            this.mouseClicked = false;
+            
+            // Raycast for shooting
+            const raycaster = new THREE.Raycaster();
+            
+            if (this.cameraMode === 'first') {
+                // Shoot from camera center in FPS mode
+                raycaster.setFromCamera({ x: 0, y: 0 }, this.camera3D);
+            } else {
+                // Convert mouse position for TPS mode
+                const mouse = new THREE.Vector2(
+                    (this.mouseX / window.innerWidth) * 2 - 1,
+                    -(this.mouseY / window.innerHeight) * 2 + 1
+                );
+                raycaster.setFromCamera(mouse, this.camera3D);
+            }
+            
+            // Check for enemy hits
+            const enemyMeshes = this.world3D.enemies.filter(mesh => mesh.visible);
+            const intersects = raycaster.intersectObjects(enemyMeshes);
+            
+            if (intersects.length > 0) {
+                const hitMesh = intersects[0].object;
+                const enemy = hitMesh.userData.enemy;
+                
+                if (enemy && enemy.alive) {
+                    // Deal damage
+                    enemy.hp -= this._selectedAgent.damage;
+                    
+                    // Create muzzle flash effect
+                    this.create3DMuzzleFlash();
+                    
+                    if (enemy.hp <= 0) {
+                        enemy.alive = false;
+                        hitMesh.visible = false;
+                        console.log('🎯 Enemy eliminated in 3D mode!');
+                    }
+                }
+            }
+        }
+    }
+    
+    create3DMuzzleFlash() {
+        if (!this._selectedAgent) return;
+        
+        // Create muzzle flash geometry
+        const geometry = new THREE.SphereGeometry(0.2, 8, 6);
+        const material = new THREE.MeshBasicMaterial({ 
+            color: 0xffff00,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        const flash = new THREE.Mesh(geometry, material);
+        
+        // Position flash at agent weapon
+        const agent = this._selectedAgent;
+        flash.position.set(
+            agent.x * 0.1 - this.currentMission.map[0].length * 0.1 + 0.5,
+            1.2,
+            agent.y * 0.1 - this.currentMission.map.length * 0.1
+        );
+        
+        this.scene3D.add(flash);
+        
+        // Remove flash after short time
+        setTimeout(() => {
+            this.scene3D.remove(flash);
+        }, 100);
+    }
+    
+    sync3DTo2D() {
+        // Update enemy positions in 3D based on 2D logic
+        this.enemies.forEach((enemy, index) => {
+            const enemyMesh = this.world3D.enemies[index];
+            if (enemyMesh && enemy.alive) {
+                enemyMesh.position.set(
+                    enemy.x * 0.1 - this.currentMission.map[0].length * 0.1,
+                    1,
+                    enemy.y * 0.1 - this.currentMission.map.length * 0.1
+                );
+                
+                // Update visibility
+                enemyMesh.visible = enemy.alive;
+            }
+        });
+        
+        // Update agent colors (selected vs unselected)
+        this.world3D.agents.forEach(agentMesh => {
+            const agent = agentMesh.userData.agent;
+            if (agent) {
+                agentMesh.material.color.setHex(
+                    agent === this._selectedAgent ? 0x00ffff : 0x00ff00
+                );
+            }
+        });
+    }
+    
+    render3D() {
+        if (!this.renderer3D || !this.scene3D || !this.camera3D) return;
+        
+        if (this.renderer3D && this.scene3D && this.camera3D) {
+            this.renderer3D.render(this.scene3D, this.camera3D);
+        } else {
+            console.log('❌ Cannot render 3D - missing components:', {
+                renderer: !!this.renderer3D,
+                scene: !!this.scene3D,
+                camera: !!this.camera3D
+            });
+        }
+    }
+    
+    // Enhanced 3D HUD update
+    update3DHUD() {
+        if (!this.is3DMode || !this._selectedAgent) return;
+        
+        // Update health display
+        const healthDisplay = document.querySelector('.health-display-3d');
+        if (healthDisplay) {
+            healthDisplay.textContent = `HP: ${this._selectedAgent.hp}/${this._selectedAgent.maxHp}`;
+        }
+        
+        // Update ammo display
+        const ammoDisplay = document.querySelector('.ammo-display-3d');
+        if (ammoDisplay) {
+            ammoDisplay.textContent = `AMMO: ${this._selectedAgent.ammo || '∞'}`;
+        }
+        
+        // Update objective display
+        const objectiveDisplay = document.querySelector('.objective-display-3d');
+        if (objectiveDisplay && this.currentMission) {
+            objectiveDisplay.textContent = this.getObjectiveText();
+        }
+        
+        // Update agent info
+        const agentNameDisplay = document.getElementById('agentName3D');
+        const agentClassDisplay = document.getElementById('agentClass3D');
+        if (agentNameDisplay && this._selectedAgent) {
+            agentNameDisplay.textContent = this._selectedAgent.name;
+        }
+        if (agentClassDisplay && this._selectedAgent) {
+            agentClassDisplay.textContent = this._selectedAgent.class;
+        }
+    }
+    
+    // REMOVED: checkAgentSelection - all logic moved to simplified handleTap
+    
+    getObjectiveText() {
+        if (!this.currentMission) return '';
+        
+        if (this.currentMission.objectives && this.currentMission.objectives.length > 0) {
+            return this.currentMission.objectives[0];
+        }
+        
+        // Fallback objectives based on mission type
+        switch(this.currentMissionIndex) {
+            case 0: return 'Eliminate all hostiles';
+            case 1: return 'Hack all terminals';
+            case 2: return 'Plant explosives';
+            case 3: return 'Eliminate targets';
+            case 4: return 'Breach the fortress';
+            default: return 'Complete mission objectives';
+        }
+    }
+    
+    // Getter and setter for selectedAgent with logging
+    get selectedAgent() {
+        return this._selectedAgent;
+    }
+    
+    set selectedAgent(value) {
+        const oldValue = this._selectedAgent;
+        this._selectedAgent = value;
+        
+        console.log('🎯 selectedAgent SETTER called:', {
+            from: oldValue ? oldValue.name : 'none',
+            to: value ? value.name : 'none',
+            stack: new Error().stack.split('\n')[1] // Show where it was called from
+        });
+        
+        // CRITICAL: Track when selection is being cleared
+        if (value === null && oldValue !== null) {
+            console.error('🚨 SELECTION BEING CLEARED!', {
+                previousAgent: oldValue.name,
+                callStack: new Error().stack
+            });
+            
+            // PROTECTION: Prevent accidental clearing during normal gameplay
+            if (this.selectionProtection && this.currentScreen === 'game') {
+                console.warn('🛡️ SELECTION PROTECTION: Preventing clear during gameplay!');
+                // Don't actually clear - keep the old value
+                this._selectedAgent = oldValue;
+                return;
+            }
+        }
+    }
 }
 
-// Initialize game
+// Initialize game  
+console.log('🚀 Starting CyberOps Game initialization...');
 const game = new CyberOpsGame();
+console.log('📦 Game instance created');
+game.init();
+console.log('✅ Game initialized successfully');
 
 // Prevent pull-to-refresh
 document.body.addEventListener('touchmove', (e) => {

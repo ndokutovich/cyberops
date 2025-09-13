@@ -2379,3 +2379,201 @@ body {
     .menu-bg-sparks::before,
     .menu-bg-sparks::after { height: 10px; }
 }
+
+/* 3D Mode Styles */
+#game3DContainer {
+    background: transparent;
+}
+
+#game3DHUD {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    pointer-events: none;
+    color: #00ffff;
+    font-family: 'Courier New', monospace;
+}
+
+/* Crosshair */
+.crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+}
+
+.crosshair-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 2px;
+    background: #00ffff;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 4px #00ffff;
+}
+
+.crosshair-lines .h-line {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    right: 10px;
+    height: 1px;
+    background: #00ffff;
+    transform: translateY(-50%);
+    opacity: 0.7;
+}
+
+.crosshair-lines .v-line {
+    position: absolute;
+    left: 50%;
+    top: 10px;
+    bottom: 10px;
+    width: 1px;
+    background: #00ffff;
+    transform: translateX(-50%);
+    opacity: 0.7;
+}
+
+/* Mode Indicator */
+.mode-indicator {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(0,20,40,0.8);
+    border: 1px solid #00ffff;
+    padding: 8px 15px;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(0,255,255,0.5);
+    animation: pulse 2s infinite;
+}
+
+/* Hint Text */
+.hint-text {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 12px;
+    text-align: center;
+    opacity: 0.8;
+    animation: pulse 3s infinite;
+}
+
+/* 3D Mode Cursor */
+#game3DContainer.pointer-lock {
+    cursor: none;
+}
+
+/* Mobile 3D Adjustments */
+@media (max-width: 480px) {
+    .crosshair {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .mode-indicator {
+        font-size: 12px;
+        padding: 6px 12px;
+        top: 15px;
+        left: 15px;
+    }
+    
+    .hint-text {
+        font-size: 11px;
+        bottom: 80px;
+    }
+}
+
+/* Enhanced 3D HUD */
+.hud3d-top {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 30px;
+    background: rgba(0,20,40,0.8);
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: 1px solid #00ffff;
+}
+
+.health-display-3d,
+.ammo-display-3d,
+.objective-display-3d {
+    color: #00ffff;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(0,255,255,0.5);
+}
+
+.health-display-3d {
+    color: #00ff00;
+}
+
+.ammo-display-3d {
+    color: #ffff00;
+}
+
+.agent-info-3d {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0,20,40,0.8);
+    padding: 15px 20px;
+    border-radius: 10px;
+    border: 1px solid #00ffff;
+}
+
+.agent-name-3d {
+    color: #00ffff;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(0,255,255,0.5);
+    margin-bottom: 5px;
+}
+
+.agent-class-3d {
+    color: #aaaaaa;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+/* Mobile 3D HUD Adjustments */
+@media (max-width: 480px) {
+    .hud3d-top {
+        flex-direction: column;
+        gap: 10px;
+        padding: 8px 15px;
+        top: 15px;
+    }
+    
+    .health-display-3d,
+    .ammo-display-3d,
+    .objective-display-3d {
+        font-size: 12px;
+    }
+    
+    .agent-info-3d {
+        padding: 10px 15px;
+        bottom: 15px;
+        left: 15px;
+    }
+    
+    .agent-name-3d {
+        font-size: 14px;
+    }
+    
+    .agent-class-3d {
+        font-size: 11px;
+    }
+}
