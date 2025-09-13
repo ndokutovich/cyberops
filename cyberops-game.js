@@ -16,6 +16,15 @@ class CyberOpsGame {
         this.totalCampaignTime = 0;
         this.totalEnemiesDefeated = 0;
         
+        // Hub Resources
+        this.credits = 5000;
+        this.researchPoints = 150;
+        this.worldControl = 15;
+        this.availableAgents = [];
+        this.activeAgents = [];
+        this.weapons = [];
+        this.equipment = [];
+        
         // Isometric Settings
         this.tileWidth = 64;
         this.tileHeight = 32;
@@ -74,13 +83,101 @@ class CyberOpsGame {
             { name: "Assault", health: 100, speed: 4, damage: 30, ability: "burst" }
         ];
         
+        this.initializeHub();
         this.init();
+    }
+    
+    initializeHub() {
+        // Initialize available agents with skills
+        this.availableAgents = [
+            { id: 1, name: 'Alex "Shadow" Chen', specialization: 'stealth', skills: ['stealth', 'melee'], cost: 1000, hired: true, health: 90, speed: 5, damage: 18 },
+            { id: 2, name: 'Maya "Code" Rodriguez', specialization: 'hacker', skills: ['hacker', 'electronics'], cost: 1200, hired: true, health: 70, speed: 4, damage: 12 },
+            { id: 3, name: 'Jake "Tank" Morrison', specialization: 'assault', skills: ['assault', 'heavy_weapons'], cost: 1100, hired: true, health: 140, speed: 3, damage: 25 },
+            { id: 4, name: 'Lisa "Ghost" Park', specialization: 'sniper', skills: ['sniper', 'stealth'], cost: 1300, hired: false, health: 85, speed: 4, damage: 35 },
+            { id: 5, name: 'Rico "Boom" Santos', specialization: 'demolition', skills: ['demolition', 'assault'], cost: 1250, hired: false, health: 110, speed: 3, damage: 22 },
+            { id: 6, name: 'Zoe "Wire" Kim', specialization: 'hacker', skills: ['hacker', 'drone_control'], cost: 1400, hired: false, health: 75, speed: 4, damage: 15 }
+        ];
+        
+        // Set up initial active agents (first 4 hired) - restore original 4 agents
+        this.availableAgents[3].hired = true; // Hire the 4th agent (Lisa "Ghost" Park)
+        this.activeAgents = this.availableAgents.filter(agent => agent.hired);
+        
+        // Initialize weapons and equipment
+        this.weapons = [
+            { id: 1, name: 'Silenced Pistol', type: 'weapon', cost: 500, owned: 3, damage: 15 },
+            { id: 2, name: 'Assault Rifle', type: 'weapon', cost: 800, owned: 1, damage: 25 },
+            { id: 3, name: 'Sniper Rifle', type: 'weapon', cost: 1200, owned: 0, damage: 40 },
+            { id: 4, name: 'SMG', type: 'weapon', cost: 600, owned: 2, damage: 20 }
+        ];
+        
+        this.equipment = [
+            { id: 1, name: 'Body Armor', type: 'equipment', cost: 300, owned: 3, protection: 10 },
+            { id: 2, name: 'Hacking Kit', type: 'equipment', cost: 400, owned: 2, hackBonus: 20 },
+            { id: 3, name: 'Explosives Kit', type: 'equipment', cost: 600, owned: 1, damage: 50 },
+            { id: 4, name: 'Stealth Suit', type: 'equipment', cost: 800, owned: 1, stealthBonus: 25 }
+        ];
+        
+        // Update missions with expanded content
+        this.missions = [
+            {
+                id: 1,
+                title: 'Data Heist',
+                description: 'Infiltrate SecureCorp and steal critical data while avoiding detection.',
+                map: 'corporate',
+                enemies: 8,
+                objectives: ['Eliminate all hostiles', 'Avoid civilian casualties', 'Keep at least 2 agents alive'],
+                requiredSkills: [],
+                rewards: { credits: 2000, researchPoints: 50, worldControl: 5 }
+            },
+            {
+                id: 2,
+                title: 'Network Breach',
+                description: 'Hack into government systems and extract classified information.',
+                map: 'government',
+                enemies: 6,
+                objectives: ['Hack all terminals', 'Extract data', 'Escape undetected'],
+                requiredSkills: ['hacker'],
+                rewards: { credits: 2500, researchPoints: 75, worldControl: 8 }
+            },
+            {
+                id: 3,
+                title: 'Sabotage Operation',
+                description: 'Infiltrate industrial facility and sabotage critical infrastructure.',
+                map: 'industrial',
+                enemies: 10,
+                objectives: ['Plant explosives on 3 targets', 'Eliminate security team', 'Extract all agents'],
+                requiredSkills: ['demolition'],
+                rewards: { credits: 3000, researchPoints: 100, worldControl: 10 }
+            },
+            {
+                id: 4,
+                title: 'Assassination Contract',
+                description: 'Eliminate high-value targets while maintaining stealth and precision.',
+                map: 'residential',
+                enemies: 12,
+                objectives: ['Eliminate primary target', 'Eliminate secondary targets', 'No witnesses'],
+                requiredSkills: ['sniper'],
+                rewards: { credits: 4000, researchPoints: 125, worldControl: 12 }
+            },
+            {
+                id: 5,
+                title: 'Final Convergence',
+                description: 'Assault the Syndicate\'s main headquarters and seize control.',
+                map: 'fortress',
+                enemies: 15,
+                objectives: ['Breach main gate', 'Control all sectors', 'Capture the mainframe'],
+                requiredSkills: ['hacker', 'assault', 'demolition'],
+                rewards: { credits: 5000, researchPoints: 200, worldControl: 25 }
+            }
+        ];
     }
     
     init() {
         this.setupEventListeners();
         // Hide main menu initially during splash screens
         document.getElementById('mainMenu').style.display = 'none';
+        // Check for saved game on startup (will be used when menu shows)
+        this.checkForSavedGame();
         this.showSplashScreens();
         this.gameLoop();
     }
@@ -441,25 +538,208 @@ class CyberOpsGame {
         return map;
     }
     
+    generateMapFromType(mapType) {
+        // Handle both old system (actual map objects) and new system (string types)
+        if (typeof mapType === 'object' && mapType.spawn) {
+            return mapType; // Already a map object
+        }
+        
+        // Generate map based on string type
+        switch (mapType) {
+            case 'corporate':
+                return this.generateCorporateMap();
+            case 'government':
+                return this.generateGovernmentMap();
+            case 'industrial':
+                return this.generateIndustrialMap();
+            case 'residential':
+                return this.generateResidentialMap();
+            case 'fortress':
+                return this.generateFortressMap();
+            default:
+                // Fallback to basic map
+                return this.generateMap1();
+        }
+    }
+    
+    generateCorporateMap() {
+        const width = 22;
+        const height = 22;
+        const map = {
+            width, height,
+            tiles: [],
+            spawn: { x: 2, y: 2 },
+            extraction: { x: 19, y: 19 },
+            cover: [],
+            terminals: []
+        };
+        
+        for (let y = 0; y < height; y++) {
+            map.tiles[y] = [];
+            for (let x = 0; x < width; x++) {
+                map.tiles[y][x] = (x === 0 || y === 0 || x === width-1 || y === height-1) ? 1 : 0;
+            }
+        }
+        
+        // Add office cubicles as cover
+        for (let i = 0; i < 8; i++) {
+            map.cover.push({
+                x: 5 + (i % 3) * 5,
+                y: 5 + Math.floor(i / 3) * 4
+            });
+        }
+        
+        return map;
+    }
+    
+    generateGovernmentMap() {
+        const width = 25;
+        const height = 25;
+        const map = {
+            width, height,
+            tiles: [],
+            spawn: { x: 2, y: 12 },
+            extraction: { x: 22, y: 12 },
+            cover: [],
+            terminals: [
+                { x: 8, y: 8, hacked: false },
+                { x: 16, y: 8, hacked: false },
+                { x: 12, y: 16, hacked: false }
+            ]
+        };
+        
+        for (let y = 0; y < height; y++) {
+            map.tiles[y] = [];
+            for (let x = 0; x < width; x++) {
+                map.tiles[y][x] = (x === 0 || y === 0 || x === width-1 || y === height-1) ? 1 : 0;
+            }
+        }
+        
+        // Add security barriers as cover
+        for (let i = 0; i < 6; i++) {
+            map.cover.push({
+                x: 6 + (i % 2) * 12,
+                y: 6 + Math.floor(i / 2) * 6
+            });
+        }
+        
+        return map;
+    }
+    
+    generateIndustrialMap() {
+        const width = 28;
+        const height = 20;
+        const map = {
+            width, height,
+            tiles: [],
+            spawn: { x: 2, y: 2 },
+            extraction: { x: 25, y: 17 },
+            cover: [],
+            terminals: []
+        };
+        
+        for (let y = 0; y < height; y++) {
+            map.tiles[y] = [];
+            for (let x = 0; x < width; x++) {
+                map.tiles[y][x] = (x === 0 || y === 0 || x === width-1 || y === height-1) ? 1 : 0;
+            }
+        }
+        
+        // Add industrial machinery as cover
+        for (let i = 0; i < 12; i++) {
+            map.cover.push({
+                x: 4 + (i % 4) * 6,
+                y: 4 + Math.floor(i / 4) * 4
+            });
+        }
+        
+        return map;
+    }
+    
+    generateResidentialMap() {
+        const width = 30;
+        const height = 25;
+        const map = {
+            width, height,
+            tiles: [],
+            spawn: { x: 2, y: 2 },
+            extraction: { x: 27, y: 22 },
+            cover: [],
+            terminals: []
+        };
+        
+        for (let y = 0; y < height; y++) {
+            map.tiles[y] = [];
+            for (let x = 0; x < width; x++) {
+                map.tiles[y][x] = (x === 0 || y === 0 || x === width-1 || y === height-1) ? 1 : 0;
+            }
+        }
+        
+        // Add houses and gardens as cover
+        for (let i = 0; i < 15; i++) {
+            map.cover.push({
+                x: 4 + (i % 5) * 5,
+                y: 4 + Math.floor(i / 5) * 6
+            });
+        }
+        
+        return map;
+    }
+    
+    generateFortressMap() {
+        const width = 35;
+        const height = 30;
+        const map = {
+            width, height,
+            tiles: [],
+            spawn: { x: 2, y: 15 },
+            extraction: { x: 32, y: 15 },
+            cover: [],
+            terminals: [
+                { x: 30, y: 12, hacked: false },
+                { x: 30, y: 18, hacked: false },
+                { x: 28, y: 15, hacked: false }
+            ]
+        };
+        
+        for (let y = 0; y < height; y++) {
+            map.tiles[y] = [];
+            for (let x = 0; x < width; x++) {
+                map.tiles[y][x] = (x === 0 || y === 0 || x === width-1 || y === height-1) ? 1 : 0;
+            }
+        }
+        
+        // Add fortress walls and defensive positions
+        for (let i = 0; i < 20; i++) {
+            map.cover.push({
+                x: 5 + (i % 5) * 5,
+                y: 5 + Math.floor(i / 5) * 5
+            });
+        }
+        
+        return map;
+    }
+    
     // Game Flow
     updateMenuState() {
         const hasProgress = this.completedMissions.length > 0 || this.currentMissionIndex > 0;
+        const hasSavedGame = this.hasSavedGame();
+        
         document.getElementById('campaignButton').style.display = hasProgress ? 'none' : 'block';
         document.getElementById('continueButton').style.display = hasProgress ? 'block' : 'none';
+        document.getElementById('hubButton').style.display = hasProgress ? 'block' : 'none';
+        document.getElementById('saveButton').style.display = hasProgress ? 'block' : 'none';
+        document.getElementById('loadButton').style.display = hasSavedGame ? 'block' : 'none';
     }
     
     startCampaign() {
         this.currentMissionIndex = 0;
         this.completedMissions = [];
-        document.getElementById('mainMenu').style.display = 'none';
-        this.showMissionBriefing(this.missions[0]);
+        this.showSyndicateHub();
     }
     
     continueCampaign() {
-        document.getElementById('mainMenu').style.display = 'none';
-        if (this.currentMissionIndex < this.missions.length) {
-            this.showMissionBriefing(this.missions[this.currentMissionIndex]);
-        }
+        this.showSyndicateHub();
     }
     
     selectMission() {
@@ -493,11 +773,15 @@ class CyberOpsGame {
             `;
             
             if (isAvailable) {
-                missionDiv.onclick = () => {
-                    this.closeMissionSelect();
+            missionDiv.onclick = () => {
+                this.closeMissionSelect();
+                if (this.currentScreen === 'hub') {
+                    document.getElementById('syndicateHub').style.display = 'none';
+                } else {
                     document.getElementById('mainMenu').style.display = 'none';
-                    this.showMissionBriefing(mission);
-                };
+                }
+                this.startMissionFromHub(index);
+            };
             }
             
             missionList.appendChild(missionDiv);
@@ -528,14 +812,22 @@ class CyberOpsGame {
         squadSel.innerHTML = '';
         this.selectedAgents = [];
         
-        this.agentTemplates.forEach((agent, idx) => {
+        // Use active agents from hub for mission briefing
+        const availableAgentsForMission = this.activeAgents.length > 0 ? this.activeAgents : this.agentTemplates;
+        
+        availableAgentsForMission.forEach((agent, idx) => {
             const card = document.createElement('div');
             card.className = 'agent-card';
+            const agentName = agent.name || `Agent ${idx + 1}`;
+            const agentHealth = agent.health;
+            const agentDamage = agent.damage;
+            const agentSpeed = agent.speed;
+            
             card.innerHTML = `
-                <div style="font-weight: bold; color: #00ffff;">${agent.name}</div>
+                <div style="font-weight: bold; color: #00ffff;">${agentName}</div>
                 <div style="font-size: 0.8em; margin-top: 5px;">
-                    HP: ${agent.health} | DMG: ${agent.damage}<br>
-                    Speed: ${agent.speed}
+                    HP: ${agentHealth} | DMG: ${agentDamage}<br>
+                    Speed: ${agentSpeed}
                 </div>
             `;
             card.onclick = () => {
@@ -550,7 +842,8 @@ class CyberOpsGame {
             };
             squadSel.appendChild(card);
             
-            if (idx < 2) {
+            // Auto-select all available agents (up to 4)
+            if (idx < Math.min(4, availableAgentsForMission.length)) {
                 card.click();
             }
         });
@@ -582,7 +875,9 @@ class CyberOpsGame {
         this.effects = [];
         this.missionTimer = 0;
         this.isPaused = false;
-        this.map = this.currentMission.map;
+        
+        // Generate map based on mission map type
+        this.map = this.generateMapFromType(this.currentMission.map);
         
         // Spawn agents
         const spawn = this.map.spawn;
@@ -817,7 +1112,104 @@ class CyberOpsGame {
     
     togglePause() {
         this.isPaused = !this.isPaused;
-        document.querySelector('.pause-button').textContent = this.isPaused ? '▶' : '⏸';
+        const pauseButton = document.querySelector('.pause-button');
+        
+        if (this.isPaused) {
+            pauseButton.textContent = '▶';
+            this.showPauseMenu();
+        } else {
+            pauseButton.textContent = '⏸';
+            this.closePauseMenu();
+        }
+    }
+    
+    showPauseMenu() {
+        this.showHudDialog(
+            '⏸ GAME PAUSED',
+            `<div style="text-align: center;">
+                <div style="background: rgba(0,255,255,0.1); padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="color: #fff; margin-bottom: 15px;">Mission Status</h3>
+                    <div style="color: #ccc;">
+                        <div>Mission: ${this.currentMission.title}</div>
+                        <div>Time: ${Math.floor(this.missionTimer / 60)}:${String(this.missionTimer % 60).padStart(2, '0')}</div>
+                        <div>Agents Alive: ${this.agents.filter(a => a.alive).length}/${this.agents.length}</div>
+                        <div>Enemies Remaining: ${this.enemies.filter(e => e.alive).length}/${this.enemies.length}</div>
+                    </div>
+                </div>
+            </div>`,
+            [
+                { text: 'RESUME', action: () => this.resumeFromPause() },
+                { text: 'SURRENDER', action: () => this.surrenderMission() },
+                { text: 'RETURN TO HUB', action: () => this.returnToHubFromMission() },
+                { text: 'SETTINGS', action: () => this.showSettingsFromPause() }
+            ]
+        );
+    }
+    
+    closePauseMenu() {
+        this.closeDialog();
+    }
+    
+    resumeFromPause() {
+        this.isPaused = false;
+        document.querySelector('.pause-button').textContent = '⏸';
+        this.closeDialog();
+    }
+    
+    surrenderMission() {
+        this.showHudDialog(
+            '⚠️ SURRENDER MISSION',
+            'Are you sure you want to surrender this mission?<br><br><strong>Warning:</strong> You will lose all progress and return to the Syndicate Hub without rewards.',
+            [
+                { text: 'CONFIRM SURRENDER', action: () => this.performSurrender() },
+                { text: 'CANCEL', action: () => this.showPauseMenu() }
+            ]
+        );
+    }
+    
+    performSurrender() {
+        this.closeDialog();
+        this.isPaused = false;
+        document.querySelector('.pause-button').textContent = '⏸';
+        
+        // Hide game elements
+        document.getElementById('gameHUD').style.display = 'none';
+        
+        // Return to hub
+        this.showSyndicateHub();
+    }
+    
+    returnToHubFromMission() {
+        this.showHudDialog(
+            '🏢 RETURN TO HUB',
+            'Return to Syndicate Hub?<br><br><strong>Note:</strong> Your mission progress will be saved and you can resume later.',
+            [
+                { text: 'RETURN TO HUB', action: () => this.performReturnToHub() },
+                { text: 'CANCEL', action: () => this.showPauseMenu() }
+            ]
+        );
+    }
+    
+    performReturnToHub() {
+        this.closeDialog();
+        this.isPaused = false;
+        document.querySelector('.pause-button').textContent = '⏸';
+        
+        // Hide game elements
+        document.getElementById('gameHUD').style.display = 'none';
+        
+        // Save mission state (could be implemented later for mission resumption)
+        this.showSyndicateHub();
+    }
+    
+    showSettingsFromPause() {
+        this.showHudDialog(
+            'SYSTEM SETTINGS',
+            'Settings panel is currently under development.<br><br>Available options will include:<br>• Audio Controls<br>• Graphics Quality<br>• Control Mapping<br>• Game Preferences',
+            [
+                { text: 'BACK', action: () => this.showPauseMenu() }
+            ]
+        );
     }
     
     backToMenuFromBriefing() {
@@ -832,6 +1224,377 @@ class CyberOpsGame {
             'SYSTEM SETTINGS',
             'Settings panel is currently under development.<br><br>Available options will include:<br>• Audio Controls<br>• Graphics Quality<br>• Control Mapping<br>• Game Preferences',
             [{ text: 'OK', action: 'close' }]
+        );
+    }
+    
+    // Save/Load System
+    saveGame() {
+        try {
+            const saveData = {
+                version: '1.0',
+                timestamp: new Date().toISOString(),
+                gameState: {
+                    currentMissionIndex: this.currentMissionIndex,
+                    completedMissions: [...this.completedMissions],
+                    totalCampaignTime: this.totalCampaignTime,
+                    totalEnemiesDefeated: this.totalEnemiesDefeated,
+                    currentScreen: this.currentScreen
+                }
+            };
+            
+            localStorage.setItem('cyberops_savegame', JSON.stringify(saveData));
+            
+            const saveTime = new Date().toLocaleString();
+            this.showHudDialog(
+                '💾 GAME SAVED',
+                `Your progress has been successfully saved.<br><br><strong>Save Details:</strong><br>• Missions Completed: ${this.completedMissions.length}/${this.missions.length}<br>• Current Mission: ${this.currentMissionIndex + 1}<br>• Save Time: ${saveTime}`,
+                [{ text: 'CONTINUE', action: 'close' }]
+            );
+            
+            // Update menu to show load button
+            this.updateMenuState();
+            
+        } catch (error) {
+            console.error('Failed to save game:', error);
+            this.showHudDialog(
+                '❌ SAVE ERROR',
+                'Failed to save game progress.<br><br>Please ensure you have sufficient storage space and try again.',
+                [{ text: 'OK', action: 'close' }]
+            );
+        }
+    }
+    
+    loadGame() {
+        try {
+            const savedData = localStorage.getItem('cyberops_savegame');
+            if (!savedData) {
+                this.showHudDialog(
+                    '❌ NO SAVE FOUND',
+                    'No saved game data was found.<br><br>Start a new campaign to begin playing.',
+                    [{ text: 'OK', action: 'close' }]
+                );
+                return;
+            }
+            
+            const saveData = JSON.parse(savedData);
+            const saveTime = new Date(saveData.timestamp).toLocaleString();
+            
+            this.showHudDialog(
+                '📁 LOAD GAME',
+                `Found saved game from: ${saveTime}<br><br><strong>Save Details:</strong><br>• Missions Completed: ${saveData.gameState.completedMissions.length}/${this.missions.length}<br>• Current Mission: ${saveData.gameState.currentMissionIndex + 1}<br><br>Load this save game?`,
+                [
+                    { text: 'LOAD GAME', action: () => this.performLoadGame(saveData) },
+                    { text: 'CANCEL', action: 'close' }
+                ]
+            );
+            
+        } catch (error) {
+            console.error('Failed to load game:', error);
+            this.showHudDialog(
+                '❌ LOAD ERROR',
+                'Failed to load saved game.<br><br>The save file may be corrupted or incompatible.',
+                [{ text: 'OK', action: 'close' }]
+            );
+        }
+    }
+    
+    performLoadGame(saveData) {
+        try {
+            // Restore game state
+            this.currentMissionIndex = saveData.gameState.currentMissionIndex;
+            this.completedMissions = [...saveData.gameState.completedMissions];
+            this.totalCampaignTime = saveData.gameState.totalCampaignTime || 0;
+            this.totalEnemiesDefeated = saveData.gameState.totalEnemiesDefeated || 0;
+            
+            // Close dialog and update menu
+            this.closeDialog();
+            this.updateMenuState();
+            
+            this.showHudDialog(
+                '✅ GAME LOADED',
+                `Game successfully loaded!<br><br>Welcome back, Commander.<br><br><strong>Progress:</strong><br>• Missions Completed: ${this.completedMissions.length}/${this.missions.length}<br>• Current Mission: ${this.currentMissionIndex + 1}`,
+                [{ text: 'CONTINUE', action: 'close' }]
+            );
+            
+        } catch (error) {
+            console.error('Failed to perform load:', error);
+            this.showHudDialog(
+                '❌ LOAD ERROR',
+                'An error occurred while loading the game.<br><br>Please try again or start a new campaign.',
+                [{ text: 'OK', action: 'close' }]
+            );
+        }
+    }
+    
+    hasSavedGame() {
+        try {
+            const savedData = localStorage.getItem('cyberops_savegame');
+            return savedData !== null;
+        } catch (error) {
+            console.error('Error checking save game:', error);
+            return false;
+        }
+    }
+    
+    exitGame() {
+        this.showHudDialog(
+            '🚪 EXIT GAME',
+            'Are you sure you want to exit CyberOps: Syndicate?<br><br>Make sure to save your progress before leaving!',
+            [
+                { text: 'SAVE & EXIT', action: () => this.saveAndExit() },
+                { text: 'EXIT', action: () => this.performExit() },
+                { text: 'CANCEL', action: 'close' }
+            ]
+        );
+    }
+    
+    saveAndExit() {
+        // Check if there's progress to save
+        const hasProgress = this.completedMissions.length > 0 || this.currentMissionIndex > 0;
+        
+        if (hasProgress) {
+            try {
+                const saveData = {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    gameState: {
+                        currentMissionIndex: this.currentMissionIndex,
+                        completedMissions: [...this.completedMissions],
+                        totalCampaignTime: this.totalCampaignTime,
+                        totalEnemiesDefeated: this.totalEnemiesDefeated,
+                        currentScreen: this.currentScreen
+                    }
+                };
+                
+                localStorage.setItem('cyberops_savegame', JSON.stringify(saveData));
+            } catch (error) {
+                console.error('Failed to save before exit:', error);
+            }
+        }
+        
+        this.performExit();
+    }
+    
+    performExit() {
+        this.closeDialog();
+        
+        // For web games, we can't actually close the window due to security restrictions
+        // So we'll show a farewell message and optionally redirect
+        this.showHudDialog(
+            '👋 FAREWELL, COMMANDER',
+            'Thank you for playing CyberOps: Syndicate!<br><br>Your progress has been saved and you can return anytime.<br><br>Stay vigilant out there!',
+            [
+                { text: 'CLOSE TAB', action: () => {
+                    try {
+                        window.close();
+                    } catch (e) {
+                        // If we can't close the window, reload to home page
+                        window.location.reload();
+                    }
+                }},
+                { text: 'STAY', action: 'close' }
+            ]
+        );
+    }
+    
+    checkForSavedGame() {
+        // This is called during initialization to set up the menu properly
+        // Will be used when the menu is displayed after splash screens
+    }
+    
+    // Syndicate Hub System
+    showSyndicateHub() {
+        // Hide all other screens
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('gameCompleteScreen').style.display = 'none';
+        document.getElementById('creditsScreen').style.display = 'none';
+        document.getElementById('endScreen').style.display = 'none';
+        document.getElementById('gameHUD').style.display = 'none';
+        document.getElementById('intermissionDialog').classList.remove('show');
+        document.getElementById('hudDialog').classList.remove('show');
+        
+        // Show hub
+        document.getElementById('syndicateHub').style.display = 'flex';
+        this.currentScreen = 'hub';
+        this.updateHubStats();
+    }
+    
+    updateHubStats() {
+        // Update resource displays
+        document.getElementById('hubCredits').textContent = this.credits.toLocaleString();
+        document.getElementById('hubResearchPoints').textContent = this.researchPoints;
+        document.getElementById('hubMissionsComplete').textContent = `${this.completedMissions.length}/${this.missions.length}`;
+        document.getElementById('hubActiveAgents').textContent = this.activeAgents.length;
+        
+        // Update world control
+        document.getElementById('worldControlPercent').textContent = `${this.worldControl}%`;
+        document.getElementById('controlProgress').style.width = `${this.worldControl}%`;
+        
+        // Update status indicators
+        const availableMissions = this.missions.length - this.completedMissions.length;
+        document.getElementById('missionStatus').textContent = `${availableMissions} Available`;
+        document.getElementById('agentStatus').textContent = `${this.activeAgents.length} Active`;
+        document.getElementById('arsenalStatus').textContent = `${this.weapons.length + this.equipment.length} Items`;
+        document.getElementById('researchStatus').textContent = `${Math.floor(this.researchPoints / 50)} Projects`;
+    }
+    
+    showMissionsFromHub() {
+        document.getElementById('syndicateHub').style.display = 'none';
+        this.showMissionSelectDialog();
+    }
+    
+    // Fix mission briefing for hub flow
+    startMissionFromHub(missionIndex) {
+        const mission = this.missions[missionIndex];
+        this.currentMissionIndex = missionIndex;
+        this.showMissionBriefing(mission);
+    }
+    
+    showAgentManagement() {
+        this.showHudDialog(
+            '👥 AGENT MANAGEMENT',
+            this.generateAgentManagementContent(),
+            [
+                { text: 'HIRE AGENTS', action: () => this.showHiringDialog() },
+                { text: 'MANAGE SQUAD', action: () => this.showSquadManagement() },
+                { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+            ]
+        );
+    }
+    
+    generateAgentManagementContent() {
+        let content = '<div style="max-height: 300px; overflow-y: auto;">';
+        content += '<h3 style="color: #00ffff; margin-bottom: 15px;">ACTIVE AGENTS</h3>';
+        
+        this.activeAgents.forEach(agent => {
+            content += `
+                <div style="background: rgba(0,255,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                    <div style="font-weight: bold; color: #fff;">${agent.name}</div>
+                    <div style="color: #ccc; font-size: 0.9em;">
+                        Specialization: ${agent.specialization} | 
+                        Skills: ${agent.skills.join(', ')} | 
+                        Health: ${agent.health} | Damage: ${agent.damage}
+                    </div>
+                </div>`;
+        });
+        
+        const availableAgents = this.availableAgents.filter(agent => !agent.hired);
+        if (availableAgents.length > 0) {
+            content += '<h3 style="color: #ff00ff; margin-top: 20px; margin-bottom: 15px;">AVAILABLE FOR HIRE</h3>';
+            availableAgents.forEach(agent => {
+                content += `
+                    <div style="background: rgba(255,0,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                        <div style="font-weight: bold; color: #fff;">${agent.name}</div>
+                        <div style="color: #ccc; font-size: 0.9em;">
+                            Cost: ${agent.cost} credits | 
+                            Skills: ${agent.skills.join(', ')} | 
+                            Health: ${agent.health} | Damage: ${agent.damage}
+                        </div>
+                    </div>`;
+            });
+        }
+        
+        content += '</div>';
+        return content;
+    }
+    
+    showArsenal() {
+        this.showHudDialog(
+            '🔫 ARSENAL & EQUIPMENT',
+            this.generateArsenalContent(),
+            [
+                { text: 'BUY EQUIPMENT', action: () => this.showShopDialog() },
+                { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+            ]
+        );
+    }
+    
+    generateArsenalContent() {
+        let content = '<div style="max-height: 300px; overflow-y: auto;">';
+        content += '<h3 style="color: #00ffff; margin-bottom: 15px;">WEAPONS</h3>';
+        
+        this.weapons.forEach(weapon => {
+            content += `
+                <div style="background: rgba(0,255,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                    <div style="font-weight: bold; color: #fff;">${weapon.name}</div>
+                    <div style="color: #ccc; font-size: 0.9em;">
+                        Owned: ${weapon.owned} | Damage: ${weapon.damage} | Type: ${weapon.type}
+                    </div>
+                </div>`;
+        });
+        
+        content += '<h3 style="color: #ff00ff; margin-top: 20px; margin-bottom: 15px;">EQUIPMENT</h3>';
+        this.equipment.forEach(item => {
+            let stats = '';
+            if (item.protection) stats += `Protection: ${item.protection}`;
+            if (item.hackBonus) stats += `Hack Bonus: ${item.hackBonus}%`;
+            if (item.stealthBonus) stats += `Stealth Bonus: ${item.stealthBonus}%`;
+            if (item.damage) stats += `Damage: ${item.damage}`;
+            
+            content += `
+                <div style="background: rgba(255,0,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                    <div style="font-weight: bold; color: #fff;">${item.name}</div>
+                    <div style="color: #ccc; font-size: 0.9em;">
+                        Owned: ${item.owned} | ${stats}
+                    </div>
+                </div>`;
+        });
+        
+        content += '</div>';
+        return content;
+    }
+    
+    showResearchLab() {
+        this.showHudDialog(
+            '🔬 RESEARCH LABORATORY',
+            `<div style="text-align: center;">
+                <div style="color: #00ffff; font-size: 1.2em; margin-bottom: 20px;">
+                    Research Points Available: ${this.researchPoints}
+                </div>
+                <div style="background: rgba(0,255,255,0.1); padding: 20px; border-radius: 8px;">
+                    <h3 style="color: #fff;">Available Research Projects:</h3>
+                    <div style="margin: 10px 0;">
+                        • Agent Enhancement (Cost: 100 RP)<br>
+                        • Weapon Upgrades (Cost: 150 RP)<br>
+                        • Stealth Technology (Cost: 200 RP)<br>
+                        • Combat Systems (Cost: 175 RP)
+                    </div>
+                    <p style="color: #ccc; margin-top: 20px; font-style: italic;">
+                        Research system coming in future updates!
+                    </p>
+                </div>
+            </div>`,
+            [
+                { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+            ]
+        );
+    }
+    
+    showIntelligence() {
+        this.showHudDialog(
+            '📡 INTELLIGENCE NETWORK',
+            `<div style="text-align: center;">
+                <div style="background: rgba(0,255,255,0.1); padding: 20px; border-radius: 8px;">
+                    <h3 style="color: #fff; margin-bottom: 20px;">CURRENT INTELLIGENCE REPORTS</h3>
+                    <div style="text-align: left; margin: 15px 0;">
+                        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-left: 3px solid #00ffff; margin: 10px 0;">
+                            <strong style="color: #00ffff;">PRIORITY ALERT:</strong><br>
+                            Increased security detected at government facilities
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-left: 3px solid #ff00ff; margin: 10px 0;">
+                            <strong style="color: #ff00ff;">SURVEILLANCE:</strong><br>
+                            New patrol patterns identified in industrial sectors
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-left: 3px solid #ffff00; margin: 10px 0;">
+                            <strong style="color: #ffff00;">NETWORK CHATTER:</strong><br>
+                            Enemy communications suggest major operation planning
+                        </div>
+                    </div>
+                </div>
+            </div>`,
+            [
+                { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+            ]
         );
     }
 
@@ -942,15 +1705,15 @@ class CyberOpsGame {
     
     continueToNextMission() {
         document.getElementById('intermissionDialog').classList.remove('show');
-        // Load next mission briefing
-        this.loadMission(this.currentMissionIndex);
-        this.showBriefing();
+        // Return to hub after mission completion
+        this.showSyndicateHub();
     }
     
     tryAgainMission() {
         document.getElementById('intermissionDialog').classList.remove('show');
-        // Restart current mission
-        this.loadMission(this.currentMissionIndex);
+        // Restart current mission - need to decrement since we incremented when showing dialog
+        const currentMissionIndex = this.currentMissionIndex - 1;
+        this.currentMission = this.missions[currentMissionIndex];
         this.startMission();
     }
     
@@ -1069,7 +1832,7 @@ class CyberOpsGame {
                         setTimeout(() => {
                             mainMenu.classList.remove('fade-in-from-flash');
                             mainMenu.style.opacity = '';
-                        }, 2600); // Match new animation duration
+                        }, 4600); // Match new animation duration
                     });
                 }, 800); // Fade-out duration
             }, 3000);  // 3 seconds
@@ -1356,7 +2119,7 @@ class CyberOpsGame {
     endMission(victory) {
         this.isPaused = true;
         
-        // Update campaign statistics
+        // Update campaign statistics and rewards
         if (victory) {
             this.totalCampaignTime += this.missionTimer;
             // Count total available enemies for completed missions, not just killed ones
@@ -1365,6 +2128,16 @@ class CyberOpsGame {
             // Add to completed missions
             if (!this.completedMissions.includes(this.currentMission.id)) {
                 this.completedMissions.push(this.currentMission.id);
+            }
+            
+            // Award mission rewards
+            if (this.currentMission.rewards) {
+                this.credits += this.currentMission.rewards.credits || 0;
+                this.researchPoints += this.currentMission.rewards.researchPoints || 0;
+                this.worldControl += this.currentMission.rewards.worldControl || 0;
+                
+                // Cap world control at 100%
+                if (this.worldControl > 100) this.worldControl = 100;
             }
         }
         
