@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk:*)",
+      "Bash(cat:*)",
+      "Bash(for file in js/game-*.js)",
+      "Bash(do wc:*)",
+      "Bash(done)",
+      "Bash(find:*)",
+      "Bash(sed:*)",
+      "Bash(grep:*)",
+      "Bash(for f in js/*.js)",
+      "Bash(paste:*)",
+      "Bash(bc)",
+      "Bash(for f in js/game-*.js)",
+      "Bash(do grep -c \"init3D\" \"$f\")",
+      "Bash(for func in \"constructor\" \"init\" \"gameLoop\" \"render\" \"init3D\" \"showSyndicateHub\" \"saveGame\" \"loadGame\")",
+      "Bash(do echo -n \"$func: Original=\")",
+      "Bash(start cyberops-game.html)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
