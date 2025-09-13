@@ -19,6 +19,7 @@ class CyberOpsGame {
         // Demoscene idle timer
         this.demosceneTimer = null;
         this.demosceneActive = false;
+        this.systemTimeInterval = null;
         this.currentMissionIndex = 0;
         this.missionTimer = 0;
         this.selectedAgents = [];
@@ -649,7 +650,12 @@ class CyberOpsGame {
             spawn: { x: 2, y: 2 },
             extraction: { x: 25, y: 17 },
             cover: [],
-            terminals: []
+            terminals: [],
+            explosiveTargets: [
+                { x: 20, y: 6, planted: false, name: "Power Generator" },
+                { x: 15, y: 10, planted: false, name: "Control Panel" },
+                { x: 22, y: 14, planted: false, name: "Main Server" }
+            ]
         };
         
         for (let y = 0; y < height; y++) {
@@ -679,7 +685,12 @@ class CyberOpsGame {
             spawn: { x: 2, y: 2 },
             extraction: { x: 27, y: 22 },
             cover: [],
-            terminals: []
+            terminals: [],
+            targets: [
+                { x: 20, y: 12, eliminated: false, name: "Primary Target", type: "primary" },
+                { x: 15, y: 8, eliminated: false, name: "Secondary Target A", type: "secondary" },
+                { x: 25, y: 16, eliminated: false, name: "Secondary Target B", type: "secondary" }
+            ]
         };
         
         for (let y = 0; y < height; y++) {
@@ -710,9 +721,12 @@ class CyberOpsGame {
             extraction: { x: 32, y: 15 },
             cover: [],
             terminals: [
-                { x: 30, y: 12, hacked: false },
-                { x: 30, y: 18, hacked: false },
-                { x: 28, y: 15, hacked: false }
+                { x: 30, y: 12, hacked: false, name: "Sector Alpha Control" },
+                { x: 30, y: 18, hacked: false, name: "Sector Beta Control" },
+                { x: 28, y: 15, hacked: false, name: "Main Mainframe" }
+            ],
+            gates: [
+                { x: 10, y: 15, breached: false, name: "Main Gate" }
             ]
         };
         
@@ -1012,8 +1026,16 @@ class CyberOpsGame {
                 this.throwGrenade(agent);
                 agent.cooldowns[2] = 180;
                 break;
-            case 3: // Hack
-                this.hackNearestTerminal(agent);
+            case 3: // Hack/Interact
+                if (this.currentMission.id === 3) {
+                    this.plantNearestExplosive(agent);
+                } else if (this.currentMission.id === 4) {
+                    this.eliminateNearestTarget(agent);
+                } else if (this.currentMission.id === 5) {
+                    this.breachNearestGate(agent) || this.hackNearestTerminal(agent);
+                } else {
+                    this.hackNearestTerminal(agent);
+                }
                 agent.cooldowns[3] = 120;
                 break;
             case 4: // Shield
@@ -1119,6 +1141,102 @@ class CyberOpsGame {
             duration: 180,
             frame: 0
         });
+    }
+    
+    plantNearestExplosive(agent) {
+        let nearest = null;
+        let minDist = Infinity;
+        
+        if (!this.map.explosiveTargets) return false;
+        
+        this.map.explosiveTargets.forEach(target => {
+            if (target.planted) return;
+            const dist = Math.sqrt(
+                Math.pow(target.x - agent.x, 2) + 
+                Math.pow(target.y - agent.y, 2)
+            );
+            if (dist < minDist && dist < 3) {
+                minDist = dist;
+                nearest = target;
+            }
+        });
+        
+        if (nearest) {
+            nearest.planted = true;
+            this.effects.push({
+                type: 'explosive',
+                x: nearest.x,
+                y: nearest.y,
+                frame: 0,
+                duration: 60
+            });
+        }
+        
+        return !!nearest;
+    }
+    
+    eliminateNearestTarget(agent) {
+        let nearest = null;
+        let minDist = Infinity;
+        
+        if (!this.map.targets) return false;
+        
+        this.map.targets.forEach(target => {
+            if (target.eliminated) return;
+            const dist = Math.sqrt(
+                Math.pow(target.x - agent.x, 2) + 
+                Math.pow(target.y - agent.y, 2)
+            );
+            if (dist < minDist && dist < 3) {
+                minDist = dist;
+                nearest = target;
+            }
+        });
+        
+        if (nearest) {
+            nearest.eliminated = true;
+            this.effects.push({
+                type: 'eliminate',
+                x: nearest.x,
+                y: nearest.y,
+                frame: 0,
+                duration: 60
+            });
+        }
+        
+        return !!nearest;
+    }
+    
+    breachNearestGate(agent) {
+        let nearest = null;
+        let minDist = Infinity;
+        
+        if (!this.map.gates) return false;
+        
+        this.map.gates.forEach(gate => {
+            if (gate.breached) return;
+            const dist = Math.sqrt(
+                Math.pow(gate.x - agent.x, 2) + 
+                Math.pow(gate.y - agent.y, 2)
+            );
+            if (dist < minDist && dist < 4) {
+                minDist = dist;
+                nearest = gate;
+            }
+        });
+        
+        if (nearest) {
+            nearest.breached = true;
+            this.effects.push({
+                type: 'breach',
+                x: nearest.x,
+                y: nearest.y,
+                frame: 0,
+                duration: 80
+            });
+        }
+        
+        return !!nearest;
     }
     
     alertEnemies(x, y, radius) {
@@ -2530,6 +2648,9 @@ class CyberOpsGame {
                             // No currentTime change - let music flow naturally
                         }
                         
+                        console.log('🎬 Natural splash progression - starting demoscene timer');
+                        this.startDemosceneIdleTimer();
+                        
                         // Remove splash click handlers
                         this.removeSplashClickHandlers();
                         
@@ -2598,6 +2719,8 @@ class CyberOpsGame {
     }
     
     finalizeSplashToMenu() {
+        console.log('🎬 finalizeSplashToMenu() called - transitioning to main menu');
+        
         const mainMenu = document.getElementById('mainMenu');
         mainMenu.style.display = 'flex';
         mainMenu.style.opacity = '0';
@@ -2610,8 +2733,12 @@ class CyberOpsGame {
         this.currentScreen = 'menu';
         this.updateMenuState();
         
+        console.log('🎬 Starting demoscene idle timer from finalizeSplashToMenu');
         // Start demoscene idle timer
         this.startDemosceneIdleTimer();
+        
+        // Start system time update
+        this.startSystemTimeUpdate();
         
         // Seek to main menu section if skipped, or let it continue naturally
         if (this.audioEnabled) {
@@ -2645,16 +2772,62 @@ class CyberOpsGame {
         }
     }
 
+    // System Time Display for Main Menu
+    startSystemTimeUpdate() {
+        if (this.systemTimeInterval) {
+            clearInterval(this.systemTimeInterval);
+        }
+        
+        const updateTime = () => {
+            const timeElement = document.getElementById('systemTime');
+            if (timeElement && this.currentScreen === 'menu') {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+        };
+        
+        // Update immediately and then every second
+        updateTime();
+        this.systemTimeInterval = setInterval(updateTime, 1000);
+    }
+    
+    stopSystemTimeUpdate() {
+        if (this.systemTimeInterval) {
+            clearInterval(this.systemTimeInterval);
+            this.systemTimeInterval = null;
+        }
+    }
+
     // Demoscene Attract Mode System
     startDemosceneIdleTimer() {
+        console.log('🎬 startDemosceneIdleTimer() called:');
+        console.log('- currentScreen:', this.currentScreen);
+        console.log('- demosceneActive:', this.demosceneActive);
+        console.log('- DEMOSCENE_IDLE_TIMEOUT:', this.DEMOSCENE_IDLE_TIMEOUT);
+        
         // Clear existing timer
         this.clearDemosceneTimer();
         
         if (this.currentScreen === 'menu' && !this.demosceneActive) {
-            console.log('Starting demoscene idle timer (15 seconds)');
+            console.log('✅ Starting demoscene idle timer (' + this.DEMOSCENE_IDLE_TIMEOUT + ' ms)');
             this.demosceneTimer = setTimeout(() => {
-                this.showDemoscene();
+                console.log('⏰ Demoscene timer fired! Checking conditions...');
+                console.log('- currentScreen at timeout:', this.currentScreen);
+                console.log('- demosceneActive at timeout:', this.demosceneActive);
+                if (this.currentScreen === 'menu' && !this.demosceneActive) {
+                    console.log('🎬 Starting demoscene!');
+                    this.showDemoscene();
+                } else {
+                    console.log('❌ Demoscene conditions not met at timeout');
+                }
             }, this.DEMOSCENE_IDLE_TIMEOUT);
+        } else {
+            console.log('❌ Not starting demoscene timer - conditions not met');
+            console.log('  - currentScreen === "menu":', this.currentScreen === 'menu');
+            console.log('  - !demosceneActive:', !this.demosceneActive);
         }
     }
     
@@ -3793,6 +3966,66 @@ class CyberOpsGame {
                     this.endMission(true);
                 }
             }
+        } else if (this.currentMission.id === 3) {
+            // Industrial Sabotage - Plant explosives on 3 targets
+            const plantedCount = this.map.explosiveTargets ? this.map.explosiveTargets.filter(t => t.planted).length : 0;
+            const allPlanted = plantedCount === 3;
+            
+            document.getElementById('objectiveTracker').textContent = 
+                aliveEnemies > 0 ? 
+                `Eliminate security: ${deadEnemies}/${this.currentMission.enemies} | Explosives: ${plantedCount}/3` :
+                allPlanted ? 'All objectives complete! Extract all agents!' : 
+                `Plant explosives: ${plantedCount}/3 | Eliminate remaining security`;
+            
+            if (aliveEnemies === 0 && allPlanted) {
+                const atExtraction = this.agents.some(agent => {
+                    if (!agent.alive) return false;
+                    const dist = Math.sqrt(
+                        Math.pow(agent.x - this.map.extraction.x, 2) + 
+                        Math.pow(agent.y - this.map.extraction.y, 2)
+                    );
+                    return dist < 2;
+                });
+                
+                if (atExtraction) {
+                    this.endMission(true);
+                }
+            }
+        } else if (this.currentMission.id === 4) {
+            // Assassination Contract - Eliminate targets
+            const primaryEliminated = this.map.targets ? this.map.targets.filter(t => t.type === 'primary' && t.eliminated).length : 0;
+            const secondaryEliminated = this.map.targets ? this.map.targets.filter(t => t.type === 'secondary' && t.eliminated).length : 0;
+            const allTargetsEliminated = primaryEliminated === 1 && secondaryEliminated === 2;
+            
+            document.getElementById('objectiveTracker').textContent = 
+                `Primary targets: ${primaryEliminated}/1 | Secondary targets: ${secondaryEliminated}/2 | Witnesses: ${deadEnemies}/${this.currentMission.enemies}`;
+            
+            if (allTargetsEliminated && aliveEnemies === 0) {
+                const atExtraction = this.agents.some(agent => {
+                    if (!agent.alive) return false;
+                    const dist = Math.sqrt(
+                        Math.pow(agent.x - this.map.extraction.x, 2) + 
+                        Math.pow(agent.y - this.map.extraction.y, 2)
+                    );
+                    return dist < 2;
+                });
+                
+                if (atExtraction) {
+                    this.endMission(true);
+                }
+            }
+        } else if (this.currentMission.id === 5) {
+            // Final Convergence - Breach gate, control sectors, capture mainframe
+            const gateBreached = this.map.gates ? this.map.gates.filter(g => g.breached).length > 0 : false;
+            const sectorsControlled = this.map.terminals ? this.map.terminals.filter(t => t.hacked).length : 0;
+            const allObjectives = gateBreached && sectorsControlled === 3 && aliveEnemies === 0;
+            
+            document.getElementById('objectiveTracker').textContent = 
+                `Gate: ${gateBreached ? 'Breached' : 'Secured'} | Sectors: ${sectorsControlled}/3 | Security: ${deadEnemies}/${this.currentMission.enemies}`;
+            
+            if (allObjectives) {
+                this.endMission(true);
+            }
         }
     }
     
@@ -3851,6 +4084,24 @@ class CyberOpsGame {
             if (this.map.terminals) {
                 this.map.terminals.forEach(terminal => {
                     this.renderTerminal(terminal.x, terminal.y, terminal.hacked);
+                });
+            }
+            
+            if (this.map.explosiveTargets) {
+                this.map.explosiveTargets.forEach(target => {
+                    this.renderExplosiveTarget(target.x, target.y, target.planted);
+                });
+            }
+            
+            if (this.map.targets) {
+                this.map.targets.forEach(target => {
+                    this.renderAssassinationTarget(target.x, target.y, target.type, target.eliminated);
+                });
+            }
+            
+            if (this.map.gates) {
+                this.map.gates.forEach(gate => {
+                    this.renderGate(gate.x, gate.y, gate.breached);
                 });
             }
             
@@ -4240,6 +4491,122 @@ class CyberOpsGame {
             );
             mctx.stroke();
         }
+    }
+    
+    renderExplosiveTarget(x, y, planted) {
+        const ctx = this.ctx;
+        const isoPos = this.worldToIsometric(x, y);
+        
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+        
+        if (planted) {
+            // Render planted explosive (red, pulsing)
+            const pulse = Math.sin(Date.now() * 0.01) * 0.3 + 0.7;
+            ctx.fillStyle = `rgba(255, 0, 0, ${pulse})`;
+            ctx.strokeStyle = '#ff6666';
+        } else {
+            // Render target structure (gray)
+            ctx.fillStyle = '#666666';
+            ctx.strokeStyle = '#999999';
+        }
+        
+        ctx.lineWidth = 2;
+        ctx.fillRect(-15, -15, 30, 30);
+        ctx.strokeRect(-15, -15, 30, 30);
+        
+        // Add warning symbol or checkmark
+        ctx.fillStyle = planted ? '#ffff00' : '#ffaa00';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(planted ? 'BOMB' : 'TARGET', 0, 0);
+        
+        ctx.restore();
+    }
+    
+    renderAssassinationTarget(x, y, type, eliminated) {
+        const ctx = this.ctx;
+        const isoPos = this.worldToIsometric(x, y);
+        
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+        
+        if (eliminated) {
+            // Render eliminated target (dark red)
+            ctx.fillStyle = '#440000';
+            ctx.strokeStyle = '#ff0000';
+        } else if (type === 'primary') {
+            // Primary target (bright red)
+            ctx.fillStyle = '#cc0000';
+            ctx.strokeStyle = '#ff6666';
+        } else {
+            // Secondary target (orange)
+            ctx.fillStyle = '#cc6600';
+            ctx.strokeStyle = '#ff9966';
+        }
+        
+        const pulse = eliminated ? 0.3 : Math.sin(Date.now() * 0.005) * 0.2 + 0.8;
+        ctx.globalAlpha = pulse;
+        
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, -10, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Add target symbol
+        ctx.fillStyle = eliminated ? '#666666' : '#ffffff';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(eliminated ? 'DEAD' : (type === 'primary' ? 'P' : 'S'), 0, -10);
+        
+        ctx.restore();
+    }
+    
+    renderGate(x, y, breached) {
+        const ctx = this.ctx;
+        const isoPos = this.worldToIsometric(x, y);
+        
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+        
+        if (breached) {
+            // Render breached gate (broken, smoking)
+            ctx.fillStyle = '#333333';
+            ctx.strokeStyle = '#666666';
+        } else {
+            // Render intact gate (metallic)
+            ctx.fillStyle = '#555555';
+            ctx.strokeStyle = '#888888';
+        }
+        
+        ctx.lineWidth = 3;
+        ctx.fillRect(-25, -20, 50, 40);
+        ctx.strokeRect(-25, -20, 50, 40);
+        
+        // Add gate details
+        if (breached) {
+            // Add explosion/damage effects
+            ctx.fillStyle = '#ff6600';
+            ctx.fillRect(-20, -15, 15, 10);
+            ctx.fillRect(5, -10, 15, 8);
+            ctx.fillStyle = '#ffaa00';
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('BREACH', 0, 0);
+        } else {
+            // Add lock symbol
+            ctx.fillStyle = '#ffff00';
+            ctx.font = 'bold 12px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('GATE', 0, 0);
+        }
+        
+        ctx.restore();
     }
 }
 

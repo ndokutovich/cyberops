@@ -18,17 +18,22 @@ body {
     touch-action: none;
 }
 
-/* Main Menu */
+/* Main Menu - Cyberpunk Redesign */
 #mainMenu {
     position: fixed;
     inset: 0;
     display: none;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: radial-gradient(circle at center, rgba(0,255,255,0.1) 0%, transparent 70%);
+    background: linear-gradient(135deg, 
+        rgba(5, 10, 25, 0.95) 0%, 
+        rgba(10, 15, 35, 0.95) 25%,
+        rgba(15, 25, 45, 0.95) 50%,
+        rgba(10, 20, 40, 0.95) 75%,
+        rgba(5, 15, 30, 0.95) 100%
+    );
     z-index: 1000;
     transition: opacity 0.5s;
+    overflow: hidden;
 }
 
 .game-title {
@@ -1831,5 +1836,467 @@ body {
     .hub-footer {
         flex-direction: column;
         align-items: center;
+    }
+}
+
+/* Menu Background Effects */
+.menu-bg-effects {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.menu-grid {
+    position: absolute;
+    inset: 0;
+    background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 30px 30px;
+    animation: menuGridMove 20s linear infinite;
+}
+
+.menu-particles {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(1px 1px at 20% 30%, #00ffff, transparent),
+                radial-gradient(1px 1px at 60% 70%, #ff00ff, transparent),
+                radial-gradient(1px 1px at 90% 40%, #00ffff, transparent),
+                radial-gradient(1px 1px at 40% 80%, #ff00ff, transparent),
+                radial-gradient(1px 1px at 10% 90%, #00ffff, transparent);
+    background-size: 200px 200px;
+    animation: menuParticlesFloat 15s linear infinite;
+}
+
+.menu-scanning-lines {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, 
+        transparent 0%, 
+        rgba(0, 255, 255, 0.05) 2%, 
+        transparent 4%
+    );
+    background-size: 100% 50px;
+    animation: menuScanLines 3s linear infinite;
+}
+
+.menu-data-streams {
+    position: absolute;
+    inset: 0;
+}
+
+.menu-data-stream {
+    position: absolute;
+    width: 2px;
+    height: 100vh;
+    background: linear-gradient(transparent, rgba(0, 255, 255, 0.4), transparent);
+    animation: menuDataStream 8s linear infinite;
+}
+
+.menu-data-stream.stream-1 {
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.menu-data-stream.stream-2 {
+    left: 50%;
+    animation-delay: 2s;
+    background: linear-gradient(transparent, rgba(255, 0, 255, 0.4), transparent);
+}
+
+.menu-data-stream.stream-3 {
+    right: 15%;
+    animation-delay: 4s;
+}
+
+/* Menu Layout */
+.menu-header {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 40px 20px 20px;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+    margin-bottom: 30px;
+}
+
+.system-status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.status-indicator {
+    color: #00ff00;
+    font-size: 1.2em;
+    animation: menuStatusPulse 1.5s infinite;
+}
+
+.status-text {
+    color: #00ffff;
+    font-weight: bold;
+}
+
+.status-time {
+    color: #ffaa00;
+    font-weight: bold;
+}
+
+.menu-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    flex: 1;
+}
+
+.main-panel {
+    max-width: 400px; /* Optimal width for button text */
+    width: 100%;
+    margin-left: 60px; /* Asymmetric shift to the right */
+}
+
+.menu-panel {
+    background: linear-gradient(135deg, 
+        rgba(0, 255, 255, 0.08) 0%, 
+        rgba(255, 0, 255, 0.08) 100%
+    );
+    border: 1px solid rgba(0, 255, 255, 0.4);
+    border-radius: 10px;
+    padding: 20px;
+    backdrop-filter: blur(5px);
+    animation: menuPanelGlow 3s ease-in-out infinite alternate;
+}
+
+.panel-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #00ffff;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.menu-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Slightly larger gap for better spacing */
+}
+
+.menu-info-panel {
+    margin-top: 30px;
+    max-width: 400px; /* Match main panel width */
+    width: 100%;
+    background: rgba(0, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+    margin-left: 60px; /* Match the panels alignment */
+}
+
+.system-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.info-label {
+    color: #aaa;
+}
+
+.info-value {
+    color: #00ffff;
+    font-weight: bold;
+}
+
+.status-secure {
+    color: #00ff00 !important;
+}
+
+.menu-footer {
+    position: relative;
+    z-index: 2;
+    padding: 20px;
+    border-top: 1px solid rgba(0, 255, 255, 0.2);
+    margin-top: auto;
+}
+
+.menu-credits {
+    text-align: center;
+    overflow: hidden;
+    height: 20px;
+}
+
+.credits-scroll {
+    display: inline-block;
+    color: #666;
+    font-size: 0.8em;
+    font-family: monospace;
+    white-space: nowrap;
+    animation: menuCreditsScroll 30s linear infinite;
+}
+
+/* Enhanced Menu Buttons */
+.menu-button {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Center align content */
+    gap: 12px;
+    padding: 15px 20px;
+    margin: 0;
+    border: 1px solid;
+    border-radius: 6px;
+    background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%);
+    color: #fff;
+    font-size: 0.95em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    width: 100%; /* Full width of container */
+    max-width: 100%; /* Don't exceed container */
+    white-space: nowrap; /* Prevent text wrapping */
+    text-align: center; /* Center align text */
+    box-sizing: border-box; /* Include padding in width calculation */
+}
+
+.menu-button:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s;
+}
+
+.menu-button:hover:before {
+    left: 100%;
+}
+
+.button-icon {
+    font-size: 1.1em;
+}
+
+.button-text {
+    text-align: center; /* Center align button text */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ellipsis if text is too long */
+    white-space: nowrap;
+}
+
+/* Button Variants */
+.menu-button.primary {
+    border-color: #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    color: #00ffff;
+}
+
+.menu-button.primary:hover {
+    background: linear-gradient(135deg, rgba(0,255,255,0.1) 0%, rgba(0,255,255,0.2) 100%);
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
+    transform: translateX(5px);
+}
+
+.menu-button.secondary {
+    border-color: #ff00ff;
+    color: #ff00ff;
+    box-shadow: 0 0 10px rgba(255, 0, 255, 0.2);
+}
+
+.menu-button.secondary:hover {
+    background: linear-gradient(135deg, rgba(255,0,255,0.1) 0%, rgba(255,0,255,0.2) 100%);
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
+    transform: translateX(5px);
+}
+
+.menu-button.tertiary {
+    border-color: #ffaa00;
+    color: #ffaa00;
+    box-shadow: 0 0 8px rgba(255, 170, 0, 0.15);
+}
+
+.menu-button.tertiary:hover {
+    background: linear-gradient(135deg, rgba(255,170,0,0.1) 0%, rgba(255,170,0,0.2) 100%);
+    box-shadow: 0 0 15px rgba(255, 170, 0, 0.3);
+    transform: translateX(3px);
+}
+
+.menu-button.danger {
+    border-color: #ff4444;
+    color: #ff4444;
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.2);
+}
+
+.menu-button.danger:hover {
+    background: linear-gradient(135deg, rgba(255,68,68,0.1) 0%, rgba(255,68,68,0.2) 100%);
+    box-shadow: 0 0 20px rgba(255, 68, 68, 0.4);
+    transform: translateX(5px);
+}
+
+/* Menu Animations */
+@keyframes menuGridMove {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(30px, 30px); }
+}
+
+@keyframes menuParticlesFloat {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-100vh); }
+}
+
+@keyframes menuScanLines {
+    0% { transform: translateY(-50px); }
+    100% { transform: translateY(100vh); }
+}
+
+@keyframes menuDataStream {
+    0% { transform: translateY(-100vh); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes menuSubtitleBlink {
+    0%, 80%, 100% { opacity: 1; }
+    85%, 95% { opacity: 0.3; }
+}
+
+@keyframes menuStatusPulse {
+    0%, 50%, 100% { opacity: 1; }
+    25%, 75% { opacity: 0.3; }
+}
+
+@keyframes menuPanelGlow {
+    0% { box-shadow: 0 0 5px rgba(0, 255, 255, 0.2); }
+    100% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.4); }
+}
+
+@keyframes menuCreditsScroll {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+}
+
+/* Mobile Menu Adjustments */
+@media (max-width: 768px) {
+    .main-panel {
+        margin-left: 20px; /* Reduced asymmetric shift for mobile */
+        max-width: calc(100% - 40px);
+    }
+    
+    .menu-info-panel {
+        margin-left: 20px; /* Match mobile panels alignment */
+        max-width: calc(100% - 40px);
+    }
+    
+    .menu-button {
+        width: 100%; /* Full width on tablets */
+        font-size: 0.9em;
+        padding: 14px 18px;
+    }
+    
+    .menu-header {
+        padding: 30px 15px 15px;
+    }
+    
+    .game-title {
+        font-size: 2em;
+    }
+    
+    .system-status {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .menu-content {
+        padding: 15px;
+    }
+    
+    .menu-info-panel {
+        margin-top: 20px;
+    }
+    
+    .menu-button {
+        padding: 15px;
+        font-size: 1em;
+    }
+    
+    .button-text {
+        text-align: center; /* Center align on all devices */
+    }
+}
+
+@media (max-width: 480px) {
+    .menu-header {
+        padding: 20px 10px 10px;
+    }
+    
+    .game-title {
+        font-size: 1.8em;
+    }
+    
+    .subtitle {
+        font-size: 0.9em;
+        margin: 8px 0 15px;
+    }
+    
+    .menu-content {
+        padding: 10px;
+    }
+    
+    .main-panel {
+        margin-left: 10px; /* Minimal asymmetric shift for small mobile */
+        max-width: calc(100% - 20px);
+    }
+    
+    .menu-info-panel {
+        margin-left: 10px; /* Match small mobile panels alignment */
+        max-width: calc(100% - 20px);
+    }
+    
+    .menu-button {
+        width: 100%; /* Full width on mobile */
+        font-size: 0.85em;
+        padding: 12px 15px;
+        gap: 8px;
+    }
+    
+    .menu-panel {
+        padding: 15px;
+    }
+    
+    .panel-title {
+        font-size: 1.1em;
+        margin-bottom: 10px;
+    }
+    
+    .menu-actions {
+        gap: 6px;
+    }
+    
+    .menu-button {
+        padding: 12px;
+        font-size: 0.9em;
     }
 }
