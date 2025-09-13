@@ -8,6 +8,11 @@
     <meta name="theme-color" content="#0a0e1a">
     <title>CyberOps: Syndicate</title>
     <link rel="stylesheet" href="cyberops-game.css">
+    
+    <!-- Three.js Library - LOCAL FILE -->
+    <script src="three.js" onload="console.log('✅ Three.js loaded from LOCAL FILE!');"
+                          onerror="console.error('❌ Failed to load local three.js file!');"></script>
+    
 </head>
 <body>
     <!-- Initial Start Screen -->
@@ -169,8 +174,7 @@
     </div>
 
         <!-- Audio element for unified menu music track -->
-        <!-- 3D Engine - Three.js (minimal setup without PointerLockControls) -->
-        <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+        <!-- 3D Engine - Three.js moved to head section to load earlier -->
         
         <audio id="gameMusic" preload="auto" loop>
             <source src="game-music.wav" type="audio/wav">

@@ -84,6 +84,7 @@ class CyberOpsGame {
         
         // CRITICAL: Add protection against accidental clearing
         this.selectionProtection = true;
+        console.log('🔧 selectionProtection set to:', this.selectionProtection);
         this.keys3D = {
             W: false, A: false, S: false, D: false,
             mouse: { x: 0, y: 0, deltaX: 0, deltaY: 0 }
@@ -95,9 +96,50 @@ class CyberOpsGame {
             terminals: [],
             ground: null
         };
+        
+        // NOW CALL THE INITIALIZATION FUNCTIONS IN THE CONSTRUCTOR
+        console.log('🔧 About to call setupCanvas()...');
+        this.setupCanvas();
+        console.log('✅ setupCanvas() completed');
+        
+        console.log('🔧 About to call loadMissionData()...');
+        this.loadMissionData();
+        console.log('✅ loadMissionData() completed');
+        
+        console.log('🔧 About to call initializeHub()...');
+        this.initializeHub();
+        console.log('✅ initializeHub() completed');
+        
+        // Initialize 3D system - check if Three.js is loaded
+        console.log('🔍 Checking Three.js availability...');
+        console.log('- window.THREE exists:', !!window.THREE);
+        console.log('- typeof THREE:', typeof THREE);
+        
+        try {
+            console.log('🚀 About to call init3D()...');
+            this.init3D();
+            console.log('✅ init3D() call completed');
+        } catch (error) {
+            console.error('💥 ERROR in init3D():', error);
+            console.error('Stack trace:', error.stack);
+        }
+        
+        console.log('🏗️ Constructor completed - checking key data:');
+        console.log('- missions:', this.missions ? this.missions.length : 'undefined');
+        console.log('- activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
+        console.log('- completedMissions:', this.completedMissions ? this.completedMissions.length : 'undefined');
+        
+        // CRITICAL CHECK: Make sure missions are really defined
+        if (!this.missions) {
+            console.error('🚨 CRITICAL ERROR: Constructor finished but this.missions is STILL undefined!');
+            console.log('🔧 Force calling initializeHub() again as emergency fix...');
+            this.initializeHub();
+        }
     }
     
     setupCanvas() {
+        console.log('🎨 setupCanvas() - setting up canvas and game state');
+        
         // Isometric Settings  
         this.tileWidth = 64;
         this.tileHeight = 32;
@@ -132,22 +174,20 @@ class CyberOpsGame {
         this.audioEnabled = false;
         this.audioElementsInitialized = false;
         
-        this.setupCanvas();
-        this.loadMissionData();
-        this.initializeHub();
-        this.init3D();
+        // Get canvas elements
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
         
-        console.log('🏗️ Constructor completed - checking key data:');
-        console.log('- missions:', this.missions ? this.missions.length : 'undefined');
-        console.log('- activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
-        console.log('- completedMissions:', this.completedMissions ? this.completedMissions.length : 'undefined');
+        // Set canvas size
+        this.resizeCanvas();
         
-        // CRITICAL CHECK: Make sure missions are really defined
-        if (!this.missions) {
-            console.error('🚨 CRITICAL ERROR: Constructor finished but this.missions is STILL undefined!');
-            console.log('🔧 Force calling initializeHub() again as emergency fix...');
-            this.initializeHub();
-        }
+        // Add resize listener
+        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.resizeCanvas(), 100);
+        });
+        
+        console.log('✅ setupCanvas() internal work completed');
     }
     
     initializeAudio() {
@@ -4942,13 +4982,39 @@ class CyberOpsGame {
     // 3D SYSTEM IMPLEMENTATION
     
     init3D() {
+        console.log('🎮 init3D() FUNCTION ENTERED!');
+        console.log('- window.THREE:', !!window.THREE);
+        console.log('- typeof THREE:', typeof THREE);
+        console.log('- THREE available globally:', typeof window.THREE);
+        
         if (!window.THREE) {
-            console.warn('Three.js not loaded, 3D features disabled');
-            console.log('Available globals:', Object.keys(window).filter(k => k.includes('THREE') || k.includes('three')));
+            console.warn('❌ Three.js not loaded, 3D features disabled');
+            console.log('📋 Available globals:', Object.keys(window).filter(k => k.includes('THREE') || k.includes('three')));
+            
+            // Try delayed initialization (Three.js might load later)
+            console.log('🔄 Attempting delayed 3D initialization...');
+            setTimeout(() => {
+                console.log('🕐 Delayed check - window.THREE:', !!window.THREE);
+                if (window.THREE) {
+                    console.log('🎉 Three.js now available! Retrying initialization...');
+                    this.init3D();
+                } else {
+                    console.error('💥 Three.js still not available after delay');
+                }
+            }, 2000);
             return;
         }
         
         console.log('🎮 Initializing 3D system...', 'THREE version:', THREE.REVISION);
+        
+        // Get 3D container
+        this.container3D = document.getElementById('game3DContainer');
+        console.log('- 3D container found:', !!this.container3D);
+        
+        if (!this.container3D) {
+            console.error('❌ 3D container not found!');
+            return;
+        }
         
         // Create scene
         this.scene3D = new THREE.Scene();
@@ -4984,7 +5050,27 @@ class CyberOpsGame {
         pinkLight.position.set(-5, 10, -5);
         this.scene3D.add(pinkLight);
         
+        // Initialize 3D HUD
+        this.gameHUD3D = document.getElementById('game3DHUD');
+        console.log('- 3D HUD found:', !!this.gameHUD3D);
+        
+        // Initialize other 3D components
+        this.world3D = {
+            agents: [],
+            enemies: [],
+            walls: [],
+            terminals: []
+        };
+        
         console.log('✅ 3D system initialized successfully');
+        console.log('📊 3D System Components:', {
+            scene3D: !!this.scene3D,
+            renderer3D: !!this.renderer3D,
+            camera3D: !!this.camera3D,
+            container3D: !!this.container3D,
+            canvas3D: !!this.canvas3D,
+            gameHUD3D: !!this.gameHUD3D
+        });
     }
     
     switchCameraMode() {
@@ -5607,6 +5693,13 @@ class CyberOpsGame {
                 this._selectedAgent = oldValue;
                 return;
             }
+        }
+    }
+    
+    resizeCanvas() {
+        if (this.canvas) {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
         }
     }
 }
