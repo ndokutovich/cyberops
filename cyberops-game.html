@@ -207,94 +207,48 @@
         </audio>
 
     <!-- Main Menu -->
-    <div id="mainMenu" class="menu-screen">
+    <div id="mainMenu">
+        <!-- Background Effects (enhanced cyberpunk atmosphere) -->
         <div class="menu-bg-effects">
-            <div class="menu-grid"></div>
-            <div class="menu-particles"></div>
+            <div class="menu-bg-grid"></div>
+            <div class="menu-bg-particles"></div>
+            <div class="menu-bg-sparks"></div>
+            <div class="menu-circuit-pattern"></div>
+            <div class="menu-hex-pattern"></div>
             <div class="menu-scanning-lines"></div>
+            <div class="menu-glitch-overlay"></div>
             <div class="menu-data-streams">
                 <div class="menu-data-stream stream-1"></div>
                 <div class="menu-data-stream stream-2"></div>
                 <div class="menu-data-stream stream-3"></div>
+                <div class="menu-data-stream stream-4"></div>
+                <div class="menu-data-stream stream-5"></div>
+            </div>
+            <div class="menu-neon-pulses">
+                <div class="neon-pulse pulse-1"></div>
+                <div class="neon-pulse pulse-2"></div>
+                <div class="neon-pulse pulse-3"></div>
+            </div>
+            <div class="menu-holo-shimmer"></div>
+            <div class="menu-status-indicators">
+                <div class="status-indicator ind-1"></div>
+                <div class="status-indicator ind-2"></div>
+                <div class="status-indicator ind-3"></div>
             </div>
         </div>
         
-        <div class="menu-header">
-            <div class="game-title">CyberOps: Syndicate</div>
-            <div class="subtitle">--- TACTICAL CYBERPUNK ACTION ---</div>
-            <div class="system-status">
-                <span class="status-indicator">●</span>
-                <span class="status-text">SYSTEM ONLINE</span>
-                <span class="status-time" id="systemTime">00:00:00</span>
-            </div>
-        </div>
-        
+        <!-- Original Menu Content -->
         <div class="menu-content">
-            <div class="menu-panel main-panel">
-                <div class="panel-title">⚡ MAIN TERMINAL</div>
-                <div class="menu-actions">
-                    <button class="menu-button primary" id="campaignButton" onclick="game.startCampaign()">
-                        <span class="button-icon">🎯</span>
-                        <span class="button-text">START CAMPAIGN</span>
-                    </button>
-                    <button class="menu-button secondary" id="continueButton" onclick="game.continueCampaign()" style="display: none;">
-                        <span class="button-icon">🔄</span>
-                        <span class="button-text">CONTINUE CAMPAIGN</span>
-                    </button>
-                    <button class="menu-button secondary" id="hubButton" onclick="game.showSyndicateHub()" style="display: none;">
-                        <span class="button-icon">🏢</span>
-                        <span class="button-text">SYNDICATE HUB</span>
-                    </button>
-                    <button class="menu-button secondary" onclick="game.selectMission()">
-                        <span class="button-icon">📋</span>
-                        <span class="button-text">MISSION SELECT</span>
-                    </button>
-                    <button class="menu-button tertiary" id="saveButton" onclick="game.saveGame()" style="display: none;">
-                        <span class="button-icon">💾</span>
-                        <span class="button-text">SAVE GAME</span>
-                    </button>
-                    <button class="menu-button tertiary" id="loadButton" onclick="game.loadGame()" style="display: none;">
-                        <span class="button-icon">📁</span>
-                        <span class="button-text">LOAD GAME</span>
-                    </button>
-                    <button class="menu-button tertiary" onclick="game.showSettings()">
-                        <span class="button-icon">⚙️</span>
-                        <span class="button-text">SETTINGS</span>
-                    </button>
-                    <button class="menu-button danger" onclick="game.exitGame()">
-                        <span class="button-icon">🚪</span>
-                        <span class="button-text">EXIT GAME</span>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="menu-info-panel">
-                <div class="panel-title">📊 STATUS</div>
-                <div class="system-info">
-                    <div class="info-row">
-                        <span class="info-label">Version:</span>
-                        <span class="info-value">v2.087</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Build:</span>
-                        <span class="info-value">NEXUS-4577</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Security:</span>
-                        <span class="info-value status-secure">ENCRYPTED</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="menu-footer">
-            <div class="menu-credits">
-                <span class="credits-scroll">
-                    NEXUS INTERACTIVE • CYBER DYNAMICS ENGINE • 
-                    NEURAL INTERFACE v3.2 • QUANTUM ENCRYPTION ACTIVE • 
-                    SYNDICATE PROTOCOLS LOADED •
-                </span>
-            </div>
+            <div class="game-title">CyberOps: Syndicate</div>
+            <div class="subtitle">Tactical Cyberpunk Action</div>
+            <button class="menu-button" id="campaignButton" onclick="game.startCampaign()">START CAMPAIGN</button>
+            <button class="menu-button" id="continueButton" onclick="game.continueCampaign()" style="display: none;">CONTINUE CAMPAIGN</button>
+            <button class="menu-button" id="hubButton" onclick="game.showSyndicateHub()" style="display: none;">SYNDICATE HUB</button>
+            <button class="menu-button" onclick="game.selectMission()">MISSION SELECT</button>
+            <button class="menu-button" id="saveButton" onclick="game.saveGame()" style="display: none;">SAVE GAME</button>
+            <button class="menu-button" id="loadButton" onclick="game.loadGame()" style="display: none;">LOAD GAME</button>
+            <button class="menu-button" onclick="game.showSettings()">SETTINGS</button>
+            <button class="menu-button" onclick="game.exitGame()">EXIT GAME</button>
         </div>
     </div>
 
@@ -410,9 +364,9 @@
                         <div class="card-status">Ready</div>
                     </div>
                 </div>
-            </div>
         </div>
-        
+    </div>
+
         <div class="hub-footer">
             <button class="menu-button hub-button" onclick="game.backToMainMenu()">MAIN MENU</button>
             <button class="menu-button hub-button" onclick="game.saveGame()">SAVE PROGRESS</button>

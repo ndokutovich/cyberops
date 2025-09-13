@@ -19,7 +19,6 @@ class CyberOpsGame {
         // Demoscene idle timer
         this.demosceneTimer = null;
         this.demosceneActive = false;
-        this.systemTimeInterval = null;
         this.currentMissionIndex = 0;
         this.missionTimer = 0;
         this.selectedAgents = [];
@@ -2737,9 +2736,6 @@ class CyberOpsGame {
         // Start demoscene idle timer
         this.startDemosceneIdleTimer();
         
-        // Start system time update
-        this.startSystemTimeUpdate();
-        
         // Seek to main menu section if skipped, or let it continue naturally
         if (this.audioEnabled) {
             if (this.splashSkipped) {
@@ -2769,35 +2765,6 @@ class CyberOpsGame {
             document.getElementById('studioLogo').removeEventListener('click', this.splashClickHandler);
             document.getElementById('loadingScreen').removeEventListener('click', this.splashClickHandler);
             this.splashClickHandler = null;
-        }
-    }
-
-    // System Time Display for Main Menu
-    startSystemTimeUpdate() {
-        if (this.systemTimeInterval) {
-            clearInterval(this.systemTimeInterval);
-        }
-        
-        const updateTime = () => {
-            const timeElement = document.getElementById('systemTime');
-            if (timeElement && this.currentScreen === 'menu') {
-                const now = new Date();
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
-                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
-            }
-        };
-        
-        // Update immediately and then every second
-        updateTime();
-        this.systemTimeInterval = setInterval(updateTime, 1000);
-    }
-    
-    stopSystemTimeUpdate() {
-        if (this.systemTimeInterval) {
-            clearInterval(this.systemTimeInterval);
-            this.systemTimeInterval = null;
         }
     }
 
