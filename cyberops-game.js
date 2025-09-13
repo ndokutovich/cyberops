@@ -3,6 +3,7 @@ class CyberOpsGame {
     constructor() {
         // Constants
         this.MUSIC_MENU_START_TIME = 10.6; // Exact duration when splash screens end and menu music should start
+        this.DEMOSCENE_IDLE_TIMEOUT = 15000; // 15 seconds of idle time before demoscene starts
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.setupCanvas();
@@ -14,6 +15,10 @@ class CyberOpsGame {
         this.currentScreen = 'splash';
         this.isPaused = false;
         this.currentMission = null;
+        
+        // Demoscene idle timer
+        this.demosceneTimer = null;
+        this.demosceneActive = false;
         this.currentMissionIndex = 0;
         this.missionTimer = 0;
         this.selectedAgents = [];
@@ -742,12 +747,14 @@ class CyberOpsGame {
     }
     
     startCampaign() {
+        this.clearDemosceneTimer(); // Clear timer when user takes action
         this.currentMissionIndex = 0;
         this.completedMissions = [];
         this.showSyndicateHub();
     }
     
     continueCampaign() {
+        this.clearDemosceneTimer(); // Clear timer when user takes action
         this.showSyndicateHub();
     }
     
@@ -874,6 +881,10 @@ class CyberOpsGame {
         document.getElementById('gameHUD').style.display = 'block';
         this.currentScreen = 'game';
         this.initMission();
+        
+        // Start level-specific music
+        const levelNumber = (this.currentMissionIndex % 5) + 1; // Cycle through 1-5 for any number of missions
+        this.playLevelMusic(levelNumber);
     }
     
     initMission() {
@@ -1144,9 +1155,11 @@ class CyberOpsGame {
         
         if (this.isPaused) {
             pauseButton.textContent = '▶';
+            this.pauseLevelMusic();
             this.showPauseMenu();
         } else {
             pauseButton.textContent = '⏸';
+            this.resumeLevelMusic();
             this.closePauseMenu();
         }
     }
@@ -1222,6 +1235,9 @@ class CyberOpsGame {
         this.closeDialog();
         this.isPaused = false;
         document.querySelector('.pause-button').textContent = '⏸';
+        
+        // Keep level music playing in the hub for atmosphere
+        console.log('🎵 Keeping level music playing in hub');
         
         // Hide game elements
         document.getElementById('gameHUD').style.display = 'none';
@@ -1304,6 +1320,8 @@ class CyberOpsGame {
     }
     
     loadGame() {
+        this.clearDemosceneTimer(); // Clear timer when user takes action
+        
         try {
             const savedData = localStorage.getItem('cyberops_savegame');
             if (!savedData) {
@@ -1389,6 +1407,8 @@ class CyberOpsGame {
     }
     
     exitGame() {
+        this.clearDemosceneTimer(); // Clear timer when user takes action
+        
         this.showHudDialog(
             '🚪 EXIT TO START SCREEN',
             'Are you sure you want to return to the start screen?<br><br>This will end your current session. Make sure to save your progress!',
@@ -1439,6 +1459,13 @@ class CyberOpsGame {
         
         // Stop all music
         this.stopMainMenuMusic();
+        this.stopLevelMusic();
+        this.stopCreditsMusic();
+        
+        // Clear demoscene timer and hide demoscene
+        this.clearDemosceneTimer();
+        this.demosceneActive = false;
+        document.getElementById('demoscene').style.display = 'none';
         
         // Hide all game screens
         document.getElementById('mainMenu').style.display = 'none';
@@ -1488,6 +1515,12 @@ class CyberOpsGame {
         // Show hub
         document.getElementById('syndicateHub').style.display = 'flex';
         this.currentScreen = 'hub';
+        
+        // Log music continuation in hub
+        if (this.currentLevelMusic) {
+            console.log(`🎵 Level ${this.currentLevelMusic} music continues playing in Syndicate Hub`);
+        }
+        
         this.updateHubStats();
     }
     
@@ -2281,6 +2314,9 @@ class CyberOpsGame {
     }
 
     showGameCompleteScreen() {
+        // Start credits music when game is completed
+        this.playCreditsMusic();
+        
         // Hide other screens
         document.getElementById('endScreen').style.display = 'none';
         document.getElementById('gameHUD').style.display = 'none';
@@ -2302,12 +2338,22 @@ class CyberOpsGame {
     }
 
     showCredits() {
+        this.clearDemosceneTimer(); // Clear timer when user takes action
+        
+        // Don't restart credits music if it's already playing
+        if (!this.creditsPlaying) {
+            this.playCreditsMusic();
+        }
+        
         document.getElementById('gameCompleteScreen').style.display = 'none';
         document.getElementById('creditsScreen').style.display = 'flex';
         this.currentScreen = 'credits';
     }
 
     restartCampaign() {
+        // Stop credits music when restarting
+        this.stopCreditsMusic();
+        
         // Reset all progress
         this.currentMissionIndex = 0;
         this.completedMissions = [];
@@ -2320,6 +2366,10 @@ class CyberOpsGame {
     }
 
     backToMainMenu() {
+        // Stop all music including credits (returning to main menu)
+        this.stopLevelMusic();
+        this.stopCreditsMusic();
+        
         // Hide all screens and dialogs
         document.getElementById('gameCompleteScreen').style.display = 'none';
         document.getElementById('creditsScreen').style.display = 'none';
@@ -2333,6 +2383,9 @@ class CyberOpsGame {
         document.getElementById('mainMenu').style.display = 'flex';
         this.currentScreen = 'menu';
         this.updateMenuState();
+        
+        // Start demoscene idle timer
+        this.startDemosceneIdleTimer();
     }
     
     showInitialScreen() {
@@ -2385,6 +2438,12 @@ class CyberOpsGame {
             console.log('AudioContext created successfully!');
             console.log('Audio context state:', this.audioContext.state);
             
+            // Debug audio elements
+            console.log('Checking audio elements:');
+            console.log('gameAudio:', this.gameAudio);
+            console.log('creditsAudio:', this.creditsAudio);
+            console.log('levelMusicElements:', this.levelMusicElements);
+            
             // Store permission for this session
             sessionStorage.setItem('cyberops_audio_enabled', 'true');
             
@@ -2402,8 +2461,12 @@ class CyberOpsGame {
         this.setupSplashSkip();
         
         // Start splash music immediately (audio is enabled from user interaction)
+        console.log('Attempting to start splash music. audioEnabled:', this.audioEnabled);
         if (this.audioEnabled) {
+            console.log('Audio is enabled, calling playSplashMusic()');
             this.playSplashMusic();
+        } else {
+            console.log('Audio not enabled yet - will start when user interacts');
         }
         
         // Show company logo
@@ -2547,6 +2610,9 @@ class CyberOpsGame {
         this.currentScreen = 'menu';
         this.updateMenuState();
         
+        // Start demoscene idle timer
+        this.startDemosceneIdleTimer();
+        
         // Seek to main menu section if skipped, or let it continue naturally
         if (this.audioEnabled) {
             if (this.splashSkipped) {
@@ -2578,6 +2644,128 @@ class CyberOpsGame {
             this.splashClickHandler = null;
         }
     }
+
+    // Demoscene Attract Mode System
+    startDemosceneIdleTimer() {
+        // Clear existing timer
+        this.clearDemosceneTimer();
+        
+        if (this.currentScreen === 'menu' && !this.demosceneActive) {
+            console.log('Starting demoscene idle timer (15 seconds)');
+            this.demosceneTimer = setTimeout(() => {
+                this.showDemoscene();
+            }, this.DEMOSCENE_IDLE_TIMEOUT);
+        }
+    }
+    
+    clearDemosceneTimer() {
+        if (this.demosceneTimer) {
+            clearTimeout(this.demosceneTimer);
+            this.demosceneTimer = null;
+        }
+    }
+    
+    showDemoscene() {
+        if (this.currentScreen !== 'menu') return;
+        
+        console.log('Starting demoscene attract mode');
+        this.demosceneActive = true;
+        this.currentScreen = 'demoscene';
+        
+        // Hide main menu
+        document.getElementById('mainMenu').style.display = 'none';
+        
+        // Show demoscene
+        const demosceneScreen = document.getElementById('demoscene');
+        demosceneScreen.style.display = 'flex';
+        
+        // Add click handler to interrupt demoscene
+        this.setupDemosceneInterrupt();
+        
+        // Add subtle animation delays for visual appeal
+        this.animateDemosceneElements();
+    }
+    
+    setupDemosceneInterrupt() {
+        const demosceneScreen = document.getElementById('demoscene');
+        
+        const interruptHandler = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.interruptDemoscene();
+        };
+        
+        // Add listeners for any interaction
+        demosceneScreen.addEventListener('click', interruptHandler, { once: true });
+        demosceneScreen.addEventListener('touchstart', interruptHandler, { once: true });
+        demosceneScreen.addEventListener('keydown', interruptHandler, { once: true });
+        
+        // Store handler for cleanup
+        this.demosceneInterruptHandler = interruptHandler;
+    }
+    
+    interruptDemoscene() {
+        if (!this.demosceneActive) return;
+        
+        console.log('Demoscene interrupted, returning to main menu');
+        this.demosceneActive = false;
+        this.currentScreen = 'menu';
+        
+        // Hide demoscene
+        document.getElementById('demoscene').style.display = 'none';
+        
+        // Show main menu
+        const mainMenu = document.getElementById('mainMenu');
+        mainMenu.style.display = 'flex';
+        
+        // Restart idle timer
+        this.startDemosceneIdleTimer();
+        
+        // Clean up interrupt handlers
+        this.removeDemosceneInterruptHandlers();
+    }
+    
+    removeDemosceneInterruptHandlers() {
+        const demosceneScreen = document.getElementById('demoscene');
+        if (this.demosceneInterruptHandler && demosceneScreen) {
+            demosceneScreen.removeEventListener('click', this.demosceneInterruptHandler);
+            demosceneScreen.removeEventListener('touchstart', this.demosceneInterruptHandler);
+            demosceneScreen.removeEventListener('keydown', this.demosceneInterruptHandler);
+            this.demosceneInterruptHandler = null;
+        }
+    }
+    
+    animateDemosceneElements() {
+        // Add staggered animation delays to lore sections
+        const loreSections = document.querySelectorAll('.lore-section');
+        loreSections.forEach((section, index) => {
+            section.style.animationDelay = `${index * 0.3}s`;
+        });
+        
+        // Add staggered animation delays to features
+        const featureItems = document.querySelectorAll('.feature-item');
+        featureItems.forEach((item, index) => {
+            item.style.animationDelay = `${0.5 + index * 0.2}s`;
+        });
+        
+        // Animate stat bars with proper widths
+        setTimeout(() => {
+            const corporateFill = document.querySelector('.corporate-fill');
+            const resistanceFill = document.querySelector('.resistance-fill');
+            const syndicateFill = document.querySelector('.syndicate-fill');
+            
+            if (corporateFill) corporateFill.style.width = '87%';
+            if (resistanceFill) resistanceFill.style.width = '13%';
+            if (syndicateFill) syndicateFill.style.width = '7%';
+        }, 1000);
+    }
+
+    // User Activity Detection (for resetting demoscene timer)
+    resetDemosceneTimer() {
+        if (this.currentScreen === 'menu' && !this.demosceneActive) {
+            this.startDemosceneIdleTimer();
+        }
+    }
     
     // Audio System
     initializeAudio() {
@@ -2585,15 +2773,51 @@ class CyberOpsGame {
         this.audioContext = null;
         this.splashMusicNode = null;
         this.mainMenuMusicNode = null;
+        this.levelMusicNode = null; // Fix: Added missing level music node
+        this.creditsMusicNode = null; // Fix: Added missing credits music node
         this.audioEnabled = false; // Start with audio disabled
         this.splashMusicData = null;
         this.mainMenuMusicData = null;
         
-        // Get unified HTML5 audio element
+        // Get HTML5 audio elements
         this.gameAudio = document.getElementById('gameMusic');
         
-        // Set initial volume
+        // Get level music elements
+        this.levelMusicElements = {
+            1: document.getElementById('levelMusic1'),
+            2: document.getElementById('levelMusic2'),
+            3: document.getElementById('levelMusic3'),
+            4: document.getElementById('levelMusic4'),
+            5: document.getElementById('levelMusic5')
+        };
+        
+        // Get credits music element
+        this.creditsAudio = document.getElementById('creditsMusic');
+        
+        // Set initial volume for all audio elements
         if (this.gameAudio) this.gameAudio.volume = 0.25;
+        
+        Object.values(this.levelMusicElements).forEach(audio => {
+            if (audio) {
+                audio.volume = 0.3; // Slightly higher volume for level music
+                audio.loop = true; // Loop level music
+            }
+        });
+        
+        // Set initial volume for credits music
+        if (this.creditsAudio) {
+            this.creditsAudio.volume = 0.2; // Lower volume for credits
+        }
+        
+        // Track current level music
+        this.currentLevelMusic = null;
+        this.currentLevelMusicElement = null;
+        
+        // Track level music interval for procedural music
+        this.levelMusicInterval = null;
+        
+        // Track credits music state
+        this.creditsPlaying = false;
         
         console.log('Audio system initialized, waiting for user interaction...');
     }
@@ -2786,19 +3010,36 @@ class CyberOpsGame {
     }
     
     playSplashMusic() {
-        if (!this.audioEnabled || !this.gameAudio) {
-            console.log('Audio not enabled or game audio not available');
+        console.log('playSplashMusic called:');
+        console.log('- audioEnabled:', this.audioEnabled);
+        console.log('- gameAudio exists:', !!this.gameAudio);
+        console.log('- gameAudio element:', this.gameAudio);
+        
+        if (!this.audioEnabled) {
+            console.log('Audio not enabled, skipping splash music');
+            return;
+        }
+        
+        if (!this.gameAudio) {
+            console.warn('Game audio element not found, falling back to procedural music');
+            this.playProceduralSplashMusic();
             return;
         }
         
         console.log('Starting splash music from beginning...');
+        console.log('- gameAudio.src:', this.gameAudio.src || this.gameAudio.currentSrc);
+        console.log('- gameAudio.readyState:', this.gameAudio.readyState);
+        console.log('- gameAudio.networkState:', this.gameAudio.networkState);
         
-        // Start from beginning (splash part: 0-9 seconds)
+        // Start from beginning (splash part: 0-10.6 seconds)
         this.gameAudio.currentTime = 0;
         this.gameAudio.play().then(() => {
-            console.log('Game music started successfully from splash section');
+            console.log('✅ Game music started successfully from splash section');
+            console.log('- currentTime:', this.gameAudio.currentTime);
+            console.log('- duration:', this.gameAudio.duration);
         }).catch(error => {
-            console.warn('Failed to play game music:', error);
+            console.warn('❌ Failed to play game music:', error);
+            console.log('Falling back to procedural splash music...');
             // Fallback to procedural music if WAV fails
             this.playProceduralSplashMusic();
         });
@@ -2816,27 +3057,43 @@ class CyberOpsGame {
     }
     
     playMainMenuMusic() {
-        if (!this.audioEnabled || !this.gameAudio) {
-            console.log('Audio not enabled or game audio not available');
+        console.log('playMainMenuMusic called:');
+        console.log('- audioEnabled:', this.audioEnabled);
+        console.log('- gameAudio exists:', !!this.gameAudio);
+        console.log('- MUSIC_MENU_START_TIME:', this.MUSIC_MENU_START_TIME);
+        
+        if (!this.audioEnabled) {
+            console.log('Audio not enabled, skipping main menu music');
+            return;
+        }
+        
+        if (!this.gameAudio) {
+            console.warn('Game audio element not found, falling back to procedural music');
+            this.playProceduralMainMenuMusic();
             return;
         }
         
         console.log('Transitioning to main menu music section...');
+        console.log('- Current time before seek:', this.gameAudio.currentTime);
+        console.log('- Seeking to:', this.MUSIC_MENU_START_TIME);
         
-        // Seek to main menu section (after 10.7 seconds of splash music)
+        // Seek to main menu section (after 10.6 seconds of splash music)
         this.gameAudio.currentTime = this.MUSIC_MENU_START_TIME;
         
         // Make sure music is playing
         if (this.gameAudio.paused) {
             this.gameAudio.play().then(() => {
-                console.log('Game music resumed from menu section (10.7s)');
+                console.log('✅ Game music resumed from menu section (' + this.MUSIC_MENU_START_TIME + 's)');
+                console.log('- Actual currentTime after seek:', this.gameAudio.currentTime);
             }).catch(error => {
-                console.warn('Failed to resume game music at menu section:', error);
+                console.warn('❌ Failed to resume game music at menu section:', error);
+                console.log('Falling back to procedural main menu music...');
                 // Fallback to procedural music if WAV fails
                 this.playProceduralMainMenuMusic();
             });
         } else {
-            console.log('Game music seeked to menu section (10.7s)');
+            console.log('✅ Game music seeked to menu section (' + this.MUSIC_MENU_START_TIME + 's)');
+            console.log('- Actual currentTime after seek:', this.gameAudio.currentTime);
         }
     }
     
@@ -2858,17 +3115,307 @@ class CyberOpsGame {
             this.mainMenuMusicInterval = null;
         }
     }
+
+    // Level Music System
+    playLevelMusic(levelNumber) {
+        console.log(`🎵 playLevelMusic(${levelNumber}) called:`);
+        console.log('- audioEnabled:', this.audioEnabled);
+        console.log('- levelMusicElements:', this.levelMusicElements);
+        
+        if (!this.audioEnabled) {
+            console.log('❌ Audio not enabled, skipping level music');
+            return;
+        }
+        
+        console.log(`🎮 Starting level ${levelNumber} music...`);
+        
+        // Stop any current level music (starting new level)
+        this.stopLevelMusic();
+        
+        // Stop main menu music  
+        this.stopMainMenuMusic();
+        
+        // Get the audio element for this level
+        const levelAudio = this.levelMusicElements[levelNumber];
+        console.log(`- levelAudio for level ${levelNumber}:`, levelAudio);
+        
+        if (!levelAudio) {
+            console.warn(`❌ No audio element found for level ${levelNumber}, falling back to procedural music`);
+            this.playProceduralLevelMusic(levelNumber);
+            return;
+        }
+        
+        console.log(`- levelAudio.src:`, levelAudio.src || levelAudio.currentSrc);
+        console.log(`- levelAudio.readyState:`, levelAudio.readyState);
+        
+        // Set current level music tracking
+        this.currentLevelMusic = levelNumber;
+        this.currentLevelMusicElement = levelAudio;
+        
+        // Play the level music
+        levelAudio.currentTime = 0;
+        levelAudio.play().then(() => {
+            console.log(`✅ Level ${levelNumber} music started successfully`);
+        }).catch(error => {
+            console.warn(`❌ Failed to play level ${levelNumber} music:`, error);
+            console.log('🎵 Falling back to procedural level music...');
+            this.playProceduralLevelMusic(levelNumber);
+        });
+    }
+    
+    stopLevelMusic() {
+        console.log('🛑 stopLevelMusic() called:');
+        console.log('- currentLevelMusicElement exists:', !!this.currentLevelMusicElement);
+        console.log('- currentLevelMusic:', this.currentLevelMusic);
+        console.log('- levelMusicNode exists:', !!this.levelMusicNode);
+        
+        if (this.currentLevelMusicElement) {
+            this.currentLevelMusicElement.pause();
+            this.currentLevelMusicElement.currentTime = 0;
+            console.log(`✅ Level ${this.currentLevelMusic} HTML5 music stopped`);
+        }
+        
+        this.currentLevelMusic = null;
+        this.currentLevelMusicElement = null;
+        
+        // Also stop any procedural level music
+        if (this.levelMusicNode) {
+            this.levelMusicNode.disconnect();
+            this.levelMusicNode = null;
+            console.log('✅ Procedural level music stopped');
+        }
+        
+        // Clear level music interval
+        if (this.levelMusicInterval) {
+            clearInterval(this.levelMusicInterval);
+            this.levelMusicInterval = null;
+            console.log('✅ Level music interval cleared');
+        }
+    }
+    
+    pauseLevelMusic() {
+        if (this.currentLevelMusicElement && !this.currentLevelMusicElement.paused) {
+            this.currentLevelMusicElement.pause();
+            console.log(`Level ${this.currentLevelMusic} music paused`);
+        }
+    }
+    
+    resumeLevelMusic() {
+        if (this.currentLevelMusicElement && this.currentLevelMusicElement.paused) {
+            this.currentLevelMusicElement.play().then(() => {
+                console.log(`Level ${this.currentLevelMusic} music resumed`);
+            }).catch(error => {
+                console.warn('Failed to resume level music:', error);
+            });
+        }
+    }
+    
+    // Fallback procedural music for levels
+    playProceduralLevelMusic(levelNumber) {
+        console.log(`🎵 playProceduralLevelMusic(${levelNumber}) called:`);
+        console.log('- audioContext:', this.audioContext);
+        console.log('- audioContext state:', this.audioContext ? this.audioContext.state : 'null');
+        
+        if (!this.audioContext) {
+            console.log('❌ No AudioContext available for procedural level music');
+            return;
+        }
+        
+        console.log(`🎶 Playing procedural music for level ${levelNumber} as fallback`);
+        
+        // Generate different music data based on level
+        const levelMusicData = this.generateLevelMusicData(levelNumber);
+        console.log('- levelMusicData generated:', levelMusicData);
+        
+        // Stop any existing level music node first
+        if (this.levelMusicNode) {
+            console.log('- Stopping previous procedural level music');
+            this.levelMusicNode.disconnect();
+            this.levelMusicNode = null;
+        }
+        
+        // Clear any level music interval
+        if (this.levelMusicInterval) {
+            clearInterval(this.levelMusicInterval);
+            this.levelMusicInterval = null;
+        }
+        
+        this.levelMusicNode = this.playProcedualMusic(levelMusicData);
+        console.log('- levelMusicNode created:', !!this.levelMusicNode);
+        
+        // Set up loop interval for continuous play (in case the music stops)
+        const totalDuration = levelMusicData.notes.reduce((sum, note) => sum + note.duration, 0) * 1000; // Convert to milliseconds
+        this.levelMusicInterval = setInterval(() => {
+            if (this.levelMusicNode && this.audioContext && this.audioContext.state === 'running') {
+                // Music should be looping via the playProcedualMusic function
+                console.log(`🔄 Level ${levelNumber} procedural music loop check - still running`);
+            }
+        }, totalDuration + 1000); // Check slightly after each loop should complete
+    }
+    
+    generateLevelMusicData(levelNumber) {
+        // Create different musical themes for each level
+        const levelThemes = {
+            1: { // Corporate Infiltration - Tense, electronic
+                tempo: 120,
+                baseFreq: 220,
+                pattern: [1, 0.75, 1, 1.25, 0.5, 1, 1.5, 0.75]
+            },
+            2: { // Government Hack - Dark, methodical  
+                tempo: 100,
+                baseFreq: 196,
+                pattern: [1, 1, 0.5, 1.5, 1, 0.75, 1.25, 1]
+            },
+            3: { // Industrial Sabotage - Heavy, rhythmic
+                tempo: 140,
+                baseFreq: 146,
+                pattern: [2, 1, 2, 1, 1.5, 1, 2, 0.5]
+            },
+            4: { // Assassination - Stealthy, ambient
+                tempo: 90,
+                baseFreq: 261,
+                pattern: [0.5, 1, 0.75, 1.5, 0.5, 1.25, 1, 0.75]
+            },
+            5: { // Final Fortress - Epic, intense
+                tempo: 160,
+                baseFreq: 174,
+                pattern: [2, 1.5, 2, 1, 1.5, 2, 1, 1.5]
+            }
+        };
+        
+        const theme = levelThemes[levelNumber] || levelThemes[1];
+        const notes = [];
+        
+        // Generate notes based on theme pattern
+        theme.pattern.forEach(multiplier => {
+            notes.push({ freq: theme.baseFreq * multiplier, duration: 0.5 });
+        });
+        
+        return {
+            tempo: theme.tempo,
+            notes: notes
+        };
+    }
+
+    // Credits Music System
+    playCreditsMusic() {
+        if (!this.audioEnabled) {
+            console.log('Audio not enabled, skipping credits music');
+            return;
+        }
+        
+        if (this.creditsPlaying) {
+            console.log('Credits music already playing, not restarting');
+            return; // Don't restart if already playing
+        }
+        
+        console.log('Starting credits music...');
+        console.log('- creditsAudio exists:', !!this.creditsAudio);
+        console.log('- creditsAudio element:', this.creditsAudio);
+        
+        // Stop any current level music and main menu music (credits starting)
+        this.stopLevelMusic();
+        this.stopMainMenuMusic();
+        
+        if (!this.creditsAudio) {
+            console.warn('No credits audio element found, falling back to procedural music');
+            this.playProceduralCreditsMusic();
+            return;
+        }
+        
+        console.log('- creditsAudio.src:', this.creditsAudio.src || this.creditsAudio.currentSrc);
+        console.log('- creditsAudio.readyState:', this.creditsAudio.readyState);
+        
+        this.creditsPlaying = true;
+        
+        // Play the credits music
+        this.creditsAudio.currentTime = 0;
+        this.creditsAudio.play().then(() => {
+            console.log('✅ Credits music started successfully');
+        }).catch(error => {
+            console.warn('❌ Failed to play credits music:', error);
+            console.log('Falling back to procedural credits music...');
+            this.playProceduralCreditsMusic();
+        });
+    }
+    
+    stopCreditsMusic() {
+        if (this.creditsAudio && this.creditsPlaying) {
+            this.creditsAudio.pause();
+            this.creditsAudio.currentTime = 0;
+            console.log('Credits music stopped');
+        }
+        
+        this.creditsPlaying = false;
+        
+        // Also stop procedural credits music if it's playing
+        if (this.creditsMusicNode) {
+            this.creditsMusicNode.disconnect();
+            this.creditsMusicNode = null;
+        }
+    }
+    
+    // Fallback procedural credits music
+    playProceduralCreditsMusic() {
+        if (!this.audioContext) {
+            console.log('❌ No AudioContext available for procedural credits music');
+            return;
+        }
+        
+        console.log('🎵 Playing procedural credits music as fallback');
+        console.log('- AudioContext state:', this.audioContext.state);
+        this.creditsPlaying = true;
+        
+        // Generate triumphant, celebratory music data for credits
+        const creditsMusicData = {
+            tempo: 110, // Moderate, celebratory tempo
+            notes: [
+                { freq: 261.63, duration: 1.0 }, // C4
+                { freq: 329.63, duration: 1.0 }, // E4
+                { freq: 392.00, duration: 1.0 }, // G4
+                { freq: 523.25, duration: 1.5 }, // C5
+                { freq: 659.25, duration: 0.5 }, // E5
+                { freq: 783.99, duration: 0.5 }, // G5
+                { freq: 1046.5, duration: 2.0 }, // C6 (high, triumphant)
+                { freq: 783.99, duration: 1.0 }, // G5
+                { freq: 659.25, duration: 1.0 }, // E5
+                { freq: 523.25, duration: 1.5 }, // C5
+                { freq: 0, duration: 1.0 }, // Rest
+            ]
+        };
+        
+        console.log('- Credits music data:', creditsMusicData);
+        this.creditsMusicNode = this.playProcedualMusic(creditsMusicData);
+    }
     
     // Fallback procedural music functions
     playProceduralSplashMusic() {
-        if (!this.audioContext) return;
-        console.log('Playing procedural splash music as fallback');
+        if (!this.audioContext) {
+            console.log('❌ No AudioContext available for procedural splash music');
+            return;
+        }
+        if (!this.splashMusicData) {
+            console.log('❌ No splash music data available for procedural music');
+            return;
+        }
+        console.log('🎵 Playing procedural splash music as fallback');
+        console.log('- AudioContext state:', this.audioContext.state);
+        console.log('- Splash music data:', this.splashMusicData);
         this.splashMusicNode = this.playProcedualMusic(this.splashMusicData);
     }
     
     playProceduralMainMenuMusic() {
-        if (!this.audioContext) return;
-        console.log('Playing procedural main menu music as fallback');
+        if (!this.audioContext) {
+            console.log('❌ No AudioContext available for procedural main menu music');
+            return;
+        }
+        if (!this.mainMenuMusicData) {
+            console.log('❌ No main menu music data available for procedural music');
+            return;
+        }
+        console.log('🎵 Playing procedural main menu music as fallback');
+        console.log('- AudioContext state:', this.audioContext.state);
+        console.log('- Main menu music data:', this.mainMenuMusicData);
         this.mainMenuMusicNode = this.playProcedualMusic(this.mainMenuMusicData);
         // Loop the music every ~13 seconds
         this.mainMenuMusicInterval = setInterval(() => {
@@ -3250,6 +3797,9 @@ class CyberOpsGame {
     }
     
     endMission(victory) {
+        // Keep level music playing until next mission starts
+        console.log('🎵 Level music continues after mission end');
+        
         this.isPaused = true;
         
         // Update campaign statistics and rewards
