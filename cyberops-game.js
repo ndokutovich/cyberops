@@ -1,9 +1,14 @@
 // Game Engine
 class CyberOpsGame {
     constructor() {
+        // Constants
+        this.MUSIC_MENU_START_TIME = 10.6; // Exact duration when splash screens end and menu music should start
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.setupCanvas();
+        
+        // Enable audio on first user interaction
+        this.setupAudioInteraction();
         
         // Game State
         this.currentScreen = 'splash';
@@ -174,11 +179,15 @@ class CyberOpsGame {
     
     init() {
         this.setupEventListeners();
-        // Hide main menu initially during splash screens
+        this.initializeAudio();
+        // Hide all game screens initially
         document.getElementById('mainMenu').style.display = 'none';
-        // Check for saved game on startup (will be used when menu shows)
-        this.checkForSavedGame();
-        this.showSplashScreens();
+        document.querySelectorAll('.splash-screen').forEach(screen => {
+            screen.style.display = 'none';
+        });
+        
+        // Show initial start screen first
+        this.showInitialScreen();
         this.gameLoop();
     }
     
@@ -879,10 +888,10 @@ class CyberOpsGame {
         // Generate map based on mission map type
         this.map = this.generateMapFromType(this.currentMission.map);
         
-        // Spawn agents
+        // Spawn agents with equipment and research bonuses
         const spawn = this.map.spawn;
         this.selectedAgents.forEach((agentData, idx) => {
-            this.agents.push({
+            const agent = {
                 id: 'agent_' + idx,
                 x: spawn.x + idx % 2,
                 y: spawn.y + Math.floor(idx / 2),
@@ -895,8 +904,20 @@ class CyberOpsGame {
                 name: agentData.name,
                 selected: idx === 0,
                 alive: true,
-                cooldowns: [0, 0, 0, 0, 0]
-            });
+                cooldowns: [0, 0, 0, 0, 0],
+                // Equipment bonuses
+                protection: 0,
+                hackBonus: 0,
+                stealthBonus: 0
+            };
+            
+            // Apply equipment bonuses
+            this.applyEquipmentBonuses(agent);
+            
+            // Apply research bonuses
+            this.applyMissionResearchBonuses(agent);
+            
+            this.agents.push(agent);
         });
         
         // Spawn enemies
@@ -1058,7 +1079,14 @@ class CyberOpsGame {
                 Math.pow(terminal.x - agent.x, 2) + 
                 Math.pow(terminal.y - agent.y, 2)
             );
-            if (dist < 3) {
+            
+            // Apply hacking bonus from equipment and research
+            let hackRange = 3;
+            if (agent.hackBonus) {
+                hackRange += agent.hackBonus / 100 * 2; // Bonus increases range
+            }
+            
+            if (dist < hackRange) {
                 terminal.hacked = true;
                 this.effects.push({
                     type: 'hack',
@@ -1231,14 +1259,25 @@ class CyberOpsGame {
     saveGame() {
         try {
             const saveData = {
-                version: '1.0',
+                version: '2.0',
                 timestamp: new Date().toISOString(),
                 gameState: {
                     currentMissionIndex: this.currentMissionIndex,
                     completedMissions: [...this.completedMissions],
                     totalCampaignTime: this.totalCampaignTime,
                     totalEnemiesDefeated: this.totalEnemiesDefeated,
-                    currentScreen: this.currentScreen
+                    currentScreen: this.currentScreen,
+                    // Hub resources
+                    credits: this.credits,
+                    researchPoints: this.researchPoints,
+                    worldControl: this.worldControl,
+                    // Agent management
+                    availableAgents: JSON.parse(JSON.stringify(this.availableAgents)),
+                    activeAgents: JSON.parse(JSON.stringify(this.activeAgents)),
+                    // Equipment and research
+                    weapons: JSON.parse(JSON.stringify(this.weapons)),
+                    equipment: JSON.parse(JSON.stringify(this.equipment)),
+                    completedResearch: this.completedResearch || []
                 }
             };
             
@@ -1306,13 +1345,26 @@ class CyberOpsGame {
             this.totalCampaignTime = saveData.gameState.totalCampaignTime || 0;
             this.totalEnemiesDefeated = saveData.gameState.totalEnemiesDefeated || 0;
             
+            // Restore hub data (if available)
+            if (saveData.gameState.credits !== undefined) {
+                this.credits = saveData.gameState.credits;
+                this.researchPoints = saveData.gameState.researchPoints;
+                this.worldControl = saveData.gameState.worldControl;
+                this.availableAgents = saveData.gameState.availableAgents;
+                this.activeAgents = saveData.gameState.activeAgents;
+                this.weapons = saveData.gameState.weapons;
+                this.equipment = saveData.gameState.equipment;
+                this.completedResearch = saveData.gameState.completedResearch || [];
+            }
+            
             // Close dialog and update menu
             this.closeDialog();
             this.updateMenuState();
+            this.updateHubStats(); // Update hub displays
             
             this.showHudDialog(
                 '✅ GAME LOADED',
-                `Game successfully loaded!<br><br>Welcome back, Commander.<br><br><strong>Progress:</strong><br>• Missions Completed: ${this.completedMissions.length}/${this.missions.length}<br>• Current Mission: ${this.currentMissionIndex + 1}`,
+                `Game successfully loaded!<br><br>Welcome back, Commander.<br><br><strong>Progress:</strong><br>• Missions Completed: ${this.completedMissions.length}/${this.missions.length}<br>• Current Mission: ${this.currentMissionIndex + 1}<br>• Credits: ${this.credits?.toLocaleString() || 'N/A'}<br>• Research Points: ${this.researchPoints?.toLocaleString() || 'N/A'}`,
                 [{ text: 'CONTINUE', action: 'close' }]
             );
             
@@ -1338,11 +1390,11 @@ class CyberOpsGame {
     
     exitGame() {
         this.showHudDialog(
-            '🚪 EXIT GAME',
-            'Are you sure you want to exit CyberOps: Syndicate?<br><br>Make sure to save your progress before leaving!',
+            '🚪 EXIT TO START SCREEN',
+            'Are you sure you want to return to the start screen?<br><br>This will end your current session. Make sure to save your progress!',
             [
                 { text: 'SAVE & EXIT', action: () => this.saveAndExit() },
-                { text: 'EXIT', action: () => this.performExit() },
+                { text: 'RETURN TO START', action: () => this.performExit() },
                 { text: 'CANCEL', action: 'close' }
             ]
         );
@@ -1378,23 +1430,43 @@ class CyberOpsGame {
     performExit() {
         this.closeDialog();
         
-        // For web games, we can't actually close the window due to security restrictions
-        // So we'll show a farewell message and optionally redirect
-        this.showHudDialog(
-            '👋 FAREWELL, COMMANDER',
-            'Thank you for playing CyberOps: Syndicate!<br><br>Your progress has been saved and you can return anytime.<br><br>Stay vigilant out there!',
-            [
-                { text: 'CLOSE TAB', action: () => {
-                    try {
-                        window.close();
-                    } catch (e) {
-                        // If we can't close the window, reload to home page
-                        window.location.reload();
-                    }
-                }},
-                { text: 'STAY', action: 'close' }
-            ]
-        );
+        // Return to initial start screen
+        this.returnToInitialScreen();
+    }
+
+    returnToInitialScreen() {
+        console.log('Returning to initial screen');
+        
+        // Stop all music
+        this.stopMainMenuMusic();
+        
+        // Hide all game screens
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('syndicateHub').style.display = 'none';
+        document.getElementById('gameCompleteScreen').style.display = 'none';
+        document.getElementById('creditsScreen').style.display = 'none';
+        document.querySelectorAll('.splash-screen').forEach(screen => {
+            screen.style.display = 'none';
+        });
+        
+        // Reset screen state
+        this.currentScreen = 'initial';
+        
+        // Reset audio state (will require new user interaction)
+        this.audioEnabled = false;
+        if (this.audioContext) {
+            this.audioContext.close();
+            this.audioContext = null;
+        }
+        
+        // Clear session storage audio permission (will require fresh start)
+        sessionStorage.removeItem('cyberops_audio_enabled');
+        
+        // Show initial screen
+        const initialScreen = document.getElementById('initialScreen');
+        initialScreen.style.display = 'flex';
+        
+        console.log('Returned to initial screen - fresh start ready');
     }
     
     checkForSavedGame() {
@@ -1545,29 +1617,223 @@ class CyberOpsGame {
     }
     
     showResearchLab() {
+        let content = '<div style="max-height: 400px; overflow-y: auto;">';
+        content += `<div style="color: #00ffff; margin-bottom: 20px; text-align: center;">Available Research Points: ${this.researchPoints.toLocaleString()}</div>`;
+        
+        content += '<h3 style="color: #00ffff; margin-bottom: 15px;">ACTIVE RESEARCH</h3>';
+        content += `<div style="background: rgba(0,0,0,0.3); padding: 15px; border-left: 3px solid #00ffff; margin: 10px 0;">
+            <strong style="color: #00ffff;">CYBER WARFARE ENHANCEMENT</strong><br>
+            Progress: 75% | Est. Completion: 2 missions<br>
+            Benefit: +15% hacking success rate
+        </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-left: 3px solid #ff00ff; margin: 10px 0;">
+            <strong style="color: #ff00ff;">ADVANCED COMBAT TRAINING</strong><br>
+            Progress: 45% | Est. Completion: 4 missions<br>
+            Benefit: +10 damage for all agents
+        </div>`;
+        
+        content += '<h3 style="color: #ff00ff; margin: 30px 0 15px 0;">AVAILABLE RESEARCH</h3>';
+        
+        const researchProjects = [
+            { id: 1, name: 'Weapon Upgrades', cost: 150, description: '+5 damage to all weapons', category: 'combat' },
+            { id: 2, name: 'Stealth Technology', cost: 200, description: '+20% stealth success rate', category: 'stealth' },
+            { id: 3, name: 'Combat Systems', cost: 175, description: '+15 health to all agents', category: 'combat' },
+            { id: 4, name: 'Hacking Protocols', cost: 225, description: '+25% hacking speed', category: 'tech' },
+            { id: 5, name: 'Medical Systems', cost: 300, description: 'Auto-heal 20% health between missions', category: 'support' },
+            { id: 6, name: 'Advanced Tactics', cost: 250, description: '+1 movement speed to all agents', category: 'tactical' }
+        ];
+        
+        researchProjects.forEach(project => {
+            const canAfford = this.researchPoints >= project.cost;
+            const completed = this.completedResearch && this.completedResearch.includes(project.id);
+            
+            content += `
+                <div style="background: ${completed ? 'rgba(0,255,0,0.1)' : canAfford ? 'rgba(255,0,255,0.1)' : 'rgba(128,128,128,0.1)'}; 
+                           padding: 15px; margin: 10px 0; border-radius: 8px; 
+                           border: 1px solid ${completed ? '#00ff00' : canAfford ? '#ff00ff' : '#666'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: bold; color: ${completed ? '#00ff00' : canAfford ? '#fff' : '#999'};">
+                                ${project.name} ${completed ? '✅' : ''}
+                            </div>
+                            <div style="color: #ccc; font-size: 0.9em; margin: 5px 0;">
+                                ${project.description}<br>
+                                Category: ${project.category}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #ff00ff; font-weight: bold; margin-bottom: 5px;">${project.cost} RP</div>
+                            <button onclick="game.startResearch(${project.id})" 
+                                    style="background: ${completed ? '#006600' : canAfford ? '#1e3c72' : '#666'}; 
+                                           color: ${completed ? '#fff' : canAfford ? '#fff' : '#999'}; 
+                                           border: 1px solid ${completed ? '#00ff00' : canAfford ? '#ff00ff' : '#888'}; 
+                                           padding: 8px 15px; border-radius: 4px; cursor: ${completed ? 'not-allowed' : canAfford ? 'pointer' : 'not-allowed'};"
+                                    ${completed || !canAfford ? 'disabled' : ''}>
+                                ${completed ? 'COMPLETED' : canAfford ? 'RESEARCH' : 'INSUFFICIENT RP'}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        
+        content += '</div>';
+        
         this.showHudDialog(
             '🔬 RESEARCH LABORATORY',
-            `<div style="text-align: center;">
-                <div style="color: #00ffff; font-size: 1.2em; margin-bottom: 20px;">
-                    Research Points Available: ${this.researchPoints}
-                </div>
-                <div style="background: rgba(0,255,255,0.1); padding: 20px; border-radius: 8px;">
-                    <h3 style="color: #fff;">Available Research Projects:</h3>
-                    <div style="margin: 10px 0;">
-                        • Agent Enhancement (Cost: 100 RP)<br>
-                        • Weapon Upgrades (Cost: 150 RP)<br>
-                        • Stealth Technology (Cost: 200 RP)<br>
-                        • Combat Systems (Cost: 175 RP)
-                    </div>
-                    <p style="color: #ccc; margin-top: 20px; font-style: italic;">
-                        Research system coming in future updates!
-                    </p>
-                </div>
-            </div>`,
+            content,
             [
                 { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
             ]
         );
+    }
+    
+    startResearch(projectId) {
+        const researchProjects = [
+            { id: 1, name: 'Weapon Upgrades', cost: 150, description: '+5 damage to all weapons', category: 'combat' },
+            { id: 2, name: 'Stealth Technology', cost: 200, description: '+20% stealth success rate', category: 'stealth' },
+            { id: 3, name: 'Combat Systems', cost: 175, description: '+15 health to all agents', category: 'combat' },
+            { id: 4, name: 'Hacking Protocols', cost: 225, description: '+25% hacking speed', category: 'tech' },
+            { id: 5, name: 'Medical Systems', cost: 300, description: 'Auto-heal 20% health between missions', category: 'support' },
+            { id: 6, name: 'Advanced Tactics', cost: 250, description: '+1 movement speed to all agents', category: 'tactical' }
+        ];
+        
+        const project = researchProjects.find(p => p.id === projectId);
+        if (!project || this.researchPoints < project.cost) return;
+        
+        // Initialize completed research array if not exists
+        if (!this.completedResearch) this.completedResearch = [];
+        
+        // Check if already researched
+        if (this.completedResearch.includes(projectId)) {
+            this.showHudDialog(
+                '⚠️ RESEARCH COMPLETE',
+                `${project.name} has already been researched!`,
+                [{ text: 'OK', action: () => this.showResearchLab() }]
+            );
+            return;
+        }
+        
+        // Complete research
+        this.researchPoints -= project.cost;
+        this.completedResearch.push(projectId);
+        
+        // Apply research benefits
+        this.applyResearchBenefits(project);
+        
+        this.showHudDialog(
+            '🎯 RESEARCH COMPLETED',
+            `${project.name} research has been completed!<br><br>
+            <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <strong>${project.name}</strong><br>
+                Category: ${project.category}<br>
+                Benefit: ${project.description}
+            </div>
+            Research Points Remaining: ${this.researchPoints.toLocaleString()}`,
+            [
+                { text: 'CONTINUE RESEARCH', action: () => this.showResearchLab() },
+                { text: 'BACK TO HUB', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+            ]
+        );
+        
+        this.updateHubStats();
+    }
+    
+    applyResearchBenefits(project) {
+        // Apply research benefits to game systems
+        switch (project.id) {
+            case 1: // Weapon Upgrades
+                this.activeAgents.forEach(agent => {
+                    agent.damage += 5;
+                });
+                break;
+            case 2: // Stealth Technology
+                // Stealth bonus will be applied during missions
+                break;
+            case 3: // Combat Systems
+                this.activeAgents.forEach(agent => {
+                    agent.health += 15;
+                    agent.maxHealth = agent.health;
+                });
+                break;
+            case 4: // Hacking Protocols
+                // Hacking bonus will be applied during missions
+                break;
+            case 5: // Medical Systems
+                // Auto-heal will be applied between missions
+                this.applyMedicalHealing();
+                break;
+            case 6: // Advanced Tactics
+                this.activeAgents.forEach(agent => {
+                    agent.speed += 1;
+                });
+                break;
+        }
+    }
+    
+    // Apply equipment bonuses to mission agents
+    applyEquipmentBonuses(agent) {
+        // Apply bonuses from owned equipment
+        this.equipment.forEach(item => {
+            if (item.owned > 0) {
+                if (item.protection) agent.protection += item.protection;
+                if (item.hackBonus) agent.hackBonus += item.hackBonus;
+                if (item.stealthBonus) agent.stealthBonus += item.stealthBonus;
+                if (item.damage) agent.damage += item.damage;
+            }
+        });
+    }
+    
+    // Apply research bonuses during missions
+    applyMissionResearchBonuses(agent) {
+        if (!this.completedResearch) return;
+        
+        this.completedResearch.forEach(researchId => {
+            switch (researchId) {
+                case 2: // Stealth Technology
+                    agent.stealthBonus += 20;
+                    break;
+                case 4: // Hacking Protocols
+                    agent.hackBonus += 25;
+                    break;
+            }
+        });
+    }
+    
+    // Apply medical healing between missions
+    applyMedicalHealing() {
+        if (!this.completedResearch || !this.completedResearch.includes(5)) return;
+        
+        this.activeAgents.forEach(agent => {
+            const healAmount = Math.floor(agent.maxHealth * 0.2);
+            agent.health = Math.min(agent.health + healAmount, agent.maxHealth);
+        });
+    }
+    
+    // Apply stealth bonus for detection  
+    getStealthDetectionRange(agent) {
+        let baseRange = 5; // Default enemy vision range
+        
+        if (agent.stealthBonus) {
+            // Stealth bonus reduces enemy detection range
+            baseRange = Math.max(2, baseRange - (agent.stealthBonus / 20));
+        }
+        
+        return baseRange;
+    }
+    
+    // Fix missing medical healing call after mission completion
+    completeMissionRewards(victory) {
+        if (victory && this.currentMission.rewards) {
+            this.credits += this.currentMission.rewards.credits || 0;
+            this.researchPoints += this.currentMission.rewards.researchPoints || 0;
+            this.worldControl += this.currentMission.rewards.worldControl || 0;
+            
+            // Apply medical healing if researched
+            this.applyMedicalHealing();
+            
+            // Update hub stats
+            this.updateHubStats();
+        }
     }
     
     showIntelligence() {
@@ -1596,6 +1862,293 @@ class CyberOpsGame {
                 { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
             ]
         );
+    }
+    
+    // Agent Hiring System
+    showHiringDialog() {
+        const availableAgents = this.availableAgents.filter(agent => !agent.hired);
+        
+        if (availableAgents.length === 0) {
+            this.showHudDialog(
+                '👥 NO AGENTS AVAILABLE',
+                'All available agents have already been hired!<br><br>Check back later for new recruits.',
+                [{ text: 'OK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }]
+            );
+            return;
+        }
+        
+        let content = '<div style="max-height: 400px; overflow-y: auto;">';
+        content += `<div style="color: #00ffff; margin-bottom: 20px; text-align: center;">Available Credits: ${this.credits.toLocaleString()}</div>`;
+        
+        availableAgents.forEach(agent => {
+            const canAfford = this.credits >= agent.cost;
+            content += `
+                <div style="background: ${canAfford ? 'rgba(0,255,255,0.1)' : 'rgba(128,128,128,0.1)'}; 
+                           padding: 15px; margin: 10px 0; border-radius: 8px; 
+                           border: 1px solid ${canAfford ? '#00ffff' : '#666'};">
+                    <div style="font-weight: bold; color: ${canAfford ? '#fff' : '#999'};">${agent.name}</div>
+                    <div style="color: #ccc; font-size: 0.9em; margin: 5px 0;">
+                        Specialization: ${agent.specialization}<br>
+                        Skills: ${agent.skills.join(', ')}<br>
+                        Health: ${agent.health} | Damage: ${agent.damage} | Speed: ${agent.speed}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                        <span style="color: #00ffff; font-weight: bold;">Cost: ${agent.cost.toLocaleString()} credits</span>
+                        <button onclick="game.hireAgent(${agent.id})" 
+                                style="background: ${canAfford ? '#1e3c72' : '#666'}; 
+                                       color: ${canAfford ? '#fff' : '#999'}; 
+                                       border: 1px solid ${canAfford ? '#00ffff' : '#888'}; 
+                                       padding: 8px 15px; border-radius: 4px; cursor: ${canAfford ? 'pointer' : 'not-allowed'};"
+                                ${!canAfford ? 'disabled' : ''}>
+                            ${canAfford ? 'HIRE' : 'INSUFFICIENT FUNDS'}
+                        </button>
+                    </div>
+                </div>`;
+        });
+        
+        content += '</div>';
+        
+        this.showHudDialog(
+            '👥 HIRE AGENTS',
+            content,
+            [
+                { text: 'BACK', action: () => this.showAgentManagement() }
+            ]
+        );
+    }
+    
+    hireAgent(agentId) {
+        const agent = this.availableAgents.find(a => a.id === agentId);
+        if (!agent || agent.hired || this.credits < agent.cost) return;
+        
+        // Deduct credits and hire agent
+        this.credits -= agent.cost;
+        agent.hired = true;
+        this.activeAgents.push(agent);
+        
+        this.showHudDialog(
+            '✅ AGENT HIRED',
+            `${agent.name} has been successfully recruited to your syndicate!<br><br>
+            <div style="background: rgba(0,255,255,0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <strong>${agent.name}</strong><br>
+                Specialization: ${agent.specialization}<br>
+                Skills: ${agent.skills.join(', ')}<br>
+                Health: ${agent.health} | Damage: ${agent.damage}
+            </div>
+            Credits Remaining: ${this.credits.toLocaleString()}`,
+            [
+                { text: 'HIRE MORE', action: () => this.showHiringDialog() },
+                { text: 'BACK TO HUB', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+            ]
+        );
+        
+        this.updateHubStats();
+    }
+    
+    // Squad Management System
+    showSquadManagement() {
+        let content = '<div style="max-height: 400px; overflow-y: auto;">';
+        content += '<h3 style="color: #00ffff; margin-bottom: 15px;">ACTIVE SQUAD MEMBERS</h3>';
+        
+        this.activeAgents.forEach(agent => {
+            content += `
+                <div style="background: rgba(0,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #00ffff;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <div style="font-weight: bold; color: #fff; margin-bottom: 5px;">${agent.name}</div>
+                            <div style="color: #ccc; font-size: 0.9em;">
+                                Specialization: ${agent.specialization}<br>
+                                Skills: ${agent.skills.join(', ')}<br>
+                                Health: ${agent.health} | Damage: ${agent.damage} | Speed: ${agent.speed}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <button onclick="game.manageAgentEquipment(${agent.id})" 
+                                    style="background: #1e3c72; color: #fff; border: 1px solid #00ffff; 
+                                           padding: 6px 12px; border-radius: 4px; cursor: pointer; margin: 2px;">
+                                EQUIP
+                            </button>
+                            <br>
+                            <button onclick="game.viewAgentDetails(${agent.id})" 
+                                    style="background: #1e3c72; color: #fff; border: 1px solid #00ffff; 
+                                           padding: 6px 12px; border-radius: 4px; cursor: pointer; margin: 2px;">
+                                DETAILS
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        
+        content += '</div>';
+        
+        this.showHudDialog(
+            '⚙️ SQUAD MANAGEMENT',
+            content,
+            [
+                { text: 'BACK', action: () => this.showAgentManagement() }
+            ]
+        );
+    }
+    
+    manageAgentEquipment(agentId) {
+        const agent = this.activeAgents.find(a => a.id === agentId);
+        if (!agent) return;
+        
+        this.showHudDialog(
+            `🔧 ${agent.name.toUpperCase()} - EQUIPMENT`,
+            `<div style="text-align: center;">
+                <div style="background: rgba(0,255,255,0.1); padding: 20px; border-radius: 8px;">
+                    <h3 style="color: #fff; margin-bottom: 15px;">${agent.name}</h3>
+                    <div style="color: #ccc; margin-bottom: 20px;">
+                        Current Equipment: Basic Loadout<br>
+                        Weapons: Standard Issue<br>
+                        Armor: Light Protection
+                    </div>
+                    <p style="color: #ccc; font-style: italic;">
+                        Advanced equipment system coming in future updates!<br>
+                        For now, all agents use standard loadouts.
+                    </p>
+                </div>
+            </div>`,
+            [
+                { text: 'BACK', action: () => this.showSquadManagement() }
+            ]
+        );
+    }
+    
+    viewAgentDetails(agentId) {
+        const agent = this.activeAgents.find(a => a.id === agentId);
+        if (!agent) return;
+        
+        this.showHudDialog(
+            `📋 ${agent.name.toUpperCase()} - PROFILE`,
+            `<div style="text-align: center;">
+                <div style="background: rgba(0,255,255,0.1); padding: 20px; border-radius: 8px;">
+                    <h3 style="color: #fff; margin-bottom: 15px;">${agent.name}</h3>
+                    <div style="text-align: left; color: #ccc;">
+                        <strong style="color: #00ffff;">Specialization:</strong> ${agent.specialization}<br>
+                        <strong style="color: #00ffff;">Skills:</strong> ${agent.skills.join(', ')}<br>
+                        <strong style="color: #00ffff;">Health:</strong> ${agent.health} HP<br>
+                        <strong style="color: #00ffff;">Damage:</strong> ${agent.damage} DMG<br>
+                        <strong style="color: #00ffff;">Speed:</strong> ${agent.speed} SPD<br>
+                        <strong style="color: #00ffff;">Cost:</strong> ${agent.cost.toLocaleString()} credits<br>
+                        <strong style="color: #00ffff;">Status:</strong> Active
+                    </div>
+                </div>
+            </div>`,
+            [
+                { text: 'BACK', action: () => this.showSquadManagement() }
+            ]
+        );
+    }
+    
+    // Equipment Shop System
+    showShopDialog() {
+        let content = '<div style="max-height: 400px; overflow-y: auto;">';
+        content += `<div style="color: #00ffff; margin-bottom: 20px; text-align: center;">Available Credits: ${this.credits.toLocaleString()}</div>`;
+        
+        content += '<h3 style="color: #00ffff; margin: 20px 0 15px 0;">WEAPONS</h3>';
+        this.weapons.forEach(weapon => {
+            const canBuy = this.credits >= weapon.cost;
+            content += `
+                <div style="background: ${canBuy ? 'rgba(0,255,255,0.1)' : 'rgba(128,128,128,0.1)'}; 
+                           padding: 15px; margin: 10px 0; border-radius: 8px; 
+                           border: 1px solid ${canBuy ? '#00ffff' : '#666'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: bold; color: ${canBuy ? '#fff' : '#999'};">${weapon.name}</div>
+                            <div style="color: #ccc; font-size: 0.9em;">
+                                Owned: ${weapon.owned} | Damage: ${weapon.damage} | Type: ${weapon.type}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #00ffff; font-weight: bold; margin-bottom: 5px;">${weapon.cost.toLocaleString()} credits</div>
+                            <button onclick="game.buyItem('weapon', ${weapon.id})" 
+                                    style="background: ${canBuy ? '#1e3c72' : '#666'}; 
+                                           color: ${canBuy ? '#fff' : '#999'}; 
+                                           border: 1px solid ${canBuy ? '#00ffff' : '#888'}; 
+                                           padding: 8px 15px; border-radius: 4px; cursor: ${canBuy ? 'pointer' : 'not-allowed'};"
+                                    ${!canBuy ? 'disabled' : ''}>
+                                ${canBuy ? 'BUY' : 'INSUFFICIENT FUNDS'}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        
+        content += '<h3 style="color: #ff00ff; margin: 20px 0 15px 0;">EQUIPMENT</h3>';
+        this.equipment.forEach(item => {
+            const canBuy = this.credits >= item.cost;
+            let stats = '';
+            if (item.protection) stats += `Protection: ${item.protection}`;
+            if (item.hackBonus) stats += `Hack Bonus: ${item.hackBonus}%`;
+            if (item.stealthBonus) stats += `Stealth Bonus: ${item.stealthBonus}%`;
+            if (item.damage) stats += `Damage: ${item.damage}`;
+            
+            content += `
+                <div style="background: ${canBuy ? 'rgba(255,0,255,0.1)' : 'rgba(128,128,128,0.1)'}; 
+                           padding: 15px; margin: 10px 0; border-radius: 8px; 
+                           border: 1px solid ${canBuy ? '#ff00ff' : '#666'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: bold; color: ${canBuy ? '#fff' : '#999'};">${item.name}</div>
+                            <div style="color: #ccc; font-size: 0.9em;">
+                                Owned: ${item.owned} | ${stats}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #ff00ff; font-weight: bold; margin-bottom: 5px;">${item.cost.toLocaleString()} credits</div>
+                            <button onclick="game.buyItem('equipment', ${item.id})" 
+                                    style="background: ${canBuy ? '#1e3c72' : '#666'}; 
+                                           color: ${canBuy ? '#fff' : '#999'}; 
+                                           border: 1px solid ${canBuy ? '#ff00ff' : '#888'}; 
+                                           padding: 8px 15px; border-radius: 4px; cursor: ${canBuy ? 'pointer' : 'not-allowed'};"
+                                    ${!canBuy ? 'disabled' : ''}>
+                                ${canBuy ? 'BUY' : 'INSUFFICIENT FUNDS'}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        
+        content += '</div>';
+        
+        this.showHudDialog(
+            '🛒 EQUIPMENT SHOP',
+            content,
+            [
+                { text: 'BACK', action: () => this.showArsenal() }
+            ]
+        );
+    }
+    
+    buyItem(type, itemId) {
+        const items = type === 'weapon' ? this.weapons : this.equipment;
+        const item = items.find(i => i.id === itemId);
+        
+        if (!item || this.credits < item.cost) return;
+        
+        // Purchase item
+        this.credits -= item.cost;
+        item.owned += 1;
+        
+        this.showHudDialog(
+            '✅ PURCHASE SUCCESSFUL',
+            `${item.name} has been added to your arsenal!<br><br>
+            <div style="background: rgba(0,255,255,0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <strong>${item.name}</strong><br>
+                Type: ${item.type}<br>
+                ${type === 'weapon' ? `Damage: ${item.damage}` : `Stats: Various bonuses`}<br>
+                Now Owned: ${item.owned}
+            </div>
+            Credits Remaining: ${this.credits.toLocaleString()}`,
+            [
+                { text: 'BUY MORE', action: () => this.showShopDialog() },
+                { text: 'BACK TO HUB', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+            ]
+        );
+        
+        this.updateHubStats();
     }
 
     // HUD Dialog System
@@ -1782,29 +2335,109 @@ class CyberOpsGame {
         this.updateMenuState();
     }
     
+    showInitialScreen() {
+        console.log('Showing initial start screen');
+        this.currentScreen = 'initial';
+        
+        const initialScreen = document.getElementById('initialScreen');
+        const resetButton = document.getElementById('resetButton');
+        
+        initialScreen.style.display = 'flex';
+        
+        // Remove existing event listener and add new one to avoid duplicates
+        resetButton.replaceWith(resetButton.cloneNode(true));
+        const newResetButton = document.getElementById('resetButton');
+        
+        // Handle reset button click
+        newResetButton.addEventListener('click', () => {
+            this.startGameExperience();
+        });
+    }
+
+    startGameExperience() {
+        console.log('Starting game experience...');
+        
+        // Enable audio immediately on user interaction
+        this.enableAudioOnInteraction();
+        
+        // Hide initial screen
+        document.getElementById('initialScreen').style.display = 'none';
+        
+        // Check for saved game
+        this.checkForSavedGame();
+        
+        // Start splash screens
+        this.showSplashScreens();
+    }
+
+    enableAudioOnInteraction() {
+        this.audioEnabled = true;
+        
+        try {
+            // Create AudioContext after user interaction
+            console.log('Creating AudioContext after user interaction...');
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Generate music data
+            this.generateSplashMusic();
+            this.generateMainMenuMusic();
+            
+            console.log('AudioContext created successfully!');
+            console.log('Audio context state:', this.audioContext.state);
+            
+            // Store permission for this session
+            sessionStorage.setItem('cyberops_audio_enabled', 'true');
+            
+        } catch (error) {
+            console.warn('Failed to create AudioContext:', error);
+            this.audioEnabled = false;
+        }
+    }
+    
     showSplashScreens() {
-        // Hide main menu during entire splash sequence
-        document.getElementById('mainMenu').style.display = 'none';
+        console.log('Starting splash sequence');
+        this.currentScreen = 'splash'; // Set screen state for skip functionality
+        
+        // Setup click skip functionality
+        this.setupSplashSkip();
+        
+        // Start splash music immediately (audio is enabled from user interaction)
+        if (this.audioEnabled) {
+            this.playSplashMusic();
+        }
         
         // Show company logo
         const companyLogo = document.getElementById('companyLogo');
+        companyLogo.style.display = 'flex';
         companyLogo.classList.add('show');
+        console.log('Showing company logo splash');
         
-        setTimeout(() => {
+        this.splashTimeout1 = setTimeout(() => {
+            if (this.splashSkipped) return;
             companyLogo.classList.remove('show');
-            companyLogo.style.display = 'none';
+            setTimeout(() => {
+                companyLogo.style.display = 'none';
+            }, 1000); // Wait for fade-out transition
+            console.log('Hiding company logo, showing studio logo');
             
             // Show studio logo
             const studioLogo = document.getElementById('studioLogo');
+            studioLogo.style.display = 'flex';
             studioLogo.classList.add('show');
             
-            setTimeout(() => {
+            this.splashTimeout2 = setTimeout(() => {
+                if (this.splashSkipped) return;
                 // Add explode fade-out effect
                 studioLogo.classList.add('fade-out-explode');
+                console.log('Studio logo explode animation');
                 
-                setTimeout(() => {
+                this.splashTimeout3 = setTimeout(() => {
+                    if (this.splashSkipped) return;
                     studioLogo.classList.remove('show', 'fade-out-explode');
-                    studioLogo.style.display = 'none';
+                    setTimeout(() => {
+                        studioLogo.style.display = 'none';
+                    }, 1000); // Wait for fade-out transition
+                    console.log('Hiding studio logo, showing loading screen');
                     
                     // Show loading screen
                     const loadingScreen = document.getElementById('loadingScreen');
@@ -1821,12 +2454,21 @@ class CyberOpsGame {
                         mainMenu.style.opacity = '0';
                         mainMenu.classList.remove('fade-in-from-flash'); // Reset
                         
-                        setTimeout(() => {
+                        setTimeout(() => {  
                             mainMenu.classList.add('fade-in-from-flash');
                         }, 50);
                         
                         this.currentScreen = 'menu';
                         this.updateMenuState();
+                        
+                        // Let music continue naturally - no seeking needed for smooth progression
+                        if (this.audioEnabled && this.gameAudio) {
+                            console.log('Natural splash progression - music continues seamlessly without seeking');
+                            // No currentTime change - let music flow naturally
+                        }
+                        
+                        // Remove splash click handlers
+                        this.removeSplashClickHandlers();
                         
                         // Clean up after animation
                         setTimeout(() => {
@@ -1834,9 +2476,489 @@ class CyberOpsGame {
                             mainMenu.style.opacity = '';
                         }, 4600); // Match new animation duration
                     });
-                }, 800); // Fade-out duration
-            }, 3000);  // 3 seconds
-        }, 3000);  // 3 seconds
+                }, 500); // Explode animation duration
+            }, 3000);  // Studio logo duration 
+        }, 3000);  // Company logo duration
+    }
+    
+    setupSplashSkip() {
+        this.splashSkipped = false;
+        
+        const skipHandler = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if (!this.splashSkipped && this.currentScreen === 'splash') {
+                // Don't skip immediately - first start music for current splash screen
+                if (!this.audioEnabled) {
+                    // This will trigger audio activation and start splash music
+                    console.log('Starting audio from splash screen click...');
+                    return; // Let the audio interaction handler take care of it
+                } else {
+                    // Audio is already enabled, now skip
+                    this.skipToMainMenu();
+                }
+            }
+        };
+        
+        // Add click listeners to all splash screens
+        document.getElementById('companyLogo').addEventListener('click', skipHandler);
+        document.getElementById('studioLogo').addEventListener('click', skipHandler);
+        document.getElementById('loadingScreen').addEventListener('click', skipHandler);
+        
+        // Store handler for cleanup
+        this.splashClickHandler = skipHandler;
+    }
+    
+    skipToMainMenu() {
+        this.splashSkipped = true;
+        
+        // Clear all splash timeouts
+        if (this.splashTimeout1) clearTimeout(this.splashTimeout1);
+        if (this.splashTimeout2) clearTimeout(this.splashTimeout2);
+        if (this.splashTimeout3) clearTimeout(this.splashTimeout3);
+        if (this.progressAnimationFrame) cancelAnimationFrame(this.progressAnimationFrame);
+        
+        // Hide all splash screens immediately
+        document.getElementById('companyLogo').style.display = 'none';
+        document.getElementById('studioLogo').style.display = 'none';
+        document.getElementById('loadingScreen').style.display = 'none';
+        
+        // Remove any classes
+        const companyLogo = document.getElementById('companyLogo');
+        const studioLogo = document.getElementById('studioLogo');
+        companyLogo.classList.remove('show');
+        studioLogo.classList.remove('show', 'fade-out-explode');
+        
+        // Skip directly to main menu with fade effect
+        this.finalizeSplashToMenu();
+    }
+    
+    finalizeSplashToMenu() {
+        const mainMenu = document.getElementById('mainMenu');
+        mainMenu.style.display = 'flex';
+        mainMenu.style.opacity = '0';
+        mainMenu.classList.remove('fade-in-from-flash');
+        
+        setTimeout(() => {
+            mainMenu.classList.add('fade-in-from-flash');
+        }, 50);
+        
+        this.currentScreen = 'menu';
+        this.updateMenuState();
+        
+        // Seek to main menu section if skipped, or let it continue naturally
+        if (this.audioEnabled) {
+            if (this.splashSkipped) {
+                // If skipped, seek to 10.7 seconds (main menu section)
+                console.log('Splash skipped - seeking to menu music section');
+                this.playMainMenuMusic();
+            } else {
+                // If natural progression, music continues seamlessly without seeking
+                console.log('Natural splash transition - music continues without artifacts');
+                // No currentTime change - avoid audio artifacts from seeking
+            }
+        }
+        
+        // Remove splash click handlers
+        this.removeSplashClickHandlers();
+        
+        // Clean up after animation
+        setTimeout(() => {
+            mainMenu.classList.remove('fade-in-from-flash');
+            mainMenu.style.opacity = '';
+        }, 4600);
+    }
+
+    removeSplashClickHandlers() {
+        if (this.splashClickHandler) {
+            document.getElementById('companyLogo').removeEventListener('click', this.splashClickHandler);
+            document.getElementById('studioLogo').removeEventListener('click', this.splashClickHandler);
+            document.getElementById('loadingScreen').removeEventListener('click', this.splashClickHandler);
+            this.splashClickHandler = null;
+        }
+    }
+    
+    // Audio System
+    initializeAudio() {
+        // Initialize audio variables - DON'T create AudioContext yet!
+        this.audioContext = null;
+        this.splashMusicNode = null;
+        this.mainMenuMusicNode = null;
+        this.audioEnabled = false; // Start with audio disabled
+        this.splashMusicData = null;
+        this.mainMenuMusicData = null;
+        
+        // Get unified HTML5 audio element
+        this.gameAudio = document.getElementById('gameMusic');
+        
+        // Set initial volume
+        if (this.gameAudio) this.gameAudio.volume = 0.25;
+        
+        console.log('Audio system initialized, waiting for user interaction...');
+    }
+    
+    enableAudioImmediately() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.generateSplashMusic();
+            this.generateMainMenuMusic();
+            this.audioEnabled = true;
+            
+            console.log('Audio enabled from session storage');
+            console.log('Audio context state:', this.audioContext.state);
+            
+            // Try to resume immediately, but setup fallback for user interaction
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    console.log('Audio context resumed successfully from session');
+                    this.startAppropriateMusic();
+                }).catch(() => {
+                    console.log('Audio resume failed, setting up one-time interaction handler');
+                    this.setupOneTimeResume();
+                });
+            } else {
+                this.startAppropriateMusic();
+            }
+            
+        } catch (error) {
+            console.warn('Failed to create AudioContext from session:', error);
+            this.audioEnabled = false;
+        }
+    }
+
+    startAppropriateMusic() {
+        // Start appropriate music based on current screen
+        setTimeout(() => {
+            if (this.currentScreen === 'splash') {
+                this.playSplashMusic();
+            } else if (this.currentScreen === 'menu') {
+                this.playMainMenuMusic();
+            }
+        }, 100);
+    }
+
+    setupOneTimeResume() {
+        const resumeHandler = () => {
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    console.log('Audio context resumed on user interaction');
+                    this.startAppropriateMusic();
+                });
+            }
+            // Remove listeners
+            document.removeEventListener('click', resumeHandler);
+            document.removeEventListener('touchstart', resumeHandler);
+            document.removeEventListener('keydown', resumeHandler);
+        };
+        
+        document.addEventListener('click', resumeHandler, { once: true });
+        document.addEventListener('touchstart', resumeHandler, { once: true });
+        document.addEventListener('keydown', resumeHandler, { once: true });
+    }
+    
+    generateSplashMusic() {
+        // Cyberpunk demoscene style splash melody (covers ~9 seconds of splashes)
+        this.splashMusicData = {
+            tempo: 140, // Faster, more energetic
+            notes: [
+                // Intro arpeggio (company logo - 3 seconds)
+                { freq: 220.00, duration: 0.3 }, // A3
+                { freq: 261.63, duration: 0.3 }, // C4
+                { freq: 329.63, duration: 0.3 }, // E4
+                { freq: 440.00, duration: 0.3 }, // A4
+                { freq: 523.25, duration: 0.3 }, // C5
+                { freq: 659.25, duration: 0.3 }, // E5
+                { freq: 880.00, duration: 0.6 }, // A5
+                { freq: 0, duration: 0.3 }, // Rest
+                
+                // Main pulse (studio logo - 3 seconds)
+                { freq: 146.83, duration: 0.4 }, // D3 (bass)
+                { freq: 293.66, duration: 0.2 }, // D4
+                { freq: 369.99, duration: 0.2 }, // F#4
+                { freq: 440.00, duration: 0.4 }, // A4
+                { freq: 146.83, duration: 0.4 }, // D3 (bass)
+                { freq: 293.66, duration: 0.2 }, // D4
+                { freq: 392.00, duration: 0.2 }, // G4
+                { freq: 466.16, duration: 0.4 }, // A#4
+                { freq: 0, duration: 0.2 }, // Rest
+                
+                // Climax sequence (loading screen - 3 seconds)
+                { freq: 174.61, duration: 0.3 }, // F3
+                { freq: 220.00, duration: 0.3 }, // A3
+                { freq: 277.18, duration: 0.3 }, // C#4
+                { freq: 349.23, duration: 0.3 }, // F4
+                { freq: 440.00, duration: 0.3 }, // A4
+                { freq: 554.37, duration: 0.3 }, // C#5
+                { freq: 698.46, duration: 0.6 }, // F5
+                { freq: 880.00, duration: 0.6 }, // A5 (peak)
+                { freq: 0, duration: 0.3 }, // Final rest
+            ]
+        };
+        console.log('Cyberpunk splash music generated (9 seconds)');
+    }
+    
+    generateMainMenuMusic() {
+        // Atmospheric cyberpunk main menu ambient (looping)
+        this.mainMenuMusicData = {
+            tempo: 85, // Slower, more atmospheric
+            notes: [
+                // Dark ambient pad
+                { freq: 130.81, duration: 1.5 }, // C3 (deep bass)
+                { freq: 164.81, duration: 1.0 }, // E3
+                { freq: 196.00, duration: 1.0 }, // G3
+                { freq: 220.00, duration: 1.5 }, // A3
+                { freq: 0, duration: 0.5 }, // Rest
+                
+                // Cyberpunk arpeggiated sequence
+                { freq: 261.63, duration: 0.4 }, // C4
+                { freq: 311.13, duration: 0.4 }, // D#4
+                { freq: 369.99, duration: 0.4 }, // F#4
+                { freq: 440.00, duration: 0.8 }, // A4
+                { freq: 523.25, duration: 0.4 }, // C5
+                { freq: 622.25, duration: 0.4 }, // D#5
+                { freq: 739.99, duration: 0.4 }, // F#5
+                { freq: 880.00, duration: 1.2 }, // A5
+                
+                // Descending resolution
+                { freq: 783.99, duration: 0.6 }, // G5
+                { freq: 659.25, duration: 0.6 }, // E5
+                { freq: 523.25, duration: 0.6 }, // C5
+                { freq: 440.00, duration: 1.2 }, // A4
+                { freq: 0, duration: 1.0 }, // Long rest before loop
+            ]
+        };
+        console.log('Atmospheric cyberpunk menu music generated');
+    }
+    
+    playProcedualMusic(musicData) {
+        if (!this.audioContext || !musicData) return null;
+        
+        const gainNode = this.audioContext.createGain();
+        gainNode.connect(this.audioContext.destination);
+        gainNode.gain.setValueAtTime(0.15, this.audioContext.currentTime); // Slightly louder for better presence
+        
+        let currentTime = this.audioContext.currentTime;
+        
+        const playSequence = () => {
+            musicData.notes.forEach((note) => {
+                if (note.freq > 0) {
+                    const oscillator = this.audioContext.createOscillator();
+                    const noteGain = this.audioContext.createGain();
+                    
+                    // Use square wave for authentic 8-bit sound with slight variation
+                    oscillator.type = note.freq < 300 ? 'sawtooth' : 'square'; // Bass uses sawtooth, highs use square
+                    oscillator.frequency.setValueAtTime(note.freq, currentTime);
+                    
+                    // Enhanced envelope for more dynamic 8-bit sound
+                    noteGain.gain.setValueAtTime(0, currentTime);
+                    noteGain.gain.linearRampToValueAtTime(0.4, currentTime + 0.02);
+                    noteGain.gain.linearRampToValueAtTime(0.3, currentTime + note.duration * 0.3);
+                    noteGain.gain.exponentialRampToValueAtTime(0.05, currentTime + note.duration);
+                    
+                    oscillator.connect(noteGain);
+                    noteGain.connect(gainNode);
+                    
+                    oscillator.start(currentTime);
+                    oscillator.stop(currentTime + note.duration);
+                }
+                currentTime += note.duration;
+            });
+            
+            // Schedule next repetition
+            setTimeout(() => {
+                if (gainNode.context.state === 'running') {
+                    playSequence();
+                }
+            }, (currentTime - this.audioContext.currentTime) * 1000);
+        };
+        
+        // Only play if audio context exists and is running
+        if (this.audioContext && this.audioContext.state === 'running') {
+            playSequence();
+        } else if (this.audioContext) {
+            console.log('Audio context not running, state:', this.audioContext.state);
+        } else {
+            console.log('Audio context not created yet');
+        }
+        
+        return gainNode;
+    }
+    
+    playSplashMusic() {
+        if (!this.audioEnabled || !this.gameAudio) {
+            console.log('Audio not enabled or game audio not available');
+            return;
+        }
+        
+        console.log('Starting splash music from beginning...');
+        
+        // Start from beginning (splash part: 0-9 seconds)
+        this.gameAudio.currentTime = 0;
+        this.gameAudio.play().then(() => {
+            console.log('Game music started successfully from splash section');
+        }).catch(error => {
+            console.warn('Failed to play game music:', error);
+            // Fallback to procedural music if WAV fails
+            this.playProceduralSplashMusic();
+        });
+    }
+    
+    stopSplashMusic() {
+        // Don't actually stop the music - just note that splash section is over
+        console.log('Splash music section completed, transitioning to menu section');
+        
+        // Stop procedural music if it's playing as fallback
+        if (this.splashMusicNode) {
+            this.splashMusicNode.disconnect();
+            this.splashMusicNode = null;
+        }
+    }
+    
+    playMainMenuMusic() {
+        if (!this.audioEnabled || !this.gameAudio) {
+            console.log('Audio not enabled or game audio not available');
+            return;
+        }
+        
+        console.log('Transitioning to main menu music section...');
+        
+        // Seek to main menu section (after 10.7 seconds of splash music)
+        this.gameAudio.currentTime = this.MUSIC_MENU_START_TIME;
+        
+        // Make sure music is playing
+        if (this.gameAudio.paused) {
+            this.gameAudio.play().then(() => {
+                console.log('Game music resumed from menu section (10.7s)');
+            }).catch(error => {
+                console.warn('Failed to resume game music at menu section:', error);
+                // Fallback to procedural music if WAV fails
+                this.playProceduralMainMenuMusic();
+            });
+        } else {
+            console.log('Game music seeked to menu section (10.7s)');
+        }
+    }
+    
+    stopMainMenuMusic() {
+        if (this.gameAudio && !this.gameAudio.paused) {
+            this.gameAudio.pause();
+            this.gameAudio.currentTime = 0;
+            console.log('Game music stopped completely');
+        }
+        
+        // Stop procedural music if it's playing as fallback
+        if (this.mainMenuMusicNode) {
+            this.mainMenuMusicNode.disconnect();
+            this.mainMenuMusicNode = null;
+        }
+        
+        if (this.mainMenuMusicInterval) {
+            clearInterval(this.mainMenuMusicInterval);
+            this.mainMenuMusicInterval = null;
+        }
+    }
+    
+    // Fallback procedural music functions
+    playProceduralSplashMusic() {
+        if (!this.audioContext) return;
+        console.log('Playing procedural splash music as fallback');
+        this.splashMusicNode = this.playProcedualMusic(this.splashMusicData);
+    }
+    
+    playProceduralMainMenuMusic() {
+        if (!this.audioContext) return;
+        console.log('Playing procedural main menu music as fallback');
+        this.mainMenuMusicNode = this.playProcedualMusic(this.mainMenuMusicData);
+        // Loop the music every ~13 seconds
+        this.mainMenuMusicInterval = setInterval(() => {
+            if (this.mainMenuMusicNode) {
+                this.mainMenuMusicNode.disconnect();
+            }
+            this.mainMenuMusicNode = this.playProcedualMusic(this.mainMenuMusicData);
+        }, 13000);
+    }
+    
+    // Setup audio interaction handler (browser autoplay policy)
+    setupAudioInteraction() {
+        const enableAudio = () => {
+            if (!this.audioEnabled) {
+                this.audioEnabled = true;
+                
+                try {
+                    // NOW create AudioContext after user interaction
+                    console.log('Creating AudioContext after user interaction...');
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Generate music data
+                    this.generateSplashMusic();
+                    this.generateMainMenuMusic();
+                    
+                    console.log('AudioContext created successfully!');
+                    console.log('Audio context state:', this.audioContext.state);
+                    
+                    // Start appropriate music based on current screen
+                    if (this.currentScreen === 'splash') {
+                        this.playSplashMusic();
+                    } else if (this.currentScreen === 'menu') {
+                        this.playMainMenuMusic();
+                    }
+                    
+                    console.log('Audio enabled after user interaction');
+                    console.log('Current screen:', this.currentScreen);
+                    
+                    // Store permission in session storage to avoid re-asking after F5
+                    sessionStorage.setItem('cyberops_audio_enabled', 'true');
+                    
+                } catch (error) {
+                    console.warn('Failed to create AudioContext:', error);
+                    this.audioEnabled = false;
+                }
+            }
+        };
+        
+        // Listen for any user interaction to enable audio
+        const interactionEvents = ['click', 'touchstart', 'keydown'];
+        
+        const setupInteraction = (event) => {
+            enableAudio();
+            
+            // After enabling audio, check if this was a skip click
+            if (event.type === 'click' && this.currentScreen === 'splash') {
+                // Give audio a moment to start, then allow skipping
+                setTimeout(() => {
+                    if (event.target.closest('#companyLogo') || 
+                        event.target.closest('#studioLogo') || 
+                        event.target.closest('#loadingScreen')) {
+                        console.log('Skip triggered after audio enabled');
+                        this.skipToMainMenu();
+                    }
+                }, 500); // Half second to hear splash music before skipping
+            }
+            
+            // Remove all listeners after first interaction
+            interactionEvents.forEach(eventType => {
+                document.removeEventListener(eventType, setupInteraction);
+            });
+        };
+        
+        interactionEvents.forEach(eventType => {
+            document.addEventListener(eventType, setupInteraction, { once: true });
+        });
+    }
+    
+    // Handle audio resume (used internally)
+    resumeAudioContext() {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            return this.audioContext.resume().then(() => {
+                console.log('Audio context resumed successfully');
+                return true;
+            }).catch(() => {
+                console.log('Failed to resume audio context');
+                return false;
+            });
+        }
+        return Promise.resolve(true);
     }
     
     animateProgressBar(callback) {
@@ -1983,7 +3105,11 @@ class CyberOpsGame {
                     Math.pow(agent.x - enemy.x, 2) + 
                     Math.pow(agent.y - enemy.y, 2)
                 );
-                if (dist < enemy.visionRange) {
+                
+                // Apply stealth bonuses to reduce detection range
+                const effectiveVisionRange = this.getStealthDetectionRange(agent);
+                
+                if (dist < effectiveVisionRange) {
                     enemy.alertLevel = 100;
                     enemy.targetX = agent.x;
                     enemy.targetY = agent.y;
@@ -2018,10 +3144,17 @@ class CyberOpsGame {
                             Math.pow(agent.y - proj.targetY, 2)
                         );
                         if (hitDist < 1) {
+                            let actualDamage = proj.damage;
+                            
+                            // Apply protection bonus from equipment
+                            if (agent.protection) {
+                                actualDamage = Math.max(1, actualDamage - agent.protection);
+                            }
+                            
                             if (agent.shield > 0) {
-                                agent.shield -= proj.damage;
+                                agent.shield -= actualDamage;
                             } else {
-                                agent.health -= proj.damage;
+                                agent.health -= actualDamage;
                                 if (agent.health <= 0) agent.alive = false;
                             }
                         }

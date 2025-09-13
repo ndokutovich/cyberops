@@ -10,12 +10,33 @@
     <link rel="stylesheet" href="cyberops-game.css">
 </head>
 <body>
+    <!-- Initial Start Screen -->
+    <div id="initialScreen" class="initial-screen">
+        <div class="initial-content">
+            <div class="initial-logo">CyberOps: Syndicate</div>
+            <div class="initial-subtitle">Tactical Cyberpunk Action</div>
+            <div class="initial-description">
+                Immerse yourself in a world of corporate espionage and tactical operations.
+            </div>
+            <button id="resetButton" class="reset-button">
+                <span class="reset-icon">⚡</span>
+                <span class="reset-text">START EXPERIENCE</span>
+            </button>
+            <div class="initial-hint">Click to begin your cyberpunk journey</div>
+        </div>
+        <div class="initial-bg-effects">
+            <div class="bg-grid"></div>
+            <div class="bg-particles"></div>
+        </div>
+    </div>
+
     <!-- Company Logo Splash -->
     <div id="companyLogo" class="splash-screen">
         <div class="logo-container">
             <div class="company-name">NEXUS INTERACTIVE</div>
             <div class="logo-subtitle">Presents</div>
         </div>
+        <div class="skip-hint">Click to skip</div>
     </div>
 
     <!-- Game Studio Splash -->
@@ -24,6 +45,7 @@
             <div class="studio-name">CYBER DYNAMICS</div>
             <div class="logo-subtitle">Game Studio</div>
         </div>
+        <div class="skip-hint">Click to skip</div>
     </div>
 
     <!-- Loading Screen -->
@@ -32,7 +54,14 @@
         <div class="loading-bar">
             <div class="loading-progress"></div>
         </div>
+        <div class="skip-hint">Click to skip</div>
     </div>
+
+        <!-- Audio element for unified music track -->
+        <audio id="gameMusic" preload="auto" loop>
+            <source src="game-music.wav" type="audio/wav">
+            <source src="game-music.mp3" type="audio/mpeg">
+        </audio>
 
     <!-- Main Menu -->
     <div id="mainMenu">
