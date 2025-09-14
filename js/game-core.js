@@ -149,6 +149,13 @@ class CyberOpsGame {
         this.initializeHub();
         console.log('✅ initializeHub() completed');
 
+        // Initialize equipment system
+        console.log('🔧 Initializing equipment system...');
+        if (this.initializeEquipmentSystem) {
+            this.initializeEquipmentSystem();
+            console.log('✅ Equipment system initialized');
+        }
+
         // Initialize 3D system - check if Three.js is loaded
         console.log('🔍 Checking Three.js availability...');
         console.log('- window.THREE exists:', !!window.THREE);

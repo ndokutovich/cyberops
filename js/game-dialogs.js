@@ -15,7 +15,7 @@ CyberOpsGame.prototype.showHudDialog = function(title, message, buttons) {
                     this.closeDialog();
                 } else if (typeof btn.action === 'function') {
                     btn.action();
-                    this.closeDialog();
+                    // Don't close the dialog if it's showing another dialog
                 }
             };
             actionsDiv.appendChild(button);

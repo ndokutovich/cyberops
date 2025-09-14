@@ -75,6 +75,10 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
     
 CyberOpsGame.prototype.continueToNextMission = function() {
         document.getElementById('intermissionDialog').classList.remove('show');
+
+        // Apply medical healing between missions if researched
+        this.applyMedicalHealing();
+
         // Return to hub after mission completion
         this.showSyndicateHub();
 }

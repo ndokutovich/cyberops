@@ -83,6 +83,11 @@ CyberOpsGame.prototype.showMissionSelectDialog = function() {
 
 CyberOpsGame.prototype.closeMissionSelect = function() {
         document.getElementById('missionSelectDialog').classList.remove('show');
+
+        // If we came from hub, show it again
+        if (document.getElementById('syndicateHub').style.display === 'none') {
+            document.getElementById('syndicateHub').style.display = 'flex';
+        }
 }
 
 CyberOpsGame.prototype.showMissionBriefing = function(mission) {
@@ -106,6 +111,15 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
         // Use active agents from hub for mission briefing
         const availableAgentsForMission = this.activeAgents.length > 0 ? this.activeAgents : this.agentTemplates;
 
+        // Calculate weapon distribution for preview
+        let weaponAssignments = [];
+        if (window.GameServices && window.GameServices.equipmentService) {
+            weaponAssignments = window.GameServices.equipmentService.distributeWeapons(
+                availableAgentsForMission,
+                this.weapons || []
+            );
+        }
+
         availableAgentsForMission.forEach((agent, idx) => {
             const card = document.createElement('div');
             card.className = 'agent-card';
@@ -114,8 +128,15 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
             const agentDamage = agent.damage;
             const agentSpeed = agent.speed;
 
+            // Get weapon assignment for this agent
+            const assignment = weaponAssignments[idx];
+            const weaponInfo = assignment && assignment.weapon ?
+                `<div style="color: #ffa500; font-size: 0.9em;">🔫 ${assignment.weapon.name}</div>` :
+                '<div style="color: #888; font-size: 0.9em;">🔫 No weapon</div>';
+
             card.innerHTML = `
                 <div style="font-weight: bold; color: #00ffff;">${agentName}</div>
+                ${weaponInfo}
                 <div style="font-size: 0.8em; margin-top: 5px;">
                     HP: ${agentHealth} | DMG: ${agentDamage}<br>
                     Speed: ${agentSpeed}
@@ -205,36 +226,59 @@ CyberOpsGame.prototype.initMission = function() {
         // Initialize fog of war
         this.initializeFogOfWar();
 
-        // Spawn agents with equipment and research bonuses
+        // Spawn agents with equipment and research bonuses using services
         const spawn = this.map.spawn;
-        this.selectedAgents.forEach((agentData, idx) => {
-            const agent = {
-                id: 'agent_' + idx,
-                x: spawn.x + idx % 2,
-                y: spawn.y + Math.floor(idx / 2),
-                targetX: spawn.x + idx % 2,
-                targetY: spawn.y + Math.floor(idx / 2),
-                health: agentData.health,
-                maxHealth: agentData.health,
-                speed: agentData.speed,
-                damage: agentData.damage,
-                name: agentData.name,
-                selected: idx === 0,
-                alive: true,
-                cooldowns: [0, 0, 0, 0, 0],
-                // Add facing direction (default facing down/south)
-                facingAngle: Math.PI / 2,
-                // Equipment bonuses
-                protection: 0,
-                hackBonus: 0,
-                stealthBonus: 0
-            };
 
-            // Apply equipment bonuses
-            this.applyEquipmentBonuses(agent);
+        // Prepare all selected agents for weapon distribution
+        const baseAgents = this.selectedAgents.map(selectedAgent => {
+            // Find the actual agent data from activeAgents (has research bonuses)
+            return this.activeAgents.find(a => a.name === selectedAgent.name) || selectedAgent;
+        });
 
-            // Apply research bonuses
-            this.applyMissionResearchBonuses(agent);
+        // Apply loadouts if equipment system is initialized
+        let agentsWithLoadouts = baseAgents;
+        if (this.agentLoadouts && this.applyLoadoutsToAgents) {
+            agentsWithLoadouts = this.applyLoadoutsToAgents(baseAgents);
+        }
+
+        // Apply research modifiers
+        let modifiedAgents;
+        if (window.GameServices) {
+            // Apply research bonuses (weapons already handled by loadouts)
+            modifiedAgents = agentsWithLoadouts.map(agent => {
+                return window.GameServices.researchService.applyResearchToAgent(
+                    { ...agent },
+                    this.completedResearch || []
+                );
+            });
+        } else {
+            // Fallback to old system
+            modifiedAgents = agentsWithLoadouts.map(agent => {
+                const modified = { ...agent };
+                this.applyMissionResearchBonuses(modified);
+                return modified;
+            });
+        }
+
+        // Add mission-specific properties to each agent
+        modifiedAgents.forEach((agent, idx) => {
+
+            // Add mission-specific properties
+            agent.id = 'agent_' + idx;
+            agent.x = spawn.x + idx % 2;
+            agent.y = spawn.y + Math.floor(idx / 2);
+            agent.targetX = spawn.x + idx % 2;
+            agent.targetY = spawn.y + Math.floor(idx / 2);
+            agent.selected = idx === 0;
+            agent.alive = true;
+            agent.cooldowns = [0, 0, 0, 0, 0];
+            agent.facingAngle = Math.PI / 2; // Default facing down/south
+
+            // Ensure required properties exist
+            agent.maxHealth = agent.maxHealth || agent.health;
+            agent.protection = agent.protection || 0;
+            agent.hackBonus = agent.hackBonus || 0;
+            agent.stealthBonus = agent.stealthBonus || 0;
 
             this.agents.push(agent);
         });

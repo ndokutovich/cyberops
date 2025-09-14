@@ -46,7 +46,26 @@ CyberOpsGame.prototype.updateHubStats = function() {
         
         // Update status indicators
         const availableMissions = this.missions.length - this.completedMissions.length;
-        document.getElementById('missionStatus').textContent = `${availableMissions} Available`;
+
+        // Find and display next mission
+        const missionStatusEl = document.getElementById('missionStatus');
+        if (missionStatusEl) {
+            let nextMissionName = null;
+            for (let i = 0; i < this.missions.length; i++) {
+                if (!this.completedMissions.includes(this.missions[i].id)) {
+                    nextMissionName = this.missions[i].title;
+                    break;
+                }
+            }
+
+            if (nextMissionName) {
+                missionStatusEl.innerHTML = `<span style="color: #00ff00;">➤</span> ${nextMissionName}`;
+                missionStatusEl.style.color = '#00ff00';
+            } else {
+                missionStatusEl.textContent = 'All Complete ✓';
+                missionStatusEl.style.color = '#ffa500';
+            }
+        }
         document.getElementById('agentStatus').textContent = `${this.activeAgents.length} Active`;
         document.getElementById('arsenalStatus').textContent = `${this.weapons.length + this.equipment.length} Items`;
         document.getElementById('researchStatus').textContent = `${Math.floor(this.researchPoints / 50)} Projects`;
@@ -64,6 +83,44 @@ CyberOpsGame.prototype.updateHubStats = function() {
 CyberOpsGame.prototype.showMissionsFromHub = function() {
         document.getElementById('syndicateHub').style.display = 'none';
         this.showMissionSelectDialog();
+}
+
+// Start next uncompleted mission
+CyberOpsGame.prototype.startNextMission = function() {
+    // Find the next uncompleted mission
+    let nextMission = null;
+    let nextMissionIndex = -1;
+
+    for (let i = 0; i < this.missions.length; i++) {
+        const mission = this.missions[i];
+        if (!this.completedMissions.includes(mission.id)) {
+            nextMission = mission;
+            nextMissionIndex = i;
+            break;
+        }
+    }
+
+    if (nextMission) {
+        // Hide hub
+        document.getElementById('syndicateHub').style.display = 'none';
+
+        // Set current mission index and start briefing
+        this.currentMissionIndex = nextMissionIndex;
+        this.showMissionBriefing(nextMission);
+    } else {
+        // All missions completed
+        this.showHudDialog(
+            '🎆 ALL MISSIONS COMPLETE',
+            `Congratulations Commander!<br><br>
+            You have completed all available missions.<br>
+            The city is safe thanks to your efforts!<br><br>
+            <div style="color: #ffa500;">Total Missions Completed: ${this.completedMissions.length}/${this.missions.length}</div>`,
+            [
+                { text: 'VIEW ACHIEVEMENTS', action: () => { this.closeDialog(); this.showHallOfGlory(); } },
+                { text: 'OK', action: 'close' }
+            ]
+        );
+    }
 }
     
     // Fix mission briefing for hub flow
@@ -129,8 +186,8 @@ CyberOpsGame.prototype.showAgentManagement = function() {
             '👥 AGENT MANAGEMENT',
             this.generateAgentManagementContent(),
             [
-                { text: 'HIRE AGENTS', action: () => this.showHiringDialog() },
-                { text: 'MANAGE SQUAD', action: () => this.showSquadManagement() },
+                { text: 'HIRE AGENTS', action: () => { this.closeDialog(); this.showHiringDialog(); } },
+                { text: 'MANAGE SQUAD', action: () => { this.closeDialog(); this.showSquadManagement(); } },
                 { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
             ]
         );
@@ -173,14 +230,13 @@ CyberOpsGame.prototype.generateAgentManagementContent = function() {
 }
     
 CyberOpsGame.prototype.showArsenal = function() {
-        this.showHudDialog(
-            '🔫 ARSENAL & EQUIPMENT',
-            this.generateArsenalContent(),
-            [
-                { text: 'BUY EQUIPMENT', action: () => this.showShopDialog() },
-                { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
-            ]
-        );
+    // Initialize equipment system if needed
+    if (!this.agentLoadouts) {
+        this.initializeEquipmentSystem();
+    }
+
+    // Show equipment management directly
+    this.showEquipmentManagement();
 }
     
 CyberOpsGame.prototype.generateArsenalContent = function() {
@@ -354,7 +410,11 @@ CyberOpsGame.prototype.applyResearchBenefits = function(project) {
             case 3: // Combat Systems
                 this.activeAgents.forEach(agent => {
                     agent.health += 15;
-                    agent.maxHealth = agent.health;
+                    if (!agent.maxHealth) {
+                        agent.maxHealth = agent.health;
+                    } else {
+                        agent.maxHealth += 15;
+                    }
                 });
                 break;
             case 4: // Hacking Protocols
@@ -377,12 +437,33 @@ CyberOpsGame.prototype.applyEquipmentBonuses = function(agent) {
         // Apply bonuses from owned equipment
         this.equipment.forEach(item => {
             if (item.owned > 0) {
-                if (item.protection) agent.protection += item.protection;
-                if (item.hackBonus) agent.hackBonus += item.hackBonus;
-                if (item.stealthBonus) agent.stealthBonus += item.stealthBonus;
-                if (item.damage) agent.damage += item.damage;
+                // Apply bonuses based on equipment type
+                switch(item.name) {
+                    case 'Body Armor':
+                        agent.protection += item.protection * item.owned;
+                        break;
+                    case 'Hacking Kit':
+                        agent.hackBonus += item.hackBonus * item.owned;
+                        break;
+                    case 'Explosives Kit':
+                        // Explosives increase grenade damage
+                        agent.explosiveDamage = (agent.explosiveDamage || 0) + item.damage * item.owned;
+                        break;
+                    case 'Stealth Suit':
+                        agent.stealthBonus += item.stealthBonus * item.owned;
+                        break;
+                }
             }
         });
+
+        // Apply weapon bonuses (best weapon available)
+        let bestWeaponBonus = 0;
+        this.weapons.forEach(weapon => {
+            if (weapon.owned > 0 && weapon.damage > bestWeaponBonus) {
+                bestWeaponBonus = weapon.damage;
+            }
+        });
+        agent.damage += bestWeaponBonus;
 }
     
     // Apply research bonuses during missions
@@ -514,7 +595,7 @@ CyberOpsGame.prototype.showHiringDialog = function() {
             '👥 HIRE AGENTS',
             content,
             [
-                { text: 'BACK', action: () => this.showAgentManagement() }
+                { text: 'BACK', action: () => { this.closeDialog(); this.showAgentManagement(); } }
             ]
         );
 }
@@ -539,7 +620,7 @@ CyberOpsGame.prototype.hireAgent = function(agentId) {
             </div>
             Credits Remaining: ${this.credits.toLocaleString()}`,
             [
-                { text: 'HIRE MORE', action: () => this.showHiringDialog() },
+                { text: 'HIRE MORE', action: () => { this.closeDialog(); this.showHiringDialog(); } },
                 { text: 'BACK TO HUB', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
             ]
         );
@@ -547,49 +628,16 @@ CyberOpsGame.prototype.hireAgent = function(agentId) {
         this.updateHubStats();
 }
     
-    // Squad Management System
+    // Squad Management System - Redirect to new equipment interface
 CyberOpsGame.prototype.showSquadManagement = function() {
-        let content = '<div style="max-height: 400px; overflow-y: auto;">';
-        content += '<h3 style="color: #00ffff; margin-bottom: 15px;">ACTIVE SQUAD MEMBERS</h3>';
-        
-        this.activeAgents.forEach(agent => {
-            content += `
-                <div style="background: rgba(0,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #00ffff;">
-                    <div style="display: flex; justify-content: space-between; align-items: start;">
-                        <div>
-                            <div style="font-weight: bold; color: #fff; margin-bottom: 5px;">${agent.name}</div>
-                            <div style="color: #ccc; font-size: 0.9em;">
-                                Specialization: ${agent.specialization}<br>
-                                Skills: ${agent.skills.join(', ')}<br>
-                                Health: ${agent.health} | Damage: ${agent.damage} | Speed: ${agent.speed}
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <button onclick="game.manageAgentEquipment(${agent.id})" 
-                                    style="background: #1e3c72; color: #fff; border: 1px solid #00ffff; 
-                                           padding: 6px 12px; border-radius: 4px; cursor: pointer; margin: 2px;">
-                                EQUIP
-                            </button>
-                            <br>
-                            <button onclick="game.viewAgentDetails(${agent.id})" 
-                                    style="background: #1e3c72; color: #fff; border: 1px solid #00ffff; 
-                                           padding: 6px 12px; border-radius: 4px; cursor: pointer; margin: 2px;">
-                                DETAILS
-                            </button>
-                        </div>
-                    </div>
-                </div>`;
-        });
-        
-        content += '</div>';
-        
-        this.showHudDialog(
-            '⚙️ SQUAD MANAGEMENT',
-            content,
-            [
-                { text: 'BACK', action: () => this.showAgentManagement() }
-            ]
-        );
+    // Initialize equipment system if needed
+    if (!this.agentLoadouts) {
+        this.initializeEquipmentSystem();
+    }
+
+    // Close current dialog and show equipment management
+    this.closeDialog();
+    this.showEquipmentManagement();
 }
     
 CyberOpsGame.prototype.manageAgentEquipment = function(agentId) {
@@ -613,7 +661,7 @@ CyberOpsGame.prototype.manageAgentEquipment = function(agentId) {
                 </div>
             </div>`,
             [
-                { text: 'BACK', action: () => this.showSquadManagement() }
+                { text: 'BACK', action: () => { this.closeDialog(); this.showSquadManagement(); } }
             ]
         );
 }
@@ -639,7 +687,7 @@ CyberOpsGame.prototype.viewAgentDetails = function(agentId) {
                 </div>
             </div>`,
             [
-                { text: 'BACK', action: () => this.showSquadManagement() }
+                { text: 'BACK', action: () => { this.closeDialog(); this.showSquadManagement(); } }
             ]
         );
 }
@@ -719,7 +767,7 @@ CyberOpsGame.prototype.showShopDialog = function() {
             '🛒 EQUIPMENT SHOP',
             content,
             [
-                { text: 'BACK', action: () => this.showArsenal() }
+                { text: 'BACK', action: () => { this.closeDialog(); this.showArsenal(); } }
             ]
         );
 }

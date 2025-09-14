@@ -338,13 +338,25 @@ CyberOpsGame.prototype.update = function() {
                     enemy.targetY = agent.y;
                     
                     if (Math.random() < 0.02 && dist < 5) {
+                        // Calculate damage using GameServices if available
+                        let damage = enemy.damage;
+                        if (window.GameServices && window.GameServices.formulaService) {
+                            damage = window.GameServices.formulaService.calculateDamage(
+                                enemy.damage || 10,
+                                0, // No weapon bonus for enemies
+                                0, // No research bonus for enemies
+                                0, // Armor calculated on impact
+                                { distance: dist }
+                            );
+                        }
+
                         this.projectiles.push({
                             x: enemy.x,
                             y: enemy.y,
                             targetX: agent.x,
                             targetY: agent.y,
                             targetAgent: agent, // Store the specific target agent
-                            damage: enemy.damage,
+                            damage: damage,
                             speed: 0.3,
                             owner: enemy.id,
                             hostile: true
@@ -369,9 +381,17 @@ CyberOpsGame.prototype.update = function() {
                         if (agent && agent.alive) {
                             let actualDamage = proj.damage;
 
-                            // Apply protection bonus from equipment
-                            if (agent.protection) {
-                                actualDamage = Math.max(1, actualDamage - agent.protection);
+                            // Use GameServices for damage calculation if available
+                            if (window.GameServices && window.GameServices.formulaService) {
+                                actualDamage = window.GameServices.formulaService.calculateDamageAfterArmor(
+                                    proj.damage,
+                                    agent.protection || 0
+                                );
+                            } else {
+                                // Fallback: Apply protection bonus from equipment
+                                if (agent.protection) {
+                                    actualDamage = Math.max(1, actualDamage - agent.protection);
+                                }
                             }
 
                             if (agent.shield > 0) {
@@ -400,8 +420,18 @@ CyberOpsGame.prototype.update = function() {
 
                         if (closestAgent) {
                             let actualDamage = proj.damage;
-                            if (closestAgent.protection) {
-                                actualDamage = Math.max(1, actualDamage - closestAgent.protection);
+
+                            // Use GameServices for damage calculation if available
+                            if (window.GameServices && window.GameServices.formulaService) {
+                                actualDamage = window.GameServices.formulaService.calculateDamageAfterArmor(
+                                    proj.damage,
+                                    closestAgent.protection || 0
+                                );
+                            } else {
+                                // Fallback
+                                if (closestAgent.protection) {
+                                    actualDamage = Math.max(1, actualDamage - closestAgent.protection);
+                                }
                             }
                             if (closestAgent.shield > 0) {
                                 closestAgent.shield -= actualDamage;
@@ -419,7 +449,17 @@ CyberOpsGame.prototype.update = function() {
                         // Damage only the specific target enemy
                         const enemy = proj.targetEnemy;
                         if (enemy && enemy.alive) {
-                            enemy.health -= proj.damage;
+                            // Use GameServices to calculate actual damage if available
+                            let actualDamage = proj.damage;
+                            if (window.GameServices && window.GameServices.calculateAttackDamage) {
+                                actualDamage = window.GameServices.calculateAttackDamage(
+                                    proj.agent || { damage: proj.damage },
+                                    enemy,
+                                    { distance: 0 }
+                                );
+                            }
+
+                            enemy.health -= actualDamage;
                             if (enemy.health <= 0) {
                                 enemy.alive = false;
                                 this.totalEnemiesDefeated++;
@@ -443,7 +483,17 @@ CyberOpsGame.prototype.update = function() {
                         });
 
                         if (closestEnemy) {
-                            closestEnemy.health -= proj.damage;
+                            // Use GameServices to calculate actual damage if available
+                            let actualDamage = proj.damage;
+                            if (window.GameServices && window.GameServices.calculateAttackDamage) {
+                                actualDamage = window.GameServices.calculateAttackDamage(
+                                    proj.agent || { damage: proj.damage },
+                                    closestEnemy,
+                                    { distance: 0 }
+                                );
+                            }
+
+                            closestEnemy.health -= actualDamage;
                             if (closestEnemy.health <= 0) {
                                 closestEnemy.alive = false;
                                 this.totalEnemiesDefeated++;
@@ -689,53 +739,122 @@ CyberOpsGame.prototype.generateFinalWords = function(agentName) {
 
 // Handle collectable item pickup
 CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
-        switch(item.type) {
-            case 'credits':
-                this.credits += item.value;
-                console.log(`💰 Collected ${item.value} credits`);
-                break;
+    // Use GameServices for collectible calculations
+    if (window.GameServices && window.GameServices.formulaService) {
+        const effects = window.GameServices.formulaService.calculateCollectibleEffect(
+            item,
+            agent,
+            {
+                averageHealth: this.calculateAverageHealth ? this.calculateAverageHealth() : 100,
+                lowAmmo: this.isLowOnAmmo ? this.isLowOnAmmo() : false,
+                difficulty: this.currentDifficulty || 1
+            }
+        );
 
-            case 'ammo':
-                // Refill ammo for abilities
-                console.log(`🔫 Collected ammo`);
-                break;
-
-            case 'health':
-                const healAmount = Math.min(item.value, agent.maxHealth - agent.health);
-                agent.health += healAmount;
-                console.log(`❤️ Healed ${healAmount} HP`);
-                break;
-
-            case 'keycard':
-                // Could unlock special doors
-                console.log(`🗝️ Collected keycard`);
-                break;
-
-            case 'intel':
-                this.researchPoints += Math.floor(item.value / 2);
-                console.log(`📄 Collected intel (+${Math.floor(item.value / 2)} research points)`);
-                break;
-
-            case 'armor':
-                agent.protection = (agent.protection || 0) + 5;
-                console.log(`🛡️ Armor upgraded (+5 protection)`);
-                break;
-
-            case 'explosives':
-                // Add explosive charges
-                console.log(`💣 Collected explosives`);
-                break;
+        // Apply effects
+        if (effects.credits > 0) {
+            this.credits += effects.credits;
+        }
+        if (effects.health > 0) {
+            agent.health = Math.min(agent.maxHealth, agent.health + effects.health);
+        }
+        if (effects.armor > 0) {
+            agent.protection = (agent.protection || 0) + effects.armor;
+        }
+        if (effects.researchPoints > 0) {
+            this.researchPoints += effects.researchPoints;
+        }
+        if (effects.ammo > 0) {
+            // Reset ability cooldowns
+            agent.cooldowns = agent.cooldowns || [0, 0, 0, 0];
+            agent.cooldowns[0] = Math.max(0, agent.cooldowns[0] - effects.ammo);
+        }
+        if (effects.explosives > 0) {
+            agent.grenades = (agent.grenades || 0) + effects.explosives;
+        }
+        if (effects.keycard) {
+            this.keycards = this.keycards || [];
+            this.keycards.push(effects.keycard);
         }
 
-        // Visual feedback
-        this.effects.push({
-            type: 'pickup',
-            x: item.x,
-            y: item.y,
-            text: item.type.toUpperCase(),
-            duration: 30,
-            frame: 0
-        });
+        // Show message
+        if (effects.message) {
+            console.log(effects.message);
+        }
+
+        return;
+    }
+
+    // Fallback to old system if services not available
+    switch(item.type) {
+        case 'credits':
+            this.credits += item.value;
+            console.log(`💰 Collected ${item.value} credits`);
+            break;
+
+        case 'ammo':
+            console.log(`🔫 Collected ammo`);
+            break;
+
+        case 'health':
+            const healAmount = Math.min(item.value, agent.maxHealth - agent.health);
+            agent.health += healAmount;
+            console.log(`❤️ Healed ${healAmount} HP`);
+            break;
+
+        case 'keycard':
+            console.log(`🗝️ Collected keycard`);
+            break;
+
+        case 'intel':
+            this.researchPoints += Math.floor(item.value / 2);
+            console.log(`📄 Collected intel (+${Math.floor(item.value / 2)} research points)`);
+            break;
+
+        case 'armor':
+            agent.protection = (agent.protection || 0) + 5;
+            console.log(`🛡️ Armor upgraded (+5 protection)`);
+            break;
+
+        case 'explosives':
+            console.log(`💣 Collected explosives`);
+            break;
+    }
+
+    // Visual feedback
+    this.effects.push({
+        type: 'pickup',
+        x: item.x,
+        y: item.y,
+        text: item.type.toUpperCase(),
+        duration: 30,
+        frame: 0
+    });
+};
+
+// Helper function to calculate average health of agents
+CyberOpsGame.prototype.calculateAverageHealth = function() {
+    if (!this.agents || this.agents.length === 0) return 100;
+
+    const aliveAgents = this.agents.filter(a => a.alive);
+    if (aliveAgents.length === 0) return 0;
+
+    const totalHealth = aliveAgents.reduce((sum, agent) => sum + agent.health, 0);
+    const totalMaxHealth = aliveAgents.reduce((sum, agent) => sum + (agent.maxHealth || 100), 0);
+
+    return Math.floor((totalHealth / totalMaxHealth) * 100);
+};
+
+// Helper function to check if agents are low on ammo
+CyberOpsGame.prototype.isLowOnAmmo = function() {
+    if (!this.agents || this.agents.length === 0) return false;
+
+    // Check if any agent has high cooldowns (indicating low ammo)
+    return this.agents.some(agent => {
+        if (!agent.cooldowns) return false;
+        const avgCooldown = agent.cooldowns.reduce((a, b) => a + b, 0) / agent.cooldowns.length;
+        return avgCooldown > 30; // Consider low ammo if cooldowns are high
+    });
 
         // Play pickup sound
         this.playSound('hit', 0.2);

@@ -423,6 +423,7 @@
     </div>
 
         <div class="hub-footer">
+            <button class="menu-button hub-button" onclick="game.startNextMission()" style="background: #2e7d32; font-size: 1.1em;">🎯 NEXT MISSION</button>
             <button class="menu-button hub-button" onclick="game.backToMainMenu()">MAIN MENU</button>
             <button class="menu-button hub-button" onclick="game.quickSave()">QUICK SAVE</button>
             <button class="menu-button hub-button" onclick="game.saveGame()">SAVE MANAGER</button>
@@ -693,6 +694,62 @@
         </div>
     </div>
 
+    <!-- Equipment Management Dialog -->
+    <div id="equipmentDialog" class="hud-dialog">
+        <div class="dialog-content" style="width: 90%; max-width: 1200px; height: 85vh; max-height: 700px;">
+            <div class="dialog-header">
+                <div class="dialog-title">🎯 EQUIPMENT MANAGEMENT</div>
+                <div class="dialog-close" onclick="game.closeEquipmentDialog()">[X]</div>
+            </div>
+            <div class="dialog-body" style="display: flex; gap: 20px; height: calc(100% - 120px);">
+                <!-- Left Panel: Agents -->
+                <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column;">
+                    <h3 style="color: #00ffff; margin-bottom: 15px;">👥 SQUAD</h3>
+                    <div id="equipmentAgentList" style="flex: 1; overflow-y: auto;">
+                        <!-- Agent list will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Center Panel: Current Loadout -->
+                <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
+                    <h3 style="color: #00ffff; margin-bottom: 15px;">🎯 CURRENT LOADOUT</h3>
+                    <div id="currentLoadout" style="background: rgba(0,255,255,0.05); padding: 15px; border-radius: 8px; flex: 1; overflow-y: auto;">
+                        <div style="color: #888; text-align: center; padding: 20px;">Select an agent to view loadout</div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <h4 style="color: #ffa500; margin-bottom: 10px;">📊 STATS PREVIEW</h4>
+                        <div id="statsPreview" style="background: rgba(255,165,0,0.1); padding: 10px; border-radius: 5px;">
+                            <!-- Stats will show here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Inventory -->
+                <div style="flex: 1.5; min-width: 350px; display: flex; flex-direction: column;">
+                    <h3 style="color: #00ffff; margin-bottom: 15px;">📦 INVENTORY</h3>
+                    <div style="margin-bottom: 10px;">
+                        <button class="menu-button" onclick="game.showWeaponInventory()" style="margin-right: 5px;">🔫 Weapons</button>
+                        <button class="menu-button" onclick="game.showEquipmentInventory()">🛡️ Equipment</button>
+                        <button class="menu-button" onclick="game.showShopInterface()" style="background: #2e7d32; margin-left: 10px;">🛒 Shop</button>
+                        <button class="menu-button" onclick="game.showSellInterface()" style="background: #8b4513; margin-left: 5px;">💰 Sell</button>
+                    </div>
+                    <div id="inventoryList" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+                        <!-- Inventory items will be listed here -->
+                    </div>
+                    <div style="margin-top: 10px; padding: 10px; background: rgba(0,255,255,0.1); border-radius: 5px;">
+                        <div style="color: #00ffff;">Credits: <span id="equipCredits">0</span></div>
+                        <div style="color: #888; font-size: 0.9em; margin-top: 5px;">Inventory Value: <span id="inventoryValue">0</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="menu-button" onclick="game.saveLoadouts()">SAVE LOADOUTS</button>
+                <button class="menu-button" onclick="game.optimizeLoadouts()" style="background: #2e7d32;">AUTO-OPTIMIZE</button>
+                <button class="menu-button" onclick="game.closeEquipmentDialog()">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Mission Intermission Dialog -->
     <div id="intermissionDialog" class="hud-dialog">
         <div class="dialog-content intermission-content">
@@ -729,8 +786,15 @@
         </div>
     </div>
 
+    <!-- Game Services (SOLID Architecture) -->
+    <script src="js/services/formula-service.js"></script>
+    <script src="js/services/research-service.js"></script>
+    <script src="js/services/equipment-service.js"></script>
+    <script src="js/services/game-services.js"></script>
+
     <!-- Game Modules - Load in sequence to preserve functionality -->
     <script src="js/game-core.js"></script>
+    <script src="js/game-equipment.js"></script>
     <!-- Hall of Glory Screen -->
     <div id="hallOfGlory" class="hub-screen" style="display: none;">
         <div class="hall-header">
