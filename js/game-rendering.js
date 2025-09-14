@@ -332,15 +332,15 @@ CyberOpsGame.prototype.renderFogOfWar = function() {
                     const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
                     ctx.save();
                     ctx.translate(isoPos.x, isoPos.y);
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';  // Almost completely black
+                    ctx.fillStyle = 'rgba(0, 0, 0, 1)';  // Completely black
                     ctx.fillRect(-this.tileWidth/2, -this.tileHeight, this.tileWidth, this.tileHeight * 2);
                     ctx.restore();
                 } else if (fogState === 1) {
-                    // Explored but not visible - much lighter overlay so you can see the map
+                    // Explored but not visible - very light blue tint for visibility
                     const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
                     ctx.save();
                     ctx.translate(isoPos.x, isoPos.y);
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';  // Much lighter - 30% black instead of 50%
+                    ctx.fillStyle = 'rgba(10, 20, 40, 0.15)';  // Very transparent dark blue - only 15% opacity
                     ctx.fillRect(-this.tileWidth/2, -this.tileHeight, this.tileWidth, this.tileHeight * 2);
                     ctx.restore();
                 }
