@@ -88,6 +88,11 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                     case 'KeyA': this.keys3D.A = true; break;
                     case 'KeyS': this.keys3D.S = true; break;
                     case 'KeyD': this.keys3D.D = true; break;
+                    case 'KeyR':
+                        // Cycle through actions
+                        this.cycleAction3D();
+                        e.preventDefault();
+                        break;
                 }
             }
 
@@ -117,10 +122,12 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         this.lastMouseY = 0;
 
         document.addEventListener('mousedown', (e) => {
+            // Handle both 2D and 3D canvas clicks
             if (this.is3DMode) {
-                this.mouseClicked = true;
-                this.mouseX = e.clientX;
-                this.mouseY = e.clientY;
+                // For 3D mode, just mark that mouse was clicked
+                // The actual shooting happens in handleTap
+                this.mouseDownX = e.clientX;
+                this.mouseDownY = e.clientY;
             }
         });
 }
@@ -262,6 +269,13 @@ CyberOpsGame.prototype.handleWheel = function(e) {
 
 CyberOpsGame.prototype.handleTap = function(x, y) {
         if (this.currentScreen !== 'game' || this.isPaused) return;
+
+        // Handle 3D mode shooting
+        if (this.is3DMode) {
+            console.log('🎯 3D Mode click - shooting!');
+            this.mouseClicked = true;  // Trigger shooting in handle3DShooting
+            return;
+        }
 
         // Check if clicking on HUD elements - allow HUD agent selection
         const squadHealth = document.getElementById('squadHealth');

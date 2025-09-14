@@ -1,6 +1,8 @@
     // 3D SYSTEM IMPLEMENTATION
     
 CyberOpsGame.prototype.init3D = function() {
+        // Initialize selected action for 3D mode
+        this.selectedAction3D = 1; // Default to Shoot (index 1)
         console.log('🎮 init3D() FUNCTION ENTERED!');
         console.log('- window.THREE:', !!window.THREE);
         console.log('- typeof THREE:', typeof THREE);
@@ -78,7 +80,8 @@ CyberOpsGame.prototype.init3D = function() {
             agents: [],
             enemies: [],
             walls: [],
-            terminals: []
+            terminals: [],
+            extraction: null
         };
         
         console.log('✅ 3D system initialized successfully');
@@ -159,46 +162,164 @@ CyberOpsGame.prototype.enable3DMode = function() {
         if (this.gameHUD) {
             this.gameHUD.style.display = 'none';
         }
-        
+
+        // Add crosshair to center of screen
+        this.addCrosshair();
+
         // Create/update 3D world
         this.create3DWorld();
-        
+
+        // Set initial camera position
+        if (this.camera3D) {
+            // Position camera based on mode
+            if (this.cameraMode === 'third' && this._selectedAgent) {
+                const agentX = (this._selectedAgent.x - this.map.tiles[0].length / 2) * 2;
+                const agentZ = (this._selectedAgent.y - this.map.tiles.length / 2) * 2;
+
+                // Use same positioning logic as update3DCamera for consistency
+                const yaw = this.cameraRotationY || 0;
+                const pitch = this.cameraRotationX || 0;
+                const distance = 5;
+                const height = 3;
+
+                this.camera3D.position.set(
+                    agentX - Math.sin(yaw) * distance,
+                    1 + height + pitch * 2,
+                    agentZ - Math.cos(yaw) * distance
+                );
+                this.camera3D.lookAt(agentX, 1.5, agentZ);
+            } else if (this.cameraMode === 'first' && this._selectedAgent) {
+                const agentX = (this._selectedAgent.x - this.map.tiles[0].length / 2) * 2;
+                const agentZ = (this._selectedAgent.y - this.map.tiles.length / 2) * 2;
+                this.camera3D.position.set(agentX, 1.6, agentZ);
+            }
+            console.log('📷 Camera positioned at:', this.camera3D.position);
+        }
+
         // Update 3D HUD with current agent info
         this.update3DHUD();
         
-        // Setup pointer lock for FPS mode
-        if (this.cameraMode === 'first') {
-            this.setupPointerLock();
-        }
+        // Setup pointer lock for both FPS and TPS modes
+        this.setupPointerLock();
         
         console.log('✅ 3D mode enabled');
 }
     
 CyberOpsGame.prototype.disable3DMode = function() {
         console.log('🎮 Disabling 3D mode...', 'Camera mode:', this.cameraMode);
-        
+
+        // Release pointer lock when switching back to tactical view
+        if (document.pointerLockElement) {
+            console.log('🔓 Releasing pointer lock for tactical mode');
+            document.exitPointerLock();
+        }
+
         this.is3DMode = false;
         this.canvas.style.display = 'block';
         this.container3D.style.display = 'none';
         this.container3D.style.pointerEvents = 'none';
         this.hud3D.style.display = 'none';
-        
+
         // Show 2D HUD
         if (this.gameHUD) {
             this.gameHUD.style.display = 'block';
         }
-        
-        // Exit pointer lock
-        if (document.pointerLockElement) {
-            document.exitPointerLock();
-        }
-        
+
+        // Remove crosshair
+        this.removeCrosshair();
+
         console.log('✅ 3D mode disabled');
 }
     
+CyberOpsGame.prototype.addCrosshair = function() {
+        // Remove existing crosshair if any
+        this.removeCrosshair();
+
+        // Create crosshair element
+        const crosshair = document.createElement('div');
+        crosshair.id = 'crosshair3D';
+        crosshair.style.position = 'fixed';
+        crosshair.style.left = '50%';
+        crosshair.style.top = '50%';
+        crosshair.style.transform = 'translate(-50%, -50%)';
+        crosshair.style.width = '20px';
+        crosshair.style.height = '20px';
+        crosshair.style.zIndex = '10000';
+        crosshair.style.pointerEvents = 'none';
+
+        // Create crosshair with CSS
+        crosshair.innerHTML = `
+            <div style="
+                position: absolute;
+                left: 50%;
+                top: 0;
+                width: 2px;
+                height: 8px;
+                background: rgba(0, 255, 255, 0.8);
+                transform: translateX(-50%);
+                box-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
+            "></div>
+            <div style="
+                position: absolute;
+                left: 50%;
+                bottom: 0;
+                width: 2px;
+                height: 8px;
+                background: rgba(0, 255, 255, 0.8);
+                transform: translateX(-50%);
+                box-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
+            "></div>
+            <div style="
+                position: absolute;
+                top: 50%;
+                left: 0;
+                width: 8px;
+                height: 2px;
+                background: rgba(0, 255, 255, 0.8);
+                transform: translateY(-50%);
+                box-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
+            "></div>
+            <div style="
+                position: absolute;
+                top: 50%;
+                right: 0;
+                width: 8px;
+                height: 2px;
+                background: rgba(0, 255, 255, 0.8);
+                transform: translateY(-50%);
+                box-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
+            "></div>
+            <div style="
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 2px;
+                height: 2px;
+                background: rgba(255, 255, 255, 0.9);
+                transform: translate(-50%, -50%);
+            "></div>
+        `;
+
+        document.body.appendChild(crosshair);
+}
+
+CyberOpsGame.prototype.removeCrosshair = function() {
+        const crosshair = document.getElementById('crosshair3D');
+        if (crosshair) {
+            crosshair.remove();
+        }
+}
+
 CyberOpsGame.prototype.create3DWorld = function() {
-        if (!this.scene3D || !this.currentMission) return;
-        
+        if (!this.scene3D || !this.map || !this.map.tiles) {
+            console.log('❌ Cannot create 3D world - missing components:', {
+                scene3D: !!this.scene3D,
+                map: !!this.map,
+                tiles: !!(this.map && this.map.tiles)
+            });
+            return;
+        }
+
         console.log('🌍 Creating 3D world from 2D map...');
         
         // Clear existing 3D objects
@@ -225,13 +346,16 @@ CyberOpsGame.prototype.create3DWorld = function() {
         
         // Create terminals and objectives
         this.createObjectives3D();
-        
+
+        // Create extraction point
+        this.createExtractionPoint3D();
+
         console.log('✅ 3D world created');
 }
     
 CyberOpsGame.prototype.createGround = function() {
-        const mapWidth = this.currentMission.map[0].length;
-        const mapHeight = this.currentMission.map.length;
+        const mapWidth = this.map.tiles[0].length;
+        const mapHeight = this.map.tiles.length;
         
         const geometry = new THREE.PlaneGeometry(mapWidth * 2, mapHeight * 2);
         const material = new THREE.MeshLambertMaterial({ 
@@ -250,7 +374,7 @@ CyberOpsGame.prototype.createGround = function() {
 }
     
 CyberOpsGame.prototype.createWalls = function() {
-        const map = this.currentMission.map;
+        const map = this.map.tiles;
         
         for (let y = 0; y < map.length; y++) {
             for (let x = 0; x < map[y].length; x++) {
@@ -265,7 +389,11 @@ CyberOpsGame.prototype.createWalls = function() {
                     });
                     
                     const wall = new THREE.Mesh(geometry, material);
-                    wall.position.set(x * 2 - map[0].length, 1.5, y * 2 - map.length);
+                    wall.position.set(
+                        (x - map[0].length / 2) * 2,
+                        1.5,
+                        (y - map.length / 2) * 2
+                    );
                     wall.castShadow = true;
                     wall.receiveShadow = true;
                     
@@ -290,9 +418,9 @@ CyberOpsGame.prototype.createAgents3D = function() {
             
             const agentMesh = new THREE.Mesh(geometry, material);
             agentMesh.position.set(
-                agent.x * 0.1 - this.currentMission.map[0].length * 0.1, 
-                1, 
-                agent.y * 0.1 - this.currentMission.map.length * 0.1
+                (agent.x - this.map.tiles[0].length / 2) * 2,
+                1,
+                (agent.y - this.map.tiles.length / 2) * 2
             );
             agentMesh.castShadow = true;
             
@@ -316,9 +444,9 @@ CyberOpsGame.prototype.createEnemies3D = function() {
             
             const enemyMesh = new THREE.Mesh(geometry, material);
             enemyMesh.position.set(
-                enemy.x * 0.1 - this.currentMission.map[0].length * 0.1, 
-                1, 
-                enemy.y * 0.1 - this.currentMission.map.length * 0.1
+                (enemy.x - this.map.tiles[0].length / 2) * 2,
+                1,
+                (enemy.y - this.map.tiles.length / 2) * 2
             );
             enemyMesh.castShadow = true;
             
@@ -334,50 +462,209 @@ CyberOpsGame.prototype.createObjectives3D = function() {
         if (this.currentMission.terminals) {
             this.currentMission.terminals.forEach((terminal, index) => {
                 if (terminal.hacked) return;
-                
+
                 const geometry = new THREE.BoxGeometry(0.8, 1.5, 0.4);
-                const material = new THREE.MeshLambertMaterial({ 
+                const material = new THREE.MeshLambertMaterial({
                     color: 0x0088ff,
                     emissive: 0x002244
                 });
-                
+
                 const terminalMesh = new THREE.Mesh(geometry, material);
                 terminalMesh.position.set(
-                    terminal.x * 0.1 - this.currentMission.map[0].length * 0.1,
+                    (terminal.x - this.map.tiles[0].length / 2) * 2,
                     0.75,
-                    terminal.y * 0.1 - this.currentMission.map.length * 0.1
+                    (terminal.y - this.map.tiles.length / 2) * 2
                 );
                 terminalMesh.castShadow = true;
-                
+
                 terminalMesh.userData = { type: 'terminal', index: index, terminal: terminal };
-                
+
                 this.scene3D.add(terminalMesh);
                 this.world3D.terminals.push(terminalMesh);
             });
         }
 }
-    
+
+CyberOpsGame.prototype.createExtractionPoint3D = function() {
+        if (!this.map.extraction) return;
+
+        // Remove old extraction point if exists
+        if (this.world3D.extraction) {
+            this.scene3D.remove(this.world3D.extraction);
+        }
+
+        // Create extraction zone group
+        const extractionGroup = new THREE.Group();
+
+        // Create glowing platform
+        const platformGeometry = new THREE.CylinderGeometry(3, 3, 0.2, 16);
+        const platformMaterial = new THREE.MeshLambertMaterial({
+            color: 0x00ffff,
+            emissive: 0x00ffff,
+            emissiveIntensity: 0.3,
+            transparent: true,
+            opacity: 0.6
+        });
+        const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+        platform.position.y = 0.1;
+        extractionGroup.add(platform);
+
+        // Create beacon pillar
+        const beaconGeometry = new THREE.CylinderGeometry(0.2, 0.2, 10, 8);
+        const beaconMaterial = new THREE.MeshLambertMaterial({
+            color: 0x00ffff,
+            emissive: 0x00ffff,
+            emissiveIntensity: 0.5
+        });
+        const beacon = new THREE.Mesh(beaconGeometry, beaconMaterial);
+        beacon.position.y = 5;
+        extractionGroup.add(beacon);
+
+        // Create rotating rings
+        for (let i = 0; i < 3; i++) {
+            const ringGeometry = new THREE.TorusGeometry(2 - i * 0.5, 0.1, 8, 16);
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.5 - i * 0.1
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.y = 1 + i * 2;
+            ring.rotation.x = Math.PI / 2;
+            extractionGroup.add(ring);
+
+            // Store ring for animation
+            ring.userData = { rotationSpeed: 0.02 * (i + 1), index: i };
+        }
+
+        // Create particle effect
+        const particleCount = 50;
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * Math.PI * 2;
+            const radius = Math.random() * 3;
+            positions[i * 3] = Math.cos(angle) * radius;
+            positions[i * 3 + 1] = Math.random() * 8;
+            positions[i * 3 + 2] = Math.sin(angle) * radius;
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            color: 0x00ffff,
+            size: 0.2,
+            transparent: true,
+            opacity: 0.6
+        });
+
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        extractionGroup.add(particles);
+
+        // Position the extraction point
+        extractionGroup.position.set(
+            (this.map.extraction.x - this.map.tiles[0].length / 2) * 2,
+            0,
+            (this.map.extraction.y - this.map.tiles.length / 2) * 2
+        );
+
+        // Add to scene
+        this.scene3D.add(extractionGroup);
+        this.world3D.extraction = extractionGroup;
+
+        // Create extraction zone marker text
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 64;
+        const context = canvas.getContext('2d');
+        context.font = 'Bold 32px Arial';
+        context.fillStyle = '#00ffff';
+        context.textAlign = 'center';
+        context.fillText('EXTRACTION', 128, 40);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.position.y = 8;
+        sprite.scale.set(4, 1, 1);
+        extractionGroup.add(sprite);
+
+        console.log('🚁 Extraction point created at:', this.map.extraction);
+}
+
+CyberOpsGame.prototype.animateExtractionPoint = function() {
+        if (!this.world3D.extraction) return;
+
+        const time = Date.now() * 0.001;
+
+        // Animate rings
+        this.world3D.extraction.children.forEach(child => {
+            if (child.userData.rotationSpeed) {
+                child.rotation.z = time * child.userData.rotationSpeed;
+                child.position.y = 1 + child.userData.index * 2 + Math.sin(time + child.userData.index) * 0.2;
+            }
+        });
+
+        // Animate particles
+        const particles = this.world3D.extraction.children.find(child => child instanceof THREE.Points);
+        if (particles) {
+            particles.rotation.y = time * 0.1;
+            const positions = particles.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i + 1] = (positions[i + 1] + 0.05) % 8;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Pulse platform
+        const platform = this.world3D.extraction.children[0];
+        if (platform && platform.material) {
+            platform.material.emissiveIntensity = 0.3 + Math.sin(time * 2) * 0.2;
+        }
+}
+
 CyberOpsGame.prototype.update3DCamera = function() {
         if (!this.scene3D || !this._selectedAgent) return;
         
         const agent = this._selectedAgent;
         const agentPos = new THREE.Vector3(
-            agent.x * 0.1 - this.currentMission.map[0].length * 0.1,
+            (agent.x - this.map.tiles[0].length / 2) * 2,
             1,
-            agent.y * 0.1 - this.currentMission.map.length * 0.1
+            (agent.y - this.map.tiles.length / 2) * 2
         );
         
         switch(this.cameraMode) {
             case 'third':
-                // Third person camera - behind and above agent
+                // Third person camera - behind and above agent with proper rotation
+                const distance = 5;
+                const height = 3;
+
+                // Use same rotation system as FPS for consistency
+                const yaw = this.cameraRotationY || 0;
+                const pitch = this.cameraRotationX || 0;
+
+                // Position camera behind agent based on rotation (negative sin/cos for behind view)
                 this.camera3D.position.set(
-                    agentPos.x - 3,
-                    agentPos.y + 2,
-                    agentPos.z + 3
+                    agentPos.x - Math.sin(yaw) * distance,
+                    agentPos.y + height + pitch * 2,
+                    agentPos.z - Math.cos(yaw) * distance
                 );
-                this.camera3D.lookAt(agentPos);
+
+                // Look at point slightly above agent for better view
+                const lookTarget = new THREE.Vector3(
+                    agentPos.x,
+                    agentPos.y + 0.5,
+                    agentPos.z
+                );
+                this.camera3D.lookAt(lookTarget);
                 break;
-                
+
             case 'first':
                 // First person camera - at agent's eye level
                 this.camera3D.position.set(
@@ -385,177 +672,611 @@ CyberOpsGame.prototype.update3DCamera = function() {
                     agentPos.y + 0.6,
                     agentPos.z
                 );
-                
-                // Mouse look in FPS mode (simplified)
-                if (this.keys3D.mouse.deltaX !== 0 || this.keys3D.mouse.deltaY !== 0) {
-                    const sensitivity = 0.002;
-                    this.camera3D.rotation.y -= this.keys3D.mouse.deltaX * sensitivity;
-                    this.camera3D.rotation.x -= this.keys3D.mouse.deltaY * sensitivity;
-                    this.camera3D.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, this.camera3D.rotation.x));
-                    
-                    // Reset mouse deltas
-                    this.keys3D.mouse.deltaX = 0;
-                    this.keys3D.mouse.deltaY = 0;
-                }
+
+                // Apply rotation - make sure we're not accumulating rotation
+                this.camera3D.rotation.order = 'YXZ'; // Proper FPS rotation order
+                this.camera3D.rotation.y = this.cameraRotationY || 0;
+                this.camera3D.rotation.x = this.cameraRotationX || 0;
+                this.camera3D.rotation.z = 0; // Ensure no roll
                 break;
         }
 }
     
 CyberOpsGame.prototype.setupPointerLock = function() {
         if (!this.canvas3D) return;
-        
-        // Simple mouse look without PointerLock API (for better compatibility)
-        let isMouseDown = false;
-        
-        this.canvas3D.addEventListener('mousedown', (e) => {
-            if (this.cameraMode === 'first') {
-                isMouseDown = true;
+
+        // Initialize camera rotation values
+        this.cameraRotationY = this.cameraRotationY || 0;
+        this.cameraRotationX = this.cameraRotationX || 0;
+
+        // Request pointer lock on first click, but don't prevent event propagation
+        // The actual shooting is handled by handleTap
+        if (!this.pointerLockSetup) {
+            this.pointerLockSetup = true;
+
+            // Handle clicks on 3D canvas
+            this.canvas3D.addEventListener('click', async (e) => {
+                if (this.is3DMode) {
+                    if (!document.pointerLockElement) {
+                        // First click - request pointer lock
+                        try {
+                            await this.canvas3D.requestPointerLock();
+                        } catch (err) {
+                            console.log('Pointer lock failed:', err);
+                        }
+                    } else {
+                        // Subsequent clicks - shoot!
+                        console.log('🔫 3D canvas clicked - shooting!');
+                        this.mouseClicked = true;
+                    }
+                }
+            });
+        }
+
+        // Handle pointer lock change
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === this.canvas3D) {
+                console.log('🔒 Pointer locked');
                 this.canvas3D.style.cursor = 'none';
+            } else {
+                console.log('🔓 Pointer unlocked');
+                this.canvas3D.style.cursor = 'crosshair';
             }
         });
-        
-        this.canvas3D.addEventListener('mouseup', () => {
-            isMouseDown = false;
-            this.canvas3D.style.cursor = 'default';
-        });
-        
+
         this.canvas3D.addEventListener('mousemove', (e) => {
-            if (isMouseDown && this.cameraMode === 'first') {
-                this.keys3D.mouse.deltaX = e.movementX || (e.pageX - this.lastMouseX);
-                this.keys3D.mouse.deltaY = e.movementY || (e.pageY - this.lastMouseY);
-                this.lastMouseX = e.pageX;
-                this.lastMouseY = e.pageY;
+            // Camera rotation with pointer lock
+            if (document.pointerLockElement === this.canvas3D) {
+                const sensitivity = 0.002;
+
+                // Use movementX/Y for smoother control
+                const deltaX = e.movementX || 0;
+                const deltaY = e.movementY || 0;
+
+                // Update rotation values
+                this.cameraRotationY -= deltaX * sensitivity;
+
+                // Invert Y for TPS mode (camera looks down when mouse goes up)
+                if (this.cameraMode === 'third') {
+                    this.cameraRotationX += deltaY * sensitivity;  // Inverted for TPS
+                } else {
+                    this.cameraRotationX -= deltaY * sensitivity;  // Normal for FPS
+                }
+
+                // Clamp vertical rotation
+                this.cameraRotationX = Math.max(-Math.PI/3, Math.min(Math.PI/3, this.cameraRotationX));
             }
         });
-        
+
         this.canvas3D.addEventListener('mouseleave', () => {
-            isMouseDown = false;
             this.canvas3D.style.cursor = 'default';
         });
+
+        // Set initial cursor
+        this.canvas3D.style.cursor = 'crosshair';
 }
     
 CyberOpsGame.prototype.update3D = function() {
-        if (!this.is3DMode || !this._selectedAgent) return;
-        
+        if (!this.is3DMode) return;
+
+        // Check if selected agent died and auto-select another
+        if (this._selectedAgent && !this._selectedAgent.alive) {
+            console.log('💀 Selected agent died, finding new agent...');
+
+            // Find another alive agent
+            const aliveAgent = this.agents.find(agent => agent.alive);
+            if (aliveAgent) {
+                // Clear previous selections
+                this.agents.forEach(a => a.selected = false);
+                this._selectedAgent = aliveAgent;
+                aliveAgent.selected = true;
+                console.log('🎯 Auto-selected new agent:', aliveAgent.name);
+                this.update3DHUD();
+            } else {
+                console.log('☠️ No alive agents remaining');
+                this._selectedAgent = null;
+                // Could switch back to tactical view or show game over
+                return;
+            }
+        }
+
+        if (!this._selectedAgent) return;
+
         // Update agent position based on WASD
         if (this.keys3D.W || this.keys3D.A || this.keys3D.S || this.keys3D.D) {
+            // Remove spam logging, movement is working
             this.updateAgent3DMovement();
         }
-        
+
         // Update camera
         this.update3DCamera();
-        
+
         // Sync 2D positions with 3D positions
         this.sync3DTo2D();
-        
+
         // Handle 3D shooting
         this.handle3DShooting();
+
+        // Animate extraction point
+        this.animateExtractionPoint();
 }
     
 CyberOpsGame.prototype.updateAgent3DMovement = function() {
         const agent = this._selectedAgent;
-        const speed = 100; // pixels per second in 2D space
-        const deltaTime = 1/60; // assuming 60fps
+        // Use EXACT same speed as 2D movement (from game-loop.js line 41)
+        const moveSpeed = agent.speed / 60;
         
         let moveX = 0;
         let moveY = 0;
         
         // Movement relative to camera direction in FPS mode
         if (this.cameraMode === 'first') {
-            const forward = new THREE.Vector3(0, 0, -1);
-            const right = new THREE.Vector3(1, 0, 0);
-            
-            forward.applyQuaternion(this.camera3D.quaternion);
-            right.applyQuaternion(this.camera3D.quaternion);
-            
+            // For true FPS controls: forward/back follows camera look, left/right strafe
+            const yaw = this.cameraRotationY || 0;
+
+            // Calculate movement vectors
+            // In our coordinate system: X is left/right, Z is forward/back
+            // Forward vector based on camera yaw (negated for correct direction)
+            const forward = new THREE.Vector3(
+                -Math.sin(yaw),
+                0,
+                -Math.cos(yaw)
+            );
+            // Right vector is perpendicular to forward (positive for correct strafe)
+            const right = new THREE.Vector3(
+                Math.sin(yaw + Math.PI/2),
+                0,
+                Math.cos(yaw + Math.PI/2)
+            );
+
             if (this.keys3D.W) {
-                moveX += forward.x * speed * deltaTime;
-                moveY += forward.z * speed * deltaTime;
+                moveX += forward.x * moveSpeed;
+                moveY += forward.z * moveSpeed;
             }
             if (this.keys3D.S) {
-                moveX -= forward.x * speed * deltaTime;
-                moveY -= forward.z * speed * deltaTime;
+                moveX -= forward.x * moveSpeed;
+                moveY -= forward.z * moveSpeed;
             }
             if (this.keys3D.A) {
-                moveX -= right.x * speed * deltaTime;
-                moveY -= right.z * speed * deltaTime;
+                moveX -= right.x * moveSpeed;
+                moveY -= right.z * moveSpeed;
             }
             if (this.keys3D.D) {
-                moveX += right.x * speed * deltaTime;
-                moveY += right.z * speed * deltaTime;
+                moveX += right.x * moveSpeed;
+                moveY += right.z * moveSpeed;
             }
-        } else {
-            // Simple movement in TPS mode
-            if (this.keys3D.W) moveY -= speed * deltaTime;
-            if (this.keys3D.S) moveY += speed * deltaTime;
-            if (this.keys3D.A) moveX -= speed * deltaTime;
-            if (this.keys3D.D) moveX += speed * deltaTime;
+        } else if (this.cameraMode === 'third') {
+            // Third person mode - camera-relative movement
+            const yaw = this.cameraRotationY || 0;
+
+            // Calculate forward and right vectors based on camera yaw
+            const forward = new THREE.Vector3(
+                Math.sin(yaw),  // Inverted sign
+                0,
+                Math.cos(yaw)   // Inverted sign
+            );
+            const right = new THREE.Vector3(
+                -Math.sin(yaw + Math.PI/2),  // Inverted sign
+                0,
+                -Math.cos(yaw + Math.PI/2)   // Inverted sign
+            );
+
+            if (this.keys3D.W) {
+                moveX += forward.x * moveSpeed;
+                moveY += forward.z * moveSpeed;
+            }
+            if (this.keys3D.S) {
+                moveX -= forward.x * moveSpeed;
+                moveY -= forward.z * moveSpeed;
+            }
+            if (this.keys3D.A) {
+                moveX -= right.x * moveSpeed;
+                moveY -= right.z * moveSpeed;
+            }
+            if (this.keys3D.D) {
+                moveX += right.x * moveSpeed;
+                moveY += right.z * moveSpeed;
+            }
         }
         
         // Apply movement
         const newX = agent.x + moveX;
         const newY = agent.y + moveY;
-        
-        // Check collision (reuse existing collision detection)
-        if (this.isValidPosition(newX, agent.y)) {
-            agent.x = newX;
-        }
-        if (this.isValidPosition(agent.x, newY)) {
-            agent.y = newY;
+
+        // Simple boundary checking for now
+        // TODO: Add proper collision detection with walls
+        agent.x = newX;
+        agent.y = newY;
+
+        // CRITICAL: Also update targetX/targetY so 2D update doesn't pull us back!
+        agent.targetX = newX;
+        agent.targetY = newY;
+
+        // Store agent body direction (for visual representation)
+        // Body faces movement direction, head can look around independently
+        if (moveX !== 0 || moveY !== 0) {
+            agent.bodyDirection = Math.atan2(-moveX, -moveY);
         }
         
         // Update 3D mesh position
         const agentMesh = this.world3D.agents.find(mesh => mesh.userData.agent === agent);
         if (agentMesh) {
             agentMesh.position.set(
-                agent.x * 0.1 - this.currentMission.map[0].length * 0.1,
+                (agent.x - this.map.tiles[0].length / 2) * 2,
                 1,
-                agent.y * 0.1 - this.currentMission.map.length * 0.1
+                (agent.y - this.map.tiles.length / 2) * 2
             );
+
+            // In TPS mode, rotate agent mesh to face camera direction
+            if (this.cameraMode === 'third') {
+                agentMesh.rotation.y = this.cameraRotationY || 0;
+            } else if (this.cameraMode === 'first') {
+                // In FPS mode, we could rotate based on movement if we had a visible body
+                // For now, keep rotation based on last movement direction
+                if (agent.bodyDirection !== undefined) {
+                    agentMesh.rotation.y = agent.bodyDirection;
+                }
+            }
         }
 }
     
+CyberOpsGame.prototype.cycleAction3D = function() {
+        if (!this.is3DMode) return;
+
+        // Cycle through actions 0-4
+        this.selectedAction3D = (this.selectedAction3D + 1) % 5;
+
+        // Update UI
+        this.updateAction3DDisplay();
+
+        const actionNames = ['Move', 'Shoot', 'Grenade', 'Hack', 'Shield'];
+        console.log(`🔄 Switched to action: ${actionNames[this.selectedAction3D]}`);
+}
+
+CyberOpsGame.prototype.updateAction3DDisplay = function() {
+        const actionNames = ['Move', 'Shoot', 'Grenade', 'Hack', 'Shield'];
+        const currentActionSpan = document.getElementById('currentAction3D');
+        if (currentActionSpan) {
+            currentActionSpan.textContent = actionNames[this.selectedAction3D];
+        }
+
+        // Update selected button visual
+        const buttons = document.querySelectorAll('.action-button-3d');
+        buttons.forEach((btn, index) => {
+            if (index === this.selectedAction3D) {
+                btn.classList.add('selected');
+            } else {
+                btn.classList.remove('selected');
+            }
+        });
+}
+
 CyberOpsGame.prototype.handle3DShooting = function() {
-        // Handle mouse clicks for shooting in 3D mode
+        // Handle mouse clicks for actions in 3D mode
         if (this.mouseClicked && this.is3DMode && this._selectedAgent) {
             this.mouseClicked = false;
-            
-            // Raycast for shooting
-            const raycaster = new THREE.Raycaster();
-            
-            if (this.cameraMode === 'first') {
-                // Shoot from camera center in FPS mode
-                raycaster.setFromCamera({ x: 0, y: 0 }, this.camera3D);
-            } else {
-                // Convert mouse position for TPS mode
-                const mouse = new THREE.Vector2(
-                    (this.mouseX / window.innerWidth) * 2 - 1,
-                    -(this.mouseY / window.innerHeight) * 2 + 1
-                );
-                raycaster.setFromCamera(mouse, this.camera3D);
+
+            // Execute the selected action
+            switch(this.selectedAction3D) {
+                case 0: // Move
+                    // In 2D mode, action 0 does nothing (movement is by clicking)
+                    // In 3D mode, we could set a waypoint but for consistency, do nothing
+                    console.log('👆 Move action selected - use WASD to move');
+                    break;
+
+                case 1: // Shoot
+                    console.log('💥 Shooting nearest enemy!');
+                    this.execute3DShooting();
+                    break;
+
+                case 2: // Grenade
+                    console.log('💣 Throwing grenade at target position!');
+                    this.execute3DGrenade();
+                    break;
+
+                case 3: // Hack
+                    console.log('💻 Executing context action!');
+                    this.execute3DHack();
+                    break;
+
+                case 4: // Shield
+                    console.log('🛡️ Activating shield!');
+                    this.execute3DShield();
+                    break;
             }
-            
-            // Check for enemy hits
-            const enemyMeshes = this.world3D.enemies.filter(mesh => mesh.visible);
-            const intersects = raycaster.intersectObjects(enemyMeshes);
-            
-            if (intersects.length > 0) {
-                const hitMesh = intersects[0].object;
-                const enemy = hitMesh.userData.enemy;
-                
-                if (enemy && enemy.alive) {
-                    // Deal damage
-                    enemy.hp -= this._selectedAgent.damage;
-                    
-                    // Create muzzle flash effect
-                    this.create3DMuzzleFlash();
-                    
-                    if (enemy.hp <= 0) {
-                        enemy.alive = false;
-                        hitMesh.visible = false;
-                        console.log('🎯 Enemy eliminated in 3D mode!');
+        }
+}
+
+CyberOpsGame.prototype.execute3DShooting = function() {
+        if (!this._selectedAgent) return;
+
+        // Check cooldown
+        if (this._selectedAgent.cooldowns[1] > 0) {
+            console.log('⏰ Shoot on cooldown!');
+            return;
+        }
+
+        // Use the SAME logic as 2D mode - shoot NEAREST enemy
+        this.shootNearestEnemy(this._selectedAgent);
+
+        // Create muzzle flash effect for visual feedback
+        this.create3DMuzzleFlash();
+
+        // Set cooldown (already set in shootNearestEnemy but ensure consistency)
+        this._selectedAgent.cooldowns[1] = 60;
+        this.update3DCooldowns();
+}
+
+CyberOpsGame.prototype.execute3DGrenade = function() {
+        if (!this._selectedAgent) return;
+
+        // Check cooldown
+        if (this._selectedAgent.cooldowns[2] > 0) {
+            console.log('⏰ Grenade on cooldown!');
+            return;
+        }
+
+        // Use the SAME logic as 2D mode - throw at agent's current target position
+        this.throwGrenade(this._selectedAgent);
+
+        // Visual feedback in 3D at agent's target position
+        const targetX = (this._selectedAgent.targetX - this.map.tiles[0].length / 2) * 2;
+        const targetZ = (this._selectedAgent.targetY - this.map.tiles.length / 2) * 2;
+        this.create3DGrenadeEffect(targetX, targetZ);
+
+        // Set cooldown
+        this._selectedAgent.cooldowns[2] = 180;
+        this.update3DCooldowns();
+
+        console.log(`💣 Grenade thrown at agent's target position`);
+}
+
+CyberOpsGame.prototype.create3DGrenadeEffect = function(x, z) {
+        if (!this.scene3D) return;
+
+        // Create explosion visual
+        const geometry = new THREE.SphereGeometry(0.3, 8, 6);
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xff6600,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const grenade = new THREE.Mesh(geometry, material);
+        grenade.position.set(x, 1, z);
+        this.scene3D.add(grenade);
+
+        // Animate grenade arc and explosion
+        let frame = 0;
+        const animateGrenade = () => {
+            frame++;
+            if (frame < 30) {
+                // Arc motion
+                grenade.position.y = 1 + Math.sin((frame / 30) * Math.PI) * 3;
+                requestAnimationFrame(animateGrenade);
+            } else {
+                // Explosion
+                this.scene3D.remove(grenade);
+                this.create3DExplosion(x, z);
+            }
+        };
+        animateGrenade();
+}
+
+CyberOpsGame.prototype.create3DExplosion = function(x, z) {
+        // Create explosion sphere
+        const geometry = new THREE.SphereGeometry(3, 16, 12);
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xff3300,
+            transparent: true,
+            opacity: 0.6
+        });
+
+        const explosion = new THREE.Mesh(geometry, material);
+        explosion.position.set(x, 1, z);
+        this.scene3D.add(explosion);
+
+        // Animate explosion
+        let scale = 0.1;
+        const animateExplosion = () => {
+            scale += 0.15;
+            explosion.scale.set(scale, scale, scale);
+            material.opacity = Math.max(0, 0.6 - scale * 0.15);
+
+            if (material.opacity > 0) {
+                requestAnimationFrame(animateExplosion);
+            } else {
+                this.scene3D.remove(explosion);
+            }
+        };
+        animateExplosion();
+}
+
+CyberOpsGame.prototype.execute3DHack = function() {
+        if (!this._selectedAgent) return;
+
+        // Check cooldown
+        if (this._selectedAgent.cooldowns[3] > 0) {
+            console.log('⏰ Hack on cooldown!');
+            return;
+        }
+
+        // Use the SAME logic as 2D mode - handle based on mission type
+        const agent = this._selectedAgent;
+
+        if (this.currentMission.id === 3) {
+            this.plantNearestExplosive(agent);
+        } else if (this.currentMission.id === 4) {
+            this.eliminateNearestTarget(agent);
+        } else if (this.currentMission.id === 5) {
+            this.breachNearestGate(agent) || this.hackNearestTerminal(agent);
+        } else {
+            this.hackNearestTerminal(agent);
+        }
+
+        // Visual feedback for hacked terminals in 3D
+        const terminals = this.map.terminals || this.currentMission.terminals || [];
+        terminals.forEach(terminal => {
+            if (terminal.hacked) {
+                // Update 3D terminal visual
+                this.world3D.terminals.forEach(terminalMesh => {
+                    if (terminalMesh.userData.terminal === terminal) {
+                        if (!terminalMesh.userData.wasHacked) {
+                            terminalMesh.material.color.setHex(0x00ff00);
+                            terminalMesh.material.emissive.setHex(0x00ff00);
+                            terminalMesh.material.emissiveIntensity = 0.5;
+                            terminalMesh.userData.wasHacked = true;
+                            // Create hack effect
+                            this.create3DHackEffect(terminal.x, terminal.y);
+                        }
                     }
+                });
+            }
+        });
+
+        // Set cooldown
+        this._selectedAgent.cooldowns[3] = 120;
+        this.update3DCooldowns();
+}
+
+CyberOpsGame.prototype.create3DHackEffect = function(terminalX, terminalY) {
+        if (!this.scene3D) return;
+
+        // Convert to 3D coordinates
+        const x = (terminalX - this.map.tiles[0].length / 2) * 2;
+        const z = (terminalY - this.map.tiles.length / 2) * 2;
+
+        // Create data stream effect
+        const geometry = new THREE.BoxGeometry(0.1, 3, 0.1);
+        const material = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        for (let i = 0; i < 10; i++) {
+            const stream = new THREE.Mesh(geometry, material.clone());
+            const angle = (i / 10) * Math.PI * 2;
+            stream.position.set(
+                x + Math.cos(angle) * 0.5,
+                0,
+                z + Math.sin(angle) * 0.5
+            );
+            this.scene3D.add(stream);
+
+            // Animate upward
+            let y = 0;
+            const animateStream = () => {
+                y += 0.1;
+                stream.position.y = y;
+                stream.material.opacity = Math.max(0, 0.8 - y * 0.2);
+
+                if (stream.material.opacity > 0) {
+                    requestAnimationFrame(animateStream);
+                } else {
+                    this.scene3D.remove(stream);
                 }
+            };
+            setTimeout(animateStream, i * 50);
+        }
+}
+
+CyberOpsGame.prototype.execute3DShield = function() {
+        if (!this._selectedAgent) return;
+
+        // Check cooldown
+        if (this._selectedAgent.cooldowns[4] > 0) {
+            console.log('⏰ Shield on cooldown!');
+            return;
+        }
+
+        // Activate shield
+        this.activateShield(this._selectedAgent);
+
+        // Create 3D shield visual
+        this.create3DShieldEffect(this._selectedAgent);
+
+        // Set cooldown
+        this._selectedAgent.cooldowns[4] = 300;
+        this.update3DCooldowns();
+
+        console.log('🛡️ Shield activated for 3 seconds');
+}
+
+CyberOpsGame.prototype.create3DShieldEffect = function(agent) {
+        if (!this.scene3D) return;
+
+        // Remove any existing shield
+        if (agent.shield3D) {
+            this.scene3D.remove(agent.shield3D);
+        }
+
+        // Create shield sphere
+        const geometry = new THREE.SphereGeometry(1.5, 16, 12);
+        const material = new THREE.MeshBasicMaterial({
+            color: 0x00ffff,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        });
+
+        const shield = new THREE.Mesh(geometry, material);
+        shield.position.set(
+            (agent.x - this.map.tiles[0].length / 2) * 2,
+            1,
+            (agent.y - this.map.tiles.length / 2) * 2
+        );
+
+        // Add wireframe overlay
+        const wireframeGeometry = new THREE.SphereGeometry(1.6, 8, 6);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ffff,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.5
+        });
+        const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+        shield.add(wireframe);
+
+        this.scene3D.add(shield);
+        agent.shield3D = shield;
+
+        // Animate shield
+        const animateShield = () => {
+            if (!agent.shield3D || agent.shieldDuration <= 0) {
+                if (agent.shield3D) {
+                    this.scene3D.remove(agent.shield3D);
+                    agent.shield3D = null;
+                }
+                return;
+            }
+
+            // Update position to follow agent
+            shield.position.set(
+                (agent.x - this.map.tiles[0].length / 2) * 2,
+                1,
+                (agent.y - this.map.tiles.length / 2) * 2
+            );
+
+            // Pulse effect
+            const time = Date.now() * 0.001;
+            shield.scale.setScalar(1 + Math.sin(time * 3) * 0.05);
+            wireframe.rotation.y += 0.02;
+
+            requestAnimationFrame(animateShield);
+        };
+        animateShield();
+}
+
+CyberOpsGame.prototype.update3DCooldowns = function() {
+        if (!this._selectedAgent) return;
+
+        for (let i = 0; i < 5; i++) {
+            const overlay = document.getElementById('cooldown3d' + i);
+            if (overlay) {
+                const maxCooldown = [0, 60, 180, 120, 300][i];
+                const progress = this._selectedAgent.cooldowns[i] / maxCooldown;
+                overlay.style.background = `conic-gradient(from 0deg, transparent ${(1 - progress) * 360}deg, rgba(0,0,0,0.7) ${(1 - progress) * 360}deg)`;
             }
         }
 }
@@ -576,9 +1297,9 @@ CyberOpsGame.prototype.create3DMuzzleFlash = function() {
         // Position flash at agent weapon
         const agent = this._selectedAgent;
         flash.position.set(
-            agent.x * 0.1 - this.currentMission.map[0].length * 0.1 + 0.5,
+            (agent.x - this.map.tiles[0].length / 2) * 2 + 0.5,
             1.2,
-            agent.y * 0.1 - this.currentMission.map.length * 0.1
+            (agent.y - this.map.tiles.length / 2) * 2
         );
         
         this.scene3D.add(flash);
@@ -593,15 +1314,21 @@ CyberOpsGame.prototype.sync3DTo2D = function() {
         // Update enemy positions in 3D based on 2D logic
         this.enemies.forEach((enemy, index) => {
             const enemyMesh = this.world3D.enemies[index];
-            if (enemyMesh && enemy.alive) {
-                enemyMesh.position.set(
-                    enemy.x * 0.1 - this.currentMission.map[0].length * 0.1,
-                    1,
-                    enemy.y * 0.1 - this.currentMission.map.length * 0.1
-                );
-                
-                // Update visibility
+            if (enemyMesh) {
+                // Always update visibility based on alive status
+                if (enemyMesh.visible !== enemy.alive) {
+                    console.log(`👻 Enemy ${index} visibility: ${enemyMesh.visible} -> ${enemy.alive}`);
+                }
                 enemyMesh.visible = enemy.alive;
+
+                // Only update position if enemy is alive
+                if (enemy.alive) {
+                    enemyMesh.position.set(
+                        (enemy.x - this.map.tiles[0].length / 2) * 2,
+                        1,
+                        (enemy.y - this.map.tiles.length / 2) * 2
+                    );
+                }
             }
         });
         
@@ -633,25 +1360,25 @@ CyberOpsGame.prototype.render3D = function() {
     // Enhanced 3D HUD update
 CyberOpsGame.prototype.update3DHUD = function() {
         if (!this.is3DMode || !this._selectedAgent) return;
-        
+
         // Update health display
         const healthDisplay = document.querySelector('.health-display-3d');
         if (healthDisplay) {
             healthDisplay.textContent = `HP: ${this._selectedAgent.hp}/${this._selectedAgent.maxHp}`;
         }
-        
+
         // Update ammo display
         const ammoDisplay = document.querySelector('.ammo-display-3d');
         if (ammoDisplay) {
             ammoDisplay.textContent = `AMMO: ${this._selectedAgent.ammo || '∞'}`;
         }
-        
+
         // Update objective display
         const objectiveDisplay = document.querySelector('.objective-display-3d');
         if (objectiveDisplay && this.currentMission) {
             objectiveDisplay.textContent = this.getObjectiveText();
         }
-        
+
         // Update agent info
         const agentNameDisplay = document.getElementById('agentName3D');
         const agentClassDisplay = document.getElementById('agentClass3D');
@@ -661,6 +1388,12 @@ CyberOpsGame.prototype.update3DHUD = function() {
         if (agentClassDisplay && this._selectedAgent) {
             agentClassDisplay.textContent = this._selectedAgent.class;
         }
+
+        // Update action display
+        this.updateAction3DDisplay();
+
+        // Update cooldowns
+        this.update3DCooldowns();
 }
     
     // REMOVED: checkAgentSelection - all logic moved to simplified handleTap

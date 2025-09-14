@@ -2548,6 +2548,86 @@ body {
     font-size: 12px;
 }
 
+/* 3D Action Bar */
+.action-bar-3d {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    background: rgba(0,20,40,0.9);
+    padding: 10px 15px;
+    border-radius: 25px;
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 20px rgba(0,255,255,0.3);
+    pointer-events: auto;
+}
+
+.action-button-3d {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    background: rgba(0,40,80,0.8);
+    border: 2px solid #004466;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: crosshair;
+    transition: all 0.3s;
+}
+
+.action-button-3d.selected {
+    border-color: #00ffff;
+    background: rgba(0,100,150,0.9);
+    box-shadow: 0 0 15px rgba(0,255,255,0.5);
+    transform: scale(1.1);
+}
+
+.action-button-3d span {
+    font-size: 24px;
+    margin-bottom: 2px;
+}
+
+.action-label {
+    font-size: 10px;
+    color: #00ffff;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.cooldown-overlay-3d {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+.action-hint-3d {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,20,40,0.9);
+    padding: 8px 16px;
+    border-radius: 15px;
+    border: 1px solid #00ffff;
+    color: #00ffff;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0,255,255,0.5);
+}
+
+#currentAction3D {
+    color: #ffff00;
+    text-transform: uppercase;
+}
+
 /* Mobile 3D HUD Adjustments */
 @media (max-width: 480px) {
     .hud3d-top {
@@ -2556,19 +2636,19 @@ body {
         padding: 8px 15px;
         top: 15px;
     }
-    
+
     .health-display-3d,
     .ammo-display-3d,
     .objective-display-3d {
         font-size: 12px;
     }
-    
+
     .agent-info-3d {
         padding: 10px 15px;
         bottom: 15px;
         left: 15px;
     }
-    
+
     .agent-name-3d {
         font-size: 14px;
     }

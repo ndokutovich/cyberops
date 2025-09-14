@@ -1,13 +1,24 @@
     // Game Loop
 CyberOpsGame.prototype.gameLoop = function() {
         requestAnimationFrame(() => this.gameLoop());
-        
+
         if (this.currentScreen === 'game' && !this.isPaused) {
             this.update();
+            // Update 3D if in 3D mode
+            if (this.is3DMode) {
+                this.update3D();
+                this.update3DCamera();
+                this.sync3DTo2D();
+            }
         }
-        
+
         if (this.currentScreen === 'game') {
-            this.render();
+            if (this.is3DMode) {
+                this.render3D();
+                this.update3DHUD();
+            } else {
+                this.render();
+            }
         }
 }
     
@@ -289,8 +300,14 @@ CyberOpsGame.prototype.checkMissionStatus = function() {
 CyberOpsGame.prototype.endMission = function(victory) {
         // Keep level music playing until next mission starts
         console.log('🎵 Level music continues after mission end');
-        
+
         this.isPaused = true;
+
+        // Release pointer lock so player can interact with dialogs
+        if (document.pointerLockElement) {
+            console.log('🔓 Releasing pointer lock for mission end dialog');
+            document.exitPointerLock();
+        }
         
         // Update campaign statistics and rewards
         if (victory) {

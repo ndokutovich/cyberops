@@ -398,7 +398,10 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                 );
                 if (dist < 3) {
                     enemy.health -= 50;
-                    if (enemy.health <= 0) enemy.alive = false;
+                    if (enemy.health <= 0) {
+                        enemy.alive = false;
+                        console.log(`💀 Enemy killed by grenade at (${enemy.x}, ${enemy.y})`);
+                    }
                 }
             });
 
@@ -577,6 +580,13 @@ CyberOpsGame.prototype.togglePause = function() {
         if (this.isPaused) {
             pauseButton.textContent = '▶';
             this.pauseLevelMusic();
+
+            // Release pointer lock when pausing in 3D mode
+            if (document.pointerLockElement) {
+                console.log('🔓 Releasing pointer lock for pause menu');
+                document.exitPointerLock();
+            }
+
             this.showPauseMenu();
         } else {
             pauseButton.textContent = '⏸';
