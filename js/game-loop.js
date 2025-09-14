@@ -2,6 +2,9 @@
 CyberOpsGame.prototype.gameLoop = function() {
         requestAnimationFrame(() => this.gameLoop());
 
+        // Update FPS counter
+        this.updateFPS();
+
         if (this.currentScreen === 'game' && !this.isPaused) {
             this.update();
             // Update 3D if in 3D mode
@@ -19,6 +22,19 @@ CyberOpsGame.prototype.gameLoop = function() {
             } else {
                 this.render();
             }
+        }
+}
+
+// FPS Counter
+CyberOpsGame.prototype.updateFPS = function() {
+        this.frameCount++;
+        const now = Date.now();
+        const delta = now - this.lastFpsUpdate;
+
+        if (delta >= 1000) {
+            this.fps = Math.round((this.frameCount * 1000) / delta);
+            this.frameCount = 0;
+            this.lastFpsUpdate = now;
         }
 }
     

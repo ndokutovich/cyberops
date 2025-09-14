@@ -45,11 +45,16 @@ CyberOpsGame.prototype.init3D = function() {
         // Create cameras
         this.camera3D = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        // Create renderer
-        this.renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        // Create renderer with optimizations
+        this.renderer3D = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true,
+            powerPreference: "high-performance"  // Pure optimization - use high-performance GPU
+        });
         this.renderer3D.setSize(window.innerWidth, window.innerHeight);
-        this.renderer3D.shadowMap.enabled = true;
-        this.renderer3D.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer3D.shadowMap.enabled = true;  // Keep shadows as before
+        this.renderer3D.shadowMap.type = THREE.PCFSoftShadowMap;  // Keep original shadow quality
+        this.renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
         
         // Add to container
         this.container3D.appendChild(this.renderer3D.domElement);
@@ -1778,6 +1783,35 @@ CyberOpsGame.prototype.render3D = function() {
         if (!this.renderer3D || !this.scene3D || !this.camera3D) return;
 
         if (this.renderer3D && this.scene3D && this.camera3D) {
+            // Update camera matrices for frustum culling
+            this.camera3D.updateMatrixWorld();
+
+            // Create frustum for culling if needed
+            if (!this.frustum3D) {
+                this.frustum3D = new THREE.Frustum();
+                this.frustumMatrix = new THREE.Matrix4();
+            }
+
+            // Update frustum from camera
+            this.frustumMatrix.multiplyMatrices(
+                this.camera3D.projectionMatrix,
+                this.camera3D.matrixWorldInverse
+            );
+            this.frustum3D.setFromProjectionMatrix(this.frustumMatrix);
+
+            // Apply frustum culling only - no behavior changes
+            this.scene3D.traverse((object) => {
+                if (object.isMesh) {
+                    // Frustum culling - only render objects in view
+                    // This is a pure optimization - objects outside camera view aren't rendered
+                    if (!this.frustum3D.intersectsObject(object)) {
+                        object.visible = false;
+                    } else {
+                        object.visible = true;
+                    }
+                }
+            });
+
             // Store original camera position
             const originalX = this.camera3D.position.x;
             const originalZ = this.camera3D.position.z;

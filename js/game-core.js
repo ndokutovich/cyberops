@@ -22,6 +22,11 @@ class CyberOpsGame {
         // Demoscene idle timer
         this.demosceneTimer = null;
         this.demosceneActive = false;
+
+        // FPS counter
+        this.fps = 0;
+        this.frameCount = 0;
+        this.lastFpsUpdate = Date.now();
         this.currentMissionIndex = 0;
         this.missionTimer = 0;
         this.selectedAgents = [];
@@ -127,6 +132,9 @@ class CyberOpsGame {
             terminals: [],
             ground: null
         };
+
+        // Initialize pathfinding cache
+        this.initPathCache();
 
         // NOW CALL THE INITIALIZATION FUNCTIONS IN THE CONSTRUCTOR
         console.log('🔧 About to call setupCanvas()...');

@@ -231,6 +231,9 @@ CyberOpsGame.prototype.render = function() {
         // Render hotkey help overlay
         this.renderHotkeyHelp();
 
+        // Render FPS counter
+        this.renderFPS();
+
         this.renderMinimap();
 }
     
@@ -325,19 +328,19 @@ CyberOpsGame.prototype.renderFogOfWar = function() {
                 const fogState = this.fogOfWar[y][x];
 
                 if (fogState === 0) {
-                    // Unexplored - fully dark
+                    // Unexplored - fully dark (black)
                     const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
                     ctx.save();
                     ctx.translate(isoPos.x, isoPos.y);
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';  // Almost completely black
                     ctx.fillRect(-this.tileWidth/2, -this.tileHeight, this.tileWidth, this.tileHeight * 2);
                     ctx.restore();
                 } else if (fogState === 1) {
-                    // Explored but not visible - semi-dark
+                    // Explored but not visible - much lighter overlay so you can see the map
                     const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
                     ctx.save();
                     ctx.translate(isoPos.x, isoPos.y);
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';  // Much lighter - 30% black instead of 50%
                     ctx.fillRect(-this.tileWidth/2, -this.tileHeight, this.tileWidth, this.tileHeight * 2);
                     ctx.restore();
                 }
@@ -808,6 +811,28 @@ CyberOpsGame.prototype.renderEffect = function(effect) {
         }
 }
     
+// Render FPS counter
+CyberOpsGame.prototype.renderFPS = function() {
+        const ctx = this.ctx;
+        ctx.save();
+
+        // Position in top right corner
+        const x = this.canvas.width - 100;
+        const y = 30;
+
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(x - 10, y - 20, 90, 30);
+
+        // FPS text
+        const fpsColor = this.fps >= 30 ? '#00ff00' : this.fps >= 20 ? '#ffff00' : '#ff0000';
+        ctx.fillStyle = fpsColor;
+        ctx.font = 'bold 16px monospace';
+        ctx.fillText(`FPS: ${this.fps}`, x, y);
+
+        ctx.restore();
+}
+
 // Render hotkey help overlay
 CyberOpsGame.prototype.renderHotkeyHelp = function() {
         // Toggle help with '?' key or show when first starting

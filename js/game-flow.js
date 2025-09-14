@@ -502,6 +502,19 @@ CyberOpsGame.prototype.initializeFogOfWar = function() {
 CyberOpsGame.prototype.updateFogOfWar = function() {
         if (!this.fogOfWar || !this.agents) return;
 
+        // Initialize line of sight cache if needed
+        if (!this.losCache) {
+            this.losCache = new Map();
+            this.losCacheFrame = 0;
+        }
+
+        // Clear cache every 30 frames to handle map changes
+        this.losCacheFrame++;
+        if (this.losCacheFrame > 30) {
+            this.losCache.clear();
+            this.losCacheFrame = 0;
+        }
+
         // Reset visibility (but keep explored areas if permanent fog)
         for (let y = 0; y < this.map.height; y++) {
             for (let x = 0; x < this.map.width; x++) {
@@ -529,17 +542,31 @@ CyberOpsGame.prototype.updateFogOfWar = function() {
                 viewDist = Math.floor(viewDist * this.ghostViewBonus);
             }
 
-            // Reveal tiles in view radius
+            // Cache agent position for this update
+            const agentX = Math.floor(agent.x);
+            const agentY = Math.floor(agent.y);
+
+            // Reveal tiles in view radius - optimized with early exit
             for (let dy = -viewDist; dy <= viewDist; dy++) {
                 for (let dx = -viewDist; dx <= viewDist; dx++) {
-                    const tx = Math.floor(agent.x + dx);
-                    const ty = Math.floor(agent.y + dy);
+                    const tx = agentX + dx;
+                    const ty = agentY + dy;
 
                     if (tx >= 0 && tx < this.map.width && ty >= 0 && ty < this.map.height) {
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist <= viewDist) {
-                            // Check line of sight (walls block vision)
-                            if (this.hasLineOfSight(agent.x, agent.y, tx, ty)) {
+                        // Quick distance check before expensive sqrt
+                        const distSq = dx * dx + dy * dy;
+                        if (distSq <= viewDist * viewDist) {
+                            // Check cache first
+                            const cacheKey = `${agentX},${agentY}-${tx},${ty}`;
+                            let hasLOS = this.losCache.get(cacheKey);
+
+                            if (hasLOS === undefined) {
+                                // Not in cache, calculate and store
+                                hasLOS = this.hasLineOfSight(agent.x, agent.y, tx, ty);
+                                this.losCache.set(cacheKey, hasLOS);
+                            }
+
+                            if (hasLOS) {
                                 this.fogOfWar[ty][tx] = 2; // Fully visible
                             }
                         }

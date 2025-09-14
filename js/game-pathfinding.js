@@ -1,8 +1,23 @@
 // A* Pathfinding Algorithm for CyberOps Game
+
+// Initialize pathfinding cache
+CyberOpsGame.prototype.initPathCache = function() {
+    this.pathCache = new Map();
+    this.pathCacheTimeout = 5000; // Cache paths for 5 seconds
+    this.maxPathCacheSize = 50; // Limit cache size
+}
+
 CyberOpsGame.prototype.findPath = function(startX, startY, endX, endY) {
     // Convert to grid coordinates
     const start = { x: Math.floor(startX), y: Math.floor(startY) };
     const end = { x: Math.floor(endX), y: Math.floor(endY) };
+
+    // Check cache first
+    const cacheKey = `${start.x},${start.y}-${end.x},${end.y}`;
+    const cached = this.pathCache?.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.pathCacheTimeout) {
+        return [...cached.path]; // Return copy of cached path
+    }
 
     // Check if start and end are valid
     if (!this.isWalkable(end.x, end.y)) {
@@ -12,6 +27,10 @@ CyberOpsGame.prototype.findPath = function(startX, startY, endX, endY) {
         end.x = Math.floor(nearestWalkable.x);
         end.y = Math.floor(nearestWalkable.y);
     }
+
+    // Limit pathfinding iterations to prevent performance issues
+    const maxIterations = 500;
+    let iterations = 0;
 
     // A* implementation
     const openSet = [];
@@ -29,7 +48,9 @@ CyberOpsGame.prototype.findPath = function(startX, startY, endX, endY) {
 
     openSet.push(startNode);
 
-    while (openSet.length > 0) {
+    while (openSet.length > 0 && iterations < maxIterations) {
+        iterations++;
+
         // Get node with lowest f score
         let current = openSet[0];
         let currentIndex = 0;
@@ -46,7 +67,22 @@ CyberOpsGame.prototype.findPath = function(startX, startY, endX, endY) {
 
         // Check if we reached the goal
         if (current.x === end.x && current.y === end.y) {
-            return this.reconstructPath(cameFrom, current);
+            const path = this.reconstructPath(cameFrom, current);
+
+            // Cache the result
+            if (this.pathCache) {
+                // Clean old cache entries if needed
+                if (this.pathCache.size > this.maxPathCacheSize) {
+                    const firstKey = this.pathCache.keys().next().value;
+                    this.pathCache.delete(firstKey);
+                }
+                this.pathCache.set(cacheKey, {
+                    path: [...path],
+                    timestamp: Date.now()
+                });
+            }
+
+            return path;
         }
 
         // Add to closed set
