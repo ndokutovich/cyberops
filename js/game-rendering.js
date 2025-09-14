@@ -209,7 +209,13 @@ CyberOpsGame.prototype.render = function() {
         });
         
         this.agents.forEach(agent => {
-            if (agent.alive) this.renderAgent(agent);
+            if (agent.alive) {
+                // Render path if exists (for debugging)
+                if (agent.path && agent.selected && this.showPaths) {
+                    this.renderPath(agent.path, agent.currentPathIndex);
+                }
+                this.renderAgent(agent);
+            }
         });
         
         this.projectiles.forEach(proj => {
@@ -368,6 +374,53 @@ CyberOpsGame.prototype.renderDoor = function(x, y, locked) {
 
             ctx.strokeStyle = '#00ff00';
             ctx.strokeRect(-15, -30, 30, 35);
+        }
+
+        ctx.restore();
+}
+
+// Render agent path for debugging
+CyberOpsGame.prototype.renderPath = function(path, currentIndex = 0) {
+        if (!path || path.length < 2) return;
+
+        const ctx = this.ctx;
+        ctx.save();
+
+        // Draw path line
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+
+        ctx.beginPath();
+        for (let i = 0; i < path.length; i++) {
+            const pos = this.worldToIsometric(path[i].x, path[i].y);
+            if (i === 0) {
+                ctx.moveTo(pos.x, pos.y);
+            } else {
+                ctx.lineTo(pos.x, pos.y);
+            }
+        }
+        ctx.stroke();
+
+        // Draw waypoints
+        ctx.setLineDash([]);
+        for (let i = 0; i < path.length; i++) {
+            const pos = this.worldToIsometric(path[i].x, path[i].y);
+
+            if (i < currentIndex) {
+                // Visited waypoints
+                ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+            } else if (i === currentIndex) {
+                // Current waypoint
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+            } else {
+                // Future waypoints
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.6)';
+            }
+
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         ctx.restore();

@@ -41,6 +41,43 @@ CyberOpsGame.prototype.isWalkable = function(x, y) {
         return this.map.tiles[tileY][tileX] === 0;
 }
 
+// Simple movement without pathfinding (fallback)
+CyberOpsGame.prototype.moveAgentSimple = function(agent) {
+        const dx = agent.targetX - agent.x;
+        const dy = agent.targetY - agent.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 0.1) {
+            // Update facing angle when moving
+            agent.facingAngle = Math.atan2(dy, dx);
+
+            const moveSpeed = agent.speed / 60;
+            const moveX = (dx / dist) * moveSpeed;
+            const moveY = (dy / dist) * moveSpeed;
+
+            const newX = agent.x + moveX;
+            const newY = agent.y + moveY;
+
+            // Check collision before moving
+            if (this.canMoveTo(agent.x, agent.y, newX, newY)) {
+                agent.x = newX;
+                agent.y = newY;
+            } else {
+                // Try to slide along walls
+                // Try horizontal movement only
+                if (this.canMoveTo(agent.x, agent.y, newX, agent.y)) {
+                    agent.x = newX;
+                    agent.facingAngle = dx > 0 ? 0 : Math.PI;
+                }
+                // Try vertical movement only
+                else if (this.canMoveTo(agent.x, agent.y, agent.x, newY)) {
+                    agent.y = newY;
+                    agent.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
+                }
+            }
+        }
+}
+
 CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
         // Check if target position is walkable
         if (!this.isWalkable(toX, toY)) {
@@ -110,38 +147,12 @@ CyberOpsGame.prototype.update = function() {
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist > 0.1) {
-                // Update facing angle when moving
-                agent.facingAngle = Math.atan2(dy, dx);
-                // Debug log to verify angle is updating
-                if (agent.selected && Math.random() < 0.1) {
-                    console.log(`Agent ${agent.name} facing: ${(agent.facingAngle * 180 / Math.PI).toFixed(0)}°`);
-                }
-
-                const moveSpeed = agent.speed / 60;
-                const moveX = (dx / dist) * moveSpeed;
-                const moveY = (dy / dist) * moveSpeed;
-
-                const newX = agent.x + moveX;
-                const newY = agent.y + moveY;
-
-                // Check collision before moving
-                if (this.canMoveTo(agent.x, agent.y, newX, newY)) {
-                    agent.x = newX;
-                    agent.y = newY;
+                // Try pathfinding first, with fallback to simple movement
+                if (this.usePathfinding !== false) {
+                    this.moveAgentWithPathfinding(agent);
                 } else {
-                    // Try to slide along walls
-                    // Try horizontal movement only
-                    if (this.canMoveTo(agent.x, agent.y, newX, agent.y)) {
-                        agent.x = newX;
-                        // Update facing for horizontal movement
-                        agent.facingAngle = dx > 0 ? 0 : Math.PI;
-                    }
-                    // Try vertical movement only
-                    else if (this.canMoveTo(agent.x, agent.y, agent.x, newY)) {
-                        agent.y = newY;
-                        // Update facing for vertical movement
-                        agent.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
-                    }
+                    // Fallback to simple movement
+                    this.moveAgentSimple(agent);
                 }
             }
             // Agent is standing still - keep last facing direction

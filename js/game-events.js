@@ -102,6 +102,27 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 return;
             }
 
+            // Toggle path visualization - 'P' key for debugging
+            if (e.code === 'KeyP' && this.currentScreen === 'game') {
+                this.showPaths = !this.showPaths;
+                console.log('🛤️ Path visualization:', this.showPaths ? 'ON' : 'OFF');
+                e.preventDefault();
+                return;
+            }
+
+            // Toggle pathfinding on/off - 'O' key
+            if (e.code === 'KeyO' && this.currentScreen === 'game') {
+                this.usePathfinding = !this.usePathfinding;
+                console.log('🧭 Pathfinding:', this.usePathfinding ? 'ON' : 'OFF');
+                // Clear existing paths when toggling
+                this.agents.forEach(agent => {
+                    agent.path = null;
+                    agent.lastTargetKey = null;
+                });
+                e.preventDefault();
+                return;
+            }
+
             // 3D Mode Controls - E Key
             if (e.code === 'KeyE' && this.currentScreen === 'game') {
                 console.log('🔑 E key detected! Checking conditions...');
