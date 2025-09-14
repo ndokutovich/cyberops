@@ -1,10 +1,122 @@
-    // Save/Load System
-CyberOpsGame.prototype.saveGame = function() {
-        try {
-            const saveData = {
-                version: '2.0',
-                timestamp: new Date().toISOString(),
-                gameState: {
+    // Save/Load System with Multiple Slots
+
+// Show save list dialog
+CyberOpsGame.prototype.showSaveList = function(mode = 'save') {
+    this.saveListMode = mode; // 'save' or 'load'
+    const dialog = document.getElementById('saveListDialog');
+    const title = dialog.querySelector('.dialog-title');
+
+    title.textContent = mode === 'save' ? '💾 SAVE GAME' : '📁 LOAD GAME';
+
+    this.refreshSaveList();
+    dialog.classList.add('show');
+}
+
+CyberOpsGame.prototype.closeSaveList = function() {
+    document.getElementById('saveListDialog').classList.remove('show');
+}
+
+CyberOpsGame.prototype.refreshSaveList = function() {
+    const content = document.getElementById('saveListContent');
+    content.innerHTML = '';
+
+    // Get all saves from localStorage
+    const saves = this.getAllSaves();
+
+    if (saves.length === 0) {
+        content.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #888;">
+                <div style="font-size: 48px; margin-bottom: 20px;">📭</div>
+                <div>No saved games found</div>
+                <div style="font-size: 0.9em; margin-top: 10px;">Create a new save to get started</div>
+            </div>`;
+        return;
+    }
+
+    // Display each save slot
+    saves.forEach((save, index) => {
+        const saveDate = new Date(save.timestamp);
+        const formattedDate = saveDate.toLocaleDateString() + ' ' + saveDate.toLocaleTimeString();
+
+        content.innerHTML += `
+            <div style="background: rgba(0,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #00ffff;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; color: #fff; margin-bottom: 5px;">
+                            ${save.name || `Save Slot ${index + 1}`}
+                        </div>
+                        <div style="color: #ccc; font-size: 0.9em;">
+                            📅 ${formattedDate}<br>
+                            🎯 Mission ${save.gameState.currentMissionIndex + 1} of ${this.missions.length}<br>
+                            ✅ ${save.gameState.completedMissions.length} missions completed<br>
+                            💰 ${save.gameState.credits.toLocaleString()} credits |
+                            🔬 ${save.gameState.researchPoints} RP |
+                            🌍 ${save.gameState.worldControl}% control
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        ${this.saveListMode === 'save' ?
+                            `<button onclick="game.overwriteSave('${save.id}')"
+                                    style="background: #1e3c72; color: #fff; border: 1px solid #00ffff;
+                                           padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                                OVERWRITE
+                            </button>` :
+                            `<button onclick="game.loadSaveSlot('${save.id}')"
+                                    style="background: #1e3c72; color: #fff; border: 1px solid #00ffff;
+                                           padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                                LOAD
+                            </button>`
+                        }
+                        <button onclick="game.renameSave('${save.id}')"
+                                style="background: #3c721e; color: #fff; border: 1px solid #00ff00;
+                                       padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                            RENAME
+                        </button>
+                        <button onclick="game.deleteSave('${save.id}')"
+                                style="background: #721e1e; color: #fff; border: 1px solid #ff0000;
+                                       padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                            DELETE
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+    });
+}
+
+CyberOpsGame.prototype.getAllSaves = function() {
+    const saves = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('cyberops_save_')) {
+            try {
+                const saveData = JSON.parse(localStorage.getItem(key));
+                saveData.id = key.replace('cyberops_save_', '');
+                saves.push(saveData);
+            } catch (e) {
+                console.error('Invalid save data:', key);
+            }
+        }
+    }
+    // Sort by timestamp, newest first
+    return saves.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
+CyberOpsGame.prototype.createNewSave = function() {
+    const saveName = prompt('Enter a name for this save:', `Save ${this.getAllSaves().length + 1}`);
+    if (!saveName) return;
+
+    const saveId = Date.now().toString();
+    this.saveToSlot(saveId, saveName);
+}
+
+CyberOpsGame.prototype.saveToSlot = function(slotId, name) {
+    try {
+        const saveData = {
+            id: slotId,
+            name: name,
+            version: '2.0',
+            timestamp: new Date().toISOString(),
+            gameState: {
                     currentMissionIndex: this.currentMissionIndex,
                     completedMissions: [...this.completedMissions],
                     totalCampaignTime: this.totalCampaignTime,
@@ -24,13 +136,19 @@ CyberOpsGame.prototype.saveGame = function() {
                 }
             };
 
+            // Save to specific slot
+            localStorage.setItem(`cyberops_save_${slotId}`, JSON.stringify(saveData));
+
+            // Also keep the legacy save for backward compatibility
             localStorage.setItem('cyberops_savegame', JSON.stringify(saveData));
 
-            const saveTime = new Date().toLocaleString();
             this.showHudDialog(
-                '💾 GAME SAVED',
-                `Your progress has been successfully saved.<br><br><strong>Save Details:</strong><br>• Missions Completed: ${this.completedMissions.length}/${this.missions.length}<br>• Current Mission: ${this.currentMissionIndex + 1}<br>• Save Time: ${saveTime}`,
-                [{ text: 'CONTINUE', action: 'close' }]
+                '✅ SAVED',
+                `Game saved as "${name}"<br><br>Missions: ${this.completedMissions.length}/${this.missions.length}<br>Credits: ${this.credits.toLocaleString()}`,
+                [{ text: 'OK', action: () => {
+                    this.closeDialog();
+                    this.refreshSaveList();
+                }}]
             );
 
             // Update menu to show load button
@@ -46,40 +164,120 @@ CyberOpsGame.prototype.saveGame = function() {
         }
 }
 
-CyberOpsGame.prototype.loadGame = function() {
-        this.clearDemosceneTimer(); // Clear timer when user takes action
+// Override/update existing save
+CyberOpsGame.prototype.overwriteSave = function(slotId) {
+    const saves = this.getAllSaves();
+    const save = saves.find(s => s.id === slotId);
+    if (!save) return;
 
-        try {
-            const savedData = localStorage.getItem('cyberops_savegame');
-            if (!savedData) {
-                this.showHudDialog(
-                    '❌ NO SAVE FOUND',
-                    'No saved game data was found.<br><br>Start a new campaign to begin playing.',
-                    [{ text: 'OK', action: 'close' }]
-                );
-                return;
-            }
+    const confirm = window.confirm(`Overwrite save "${save.name}"?`);
+    if (!confirm) return;
 
-            const saveData = JSON.parse(savedData);
-            const saveTime = new Date(saveData.timestamp).toLocaleString();
+    this.saveToSlot(slotId, save.name);
+}
 
+// Delete save
+CyberOpsGame.prototype.deleteSave = function(slotId) {
+    const saves = this.getAllSaves();
+    const save = saves.find(s => s.id === slotId);
+    if (!save) return;
+
+    const confirm = window.confirm(`Delete save "${save.name}"? This cannot be undone.`);
+    if (!confirm) return;
+
+    localStorage.removeItem(`cyberops_save_${slotId}`);
+    this.refreshSaveList();
+
+    this.showHudDialog(
+        '🗑️ DELETED',
+        `Save "${save.name}" has been deleted.`,
+        [{ text: 'OK', action: 'close' }]
+    );
+}
+
+// Rename save
+CyberOpsGame.prototype.renameSave = function(slotId) {
+    const saves = this.getAllSaves();
+    const save = saves.find(s => s.id === slotId);
+    if (!save) return;
+
+    const newName = prompt('Enter new name:', save.name);
+    if (!newName || newName === save.name) return;
+
+    save.name = newName;
+    localStorage.setItem(`cyberops_save_${slotId}`, JSON.stringify(save));
+    this.refreshSaveList();
+}
+
+// Load specific save slot
+CyberOpsGame.prototype.loadSaveSlot = function(slotId) {
+    try {
+        const saveData = JSON.parse(localStorage.getItem(`cyberops_save_${slotId}`));
+        if (!saveData) {
             this.showHudDialog(
-                '📁 LOAD GAME',
-                `Found saved game from: ${saveTime}<br><br><strong>Save Details:</strong><br>• Missions Completed: ${saveData.gameState.completedMissions.length}/${this.missions.length}<br>• Current Mission: ${saveData.gameState.currentMissionIndex + 1}<br><br>Load this save game?`,
-                [
-                    { text: 'LOAD GAME', action: () => this.performLoadGame(saveData) },
-                    { text: 'CANCEL', action: 'close' }
-                ]
-            );
-
-        } catch (error) {
-            console.error('Failed to load game:', error);
-            this.showHudDialog(
-                '❌ LOAD ERROR',
-                'Failed to load saved game.<br><br>The save file may be corrupted or incompatible.',
+                '❌ ERROR',
+                'Save file not found or corrupted.',
                 [{ text: 'OK', action: 'close' }]
             );
+            return;
         }
+
+        const saveTime = new Date(saveData.timestamp).toLocaleString();
+        this.showHudDialog(
+            '📁 LOAD GAME',
+            `Load "${saveData.name}"?<br><br>Saved: ${saveTime}<br>Mission: ${saveData.gameState.currentMissionIndex + 1}/${this.missions.length}`,
+            [
+                { text: 'LOAD', action: () => {
+                    this.performLoadGame(saveData);
+                    this.closeSaveList();
+                }},
+                { text: 'CANCEL', action: 'close' }
+            ]
+        );
+    } catch (error) {
+        console.error('Failed to load save:', error);
+        this.showHudDialog(
+            '❌ LOAD ERROR',
+            'Failed to load save file.',
+            [{ text: 'OK', action: 'close' }]
+        );
+    }
+}
+
+// Quick save - saves to automatic slot
+CyberOpsGame.prototype.quickSave = function() {
+    const quickSaveId = 'quicksave';
+    const timestamp = new Date().toLocaleString();
+    this.saveToSlot(quickSaveId, `Quick Save - ${timestamp}`);
+}
+
+// Update the original saveGame to use the new system
+CyberOpsGame.prototype.saveGame = function() {
+    // Show save list in save mode
+    this.showSaveList('save');
+}
+
+// Update the original loadGame to use the new system
+CyberOpsGame.prototype.loadGame = function() {
+    this.clearDemosceneTimer();
+
+    // Check if there are any saves
+    const saves = this.getAllSaves();
+
+    // Also check for legacy save
+    const legacySave = localStorage.getItem('cyberops_savegame');
+
+    if (saves.length === 0 && !legacySave) {
+        this.showHudDialog(
+            '❌ NO SAVES FOUND',
+            'No saved games found.<br><br>Start a new campaign to begin playing.',
+            [{ text: 'OK', action: 'close' }]
+        );
+        return;
+    }
+
+    // Show save list in load mode
+    this.showSaveList('load');
 }
 
 CyberOpsGame.prototype.performLoadGame = function(saveData) {

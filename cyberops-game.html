@@ -424,7 +424,8 @@
 
         <div class="hub-footer">
             <button class="menu-button hub-button" onclick="game.backToMainMenu()">MAIN MENU</button>
-            <button class="menu-button hub-button" onclick="game.saveGame()">SAVE PROGRESS</button>
+            <button class="menu-button hub-button" onclick="game.quickSave()">QUICK SAVE</button>
+            <button class="menu-button hub-button" onclick="game.saveGame()">SAVE MANAGER</button>
         </div>
     </div>
 
@@ -665,6 +666,29 @@
             </div>
             <div class="dialog-actions">
                 <button class="menu-button" onclick="game.closeMissionSelect()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save List Dialog -->
+    <div id="saveListDialog" class="hud-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <div class="dialog-title">💾 SAVE GAMES</div>
+                <div class="dialog-close" onclick="game.closeSaveList()">[X]</div>
+            </div>
+            <div class="dialog-body">
+                <div id="saveListContent" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Save slots will be dynamically added here -->
+                </div>
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #00ffff;">
+                    <button class="menu-button" onclick="game.createNewSave()" style="width: 100%; background: #1e3c72;">
+                        ➕ CREATE NEW SAVE
+                    </button>
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="menu-button" onclick="game.closeSaveList()">CLOSE</button>
             </div>
         </div>
     </div>
