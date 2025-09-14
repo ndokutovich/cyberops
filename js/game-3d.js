@@ -1760,9 +1760,27 @@ CyberOpsGame.prototype.sync3DTo2D = function() {
     
 CyberOpsGame.prototype.render3D = function() {
         if (!this.renderer3D || !this.scene3D || !this.camera3D) return;
-        
+
         if (this.renderer3D && this.scene3D && this.camera3D) {
+            // Store original camera position
+            const originalX = this.camera3D.position.x;
+            const originalZ = this.camera3D.position.z;
+
+            // Apply screen shake to camera if active
+            if (this.screenShake && this.screenShake.active) {
+                const shakeX = (Math.random() - 0.5) * this.screenShake.intensity * 0.1;
+                const shakeZ = (Math.random() - 0.5) * this.screenShake.intensity * 0.1;
+                this.camera3D.position.x += shakeX;
+                this.camera3D.position.z += shakeZ;
+            }
+
             this.renderer3D.render(this.scene3D, this.camera3D);
+
+            // Restore camera position after render
+            if (this.screenShake && this.screenShake.active) {
+                this.camera3D.position.x = originalX;
+                this.camera3D.position.z = originalZ;
+            }
         } else {
             console.log('❌ Cannot render 3D - missing components:', {
                 renderer: !!this.renderer3D,

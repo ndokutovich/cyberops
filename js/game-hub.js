@@ -6,9 +6,10 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
         document.getElementById('creditsScreen').style.display = 'none';
         document.getElementById('endScreen').style.display = 'none';
         document.getElementById('gameHUD').style.display = 'none';
+        document.getElementById('hallOfGlory').style.display = 'none';
         document.getElementById('intermissionDialog').classList.remove('show');
         document.getElementById('hudDialog').classList.remove('show');
-        
+
         // Show hub
         document.getElementById('syndicateHub').style.display = 'flex';
         this.currentScreen = 'hub';
@@ -49,6 +50,15 @@ CyberOpsGame.prototype.updateHubStats = function() {
         document.getElementById('agentStatus').textContent = `${this.activeAgents.length} Active`;
         document.getElementById('arsenalStatus').textContent = `${this.weapons.length + this.equipment.length} Items`;
         document.getElementById('researchStatus').textContent = `${Math.floor(this.researchPoints / 50)} Projects`;
+
+        // Update fallen agents status
+        const fallenCount = this.fallenAgents ? this.fallenAgents.length : 0;
+        const fallenStatus = document.getElementById('fallenStatus');
+        if (fallenStatus) {
+            fallenStatus.textContent = fallenCount === 0 ? '0 Heroes' :
+                                      fallenCount === 1 ? '1 Hero' :
+                                      `${fallenCount} Heroes`;
+        }
 }
     
 CyberOpsGame.prototype.showMissionsFromHub = function() {
@@ -63,6 +73,57 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
         this.showMissionBriefing(mission);
 }
     
+CyberOpsGame.prototype.showHallOfGlory = function() {
+        // Hide other screens
+        document.getElementById('syndicateHub').style.display = 'none';
+
+        // Show Hall of Glory
+        const hallScreen = document.getElementById('hallOfGlory');
+        hallScreen.style.display = 'block';
+
+        const noFallenMsg = document.getElementById('noFallenMessage');
+        const fallenList = document.getElementById('fallenAgentsList');
+
+        if (this.fallenAgents.length === 0) {
+            noFallenMsg.style.display = 'block';
+            fallenList.style.display = 'none';
+        } else {
+            noFallenMsg.style.display = 'none';
+            fallenList.style.display = 'grid';
+            fallenList.innerHTML = '';
+
+            // Display each fallen agent
+            this.fallenAgents.forEach(agent => {
+                const agentCard = document.createElement('div');
+                agentCard.className = 'fallen-agent-card';
+                agentCard.innerHTML = `
+                    <div class="fallen-agent-header">
+                        <div class="fallen-agent-name">${agent.name}</div>
+                        <div class="fallen-agent-class">${agent.specialization.toUpperCase()}</div>
+                    </div>
+                    <div class="fallen-agent-details">
+                        <div class="fallen-detail">
+                            <span class="detail-label">Fallen in:</span>
+                            <span class="detail-value">${agent.fallenInMission}</span>
+                        </div>
+                        <div class="fallen-detail">
+                            <span class="detail-label">Final words:</span>
+                            <span class="detail-value">"${agent.finalWords}"</span>
+                        </div>
+                        <div class="fallen-detail">
+                            <span class="detail-label">Skills:</span>
+                            <span class="detail-value">${agent.skills.join(', ')}</span>
+                        </div>
+                    </div>
+                    <div class="fallen-agent-footer">
+                        Rest in peace, soldier
+                    </div>
+                `;
+                fallenList.appendChild(agentCard);
+            });
+        }
+}
+
 CyberOpsGame.prototype.showAgentManagement = function() {
         this.showHudDialog(
             '👥 AGENT MANAGEMENT',

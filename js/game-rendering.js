@@ -122,7 +122,15 @@ CyberOpsGame.prototype.render = function() {
         this.render2DBackgroundEffects();
 
         ctx.save();
-        ctx.translate(this.cameraX, this.cameraY);
+
+        // Apply screen shake effect if active
+        let shakeX = 0, shakeY = 0;
+        if (this.screenShake && this.screenShake.active) {
+            shakeX = (Math.random() - 0.5) * this.screenShake.intensity;
+            shakeY = (Math.random() - 0.5) * this.screenShake.intensity;
+        }
+
+        ctx.translate(this.cameraX + shakeX, this.cameraY + shakeY);
         ctx.scale(this.zoom, this.zoom);
 
         if (this.map) {

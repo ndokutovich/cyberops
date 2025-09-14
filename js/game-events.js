@@ -368,6 +368,9 @@ CyberOpsGame.prototype.handleTap = function(x, y) {
                 selected.targetY = worldPos.y;
                 this.showTouchIndicator(x, y);
                 console.log(`🚶 TAP MOVEMENT: Moving ${selected.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+
+                // Play a subtle click/move sound
+                this.playSound('hit', 0.05);
             } else {
                 console.log(`🚫 Cannot move to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}) - obstacle detected`);
                 // Could show a different indicator for invalid moves

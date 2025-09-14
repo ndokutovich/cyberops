@@ -35,6 +35,7 @@ class CyberOpsGame {
         this.worldControl = 15;
         this.availableAgents = [];
         this.activeAgents = [];
+        this.fallenAgents = []; // Hall of Glory - agents who died in missions
         this.weapons = [];
         this.equipment = [];
         this.completedResearch = [];
@@ -85,6 +86,30 @@ class CyberOpsGame {
         // CRITICAL: Add protection against accidental clearing
         this.selectionProtection = true;
         console.log('🔧 selectionProtection set to:', this.selectionProtection);
+
+        // Screen effects (shake, freeze, etc.)
+        this.screenShake = {
+            active: false,
+            intensity: 0,
+            duration: 0,
+            offsetX: 0,
+            offsetY: 0
+        };
+        this.freezeEffect = {
+            active: false,
+            duration: 0,
+            startTime: 0
+        };
+
+        // Sound effects - initialize early to prevent undefined errors
+        this.soundEffects = {
+            shoot: null,
+            explosion: null,
+            hack: null,
+            shield: null,
+            hit: null
+        };
+
         this.keys3D = {
             W: false, A: false, S: false, D: false,
             mouse: { x: 0, y: 0, deltaX: 0, deltaY: 0 }
@@ -203,10 +228,18 @@ class CyberOpsGame {
             this.levelMusicElements[i] = document.getElementById(`levelMusic${i}`);
         }
 
+        // Initialize sound effects
+        this.soundEffects.shoot = document.getElementById('shootSound');
+        this.soundEffects.explosion = document.getElementById('explosionSound');
+        this.soundEffects.hack = document.getElementById('hackSound');
+        this.soundEffects.shield = document.getElementById('shieldSound');
+        this.soundEffects.hit = document.getElementById('hitSound');
+
         console.log('🔍 Audio elements initialized:');
         console.log('- gameAudio:', !!this.gameAudio);
         console.log('- creditsAudio:', !!this.creditsAudio);
         console.log('- levelMusicElements count:', Object.keys(this.levelMusicElements).length);
+        console.log('- soundEffects loaded:', Object.keys(this.soundEffects).filter(k => this.soundEffects[k]).length);
 
         // Check for saved audio permission
         const savedPermission = sessionStorage.getItem('cyberops_audio_enabled');

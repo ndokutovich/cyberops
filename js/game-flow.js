@@ -403,10 +403,24 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
                 y: agent.y,
                 targetX: nearest.x,
                 targetY: nearest.y,
+                targetEnemy: nearest, // Store the actual target
                 damage: agent.damage,
                 speed: 0.5,
                 owner: agent.id
             });
+
+            // Trigger recoil effect for shooting
+            this.triggerFreezeEffect(50); // 50ms freeze for gun recoil
+            this.triggerScreenShake(3, 5); // Light shake for shooting
+
+            // Play shooting sound
+            this.playSound('shoot', 0.4);
+
+            // Vibration feedback
+            if ('vibrate' in navigator) {
+                navigator.vibrate(20);
+            }
+
             this.alertEnemies(agent.x, agent.y, 8);
         }
 }
@@ -423,6 +437,18 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                 frame: 0
             });
 
+            // Big shake and freeze for grenade explosion
+            this.triggerScreenShake(15, 30); // Strong shake for 0.5 seconds
+            this.triggerFreezeEffect(150); // 150ms freeze for explosion impact
+
+            // Play explosion sound
+            this.playSound('explosion', 0.6);
+
+            // Strong vibration for explosion
+            if ('vibrate' in navigator) {
+                navigator.vibrate([50, 30, 100]); // Pattern: short, pause, long
+            }
+
             this.enemies.forEach(enemy => {
                 const dist = Math.sqrt(
                     Math.pow(enemy.x - agent.targetX, 2) +
@@ -438,6 +464,151 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
 
             this.alertEnemies(agent.targetX, agent.targetY, 10);
         }, 500);
+}
+
+// Screen effect helpers
+CyberOpsGame.prototype.triggerScreenShake = function(intensity, duration) {
+        if (!this.screenShake) return;
+        this.screenShake.active = true;
+        this.screenShake.intensity = intensity;
+        this.screenShake.duration = duration;
+}
+
+CyberOpsGame.prototype.triggerFreezeEffect = function(duration) {
+        if (!this.freezeEffect) return;
+        this.freezeEffect.active = true;
+        this.freezeEffect.duration = duration;
+        this.freezeEffect.startTime = Date.now();
+}
+
+// Sound effect helper
+CyberOpsGame.prototype.playSound = function(soundName, volume = 0.5) {
+        // Use Web Audio API to synthesize sounds since files don't exist
+        this.playSynthSound(soundName, volume);
+}
+
+// Synthesized sound effects using Web Audio API
+CyberOpsGame.prototype.playSynthSound = function(soundName, volume = 0.5) {
+        // Create audio context if not exists
+        if (!this.audioContext) {
+            try {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                return; // No audio support
+            }
+        }
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        try {
+            if (soundName === 'shoot') {
+                // Laser/gun sound
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+
+                gain.gain.setValueAtTime(volume * 0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.1);
+
+            } else if (soundName === 'explosion') {
+                // Explosion sound
+                const noise = ctx.createBufferSource();
+                const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                for (let i = 0; i < data.length; i++) {
+                    data[i] = (Math.random() - 0.5) * 2;
+                }
+
+                noise.buffer = buffer;
+
+                const gain = ctx.createGain();
+                const filter = ctx.createBiquadFilter();
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(3000, now);
+                filter.frequency.exponentialRampToValueAtTime(400, now + 0.2);
+
+                gain.gain.setValueAtTime(volume * 0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+
+                noise.start(now);
+
+            } else if (soundName === 'hit') {
+                // Impact sound
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.05);
+
+                gain.gain.setValueAtTime(volume * 0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.05);
+
+            } else if (soundName === 'hack') {
+                // Digital/hack sound
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, now);
+
+                // Create beeping pattern
+                for (let i = 0; i < 3; i++) {
+                    const t = now + i * 0.1;
+                    gain.gain.setValueAtTime(volume * 0.2, t);
+                    gain.gain.setValueAtTime(0, t + 0.05);
+                }
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.3);
+
+            } else if (soundName === 'shield') {
+                // Shield activation sound
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(volume * 0.3, now + 0.1);
+                gain.gain.linearRampToValueAtTime(0, now + 0.2);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+        } catch (e) {
+            console.log('Synth sound failed:', soundName, e);
+        }
 }
 
 CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
@@ -465,6 +636,9 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
                     duration: 60,
                     frame: 0
                 });
+
+                // Play hack sound
+                this.playSound('hack', 0.5);
             }
         });
 }
@@ -478,6 +652,9 @@ CyberOpsGame.prototype.activateShield = function(agent) {
             duration: 180,
             frame: 0
         });
+
+        // Play shield sound
+        this.playSound('shield', 0.4);
 }
 
 CyberOpsGame.prototype.plantNearestExplosive = function(agent) {

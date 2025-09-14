@@ -57,6 +57,25 @@ CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
 }
 
 CyberOpsGame.prototype.update = function() {
+        // Check if frozen
+        if (this.freezeEffect && this.freezeEffect.active) {
+            const now = Date.now();
+            if (now - this.freezeEffect.startTime < this.freezeEffect.duration) {
+                return; // Skip update while frozen
+            } else {
+                this.freezeEffect.active = false;
+            }
+        }
+
+        // Update screen shake
+        if (this.screenShake && this.screenShake.active) {
+            this.screenShake.duration--;
+            if (this.screenShake.duration <= 0) {
+                this.screenShake.active = false;
+                this.screenShake.intensity = 0;
+            }
+        }
+
         this.missionTimer++;
         const seconds = Math.floor(this.missionTimer / 60);
         const minutes = Math.floor(seconds / 60);
@@ -235,6 +254,7 @@ CyberOpsGame.prototype.update = function() {
                             y: enemy.y,
                             targetX: agent.x,
                             targetY: agent.y,
+                            targetAgent: agent, // Store the specific target agent
                             damage: enemy.damage,
                             speed: 0.3,
                             owner: enemy.id,
@@ -250,41 +270,99 @@ CyberOpsGame.prototype.update = function() {
             const dx = proj.targetX - proj.x;
             const dy = proj.targetY - proj.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            
+
             if (dist < 0.5) {
                 if (proj.hostile) {
-                    this.agents.forEach(agent => {
-                        const hitDist = Math.sqrt(
-                            Math.pow(agent.x - proj.targetX, 2) + 
-                            Math.pow(agent.y - proj.targetY, 2)
-                        );
-                        if (hitDist < 1) {
+                    // Find the specific target agent
+                    if (proj.targetAgent) {
+                        // Damage only the specific target
+                        const agent = proj.targetAgent;
+                        if (agent && agent.alive) {
                             let actualDamage = proj.damage;
-                            
+
                             // Apply protection bonus from equipment
                             if (agent.protection) {
                                 actualDamage = Math.max(1, actualDamage - agent.protection);
                             }
-                            
+
                             if (agent.shield > 0) {
                                 agent.shield -= actualDamage;
                             } else {
                                 agent.health -= actualDamage;
                                 if (agent.health <= 0) agent.alive = false;
                             }
+                            // Play hit sound
+                            this.playSound('hit', 0.3);
                         }
-                    });
+                    } else {
+                        // Fallback: find closest agent to impact point
+                        let closestAgent = null;
+                        let closestDist = Infinity;
+                        this.agents.forEach(agent => {
+                            const hitDist = Math.sqrt(
+                                Math.pow(agent.x - proj.targetX, 2) +
+                                Math.pow(agent.y - proj.targetY, 2)
+                            );
+                            if (hitDist < 1 && hitDist < closestDist) {
+                                closestDist = hitDist;
+                                closestAgent = agent;
+                            }
+                        });
+
+                        if (closestAgent) {
+                            let actualDamage = proj.damage;
+                            if (closestAgent.protection) {
+                                actualDamage = Math.max(1, actualDamage - closestAgent.protection);
+                            }
+                            if (closestAgent.shield > 0) {
+                                closestAgent.shield -= actualDamage;
+                            } else {
+                                closestAgent.health -= actualDamage;
+                                if (closestAgent.health <= 0) closestAgent.alive = false;
+                            }
+                            // Play hit sound
+                            this.playSound('hit', 0.3);
+                        }
+                    }
                 } else {
-                    this.enemies.forEach(enemy => {
-                        const hitDist = Math.sqrt(
-                            Math.pow(enemy.x - proj.targetX, 2) + 
-                            Math.pow(enemy.y - proj.targetY, 2)
-                        );
-                        if (hitDist < 1) {
+                    // Player projectile hitting enemy
+                    if (proj.targetEnemy) {
+                        // Damage only the specific target enemy
+                        const enemy = proj.targetEnemy;
+                        if (enemy && enemy.alive) {
                             enemy.health -= proj.damage;
-                            if (enemy.health <= 0) enemy.alive = false;
+                            if (enemy.health <= 0) {
+                                enemy.alive = false;
+                                this.totalEnemiesDefeated++;
+                            }
+                            // Play hit sound
+                            this.playSound('hit', 0.3);
                         }
-                    });
+                    } else {
+                        // Fallback: find closest enemy to impact point
+                        let closestEnemy = null;
+                        let closestDist = Infinity;
+                        this.enemies.forEach(enemy => {
+                            const hitDist = Math.sqrt(
+                                Math.pow(enemy.x - proj.targetX, 2) +
+                                Math.pow(enemy.y - proj.targetY, 2)
+                            );
+                            if (hitDist < 1 && hitDist < closestDist) {
+                                closestDist = hitDist;
+                                closestEnemy = enemy;
+                            }
+                        });
+
+                        if (closestEnemy) {
+                            closestEnemy.health -= proj.damage;
+                            if (closestEnemy.health <= 0) {
+                                closestEnemy.alive = false;
+                                this.totalEnemiesDefeated++;
+                            }
+                            // Play hit sound
+                            this.playSound('hit', 0.3);
+                        }
+                    }
                 }
                 return false;
             }
@@ -442,7 +520,38 @@ CyberOpsGame.prototype.endMission = function(victory) {
             console.log('🔓 Releasing pointer lock for mission end dialog');
             document.exitPointerLock();
         }
-        
+
+        // Handle fallen agents - move dead agents to Hall of Glory
+        const fallenThisMission = [];
+        this.agents.forEach(agent => {
+            if (!agent.alive) {
+                // Find the original agent data
+                const originalAgent = this.activeAgents.find(a => a.name === agent.name);
+                if (originalAgent) {
+                    // Add to fallen with mission details
+                    this.fallenAgents.push({
+                        ...originalAgent,
+                        fallenInMission: this.currentMission.title,
+                        missionId: this.currentMission.id,
+                        deathDate: new Date().toISOString(),
+                        finalWords: this.generateFinalWords(originalAgent.name)
+                    });
+                    fallenThisMission.push(originalAgent.name);
+
+                    // Remove from active roster
+                    const index = this.activeAgents.indexOf(originalAgent);
+                    if (index > -1) {
+                        this.activeAgents.splice(index, 1);
+                    }
+                }
+            }
+        });
+
+        if (fallenThisMission.length > 0) {
+            console.log(`⚰️ Agents fallen in battle: ${fallenThisMission.join(', ')}`);
+            console.log(`📜 Added to Hall of Glory. Active agents remaining: ${this.activeAgents.length}`);
+        }
+
         // Update campaign statistics and rewards
         if (victory) {
             this.totalCampaignTime += this.missionTimer;
@@ -470,4 +579,22 @@ CyberOpsGame.prototype.endMission = function(victory) {
             this.showIntermissionDialog(victory);
         }, 1000); // Brief delay for dramatic effect
 }
-    
+
+// Generate final words for fallen agents
+CyberOpsGame.prototype.generateFinalWords = function(agentName) {
+        const finalWords = [
+            "Tell my family... I fought for freedom...",
+            "It was... an honor... serving with you...",
+            "Don't let them... win...",
+            "Keep fighting... for all of us...",
+            "The mission... must continue...",
+            "Remember me... when you win...",
+            "I regret... nothing...",
+            "This is... a good death...",
+            "Avenge... me...",
+            "The Syndicate... lives on..."
+        ];
+
+        return finalWords[Math.floor(Math.random() * finalWords.length)];
+}
+

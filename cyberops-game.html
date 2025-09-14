@@ -213,6 +213,28 @@
             <source src="game-credits.mp3" type="audio/mpeg">
         </audio>
 
+        <!-- Weapon Sound Effects -->
+        <audio id="shootSound" preload="auto">
+            <source src="sfx-shoot.wav" type="audio/wav">
+            <source src="sfx-shoot.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="explosionSound" preload="auto">
+            <source src="sfx-explosion.wav" type="audio/wav">
+            <source src="sfx-explosion.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="hackSound" preload="auto">
+            <source src="sfx-hack.wav" type="audio/wav">
+            <source src="sfx-hack.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="shieldSound" preload="auto">
+            <source src="sfx-shield.wav" type="audio/wav">
+            <source src="sfx-shield.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="hitSound" preload="auto">
+            <source src="sfx-hit.wav" type="audio/wav">
+            <source src="sfx-hit.mp3" type="audio/mpeg">
+        </audio>
+
     <!-- Main Menu -->
     <div id="mainMenu">
         <!-- Background Effects (enhanced cyberpunk atmosphere) -->
@@ -316,6 +338,13 @@
                         <div class="card-title">RESEARCH</div>
                         <div class="card-desc">Upgrade capabilities</div>
                         <div class="card-status" id="researchStatus">2 Active</div>
+                    </div>
+
+                    <div class="hub-card" onclick="game.showHallOfGlory()">
+                        <div class="card-icon">⚰️</div>
+                        <div class="card-title">HALL OF GLORY</div>
+                        <div class="card-desc">Remember the fallen</div>
+                        <div class="card-status" id="fallenStatus">0 Heroes</div>
                     </div>
                 </div>
             </div>
@@ -678,6 +707,36 @@
 
     <!-- Game Modules - Load in sequence to preserve functionality -->
     <script src="js/game-core.js"></script>
+    <!-- Hall of Glory Screen -->
+    <div id="hallOfGlory" class="hub-screen" style="display: none;">
+        <div class="hall-header">
+            <div class="hall-title">⚰️ HALL OF GLORY</div>
+            <div class="hall-subtitle">Heroes who gave everything for the cause</div>
+            <button class="back-button" onclick="game.showSyndicateHub()">← Back to Hub</button>
+        </div>
+
+        <div class="hall-content">
+            <div id="noFallenMessage" class="empty-message">
+                <div class="empty-icon">🎖️</div>
+                <div class="empty-text">No fallen heroes yet</div>
+                <div class="empty-subtext">May your agents always return home</div>
+            </div>
+
+            <div id="fallenAgentsList" class="fallen-agents-grid">
+                <!-- Fallen agents will be dynamically added here -->
+            </div>
+        </div>
+
+        <div class="hall-footer">
+            <div class="memorial-quote">
+                "They shall grow not old, as we that are left grow old;<br>
+                Age shall not weary them, nor the years condemn.<br>
+                At the going down of the sun and in the morning<br>
+                We will remember them."
+            </div>
+        </div>
+    </div>
+
     <script src="js/game-events.js"></script>
     <script src="js/game-maps.js"></script>
     <script src="js/game-flow.js"></script>
