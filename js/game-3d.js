@@ -40,7 +40,7 @@ CyberOpsGame.prototype.init3D = function() {
         // Create scene
         this.scene3D = new THREE.Scene();
         this.scene3D.background = new THREE.Color(0x0a0e1a);
-        this.scene3D.fog = new THREE.Fog(0x0a0e1a, 10, 50);
+        this.scene3D.fog = new THREE.Fog(0x0a0e1a, 30, 100); // Increased fog distance for better visibility
         
         // Create cameras
         this.camera3D = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -213,7 +213,13 @@ CyberOpsGame.prototype.enable3DMode = function() {
         
         // Setup pointer lock for both FPS and TPS modes
         this.setupPointerLock();
-        
+
+        // Start background animation if not already running
+        if (!this.bgAnimationRunning) {
+            this.bgAnimationRunning = true;
+            this.animateBackgroundEffects();
+        }
+
         console.log('✅ 3D mode enabled');
 }
     
@@ -365,6 +371,155 @@ CyberOpsGame.prototype.create3DWorld = function() {
         console.log('✅ 3D world created');
 }
     
+CyberOpsGame.prototype.createBackgroundEffects = function(mapWidth, mapHeight) {
+        // Create larger background plane beneath the game area
+        const bgSize = Math.max(mapWidth, mapHeight) * 6;
+        const bgGeometry = new THREE.PlaneGeometry(bgSize, bgSize);
+
+        // Create grid texture for background
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        // Draw cyberpunk grid pattern
+        ctx.fillStyle = '#0a0e1a';
+        ctx.fillRect(0, 0, 512, 512);
+
+        ctx.strokeStyle = '#00ffff20';
+        ctx.lineWidth = 1;
+
+        // Draw grid lines
+        for (let i = 0; i < 512; i += 32) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, 512);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(512, i);
+            ctx.stroke();
+        }
+
+        const gridTexture = new THREE.CanvasTexture(canvas);
+        gridTexture.wrapS = THREE.RepeatWrapping;
+        gridTexture.wrapT = THREE.RepeatWrapping;
+        gridTexture.repeat.set(bgSize / 16, bgSize / 16);
+
+        const bgMaterial = new THREE.MeshBasicMaterial({
+            map: gridTexture,
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide
+        });
+
+        const bgPlane = new THREE.Mesh(bgGeometry, bgMaterial);
+        bgPlane.rotation.x = -Math.PI / 2;
+        bgPlane.position.y = -0.2;
+        this.scene3D.add(bgPlane);
+
+        // Add floating particles around the play area
+        const particleCount = 200;
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount; i++) {
+            // Position particles outside the play area (convert to 3D space)
+            let x, z;
+            const margin = 5; // Keep particles away from play area
+            do {
+                x = (Math.random() - 0.5) * bgSize;
+                z = (Math.random() - 0.5) * bgSize;
+            } while (Math.abs(x) < mapWidth + margin && Math.abs(z) < mapHeight + margin);
+
+            positions[i * 3] = x;
+            positions[i * 3 + 1] = Math.random() * 10 - 2;
+            positions[i * 3 + 2] = z;
+
+            // Cyan and pink colors
+            const color = Math.random() > 0.5
+                ? new THREE.Color(0x00ffff)
+                : new THREE.Color(0xff00ff);
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 2.0,  // Increased size for visibility
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,  // Increased opacity
+            blending: THREE.AdditiveBlending
+        });
+
+        this.backgroundParticles = new THREE.Points(particleGeometry, particleMaterial);
+        this.scene3D.add(this.backgroundParticles);
+
+        // Add animated glow planes in corners
+        const glowMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ffff,
+            transparent: true,
+            opacity: 0.3,  // Increased visibility
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending
+        });
+
+        // Create corner glow effects
+        const cornerPositions = [
+            { x: mapWidth + 10, z: mapHeight + 10 },
+            { x: -mapWidth - 10, z: mapHeight + 10 },
+            { x: mapWidth + 10, z: -mapHeight - 10 },
+            { x: -mapWidth - 10, z: -mapHeight - 10 }
+        ];
+
+        this.cornerGlows = [];
+        cornerPositions.forEach(pos => {
+            const glowGeometry = new THREE.PlaneGeometry(20, 20);
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial.clone());
+            glow.rotation.x = -Math.PI / 2;
+            glow.position.set(pos.x, 0.1, pos.z);
+            this.scene3D.add(glow);
+            this.cornerGlows.push(glow);
+        });
+}
+
+CyberOpsGame.prototype.animateBackgroundEffects = function() {
+        if (!this.is3DMode) {
+            this.bgAnimationRunning = false;
+            return;
+        }
+
+        const time = Date.now() * 0.001;
+
+        // Animate particles
+        if (this.backgroundParticles) {
+            this.backgroundParticles.rotation.y = time * 0.05;
+
+            // Float particles up and down
+            const positions = this.backgroundParticles.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i + 1] = Math.sin(time + i) * 2;
+            }
+            this.backgroundParticles.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Animate corner glows
+        if (this.cornerGlows) {
+            this.cornerGlows.forEach((glow, index) => {
+                glow.material.opacity = 0.2 + Math.sin(time * 2 + index) * 0.15;  // More visible pulsing
+                glow.scale.setScalar(1 + Math.sin(time * 3 + index) * 0.3);
+            });
+        }
+
+        requestAnimationFrame(() => this.animateBackgroundEffects());
+}
+
 CyberOpsGame.prototype.createGround = function() {
         const mapWidth = this.map.tiles[0].length;
         const mapHeight = this.map.tiles.length;
@@ -384,6 +539,9 @@ CyberOpsGame.prototype.createGround = function() {
 
         this.scene3D.add(ground);
         this.world3D.ground = ground;
+
+        // Add background effects for non-game area
+        this.createBackgroundEffects(mapWidth, mapHeight);
 
         // Create walls from map tiles
         this.world3D.walls = [];
@@ -1748,8 +1906,14 @@ CyberOpsGame.prototype.renderMinimap3D = function() {
             );
 
             // Draw vision cone based on camera rotation
+            // The camera looks in the negative Z direction in Three.js
+            // On the minimap, up is negative Y, so we need to adjust
             const angle = this.cameraRotationY || 0;
-            mctx.rotate(-angle);
+
+            // Rotate to match actual camera direction
+            // Negate angle because mouse movement is inverted on minimap
+            // Subtract PI/2 (90 degrees) because minimap has different orientation than 3D world
+            mctx.rotate(-angle - Math.PI/2);
 
             mctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
             mctx.beginPath();

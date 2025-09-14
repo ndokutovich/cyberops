@@ -1,12 +1,130 @@
+    // 2D Background Effects
+CyberOpsGame.prototype.init2DBackgroundEffects = function() {
+        // Initialize background particles for 2D mode
+        this.bgParticles2D = [];
+        const particleCount = 50;
+
+        for (let i = 0; i < particleCount; i++) {
+            this.bgParticles2D.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5,
+                size: Math.random() * 3 + 1,
+                color: Math.random() > 0.5 ? '#00ffff' : '#ff00ff',
+                opacity: Math.random() * 0.5 + 0.3
+            });
+        }
+}
+
+CyberOpsGame.prototype.render2DBackgroundEffects = function() {
+        const ctx = this.ctx;
+
+        // Initialize particles if not already done
+        if (!this.bgParticles2D) {
+            this.init2DBackgroundEffects();
+        }
+
+        // Draw grid pattern with parallax effect (moves slower than camera)
+        ctx.save();
+        ctx.globalAlpha = 0.1;
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 0.5;
+
+        const gridSize = 50;
+        const parallaxFactor = 0.3; // Grid moves at 30% of camera speed
+        const offsetX = (this.cameraX * parallaxFactor) % gridSize;
+        const offsetY = (this.cameraY * parallaxFactor) % gridSize;
+
+        // Draw vertical lines
+        for (let x = offsetX - gridSize; x < this.canvas.width + gridSize; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, this.canvas.height);
+            ctx.stroke();
+        }
+
+        // Draw horizontal lines
+        for (let y = offsetY - gridSize; y < this.canvas.height + gridSize; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(this.canvas.width, y);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // Draw and update particles with parallax
+        const particleParallax = 0.5; // Particles move at 50% of camera speed
+
+        this.bgParticles2D.forEach(particle => {
+            // Update particle position
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+
+            // Wrap around screen edges
+            if (particle.x < 0) particle.x = this.canvas.width;
+            if (particle.x > this.canvas.width) particle.x = 0;
+            if (particle.y < 0) particle.y = this.canvas.height;
+            if (particle.y > this.canvas.height) particle.y = 0;
+
+            // Draw particle with parallax offset
+            const drawX = particle.x + (this.cameraX * particleParallax);
+            const drawY = particle.y + (this.cameraY * particleParallax);
+
+            ctx.save();
+            ctx.globalAlpha = particle.opacity;
+            ctx.fillStyle = particle.color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = particle.color;
+
+            ctx.beginPath();
+            ctx.arc(drawX, drawY, particle.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // Draw corner glows
+        const time = Date.now() * 0.001;
+        const corners = [
+            { x: 0, y: 0 },
+            { x: this.canvas.width, y: 0 },
+            { x: 0, y: this.canvas.height },
+            { x: this.canvas.width, y: this.canvas.height }
+        ];
+
+        corners.forEach((corner, index) => {
+            const opacity = 0.1 + Math.sin(time * 2 + index) * 0.05;
+            const size = 150 + Math.sin(time * 3 + index) * 30;
+
+            ctx.save();
+            ctx.globalAlpha = opacity;
+
+            const gradient = ctx.createRadialGradient(corner.x, corner.y, 0, corner.x, corner.y, size);
+            gradient.addColorStop(0, '#00ffff');
+            gradient.addColorStop(0.5, '#00ffff40');
+            gradient.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(corner.x - size, corner.y - size, size * 2, size * 2);
+            ctx.restore();
+        });
+}
+
     // Rendering
 CyberOpsGame.prototype.render = function() {
         const ctx = this.ctx;
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
+        // Fill background with dark color
+        ctx.fillStyle = '#0a0e1a';
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Render background effects first (before camera transform)
+        this.render2DBackgroundEffects();
+
         ctx.save();
         ctx.translate(this.cameraX, this.cameraY);
         ctx.scale(this.zoom, this.zoom);
-        
+
         if (this.map) {
             this.renderMap();
             
@@ -180,10 +298,11 @@ CyberOpsGame.prototype.renderExtractionPoint = function(x, y) {
 CyberOpsGame.prototype.renderAgent = function(agent) {
         const ctx = this.ctx;
         const isoPos = this.worldToIsometric(agent.x, agent.y);
-        
+
         ctx.save();
         ctx.translate(isoPos.x, isoPos.y);
-        
+
+        // Draw body and selection WITHOUT rotation
         if (agent.selected) {
             ctx.strokeStyle = '#00ffff';
             ctx.lineWidth = 2;
@@ -191,19 +310,46 @@ CyberOpsGame.prototype.renderAgent = function(agent) {
             ctx.arc(0, 0, 20, 0, Math.PI * 2);
             ctx.stroke();
         }
-        
+
         if (agent.shield > 0) {
             ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
             ctx.beginPath();
             ctx.arc(0, -10, 25, 0, Math.PI * 2);
             ctx.fill();
         }
-        
+
         ctx.fillStyle = '#4a7c8c';
         ctx.fillRect(-10, -25, 20, 30);
-        
+
         ctx.fillStyle = '#00ffff';
         ctx.fillRect(-8, -23, 16, 5);
+
+        // Now apply rotation ONLY for vision cone and direction indicator
+        ctx.save();
+        // Add 90 degrees (PI/2) to agent facing angle, then adjust for isometric view
+        const isoAngle = (agent.facingAngle || 0) + Math.PI/2 - Math.PI/4; // +90 degrees then adjust for isometric
+        ctx.rotate(isoAngle);
+
+        // Draw vision cone
+        ctx.fillStyle = agent.selected ? 'rgba(0, 255, 255, 0.15)' : 'rgba(0, 255, 255, 0.1)';
+        ctx.strokeStyle = agent.selected ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 60, -Math.PI/4, Math.PI/4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw direction indicator (small triangle pointing forward)
+        ctx.fillStyle = '#00ffff';
+        ctx.beginPath();
+        ctx.moveTo(15, 0);
+        ctx.lineTo(10, -3);
+        ctx.lineTo(10, 3);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore(); // Restore from rotation
         
         if (agent.health < agent.maxHealth) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -221,16 +367,17 @@ CyberOpsGame.prototype.renderAgent = function(agent) {
 CyberOpsGame.prototype.renderEnemy = function(enemy) {
         const ctx = this.ctx;
         const isoPos = this.worldToIsometric(enemy.x, enemy.y);
-        
+
         ctx.save();
         ctx.translate(isoPos.x, isoPos.y);
-        
+
+        // Draw body and alert indicator WITHOUT rotation
         if (enemy.alertLevel > 0) {
             ctx.fillStyle = `rgba(255, 0, 0, ${enemy.alertLevel / 100})`;
             ctx.beginPath();
             ctx.arc(0, -30, 5, 0, Math.PI * 2);
             ctx.fill();
-            
+
             if (enemy.alertLevel > 50) {
                 ctx.fillStyle = '#ff0000';
                 ctx.font = 'bold 12px monospace';
@@ -238,13 +385,19 @@ CyberOpsGame.prototype.renderEnemy = function(enemy) {
                 ctx.fillText('!', 0, -27);
             }
         }
-        
+
         ctx.fillStyle = '#8c4a4a';
         ctx.fillRect(-10, -25, 20, 30);
-        
+
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(-8, -23, 16, 5);
-        
+
+        // Now apply rotation ONLY for vision cone and direction indicator
+        ctx.save();
+        const isoAngle = (enemy.facingAngle || 0) - Math.PI/4; // Adjust for isometric view
+        ctx.rotate(isoAngle);
+
+        // Draw vision cone
         if (enemy.alertLevel < 50) {
             ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)';
             ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
@@ -255,6 +408,17 @@ CyberOpsGame.prototype.renderEnemy = function(enemy) {
             ctx.fill();
             ctx.stroke();
         }
+
+        // Draw direction indicator (small triangle pointing forward)
+        ctx.fillStyle = '#ff0000';
+        ctx.beginPath();
+        ctx.moveTo(15, 0);
+        ctx.lineTo(10, -3);
+        ctx.lineTo(10, 3);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore(); // Restore from rotation
         
         if (enemy.health < enemy.maxHealth) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -404,6 +568,33 @@ CyberOpsGame.prototype.renderMinimap = function() {
         
         this.agents.forEach(agent => {
             if (agent.alive) {
+                // Draw agent vision cone first (behind the agent)
+                mctx.save();
+                mctx.translate(agent.x * scale, agent.y * scale);
+
+                // Use the agent's stored facing angle
+                const angle = agent.facingAngle !== undefined ? agent.facingAngle : 0;
+
+                // Debug: log angle for selected agent
+                if (agent.selected && Math.random() < 0.05) {
+                    console.log(`Rendering vision cone for ${agent.name}, angle: ${(angle * 180 / Math.PI).toFixed(0)}°`);
+                }
+
+                mctx.rotate(angle);
+
+                // Draw vision cone - cyan for selected, dim cyan for others
+                mctx.fillStyle = agent.selected ?
+                    'rgba(0, 255, 255, 0.2)' : 'rgba(74, 124, 140, 0.15)';
+                mctx.beginPath();
+                mctx.moveTo(0, 0);
+                // Agent vision cone (25 pixel radius, 90 degree arc)
+                mctx.arc(0, 0, 25, -Math.PI/4, Math.PI/4);
+                mctx.closePath();
+                mctx.fill();
+
+                mctx.restore();
+
+                // Draw agent dot
                 mctx.fillStyle = agent.selected ? '#00ffff' : '#4a7c8c';
                 mctx.fillRect(agent.x * scale - 2, agent.y * scale - 2, 4, 4);
             }
@@ -411,6 +602,28 @@ CyberOpsGame.prototype.renderMinimap = function() {
         
         this.enemies.forEach(enemy => {
             if (enemy.alive) {
+                // Draw enemy vision cone first (behind the enemy)
+                mctx.save();
+                mctx.translate(enemy.x * scale, enemy.y * scale);
+
+                // Use the enemy's stored facing angle
+                const angle = enemy.facingAngle || 0;
+
+                mctx.rotate(angle);
+
+                // Draw vision cone - red when alert, dim red when patrolling
+                mctx.fillStyle = enemy.alertLevel > 0 ?
+                    'rgba(255, 0, 0, 0.3)' : 'rgba(140, 74, 74, 0.2)';
+                mctx.beginPath();
+                mctx.moveTo(0, 0);
+                // Smaller cone for enemies (20 pixel radius, 60 degree arc)
+                mctx.arc(0, 0, 20, -Math.PI/6, Math.PI/6);
+                mctx.closePath();
+                mctx.fill();
+
+                mctx.restore();
+
+                // Draw enemy dot
                 mctx.fillStyle = enemy.alertLevel > 0 ? '#ff0000' : '#8c4a4a';
                 mctx.fillRect(enemy.x * scale - 2, enemy.y * scale - 2, 4, 4);
             }

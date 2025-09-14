@@ -219,6 +219,8 @@ CyberOpsGame.prototype.initMission = function() {
                 selected: idx === 0,
                 alive: true,
                 cooldowns: [0, 0, 0, 0, 0],
+                // Add facing direction (default facing down/south)
+                facingAngle: Math.PI / 2,
                 // Equipment bonuses
                 protection: 0,
                 hackBonus: 0,
@@ -288,7 +290,9 @@ CyberOpsGame.prototype.initMission = function() {
                 damage: 10,
                 alive: true,
                 alertLevel: 0,
-                visionRange: 5
+                visionRange: 5,
+                // Add facing direction (random initial direction)
+                facingAngle: Math.random() * Math.PI * 2
             };
             enemy.targetX = enemy.x;
             enemy.targetY = enemy.y;

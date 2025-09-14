@@ -67,11 +67,23 @@ CyberOpsGame.prototype.update = function() {
         this.agents.forEach(agent => {
             if (!agent.alive) return;
 
+            // Initialize facing angle if not set
+            if (agent.facingAngle === undefined) {
+                agent.facingAngle = Math.PI / 2; // Default facing down
+            }
+
             const dx = agent.targetX - agent.x;
             const dy = agent.targetY - agent.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist > 0.1) {
+                // Update facing angle when moving
+                agent.facingAngle = Math.atan2(dy, dx);
+                // Debug log to verify angle is updating
+                if (agent.selected && Math.random() < 0.1) {
+                    console.log(`Agent ${agent.name} facing: ${(agent.facingAngle * 180 / Math.PI).toFixed(0)}°`);
+                }
+
                 const moveSpeed = agent.speed / 60;
                 const moveX = (dx / dist) * moveSpeed;
                 const moveY = (dy / dist) * moveSpeed;
@@ -88,13 +100,18 @@ CyberOpsGame.prototype.update = function() {
                     // Try horizontal movement only
                     if (this.canMoveTo(agent.x, agent.y, newX, agent.y)) {
                         agent.x = newX;
+                        // Update facing for horizontal movement
+                        agent.facingAngle = dx > 0 ? 0 : Math.PI;
                     }
                     // Try vertical movement only
                     else if (this.canMoveTo(agent.x, agent.y, agent.x, newY)) {
                         agent.y = newY;
+                        // Update facing for vertical movement
+                        agent.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
                     }
                 }
             }
+            // Agent is standing still - keep last facing direction
             
             for (let i = 0; i < agent.cooldowns.length; i++) {
                 if (agent.cooldowns[i] > 0) agent.cooldowns[i]--;
@@ -116,6 +133,9 @@ CyberOpsGame.prototype.update = function() {
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist > 0.5) {
+                    // Update facing angle when chasing
+                    enemy.facingAngle = Math.atan2(dy, dx);
+
                     const moveSpeed = enemy.speed / 60;
                     const moveX = (dx / dist) * moveSpeed;
                     const moveY = (dy / dist) * moveSpeed;
@@ -131,8 +151,10 @@ CyberOpsGame.prototype.update = function() {
                         // Try to slide along walls
                         if (this.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
                             enemy.x = newX;
+                            enemy.facingAngle = dx > 0 ? 0 : Math.PI;
                         } else if (this.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
                             enemy.y = newY;
+                            enemy.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
                         }
                     }
                 } else {
@@ -160,6 +182,9 @@ CyberOpsGame.prototype.update = function() {
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist > 0.1) {
+                    // Update facing angle when patrolling
+                    enemy.facingAngle = Math.atan2(dy, dx);
+
                     const moveSpeed = enemy.speed / 120;
                     const moveX = (dx / dist) * moveSpeed;
                     const moveY = (dy / dist) * moveSpeed;
@@ -175,8 +200,10 @@ CyberOpsGame.prototype.update = function() {
                         // Try to slide along walls
                         if (this.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
                             enemy.x = newX;
+                            enemy.facingAngle = dx > 0 ? 0 : Math.PI;
                         } else if (this.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
                             enemy.y = newY;
+                            enemy.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
                         } else {
                             // If stuck, pick a new target
                             enemy.targetX = enemy.x;
