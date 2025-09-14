@@ -32,12 +32,23 @@ CyberOpsGame.prototype.isWalkable = function(x, y) {
         // Check tile - 0 is walkable, 1 is wall
         const tileX = Math.floor(x);
         const tileY = Math.floor(y);
+
+        // Safety check for array access
+        if (!this.map.tiles[tileY] || this.map.tiles[tileY][tileX] === undefined) {
+            return false;
+        }
+
         return this.map.tiles[tileY][tileX] === 0;
 }
 
 CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
         // Check if target position is walkable
         if (!this.isWalkable(toX, toY)) {
+            return false;
+        }
+
+        // Check if blocked by a locked door
+        if (this.isDoorBlocking(toX, toY)) {
             return false;
         }
 
@@ -81,6 +92,9 @@ CyberOpsGame.prototype.update = function() {
         const minutes = Math.floor(seconds / 60);
         document.getElementById('missionTimer').textContent =
             `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+
+        // Update fog of war
+        this.updateFogOfWar();
 
         // Update agents
         this.agents.forEach(agent => {
@@ -131,11 +145,27 @@ CyberOpsGame.prototype.update = function() {
                 }
             }
             // Agent is standing still - keep last facing direction
-            
+
+            // Check for collectable pickup
+            if (this.map.collectables) {
+                this.map.collectables.forEach(item => {
+                    if (!item.collected) {
+                        const dist = Math.sqrt(
+                            Math.pow(item.x - agent.x, 2) +
+                            Math.pow(item.y - agent.y, 2)
+                        );
+                        if (dist < 1) {
+                            item.collected = true;
+                            this.handleCollectablePickup(agent, item);
+                        }
+                    }
+                });
+            }
+
             for (let i = 0; i < agent.cooldowns.length; i++) {
                 if (agent.cooldowns[i] > 0) agent.cooldowns[i]--;
             }
-            
+
             if (agent.shieldDuration > 0) {
                 agent.shieldDuration--;
                 if (agent.shieldDuration === 0) agent.shield = 0;
@@ -596,5 +626,77 @@ CyberOpsGame.prototype.generateFinalWords = function(agentName) {
         ];
 
         return finalWords[Math.floor(Math.random() * finalWords.length)];
+}
+
+// Handle collectable item pickup
+CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
+        switch(item.type) {
+            case 'credits':
+                this.credits += item.value;
+                console.log(`💰 Collected ${item.value} credits`);
+                break;
+
+            case 'ammo':
+                // Refill ammo for abilities
+                console.log(`🔫 Collected ammo`);
+                break;
+
+            case 'health':
+                const healAmount = Math.min(item.value, agent.maxHealth - agent.health);
+                agent.health += healAmount;
+                console.log(`❤️ Healed ${healAmount} HP`);
+                break;
+
+            case 'keycard':
+                // Could unlock special doors
+                console.log(`🗝️ Collected keycard`);
+                break;
+
+            case 'intel':
+                this.researchPoints += Math.floor(item.value / 2);
+                console.log(`📄 Collected intel (+${Math.floor(item.value / 2)} research points)`);
+                break;
+
+            case 'armor':
+                agent.protection = (agent.protection || 0) + 5;
+                console.log(`🛡️ Armor upgraded (+5 protection)`);
+                break;
+
+            case 'explosives':
+                // Add explosive charges
+                console.log(`💣 Collected explosives`);
+                break;
+        }
+
+        // Visual feedback
+        this.effects.push({
+            type: 'pickup',
+            x: item.x,
+            y: item.y,
+            text: item.type.toUpperCase(),
+            duration: 30,
+            frame: 0
+        });
+
+        // Play pickup sound
+        this.playSound('hit', 0.2);
+}
+
+// Check if a position is blocked by a door
+CyberOpsGame.prototype.isDoorBlocking = function(x, y) {
+        if (!this.map.doors) return false;
+
+        for (let door of this.map.doors) {
+            if (door.locked) {
+                const dist = Math.sqrt(
+                    Math.pow(door.x - x, 2) +
+                    Math.pow(door.y - y, 2)
+                );
+                if (dist < 0.5) {
+                    return true;
+                }
+            }
+        }
+        return false;
 }
 

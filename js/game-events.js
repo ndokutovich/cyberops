@@ -1,3 +1,79 @@
+// Select all alive agents in the squad
+CyberOpsGame.prototype.selectAllSquad = function() {
+        let selectedCount = 0;
+        this.agents.forEach(agent => {
+            if (agent.alive) {
+                agent.selected = true;
+                selectedCount++;
+            } else {
+                agent.selected = false;
+            }
+        });
+
+        // Update selected agent reference to first alive agent
+        this._selectedAgent = this.agents.find(a => a.alive);
+
+        console.log(`👥 SQUAD SELECT: Selected all ${selectedCount} alive agents`);
+        this.updateSquadHealth();
+        this.updateCooldownDisplay();
+
+        // Visual feedback
+        this.showSquadSelectionEffect();
+}
+
+// Move squad in square formation
+CyberOpsGame.prototype.moveSquadInFormation = function(agents, targetX, targetY) {
+        const squadSize = Math.ceil(Math.sqrt(agents.length));
+        const spacing = 1.5; // Space between agents in formation
+
+        // Calculate formation positions around the target point
+        const startX = targetX - (squadSize - 1) * spacing / 2;
+        const startY = targetY - (squadSize - 1) * spacing / 2;
+
+        agents.forEach((agent, index) => {
+            const row = Math.floor(index / squadSize);
+            const col = index % squadSize;
+
+            const formationX = startX + col * spacing;
+            const formationY = startY + row * spacing;
+
+            // Check if the formation position is walkable
+            if (this.isWalkable(formationX, formationY)) {
+                agent.targetX = formationX;
+                agent.targetY = formationY;
+            } else {
+                // Try to find nearest walkable position
+                let found = false;
+                for (let radius = 1; radius <= 3 && !found; radius++) {
+                    for (let angle = 0; angle < Math.PI * 2 && !found; angle += Math.PI / 4) {
+                        const testX = formationX + Math.cos(angle) * radius;
+                        const testY = formationY + Math.sin(angle) * radius;
+                        if (this.isWalkable(testX, testY)) {
+                            agent.targetX = testX;
+                            agent.targetY = testY;
+                            found = true;
+                        }
+                    }
+                }
+                // If still no valid position, move to center target
+                if (!found) {
+                    agent.targetX = targetX;
+                    agent.targetY = targetY;
+                }
+            }
+        });
+}
+
+// Visual effect for squad selection
+CyberOpsGame.prototype.showSquadSelectionEffect = function() {
+        // Create a temporary visual effect
+        this.squadSelectEffect = {
+            active: true,
+            duration: 500,
+            startTime: Date.now()
+        };
+}
+
 CyberOpsGame.prototype.setupEventListeners = function() {
         // Touch Events
         this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
@@ -16,8 +92,16 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         // Prevent context menu
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Keyboard Events for 3D mode - CONSOLIDATED E KEY HANDLING
+        // Keyboard Events for 3D mode and squad controls
         document.addEventListener('keydown', (e) => {
+            // Select All Squad - 'T' key for Team
+            if (e.code === 'KeyT' && this.currentScreen === 'game') {
+                console.log('🎮 Team Select: Selecting all squad members');
+                this.selectAllSquad();
+                e.preventDefault();
+                return;
+            }
+
             // 3D Mode Controls - E Key
             if (e.code === 'KeyE' && this.currentScreen === 'game') {
                 console.log('🔑 E key detected! Checking conditions...');
@@ -277,6 +361,16 @@ CyberOpsGame.prototype.handleTap = function(x, y) {
             return;
         }
 
+        // Check for double-click/tap to select all squad
+        const now = Date.now();
+        if (this.lastTapTime && (now - this.lastTapTime) < 300) {
+            // Double tap detected - select all alive agents
+            this.selectAllSquad();
+            this.lastTapTime = 0; // Reset to prevent triple tap
+            return;
+        }
+        this.lastTapTime = now;
+
         // Check if clicking on HUD elements - allow HUD agent selection
         const squadHealth = document.getElementById('squadHealth');
         const rect = squadHealth.getBoundingClientRect();
@@ -357,18 +451,28 @@ CyberOpsGame.prototype.handleTap = function(x, y) {
             return; // Don't move if we selected an agent
         }
 
-        // If no agent selected, move the currently selected agent
+        // If no agent selected, move the currently selected agent(s)
         const worldPos = this.screenToWorld(x, y);
 
-        const selected = this.agents.find(a => a.selected);
-        if (selected && selected.alive) {
+        // Get all selected agents
+        const selectedAgents = this.agents.filter(a => a.selected && a.alive);
+
+        if (selectedAgents.length > 0) {
             // Check if target position is walkable
             if (this.isWalkable(worldPos.x, worldPos.y)) {
-                selected.targetX = worldPos.x;
-                selected.targetY = worldPos.y;
-                this.showTouchIndicator(x, y);
-                console.log(`🚶 TAP MOVEMENT: Moving ${selected.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+                if (selectedAgents.length === 1) {
+                    // Single agent movement
+                    const selected = selectedAgents[0];
+                    selected.targetX = worldPos.x;
+                    selected.targetY = worldPos.y;
+                    console.log(`🚶 TAP MOVEMENT: Moving ${selected.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+                } else {
+                    // Squad movement in square formation
+                    this.moveSquadInFormation(selectedAgents, worldPos.x, worldPos.y);
+                    console.log(`👥 SQUAD MOVEMENT: Moving ${selectedAgents.length} agents in formation to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+                }
 
+                this.showTouchIndicator(x, y);
                 // Play a subtle click/move sound
                 this.playSound('hit', 0.05);
             } else {

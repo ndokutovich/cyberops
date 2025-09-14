@@ -133,9 +133,26 @@ CyberOpsGame.prototype.render = function() {
         ctx.translate(this.cameraX + shakeX, this.cameraY + shakeY);
         ctx.scale(this.zoom, this.zoom);
 
+        // Render squad selection effect
+        if (this.squadSelectEffect && this.squadSelectEffect.active) {
+            const elapsed = Date.now() - this.squadSelectEffect.startTime;
+            if (elapsed < this.squadSelectEffect.duration) {
+                const progress = elapsed / this.squadSelectEffect.duration;
+                const alpha = (1 - progress) * 0.5;
+
+                ctx.save();
+                ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                ctx.restore();
+            } else {
+                this.squadSelectEffect.active = false;
+            }
+        }
+
         if (this.map) {
             this.renderMap();
-            
+            this.renderFogOfWar();
+
             if (this.map.cover) {
                 this.map.cover.forEach(cover => {
                     this.renderCover(cover.x, cover.y);
@@ -168,6 +185,22 @@ CyberOpsGame.prototype.render = function() {
             
             if (this.map.extraction) {
                 this.renderExtractionPoint(this.map.extraction.x, this.map.extraction.y);
+            }
+
+            // Render doors
+            if (this.map.doors) {
+                this.map.doors.forEach(door => {
+                    this.renderDoor(door.x, door.y, door.locked);
+                });
+            }
+
+            // Render collectables
+            if (this.map.collectables) {
+                this.map.collectables.forEach(item => {
+                    if (!item.collected) {
+                        this.renderCollectable(item.x, item.y, item.type);
+                    }
+                });
             }
         }
         
@@ -272,6 +305,164 @@ CyberOpsGame.prototype.renderTerminal = function(x, y, hacked) {
         ctx.restore();
 }
     
+// Render fog of war overlay
+CyberOpsGame.prototype.renderFogOfWar = function() {
+        if (!this.fogOfWar) return;
+
+        const ctx = this.ctx;
+
+        for (let y = 0; y < this.map.height; y++) {
+            for (let x = 0; x < this.map.width; x++) {
+                const fogState = this.fogOfWar[y][x];
+
+                if (fogState === 0) {
+                    // Unexplored - fully dark
+                    const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
+                    ctx.save();
+                    ctx.translate(isoPos.x, isoPos.y);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                    ctx.fillRect(-this.tileWidth/2, -this.tileHeight, this.tileWidth, this.tileHeight * 2);
+                    ctx.restore();
+                } else if (fogState === 1) {
+                    // Explored but not visible - semi-dark
+                    const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
+                    ctx.save();
+                    ctx.translate(isoPos.x, isoPos.y);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.fillRect(-this.tileWidth/2, -this.tileHeight, this.tileWidth, this.tileHeight * 2);
+                    ctx.restore();
+                }
+                // fogState === 2 is fully visible, no overlay needed
+            }
+        }
+}
+
+// Render door
+CyberOpsGame.prototype.renderDoor = function(x, y, locked) {
+        const ctx = this.ctx;
+        const isoPos = this.worldToIsometric(x, y);
+
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+
+        if (locked) {
+            // Locked door - red
+            ctx.fillStyle = '#ff3333';
+            ctx.fillRect(-15, -30, 30, 35);
+
+            ctx.fillStyle = '#aa0000';
+            ctx.fillRect(-12, -28, 24, 10);
+
+            // Lock symbol
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, -15, 5, Math.PI, 0);
+            ctx.stroke();
+            ctx.fillStyle = '#ffff00';
+            ctx.fillRect(-8, -15, 16, 12);
+        } else {
+            // Open door - green
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+            ctx.fillRect(-15, -30, 30, 35);
+
+            ctx.strokeStyle = '#00ff00';
+            ctx.strokeRect(-15, -30, 30, 35);
+        }
+
+        ctx.restore();
+}
+
+// Render collectable item
+CyberOpsGame.prototype.renderCollectable = function(x, y, type) {
+        const ctx = this.ctx;
+        const isoPos = this.worldToIsometric(x, y);
+
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+
+        // Pulse effect
+        const pulse = Math.sin(this.missionTimer * 0.1) * 0.3 + 0.7;
+
+        // Draw based on type
+        switch(type) {
+            case 'credits':
+                ctx.fillStyle = `rgba(255, 215, 0, ${pulse})`;
+                ctx.font = 'bold 16px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('$', 0, -10);
+                break;
+
+            case 'ammo':
+                ctx.fillStyle = `rgba(200, 200, 200, ${pulse})`;
+                ctx.fillRect(-5, -15, 10, 15);
+                ctx.fillStyle = `rgba(255, 200, 0, ${pulse})`;
+                ctx.fillRect(-3, -18, 6, 3);
+                break;
+
+            case 'health':
+                ctx.fillStyle = `rgba(255, 0, 0, ${pulse})`;
+                ctx.fillRect(-8, -12, 16, 6);
+                ctx.fillRect(-3, -17, 6, 16);
+                break;
+
+            case 'keycard':
+                ctx.fillStyle = `rgba(0, 255, 255, ${pulse})`;
+                ctx.fillRect(-6, -10, 12, 8);
+                ctx.fillStyle = 'black';
+                ctx.fillRect(-4, -8, 8, 2);
+                break;
+
+            case 'intel':
+                ctx.fillStyle = `rgba(128, 0, 255, ${pulse})`;
+                ctx.beginPath();
+                ctx.arc(0, -10, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('i', 0, -7);
+                break;
+
+            case 'armor':
+                ctx.fillStyle = `rgba(100, 100, 255, ${pulse})`;
+                ctx.beginPath();
+                ctx.moveTo(0, -18);
+                ctx.lineTo(-8, -10);
+                ctx.lineTo(-8, 0);
+                ctx.lineTo(0, 5);
+                ctx.lineTo(8, 0);
+                ctx.lineTo(8, -10);
+                ctx.closePath();
+                ctx.fill();
+                break;
+
+            case 'explosives':
+                ctx.fillStyle = `rgba(255, 100, 0, ${pulse})`;
+                ctx.beginPath();
+                ctx.arc(0, -10, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, -16);
+                ctx.lineTo(0, -20);
+                ctx.stroke();
+                break;
+        }
+
+        // Glow effect
+        ctx.shadowColor = type === 'credits' ? 'gold' :
+                         type === 'health' ? 'red' :
+                         type === 'intel' ? 'purple' : 'cyan';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(0, -10, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+}
+
 CyberOpsGame.prototype.renderExtractionPoint = function(x, y) {
         const ctx = this.ctx;
         const isoPos = this.worldToIsometric(x, y);
@@ -312,11 +503,28 @@ CyberOpsGame.prototype.renderAgent = function(agent) {
 
         // Draw body and selection WITHOUT rotation
         if (agent.selected) {
+            // Pulsing selection ring for selected agents
+            const pulse = Math.sin(Date.now() * 0.005) * 0.2 + 0.8;
             ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = pulse;
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner ring
             ctx.lineWidth = 2;
+            ctx.globalAlpha = 1;
             ctx.beginPath();
             ctx.arc(0, 0, 20, 0, Math.PI * 2);
             ctx.stroke();
+
+            // Selection indicator on ground
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(-15, -5, 30, 20);
+            ctx.setLineDash([]);
         }
 
         if (agent.shield > 0) {

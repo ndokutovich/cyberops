@@ -202,6 +202,9 @@ CyberOpsGame.prototype.initMission = function() {
         // Generate map based on mission map type
         this.map = this.generateMapFromType(this.currentMission.map);
 
+        // Initialize fog of war
+        this.initializeFogOfWar();
+
         // Spawn agents with equipment and research bonuses
         const spawn = this.map.spawn;
         this.selectedAgents.forEach((agentData, idx) => {
@@ -481,6 +484,118 @@ CyberOpsGame.prototype.triggerFreezeEffect = function(duration) {
         this.freezeEffect.startTime = Date.now();
 }
 
+// Initialize fog of war for the current map
+CyberOpsGame.prototype.initializeFogOfWar = function() {
+        if (!this.map) return;
+
+        this.fogOfWar = [];
+        for (let y = 0; y < this.map.height; y++) {
+            this.fogOfWar[y] = [];
+            for (let x = 0; x < this.map.width; x++) {
+                // 0 = unexplored, 1 = explored but not visible, 2 = visible
+                this.fogOfWar[y][x] = 0;
+            }
+        }
+}
+
+// Update fog of war based on agent positions
+CyberOpsGame.prototype.updateFogOfWar = function() {
+        if (!this.fogOfWar || !this.agents) return;
+
+        // Reset visibility (but keep explored areas if permanent fog)
+        for (let y = 0; y < this.map.height; y++) {
+            for (let x = 0; x < this.map.width; x++) {
+                if (this.permanentFog) {
+                    // Keep explored areas visible but dimmed
+                    if (this.fogOfWar[y][x] === 2) {
+                        this.fogOfWar[y][x] = 1;
+                    }
+                } else {
+                    // Tactical fog - reset all to unexplored
+                    if (this.fogOfWar[y][x] !== 0) {
+                        this.fogOfWar[y][x] = 0;
+                    }
+                }
+            }
+        }
+
+        // Update visibility for each agent
+        this.agents.forEach(agent => {
+            if (!agent.alive) return;
+
+            // Calculate view radius (Ghost agents see further)
+            let viewDist = this.viewRadius;
+            if (agent.name && agent.name.includes('Ghost')) {
+                viewDist = Math.floor(viewDist * this.ghostViewBonus);
+            }
+
+            // Reveal tiles in view radius
+            for (let dy = -viewDist; dy <= viewDist; dy++) {
+                for (let dx = -viewDist; dx <= viewDist; dx++) {
+                    const tx = Math.floor(agent.x + dx);
+                    const ty = Math.floor(agent.y + dy);
+
+                    if (tx >= 0 && tx < this.map.width && ty >= 0 && ty < this.map.height) {
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist <= viewDist) {
+                            // Check line of sight (walls block vision)
+                            if (this.hasLineOfSight(agent.x, agent.y, tx, ty)) {
+                                this.fogOfWar[ty][tx] = 2; // Fully visible
+                            }
+                        }
+                    }
+                }
+            }
+        });
+}
+
+// Check if there's a clear line of sight between two points
+CyberOpsGame.prototype.hasLineOfSight = function(x1, y1, x2, y2) {
+        // Use integer coordinates for Bresenham's algorithm
+        const startX = Math.floor(x1);
+        const startY = Math.floor(y1);
+        const endX = Math.floor(x2);
+        const endY = Math.floor(y2);
+
+        const dx = Math.abs(endX - startX);
+        const dy = Math.abs(endY - startY);
+        const sx = startX < endX ? 1 : -1;
+        const sy = startY < endY ? 1 : -1;
+        let err = dx - dy;
+
+        let x = startX;
+        let y = startY;
+        let steps = 0;
+        const maxSteps = dx + dy + 10; // Prevent infinite loops
+
+        while (steps < maxSteps) {
+            // Check if current tile blocks vision
+            if (x >= 0 && x < this.map.width && y >= 0 && y < this.map.height) {
+                if (this.map.tiles[y] && this.map.tiles[y][x] === 1) {
+                    // Wall blocks vision
+                    return false;
+                }
+            }
+
+            // Check if we've reached the target
+            if (x === endX && y === endY) break;
+
+            const e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                x += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                y += sy;
+            }
+
+            steps++;
+        }
+
+        return true;
+}
+
 // Sound effect helper
 CyberOpsGame.prototype.playSound = function(soundName, volume = 0.5) {
         // Use Web Audio API to synthesize sounds since files don't exist
@@ -639,6 +754,16 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
 
                 // Play hack sound
                 this.playSound('hack', 0.5);
+
+                // Unlock doors linked to this terminal
+                if (this.map.doors) {
+                    this.map.doors.forEach(door => {
+                        if (door.linkedTerminal === terminal.id) {
+                            door.locked = false;
+                            console.log(`🔓 Door at (${door.x}, ${door.y}) unlocked by terminal ${terminal.id}`);
+                        }
+                    });
+                }
             }
         });
 }
