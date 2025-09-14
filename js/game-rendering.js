@@ -227,7 +227,10 @@ CyberOpsGame.prototype.render = function() {
         });
         
         ctx.restore();
-        
+
+        // Render hotkey help overlay
+        this.renderHotkeyHelp();
+
         this.renderMinimap();
 }
     
@@ -805,6 +808,54 @@ CyberOpsGame.prototype.renderEffect = function(effect) {
         }
 }
     
+// Render hotkey help overlay
+CyberOpsGame.prototype.renderHotkeyHelp = function() {
+        // Toggle help with '?' key or show when first starting
+        if (!this.showHotkeyHelp) return;
+
+        const ctx = this.ctx;
+        ctx.save();
+
+        // Position in bottom left corner
+        const x = 20;
+        const y = this.canvas.height - 200;
+
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(x - 10, y - 10, 180, 190);
+
+        // Border
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - 10, y - 10, 180, 190);
+
+        // Title
+        ctx.fillStyle = '#00ffff';
+        ctx.font = 'bold 14px monospace';
+        ctx.fillText('ACTION HOTKEYS:', x, y + 5);
+
+        // Hotkeys
+        ctx.font = '12px monospace';
+        ctx.fillStyle = '#88ffff';
+        const hotkeys = [
+            'F - Fire/Shoot',
+            'G - Grenade',
+            'H - Hack/Interact',
+            'V - Shield',
+            'T - Team Select',
+            'E - 3D Mode',
+            'P - Path Debug',
+            'O - Pathfinding On/Off',
+            '? - Toggle Help'
+        ];
+
+        hotkeys.forEach((key, index) => {
+            ctx.fillText(key, x, y + 25 + index * 15);
+        });
+
+        ctx.restore();
+}
+
 CyberOpsGame.prototype.renderMinimap = function() {
         const minimap = document.getElementById('minimapContent');
         

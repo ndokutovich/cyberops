@@ -110,6 +110,16 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 return;
             }
 
+            // Toggle hotkey help - '?' key
+            if ((e.code === 'Slash' && e.shiftKey) || e.key === '?') {
+                if (this.currentScreen === 'game') {
+                    this.showHotkeyHelp = !this.showHotkeyHelp;
+                    console.log('❓ Hotkey help:', this.showHotkeyHelp ? 'SHOWN' : 'HIDDEN');
+                    e.preventDefault();
+                    return;
+                }
+            }
+
             // Toggle pathfinding on/off - 'O' key
             if (e.code === 'KeyO' && this.currentScreen === 'game') {
                 this.usePathfinding = !this.usePathfinding;
@@ -121,6 +131,80 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 });
                 e.preventDefault();
                 return;
+            }
+
+            // Action Hotkeys for both 2D and 3D modes
+            if (this.currentScreen === 'game') {
+                // Get ALL selected agents for team actions
+                const selectedAgents = this.agents.filter(a => a.selected && a.alive);
+
+                if (selectedAgents.length > 0) {
+                    let actionTriggered = false;
+
+                    // F - Fire/Shoot (ALL selected agents shoot)
+                    if (e.code === 'KeyF') {
+                        console.log(`🔫 Team Shoot! ${selectedAgents.length} agents firing`);
+                        selectedAgents.forEach(agent => {
+                            if (!agent.cooldowns[1] || agent.cooldowns[1] <= 0) {
+                                this.shootNearestEnemy(agent);
+                                agent.cooldowns[1] = 60;
+                                actionTriggered = true;
+                            }
+                        });
+                    }
+
+                    // G - Grenade (ALL selected agents throw grenades)
+                    else if (e.code === 'KeyG') {
+                        console.log(`💣 Team Grenades! ${selectedAgents.length} agents throwing`);
+                        selectedAgents.forEach(agent => {
+                            if (!agent.cooldowns[2] || agent.cooldowns[2] <= 0) {
+                                this.throwGrenade(agent);
+                                agent.cooldowns[2] = 180;
+                                actionTriggered = true;
+                            }
+                        });
+                    }
+
+                    // H - Hack/Interact (only first agent hacks to avoid duplicates)
+                    else if (e.code === 'KeyH') {
+                        console.log('💻 Hack hotkey pressed');
+                        const hacker = selectedAgents[0];
+                        if (!hacker.cooldowns[3] || hacker.cooldowns[3] <= 0) {
+                            // Mission-specific actions
+                            if (this.currentMission && this.currentMission.id === 3) {
+                                this.plantNearestExplosive(hacker);
+                            } else if (this.currentMission && this.currentMission.id === 4) {
+                                this.eliminateNearestTarget(hacker);
+                            } else if (this.currentMission && this.currentMission.id === 5) {
+                                this.breachNearestGate(hacker) || this.hackNearestTerminal(hacker);
+                            } else {
+                                this.hackNearestTerminal(hacker);
+                            }
+                            hacker.cooldowns[3] = 120;
+                            actionTriggered = true;
+                        } else {
+                            console.log('⏳ Hack on cooldown:', hacker.cooldowns[3]);
+                        }
+                    }
+
+                    // V - Shield (ALL selected agents activate shields)
+                    else if (e.code === 'KeyV') {
+                        console.log(`🛡️ Team Shields! ${selectedAgents.length} agents shielding`);
+                        selectedAgents.forEach(agent => {
+                            if (!agent.cooldowns[4] || agent.cooldowns[4] <= 0) {
+                                this.activateShield(agent);
+                                agent.cooldowns[4] = 300;
+                                actionTriggered = true;
+                            }
+                        });
+                    }
+
+                    if (actionTriggered) {
+                        this.updateCooldownDisplay();
+                        e.preventDefault();
+                        return;
+                    }
+                }
             }
 
             // 3D Mode Controls - E Key
