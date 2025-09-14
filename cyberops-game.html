@@ -422,7 +422,7 @@
     <canvas id="gameCanvas"></canvas>
     
     <!-- 3D Canvas Container -->
-    <div id="game3DContainer" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 998; display: none; pointer-events: none;">
+    <div id="game3DContainer" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; display: none; pointer-events: none;">
         <!-- Three.js canvas will be inserted here -->
     </div>
     
@@ -448,6 +448,11 @@
         <div class="agent-info-3d">
             <div class="agent-name-3d" id="agentName3D">Agent Selected</div>
             <div class="agent-class-3d" id="agentClass3D">Operative</div>
+        </div>
+
+        <!-- Minimap for 3D Mode -->
+        <div class="minimap-3d">
+            <div class="minimap-content-3d" id="minimapContent3D"></div>
         </div>
 
         <!-- Action Palette for 3D Mode -->

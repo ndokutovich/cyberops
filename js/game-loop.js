@@ -303,6 +303,13 @@ CyberOpsGame.prototype.endMission = function(victory) {
 
         this.isPaused = true;
 
+        // Switch to tactical view before showing end dialog
+        if (this.is3DMode) {
+            console.log('📐 Switching to tactical view for mission end');
+            this.cameraMode = 'tactical';
+            this.disable3DMode();
+        }
+
         // Release pointer lock so player can interact with dialogs
         if (document.pointerLockElement) {
             console.log('🔓 Releasing pointer lock for mission end dialog');

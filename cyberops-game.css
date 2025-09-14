@@ -1925,6 +1925,7 @@ body {
 .hud-dialog {
     position: fixed;
     inset: 0;
+    z-index: 10001;
     background: rgba(0, 0, 0, 0.8);
     display: none;
     justify-content: center;
@@ -2388,7 +2389,7 @@ body {
 #game3DHUD {
     position: fixed;
     inset: 0;
-    z-index: 999;
+    z-index: 101;
     pointer-events: none;
     color: #00ffff;
     font-family: 'Courier New', monospace;
@@ -2546,6 +2547,26 @@ body {
     color: #aaaaaa;
     font-family: 'Courier New', monospace;
     font-size: 12px;
+}
+
+/* 3D Minimap */
+.minimap-3d {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 150px;
+    height: 150px;
+    background: rgba(0,20,40,0.9);
+    border: 2px solid #00ffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0,255,255,0.3);
+}
+
+.minimap-content-3d {
+    width: 100%;
+    height: 100%;
+    position: relative;
 }
 
 /* 3D Action Bar */

@@ -171,6 +171,34 @@ CyberOpsGame.prototype.initMission = function() {
         this.missionTimer = 0;
         this.isPaused = false;
 
+        // CRITICAL: Full 3D mode reset to prevent movement state carryover
+        console.log('🔄 Resetting 3D mode state for new mission');
+
+        // Reset all 3D movement keys
+        this.keys3D = {
+            w: false,
+            a: false,
+            s: false,
+            d: false,
+            shift: false
+        };
+
+        // Reset camera rotation
+        this.cameraRotationX = 0;
+        this.cameraRotationY = 0;
+
+        // Reset mouse movement deltas
+        this.mouseMovementX = 0;
+        this.mouseMovementY = 0;
+
+        // Ensure 3D mode is disabled at mission start
+        this.is3DMode = false;
+
+        // Clear any active pointer lock
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
+        }
+
         // Generate map based on mission map type
         this.map = this.generateMapFromType(this.currentMission.map);
 
@@ -400,7 +428,6 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                     enemy.health -= 50;
                     if (enemy.health <= 0) {
                         enemy.alive = false;
-                        console.log(`💀 Enemy killed by grenade at (${enemy.x}, ${enemy.y})`);
                     }
                 }
             });

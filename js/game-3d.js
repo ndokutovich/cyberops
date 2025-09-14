@@ -356,21 +356,51 @@ CyberOpsGame.prototype.create3DWorld = function() {
 CyberOpsGame.prototype.createGround = function() {
         const mapWidth = this.map.tiles[0].length;
         const mapHeight = this.map.tiles.length;
-        
+
+        // Create ground plane
         const geometry = new THREE.PlaneGeometry(mapWidth * 2, mapHeight * 2);
-        const material = new THREE.MeshLambertMaterial({ 
+        const material = new THREE.MeshLambertMaterial({
             color: 0x1a1a2e,
             transparent: true,
             opacity: 0.8
         });
-        
+
         const ground = new THREE.Mesh(geometry, material);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -0.1;
         ground.receiveShadow = true;
-        
+
         this.scene3D.add(ground);
         this.world3D.ground = ground;
+
+        // Create walls from map tiles
+        this.world3D.walls = [];
+        for (let y = 0; y < this.map.tiles.length; y++) {
+            for (let x = 0; x < this.map.tiles[y].length; x++) {
+                if (this.map.tiles[y][x] === 1) { // Wall tile
+                    const wallGeometry = new THREE.BoxGeometry(2, 3, 2);
+                    const wallMaterial = new THREE.MeshLambertMaterial({
+                        color: 0x444466,
+                        emissive: 0x000033,
+                        emissiveIntensity: 0.1
+                    });
+
+                    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                    wall.position.set(
+                        (x - mapWidth / 2) * 2,
+                        1.5,
+                        (y - mapHeight / 2) * 2
+                    );
+                    wall.castShadow = true;
+                    wall.receiveShadow = true;
+
+                    this.scene3D.add(wall);
+                    this.world3D.walls.push(wall);
+                }
+            }
+        }
+
+        console.log(`🧱 Created ${this.world3D.walls.length} walls from map tiles`);
 }
     
 CyberOpsGame.prototype.createWalls = function() {
@@ -433,15 +463,16 @@ CyberOpsGame.prototype.createAgents3D = function() {
 }
     
 CyberOpsGame.prototype.createEnemies3D = function() {
+        // Clear existing enemy meshes
+        this.world3D.enemies = [];
+
         this.enemies.forEach((enemy, index) => {
-            if (!enemy.alive) return;
-            
-        // Create enemy geometry (fallback for older Three.js versions)
-        const geometry = THREE.CapsuleGeometry ? 
-            new THREE.CapsuleGeometry(0.3, 1.5, 4, 8) : 
-            new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
-        const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
-            
+            // Create enemy geometry (fallback for older Three.js versions)
+            const geometry = THREE.CapsuleGeometry ?
+                new THREE.CapsuleGeometry(0.3, 1.5, 4, 8) :
+                new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+            const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+
             const enemyMesh = new THREE.Mesh(geometry, material);
             enemyMesh.position.set(
                 (enemy.x - this.map.tiles[0].length / 2) * 2,
@@ -449,40 +480,144 @@ CyberOpsGame.prototype.createEnemies3D = function() {
                 (enemy.y - this.map.tiles.length / 2) * 2
             );
             enemyMesh.castShadow = true;
-            
+
+            // Set visibility based on alive status
+            enemyMesh.visible = enemy.alive;
+
             enemyMesh.userData = { type: 'enemy', index: index, enemy: enemy };
-            
+
             this.scene3D.add(enemyMesh);
+            // IMPORTANT: Push to array even if dead to maintain index alignment
             this.world3D.enemies.push(enemyMesh);
         });
+
+        console.log(`🎯 Created ${this.world3D.enemies.length} enemy meshes for ${this.enemies.length} enemies`);
 }
     
 CyberOpsGame.prototype.createObjectives3D = function() {
-        // Create terminals
-        if (this.currentMission.terminals) {
-            this.currentMission.terminals.forEach((terminal, index) => {
-                if (terminal.hacked) return;
+        // Clear existing objectives
+        this.world3D.terminals = [];
+        this.world3D.explosiveTargets = [];
+        this.world3D.targets = [];
+        this.world3D.gates = [];
 
-                const geometry = new THREE.BoxGeometry(0.8, 1.5, 0.4);
+        // Create terminals
+        const terminals = this.map.terminals || this.currentMission.terminals || [];
+        terminals.forEach((terminal, index) => {
+            const geometry = new THREE.BoxGeometry(0.8, 1.5, 0.4);
+            const material = new THREE.MeshLambertMaterial({
+                color: terminal.hacked ? 0x00ff00 : 0x0088ff,
+                emissive: terminal.hacked ? 0x00ff00 : 0x002244,
+                emissiveIntensity: terminal.hacked ? 0.5 : 0.2
+            });
+
+            const terminalMesh = new THREE.Mesh(geometry, material);
+            terminalMesh.position.set(
+                (terminal.x - this.map.tiles[0].length / 2) * 2,
+                0.75,
+                (terminal.y - this.map.tiles.length / 2) * 2
+            );
+            terminalMesh.castShadow = true;
+            terminalMesh.userData = { type: 'terminal', index: index, terminal: terminal };
+
+            this.scene3D.add(terminalMesh);
+            this.world3D.terminals.push(terminalMesh);
+        });
+
+        // Create explosive targets (Mission 3)
+        if (this.map.explosiveTargets) {
+            this.map.explosiveTargets.forEach((target, index) => {
+                const geometry = new THREE.CylinderGeometry(0.5, 0.6, 1.2, 8);
                 const material = new THREE.MeshLambertMaterial({
-                    color: 0x0088ff,
-                    emissive: 0x002244
+                    color: target.planted ? 0xff6600 : 0x666666,
+                    emissive: target.planted ? 0xff0000 : 0x000000,
+                    emissiveIntensity: target.planted ? 0.3 : 0
                 });
 
-                const terminalMesh = new THREE.Mesh(geometry, material);
-                terminalMesh.position.set(
-                    (terminal.x - this.map.tiles[0].length / 2) * 2,
-                    0.75,
-                    (terminal.y - this.map.tiles.length / 2) * 2
+                const targetMesh = new THREE.Mesh(geometry, material);
+                targetMesh.position.set(
+                    (target.x - this.map.tiles[0].length / 2) * 2,
+                    0.6,
+                    (target.y - this.map.tiles.length / 2) * 2
                 );
-                terminalMesh.castShadow = true;
+                targetMesh.castShadow = true;
+                targetMesh.userData = { type: 'explosiveTarget', index: index, target: target };
 
-                terminalMesh.userData = { type: 'terminal', index: index, terminal: terminal };
+                // Add blinking light if planted
+                if (target.planted) {
+                    const lightGeometry = new THREE.SphereGeometry(0.1, 4, 4);
+                    const lightMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xff0000,
+                        emissive: 0xff0000
+                    });
+                    const light = new THREE.Mesh(lightGeometry, lightMaterial);
+                    light.position.y = 0.7;
+                    targetMesh.add(light);
+                }
 
-                this.scene3D.add(terminalMesh);
-                this.world3D.terminals.push(terminalMesh);
+                this.scene3D.add(targetMesh);
+                this.world3D.explosiveTargets.push(targetMesh);
             });
         }
+
+        // Create assassination targets (Mission 4)
+        if (this.map.targets) {
+            this.map.targets.forEach((target, index) => {
+                if (target.eliminated) return;
+
+                const geometry = new THREE.ConeGeometry(0.4, 1.8, 6);
+                const material = new THREE.MeshLambertMaterial({
+                    color: target.type === 'primary' ? 0xff00ff : 0xffff00,
+                    emissive: target.type === 'primary' ? 0xff00ff : 0xffff00,
+                    emissiveIntensity: 0.2
+                });
+
+                const targetMesh = new THREE.Mesh(geometry, material);
+                targetMesh.position.set(
+                    (target.x - this.map.tiles[0].length / 2) * 2,
+                    0.9,
+                    (target.y - this.map.tiles.length / 2) * 2
+                );
+                targetMesh.castShadow = true;
+                targetMesh.userData = { type: 'assassinTarget', index: index, target: target };
+
+                this.scene3D.add(targetMesh);
+                this.world3D.targets.push(targetMesh);
+            });
+        }
+
+        // Create gates (Mission 5)
+        if (this.map.gates) {
+            this.map.gates.forEach((gate, index) => {
+                const geometry = new THREE.BoxGeometry(3, 3, 0.5);
+                const material = new THREE.MeshLambertMaterial({
+                    color: gate.breached ? 0x333333 : 0xcccccc,
+                    emissive: gate.breached ? 0x000000 : 0x0066cc,
+                    emissiveIntensity: gate.breached ? 0 : 0.2,
+                    transparent: gate.breached,
+                    opacity: gate.breached ? 0.3 : 1
+                });
+
+                const gateMesh = new THREE.Mesh(geometry, material);
+                gateMesh.position.set(
+                    (gate.x - this.map.tiles[0].length / 2) * 2,
+                    1.5,
+                    (gate.y - this.map.tiles.length / 2) * 2
+                );
+                gateMesh.castShadow = true;
+                gateMesh.userData = { type: 'gate', index: index, gate: gate };
+
+                this.scene3D.add(gateMesh);
+                this.world3D.gates.push(gateMesh);
+            });
+        }
+
+        console.log('📦 Created 3D objectives:', {
+            terminals: this.world3D.terminals.length,
+            explosiveTargets: this.world3D.explosiveTargets.length,
+            targets: this.world3D.targets.length,
+            gates: this.world3D.gates.length
+        });
 }
 
 CyberOpsGame.prototype.createExtractionPoint3D = function() {
@@ -1316,9 +1451,6 @@ CyberOpsGame.prototype.sync3DTo2D = function() {
             const enemyMesh = this.world3D.enemies[index];
             if (enemyMesh) {
                 // Always update visibility based on alive status
-                if (enemyMesh.visible !== enemy.alive) {
-                    console.log(`👻 Enemy ${index} visibility: ${enemyMesh.visible} -> ${enemy.alive}`);
-                }
                 enemyMesh.visible = enemy.alive;
 
                 // Only update position if enemy is alive
@@ -1364,7 +1496,7 @@ CyberOpsGame.prototype.update3DHUD = function() {
         // Update health display
         const healthDisplay = document.querySelector('.health-display-3d');
         if (healthDisplay) {
-            healthDisplay.textContent = `HP: ${this._selectedAgent.hp}/${this._selectedAgent.maxHp}`;
+            healthDisplay.textContent = `HP: ${this._selectedAgent.health}/${this._selectedAgent.maxHealth}`;
         }
 
         // Update ammo display
@@ -1394,10 +1526,117 @@ CyberOpsGame.prototype.update3DHUD = function() {
 
         // Update cooldowns
         this.update3DCooldowns();
+
+        // Update minimap for 3D mode
+        this.renderMinimap3D();
 }
     
     // REMOVED: checkAgentSelection - all logic moved to simplified handleTap
     
+CyberOpsGame.prototype.renderMinimap3D = function() {
+        const minimap = document.getElementById('minimapContent3D');
+        if (!minimap) return;
+
+        if (!this.minimapCanvas3D) {
+            this.minimapCanvas3D = document.createElement('canvas');
+            this.minimapCanvas3D.width = 150;
+            this.minimapCanvas3D.height = 150;
+            minimap.appendChild(this.minimapCanvas3D);
+            this.minimapCtx3D = this.minimapCanvas3D.getContext('2d');
+        }
+
+        const mctx = this.minimapCtx3D;
+        mctx.clearRect(0, 0, 150, 150);
+
+        if (!this.map) return;
+
+        const scale = 150 / Math.max(this.map.tiles[0].length, this.map.tiles.length);
+
+        // Draw background
+        mctx.fillStyle = '#0a0a1a';
+        mctx.fillRect(0, 0, 150, 150);
+
+        // Draw walls
+        for (let y = 0; y < this.map.tiles.length; y++) {
+            for (let x = 0; x < this.map.tiles[y].length; x++) {
+                if (this.map.tiles[y][x] === 1) {
+                    mctx.fillStyle = '#2a2a4a';
+                    mctx.fillRect(x * scale, y * scale, scale, scale);
+                }
+            }
+        }
+
+        // Draw objectives
+        const terminals = this.map.terminals || this.currentMission.terminals || [];
+        terminals.forEach(terminal => {
+            mctx.fillStyle = terminal.hacked ? '#00ff00' : '#0088ff';
+            mctx.fillRect(
+                terminal.x * scale - 2,
+                terminal.y * scale - 2,
+                4, 4
+            );
+        });
+
+        // Draw enemies
+        this.enemies.forEach(enemy => {
+            if (enemy.alive) {
+                mctx.fillStyle = '#ff0000';
+                mctx.fillRect(
+                    enemy.x * scale - 2,
+                    enemy.y * scale - 2,
+                    4, 4
+                );
+            }
+        });
+
+        // Draw agents
+        this.agents.forEach(agent => {
+            if (agent.alive) {
+                mctx.fillStyle = agent.selected ? '#00ffff' : '#00ff00';
+                mctx.fillRect(
+                    agent.x * scale - 2,
+                    agent.y * scale - 2,
+                    4, 4
+                );
+            }
+        });
+
+        // Draw extraction point
+        if (this.map.extraction) {
+            mctx.strokeStyle = '#00ffff';
+            mctx.lineWidth = 2;
+            mctx.beginPath();
+            mctx.arc(
+                this.map.extraction.x * scale,
+                this.map.extraction.y * scale,
+                6, 0, Math.PI * 2
+            );
+            mctx.stroke();
+        }
+
+        // Draw field of view cone for selected agent
+        if (this._selectedAgent && this._selectedAgent.alive) {
+            mctx.save();
+            mctx.translate(
+                this._selectedAgent.x * scale,
+                this._selectedAgent.y * scale
+            );
+
+            // Draw vision cone based on camera rotation
+            const angle = this.cameraRotationY || 0;
+            mctx.rotate(-angle);
+
+            mctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+            mctx.beginPath();
+            mctx.moveTo(0, 0);
+            mctx.arc(0, 0, 30, -Math.PI/4, Math.PI/4);
+            mctx.closePath();
+            mctx.fill();
+
+            mctx.restore();
+        }
+}
+
 CyberOpsGame.prototype.getObjectiveText = function() {
         if (!this.currentMission) return '';
         
