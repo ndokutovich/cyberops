@@ -76,7 +76,7 @@ class CyberOpsGame {
         this.hud3D = document.getElementById('game3DHUD');
         this.controls3D = null;
         this.is3DMode = false;
-        this.cameraMode = 'tactical'; // 'tactical', 'third', 'first'
+        this.cameraMode = 'tactical'; // 'tactical', 'isometric', 'third', 'first'
 
         // Track selectedAgent changes
         this._selectedAgent = null;

@@ -107,16 +107,16 @@ CyberOpsGame.prototype.switchCameraMode = function() {
             return;
         }
         
-        const modes = ['tactical', 'third', 'first'];
+        const modes = ['tactical', 'isometric', 'third', 'first'];
         const currentIndex = modes.indexOf(this.cameraMode);
         const nextIndex = (currentIndex + 1) % modes.length;
         const oldMode = this.cameraMode;
         this.cameraMode = modes[nextIndex];
-        
+
         console.log('🎬 Camera mode switched:', oldMode, '→', this.cameraMode);
         
         // Ensure we have an agent selected for 3D modes
-        if ((this.cameraMode === 'third' || this.cameraMode === 'first') && !this._selectedAgent) {
+        if ((this.cameraMode === 'third' || this.cameraMode === 'first' || this.cameraMode === 'isometric') && !this._selectedAgent) {
             // Auto-select the first available alive agent
             const aliveAgent = this.agents.find(agent => agent.alive);
             if (aliveAgent) {
@@ -127,18 +127,30 @@ CyberOpsGame.prototype.switchCameraMode = function() {
                 console.log('🎯 Auto-selected agent for 3D mode:', aliveAgent.name);
             }
         }
-        
+
         // Update mode indicator
         const indicator = document.getElementById('modeIndicator');
         if (indicator) {
             indicator.textContent = this.cameraMode.toUpperCase();
         }
-        
-        // Switch between 2D and 3D
+
+        // Switch between 2D and 3D modes
         if (this.cameraMode === 'tactical') {
             this.disable3DMode();
         } else {
             this.enable3DMode();
+        }
+
+        // Request or release pointer lock based on mode
+        // Tactical and isometric modes don't need pointer lock
+        if (this.cameraMode === 'third' || this.cameraMode === 'first') {
+            if (!document.pointerLockElement && this.canvas3D) {
+                this.canvas3D.requestPointerLock();
+            }
+        } else if (this.cameraMode === 'isometric' || this.cameraMode === 'tactical') {
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
         }
         
         this.update3DCamera();
@@ -775,10 +787,40 @@ CyberOpsGame.prototype.update3DCamera = function() {
         );
         
         switch(this.cameraMode) {
+            case 'isometric':
+                // Isometric camera - mimics 2D view
+                // Position camera to match 2D isometric view angle
+                const isoDistance = 25;
+                const isoHeight = 25;
+
+                // Position camera at southeast corner looking northwest
+                // This matches typical isometric game view
+                this.camera3D.position.set(
+                    agentPos.x + isoDistance,
+                    agentPos.y + isoHeight,
+                    agentPos.z + isoDistance
+                );
+
+                // Look at agent position
+                this.camera3D.lookAt(agentPos);
+
+                // Adjust FOV for more orthographic-like view
+                this.camera3D.fov = 35;
+                this.camera3D.updateProjectionMatrix();
+
+                // Reset rotation for fixed isometric view
+                this.cameraRotationX = 0;
+                this.cameraRotationY = 0;
+                break;
+
             case 'third':
                 // Third person camera - behind and above agent with proper rotation
                 const distance = 5;
                 const height = 3;
+
+                // Reset FOV to normal for third person
+                this.camera3D.fov = 75;
+                this.camera3D.updateProjectionMatrix();
 
                 // Use same rotation system as FPS for consistency
                 const yaw = this.cameraRotationY || 0;
@@ -802,6 +844,10 @@ CyberOpsGame.prototype.update3DCamera = function() {
 
             case 'first':
                 // First person camera - at agent's eye level
+                // Reset FOV to normal for first person
+                this.camera3D.fov = 75;
+                this.camera3D.updateProjectionMatrix();
+
                 this.camera3D.position.set(
                     agentPos.x,
                     agentPos.y + 0.6,
@@ -817,6 +863,46 @@ CyberOpsGame.prototype.update3DCamera = function() {
         }
 }
     
+CyberOpsGame.prototype.handleIsometricClick = function(event) {
+        if (!this._selectedAgent || !this._selectedAgent.alive) return;
+
+        // Create raycaster for click detection
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Calculate mouse position in normalized device coordinates
+        const rect = this.canvas3D.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        // Set raycaster from camera
+        raycaster.setFromCamera(mouse, this.camera3D);
+
+        // Create a plane at ground level for intersection
+        const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1);
+        const intersectPoint = new THREE.Vector3();
+
+        // Check if ray intersects with ground plane
+        if (raycaster.ray.intersectPlane(groundPlane, intersectPoint)) {
+            // Convert 3D world position back to 2D map coordinates
+            const mapWidth = this.map.tiles[0].length;
+            const mapHeight = this.map.tiles.length;
+
+            const targetX = (intersectPoint.x / 2) + mapWidth / 2;
+            const targetY = (intersectPoint.z / 2) + mapHeight / 2;
+
+            // Check if target is walkable
+            if (this.isWalkable(targetX, targetY)) {
+                // Set agent target position
+                this._selectedAgent.targetX = targetX;
+                this._selectedAgent.targetY = targetY;
+                console.log(`🎯 Isometric click-to-move: (${targetX.toFixed(1)}, ${targetY.toFixed(1)})`);
+            } else {
+                console.log('🚫 Cannot move to that location - obstacle detected');
+            }
+        }
+}
+
 CyberOpsGame.prototype.setupPointerLock = function() {
         if (!this.canvas3D) return;
 
@@ -832,15 +918,18 @@ CyberOpsGame.prototype.setupPointerLock = function() {
             // Handle clicks on 3D canvas
             this.canvas3D.addEventListener('click', async (e) => {
                 if (this.is3DMode) {
-                    if (!document.pointerLockElement) {
-                        // First click - request pointer lock
+                    if (this.cameraMode === 'isometric') {
+                        // Isometric mode - click to move
+                        this.handleIsometricClick(e);
+                    } else if (!document.pointerLockElement) {
+                        // First click in FPS/TPS - request pointer lock
                         try {
                             await this.canvas3D.requestPointerLock();
                         } catch (err) {
                             console.log('Pointer lock failed:', err);
                         }
                     } else {
-                        // Subsequent clicks - shoot!
+                        // Subsequent clicks in FPS/TPS - shoot!
                         console.log('🔫 3D canvas clicked - shooting!');
                         this.mouseClicked = true;
                     }
@@ -940,12 +1029,31 @@ CyberOpsGame.prototype.updateAgent3DMovement = function() {
         const agent = this._selectedAgent;
         // Use EXACT same speed as 2D movement (from game-loop.js line 41)
         const moveSpeed = agent.speed / 60;
-        
+
         let moveX = 0;
         let moveY = 0;
-        
-        // Movement relative to camera direction in FPS mode
-        if (this.cameraMode === 'first') {
+
+        // Movement relative to camera direction based on mode
+        if (this.cameraMode === 'isometric') {
+            // Isometric mode - fixed direction movement like 2D mode
+            // W/S moves up/down on screen, A/D moves left/right
+            if (this.keys3D.W) {
+                moveX -= moveSpeed * 0.707;  // Diagonal movement
+                moveY -= moveSpeed * 0.707;
+            }
+            if (this.keys3D.S) {
+                moveX += moveSpeed * 0.707;
+                moveY += moveSpeed * 0.707;
+            }
+            if (this.keys3D.A) {
+                moveX -= moveSpeed * 0.707;
+                moveY += moveSpeed * 0.707;
+            }
+            if (this.keys3D.D) {
+                moveX += moveSpeed * 0.707;
+                moveY -= moveSpeed * 0.707;
+            }
+        } else if (this.cameraMode === 'first') {
             // For true FPS controls: forward/back follows camera look, left/right strafe
             const yaw = this.cameraRotationY || 0;
 
@@ -1014,18 +1122,35 @@ CyberOpsGame.prototype.updateAgent3DMovement = function() {
             }
         }
         
-        // Apply movement
+        // Apply movement with collision detection
         const newX = agent.x + moveX;
         const newY = agent.y + moveY;
 
-        // Simple boundary checking for now
-        // TODO: Add proper collision detection with walls
-        agent.x = newX;
-        agent.y = newY;
-
-        // CRITICAL: Also update targetX/targetY so 2D update doesn't pull us back!
-        agent.targetX = newX;
-        agent.targetY = newY;
+        // Check collision before moving
+        if (this.canMoveTo(agent.x, agent.y, newX, newY)) {
+            // Update both current position and target position
+            agent.x = newX;
+            agent.y = newY;
+            agent.targetX = newX;
+            agent.targetY = newY;
+        } else {
+            // Try to slide along walls
+            // Try horizontal movement only
+            if (this.canMoveTo(agent.x, agent.y, newX, agent.y)) {
+                agent.x = newX;
+                agent.targetX = newX;
+            }
+            // Try vertical movement only
+            else if (this.canMoveTo(agent.x, agent.y, agent.x, newY)) {
+                agent.y = newY;
+                agent.targetY = newY;
+            }
+            // If both fail, stop at wall
+            else {
+                agent.targetX = agent.x;
+                agent.targetY = agent.y;
+            }
+        }
 
         // Store agent body direction (for visual representation)
         // Body faces movement direction, head can look around independently

@@ -22,25 +22,78 @@ CyberOpsGame.prototype.gameLoop = function() {
         }
 }
     
+// Collision detection helper
+CyberOpsGame.prototype.isWalkable = function(x, y) {
+        // Check map bounds
+        if (x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) {
+            return false;
+        }
+
+        // Check tile - 0 is walkable, 1 is wall
+        const tileX = Math.floor(x);
+        const tileY = Math.floor(y);
+        return this.map.tiles[tileY][tileX] === 0;
+}
+
+CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
+        // Check if target position is walkable
+        if (!this.isWalkable(toX, toY)) {
+            return false;
+        }
+
+        // Check corners for diagonal movement to prevent clipping through walls
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+
+        // If moving diagonally, check both adjacent tiles
+        if (Math.abs(dx) > 0.01 && Math.abs(dy) > 0.01) {
+            // Check horizontal then vertical path
+            if (!this.isWalkable(toX, fromY) || !this.isWalkable(fromX, toY)) {
+                return false;
+            }
+        }
+
+        return true;
+}
+
 CyberOpsGame.prototype.update = function() {
         this.missionTimer++;
         const seconds = Math.floor(this.missionTimer / 60);
         const minutes = Math.floor(seconds / 60);
-        document.getElementById('missionTimer').textContent = 
+        document.getElementById('missionTimer').textContent =
             `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-        
+
         // Update agents
         this.agents.forEach(agent => {
             if (!agent.alive) return;
-            
+
             const dx = agent.targetX - agent.x;
             const dy = agent.targetY - agent.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            
+
             if (dist > 0.1) {
                 const moveSpeed = agent.speed / 60;
-                agent.x += (dx / dist) * moveSpeed;
-                agent.y += (dy / dist) * moveSpeed;
+                const moveX = (dx / dist) * moveSpeed;
+                const moveY = (dy / dist) * moveSpeed;
+
+                const newX = agent.x + moveX;
+                const newY = agent.y + moveY;
+
+                // Check collision before moving
+                if (this.canMoveTo(agent.x, agent.y, newX, newY)) {
+                    agent.x = newX;
+                    agent.y = newY;
+                } else {
+                    // Try to slide along walls
+                    // Try horizontal movement only
+                    if (this.canMoveTo(agent.x, agent.y, newX, agent.y)) {
+                        agent.x = newX;
+                    }
+                    // Try vertical movement only
+                    else if (this.canMoveTo(agent.x, agent.y, agent.x, newY)) {
+                        agent.y = newY;
+                    }
+                }
             }
             
             for (let i = 0; i < agent.cooldowns.length; i++) {
@@ -56,33 +109,80 @@ CyberOpsGame.prototype.update = function() {
         // Update enemies
         this.enemies.forEach(enemy => {
             if (!enemy.alive) return;
-            
+
             if (enemy.alertLevel > 0) {
                 const dx = enemy.targetX - enemy.x;
                 const dy = enemy.targetY - enemy.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                
+
                 if (dist > 0.5) {
                     const moveSpeed = enemy.speed / 60;
-                    enemy.x += (dx / dist) * moveSpeed;
-                    enemy.y += (dy / dist) * moveSpeed;
+                    const moveX = (dx / dist) * moveSpeed;
+                    const moveY = (dy / dist) * moveSpeed;
+
+                    const newX = enemy.x + moveX;
+                    const newY = enemy.y + moveY;
+
+                    // Check collision before moving
+                    if (this.canMoveTo(enemy.x, enemy.y, newX, newY)) {
+                        enemy.x = newX;
+                        enemy.y = newY;
+                    } else {
+                        // Try to slide along walls
+                        if (this.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
+                            enemy.x = newX;
+                        } else if (this.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
+                            enemy.y = newY;
+                        }
+                    }
                 } else {
                     enemy.alertLevel = Math.max(0, enemy.alertLevel - 0.5);
                 }
             } else {
                 if (Math.random() < 0.01) {
-                    enemy.targetX = enemy.x + (Math.random() - 0.5) * 5;
-                    enemy.targetY = enemy.y + (Math.random() - 0.5) * 5;
+                    // Generate new target position that is walkable
+                    let attempts = 0;
+                    let newTargetX, newTargetY;
+                    do {
+                        newTargetX = enemy.x + (Math.random() - 0.5) * 5;
+                        newTargetY = enemy.y + (Math.random() - 0.5) * 5;
+                        attempts++;
+                    } while (!this.isWalkable(newTargetX, newTargetY) && attempts < 10);
+
+                    if (attempts < 10) {
+                        enemy.targetX = newTargetX;
+                        enemy.targetY = newTargetY;
+                    }
                 }
-                
+
                 const dx = enemy.targetX - enemy.x;
                 const dy = enemy.targetY - enemy.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                
+
                 if (dist > 0.1) {
                     const moveSpeed = enemy.speed / 120;
-                    enemy.x += (dx / dist) * moveSpeed;
-                    enemy.y += (dy / dist) * moveSpeed;
+                    const moveX = (dx / dist) * moveSpeed;
+                    const moveY = (dy / dist) * moveSpeed;
+
+                    const newX = enemy.x + moveX;
+                    const newY = enemy.y + moveY;
+
+                    // Check collision before moving
+                    if (this.canMoveTo(enemy.x, enemy.y, newX, newY)) {
+                        enemy.x = newX;
+                        enemy.y = newY;
+                    } else {
+                        // Try to slide along walls
+                        if (this.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
+                            enemy.x = newX;
+                        } else if (this.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
+                            enemy.y = newY;
+                        } else {
+                            // If stuck, pick a new target
+                            enemy.targetX = enemy.x;
+                            enemy.targetY = enemy.y;
+                        }
+                    }
                 }
             }
             

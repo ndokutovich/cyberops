@@ -359,13 +359,20 @@ CyberOpsGame.prototype.handleTap = function(x, y) {
 
         // If no agent selected, move the currently selected agent
         const worldPos = this.screenToWorld(x, y);
-        this.showTouchIndicator(x, y);
 
         const selected = this.agents.find(a => a.selected);
         if (selected && selected.alive) {
-            selected.targetX = worldPos.x;
-            selected.targetY = worldPos.y;
-            console.log(`🚶 TAP MOVEMENT: Moving ${selected.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+            // Check if target position is walkable
+            if (this.isWalkable(worldPos.x, worldPos.y)) {
+                selected.targetX = worldPos.x;
+                selected.targetY = worldPos.y;
+                this.showTouchIndicator(x, y);
+                console.log(`🚶 TAP MOVEMENT: Moving ${selected.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+            } else {
+                console.log(`🚫 Cannot move to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}) - obstacle detected`);
+                // Could show a different indicator for invalid moves
+                this.showBlockedIndicator(x, y);
+            }
         } else {
             console.log(`❌ No agent selected for movement`);
         }
@@ -417,6 +424,17 @@ CyberOpsGame.prototype.showTouchIndicator = function(x, y) {
         indicator.className = 'touch-indicator';
         indicator.style.left = x + 'px';
         indicator.style.top = y + 'px';
+        document.body.appendChild(indicator);
+        setTimeout(() => indicator.remove(), 500);
+}
+
+CyberOpsGame.prototype.showBlockedIndicator = function(x, y) {
+        const indicator = document.createElement('div');
+        indicator.className = 'touch-indicator blocked';
+        indicator.style.left = x + 'px';
+        indicator.style.top = y + 'px';
+        indicator.style.borderColor = '#ff3333';
+        indicator.style.backgroundColor = 'rgba(255, 51, 51, 0.2)';
         document.body.appendChild(indicator);
         setTimeout(() => indicator.remove(), 500);
 }
