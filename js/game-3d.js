@@ -1729,6 +1729,32 @@ CyberOpsGame.prototype.create3DMuzzleFlash = function() {
 }
     
 CyberOpsGame.prototype.sync3DTo2D = function() {
+        // Update ALL agent positions in 3D based on 2D logic
+        this.agents.forEach((agent, index) => {
+            const agentMesh = this.world3D.agents[index];
+            if (agentMesh && agent.alive) {
+                // Update position for ALL agents, not just selected
+                agentMesh.position.set(
+                    (agent.x - this.map.tiles[0].length / 2) * 2,
+                    1,
+                    (agent.y - this.map.tiles.length / 2) * 2
+                );
+
+                // Update rotation based on facing angle
+                if (agent.facingAngle !== undefined) {
+                    agentMesh.rotation.y = -agent.facingAngle + Math.PI / 2;
+                }
+
+                // Update color based on selection
+                agentMesh.material.color.setHex(
+                    agent === this._selectedAgent ? 0x00ffff : 0x00ff00
+                );
+
+                // Update visibility
+                agentMesh.visible = agent.alive;
+            }
+        });
+
         // Update enemy positions in 3D based on 2D logic
         this.enemies.forEach((enemy, index) => {
             const enemyMesh = this.world3D.enemies[index];
@@ -1744,16 +1770,6 @@ CyberOpsGame.prototype.sync3DTo2D = function() {
                         (enemy.y - this.map.tiles.length / 2) * 2
                     );
                 }
-            }
-        });
-        
-        // Update agent colors (selected vs unselected)
-        this.world3D.agents.forEach(agentMesh => {
-            const agent = agentMesh.userData.agent;
-            if (agent) {
-                agentMesh.material.color.setHex(
-                    agent === this._selectedAgent ? 0x00ffff : 0x00ff00
-                );
             }
         });
 }

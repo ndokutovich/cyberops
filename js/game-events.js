@@ -133,6 +133,14 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 return;
             }
 
+            // Toggle squad following in 3D mode - 'L' key (foLLow)
+            if (e.code === 'KeyL' && this.currentScreen === 'game') {
+                this.squadFollowing = this.squadFollowing !== false ? false : true;
+                console.log('👥 Squad Following:', this.squadFollowing ? 'ON' : 'OFF');
+                e.preventDefault();
+                return;
+            }
+
             // Action Hotkeys for both 2D and 3D modes
             if (this.currentScreen === 'game') {
                 // Get ALL selected agents for team actions

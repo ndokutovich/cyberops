@@ -844,6 +844,7 @@ CyberOpsGame.prototype.renderHotkeyHelp = function() {
             'V - Shield',
             'T - Team Select',
             'E - 3D Mode',
+            'L - Squad Follow (3D)',
             'P - Path Debug',
             'O - Pathfinding On/Off',
             '? - Toggle Help'

@@ -142,6 +142,38 @@ CyberOpsGame.prototype.update = function() {
                 agent.facingAngle = Math.PI / 2; // Default facing down
             }
 
+            // In 3D mode, make non-controlled agents follow the player (if enabled)
+            if (this.is3DMode && this.squadFollowing !== false && this._selectedAgent && agent !== this._selectedAgent) {
+                // Calculate distance to leader
+                const leaderDist = Math.sqrt(
+                    Math.pow(agent.x - this._selectedAgent.x, 2) +
+                    Math.pow(agent.y - this._selectedAgent.y, 2)
+                );
+
+                // Only update target if too far from leader (to avoid constant movement)
+                if (leaderDist > 5) {
+                    // Set follow target with offset for formation
+                    const followDist = 2.5; // Distance to maintain from leader
+                    const index = this.agents.filter(a => a.alive).indexOf(agent);
+                    const squadSize = this.agents.filter(a => a.alive).length - 1;
+
+                    // Create formation behind the leader based on their facing
+                    const leaderFacing = this._selectedAgent.facingAngle || 0;
+                    const formationAngle = leaderFacing + Math.PI; // Behind the leader
+
+                    // Spread agents in a line formation behind leader
+                    const offsetAngle = formationAngle + (Math.PI / 4) * ((index / squadSize) - 0.5);
+
+                    // Calculate formation position
+                    agent.targetX = this._selectedAgent.x + Math.cos(offsetAngle) * followDist;
+                    agent.targetY = this._selectedAgent.y + Math.sin(offsetAngle) * followDist;
+                } else if (leaderDist < 2) {
+                    // Too close, stop moving
+                    agent.targetX = agent.x;
+                    agent.targetY = agent.y;
+                }
+            }
+
             const dx = agent.targetX - agent.x;
             const dy = agent.targetY - agent.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
