@@ -1397,126 +1397,149 @@ CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
     }
 };
 
-// Show mission list screen
+// Show mission progress screen (uses same comprehensive system as completion modal)
 CyberOpsGame.prototype.showMissionList = function() {
-    console.log('📜 Showing mission list');
+    console.log('📜 Showing mission progress');
 
-    // Build content for mission list
+    // Gather comprehensive mission data (same as completion modal)
+    const missionSummary = this.gatherMissionSummary ? this.gatherMissionSummary(false) : {
+        mainObjectives: [],
+        sideQuests: [],
+        rewards: [],
+        itemsCollected: {},
+        completedMainObjectives: 0,
+        totalMainObjectives: 0,
+        intelCollected: 0,
+        totalCredits: 0,
+        totalResearchPoints: 0
+    };
+
+    // Build content with comprehensive layout
     let content = `
-        <div style="padding: 20px;">
-            <h2 style="color: #00ffff; margin-bottom: 20px;">📜 MISSION STATUS</h2>
+        <div style="padding: 20px; max-height: 80vh; overflow-y: auto;">
+            <h2 style="color: #00ffff; margin-bottom: 20px; text-align: center;">📊 MISSION PROGRESS</h2>
+
+            <!-- Mission Header Info -->
+            <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,255,255,0.1); border-radius: 5px;">
+                <h3 style="color: #ffff00; margin-bottom: 10px;">🎯 ${this.currentMission ? this.currentMission.title : 'Current Mission'}</h3>
+                <div style="color: #ccc; display: flex; justify-content: space-around; flex-wrap: wrap;">
+                    <div>⏱️ Time: ${Math.floor(this.missionTimer / 60)}:${String(this.missionTimer % 60).padStart(2, '0')}</div>
+                    <div>👥 Squad: ${this.agents.filter(a => a.alive).length}/${this.agents.length}</div>
+                    <div>🎯 Enemies: ${this.enemies.filter(e => !e.alive).length}/${this.enemies.length} eliminated</div>
+                </div>
+            </div>
+
+            <!-- Primary Objectives -->
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #ffff00; margin-bottom: 10px;">📋 PRIMARY OBJECTIVES (${missionSummary.completedMainObjectives}/${missionSummary.totalMainObjectives})</h3>
+                <div style="padding-left: 20px;">
     `;
 
-    // Main mission status
-    content += `
-        <div style="margin-bottom: 30px;">
-            <h3 style="color: #ffff00; margin-bottom: 10px;">🎯 PRIMARY MISSION</h3>
-            <div style="padding-left: 20px; color: #ffffff;">
-    `;
-
-    // Show main mission objectives
-    if (this.currentMission && this.currentMission.objectives) {
+    // Show primary objectives with detailed status
+    if (missionSummary.mainObjectives.length > 0) {
+        missionSummary.mainObjectives.forEach(obj => {
+            const icon = obj.completed ? '✅' : obj.required ? '⬜' : '⭕';
+            const color = obj.completed ? '#00ff00' : obj.required ? '#ffffff' : '#ffaa00';
+            content += `
+                <div style="margin-bottom: 8px; color: ${color};">
+                    ${icon} ${obj.description || obj.name}
+                    ${obj.progress ? ` <span style="color: #00ffff;">[${obj.progress}]</span>` : ''}
+                    ${!obj.required ? ' <span style="color: #888;">(Optional)</span>' : ''}
+                </div>
+            `;
+        });
+    } else if (this.currentMission && this.currentMission.objectives) {
+        // Fallback to old system if new system not available
         this.currentMission.objectives.forEach(obj => {
-            // Handle both string objectives (original) and object objectives (new system)
-            let description, completed;
-
-            if (typeof obj === 'string') {
-                // Original format - just strings
-                description = obj;
-                // Simple completion check for string objectives
-                if (obj.includes('Eliminate')) {
-                    completed = this.enemiesKilledThisMission >= 8; // Hardcoded for mission 1
-                } else {
-                    completed = false; // Can't track other string objectives
-                }
-            } else {
-                // New format - objects with description
-                description = obj.description || obj.displayText || 'Unknown objective';
-                completed = this.checkObjectiveComplete(obj);
-            }
-
-            const icon = completed ? '✅' : '⬜';
-            const color = completed ? '#00ff00' : '#ffffff';
-            content += `<div style="color: ${color}; margin: 5px 0;">${icon} ${description}</div>`;
+            const description = typeof obj === 'string' ? obj : (obj.description || 'Unknown objective');
+            content += `<div style="color: #ffffff; margin: 5px 0;">⬜ ${description}</div>`;
         });
     } else {
-        content += '<div>No primary objectives</div>';
+        content += '<div style="color: #888;">No objectives available</div>';
     }
 
     content += '</div></div>';
 
-    // Side quests
+    // Side quests with comprehensive status
     content += `
-        <div style="margin-bottom: 30px;">
-            <h3 style="color: #ffff00; margin-bottom: 10px;">📋 SIDE QUESTS</h3>
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: #ff00ff; margin-bottom: 10px;">📜 SIDE QUESTS</h3>
             <div style="padding-left: 20px;">
     `;
 
-    if (this.quests && Object.keys(this.quests).length > 0) {
-        for (let questId in this.quests) {
-            const quest = this.quests[questId];
-            const completed = this.completedQuests && this.completedQuests.has(questId);
-            const active = quest.active && !completed;
-
-            let statusColor = '#666666';
-            let statusText = 'Not Started';
-
-            if (completed) {
-                statusColor = '#00ff00';
-                statusText = 'COMPLETED';
-            } else if (active) {
-                statusColor = '#ffff00';
-                statusText = 'IN PROGRESS';
+    if (missionSummary.sideQuests.length > 0) {
+        missionSummary.sideQuests.forEach(quest => {
+            let icon, color, status;
+            if (!quest.discovered) {
+                icon = '❓';
+                color = '#666666';
+                status = 'Not discovered';
+            } else if (quest.completed && quest.rewardClaimed) {
+                icon = '✅';
+                color = '#00ff00';
+                status = 'Completed';
+            } else if (quest.completed && !quest.rewardClaimed) {
+                icon = '🎁';
+                color = '#ffd700';
+                status = 'Ready to claim';
+            } else if (quest.failed) {
+                icon = '❌';
+                color = '#ff6666';
+                status = 'Failed';
+            } else {
+                icon = '🔄';
+                color = '#ffff00';
+                status = 'In progress';
             }
 
             content += `
-                <div style="margin-bottom: 15px; padding: 10px; border: 1px solid ${statusColor}; border-radius: 5px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="color: ${statusColor}; font-weight: bold;">${quest.name}</span>
-                        <span style="color: ${statusColor}; font-size: 12px;">[${statusText}]</span>
-                    </div>
-                    <div style="color: #aaaaaa; font-size: 14px; margin-bottom: 5px;">${quest.description}</div>
+                <div style="margin-bottom: 8px; color: ${color}; ${!quest.discovered ? 'opacity: 0.5;' : ''}">
+                    ${icon} ${quest.discovered ? quest.name : '???'} - ${status}
+                    ${quest.discovered && quest.reward ? ` <span style="color: #ffd700;">(${quest.reward})</span>` : ''}
+                </div>
             `;
-
-            // Show objectives
-            if (active && quest.objectives) {
-                content += '<div style="margin-top: 10px; padding-left: 10px;">';
-                quest.objectives.forEach(obj => {
-                    const objComplete = quest.checkObjective ? quest.checkObjective(obj, this) : false;
-                    const icon = objComplete ? '✓' : '○';
-                    const color = objComplete ? '#00ff00' : '#ffffff';
-                    content += `<div style="color: ${color}; font-size: 12px; margin: 3px 0;">${icon} ${obj.description}</div>`;
-                });
-                content += '</div>';
-            }
-
-            // Show rewards
-            if (quest.rewards) {
-                content += '<div style="margin-top: 5px; color: #00ffff; font-size: 12px;">Rewards: ';
-                if (quest.rewards.credits) content += `💰 ${quest.rewards.credits} credits `;
-                if (quest.rewards.researchPoints) content += `🔬 ${quest.rewards.researchPoints} RP `;
-                content += '</div>';
-            }
-
-            content += '</div>';
-        }
+        });
     } else {
-        content += '<div style="color: #666666;">No side quests available</div>';
+        content += '<div style="color: #888;">No quests discovered</div>';
     }
 
     content += '</div></div>';
 
-    // Statistics
+    // Current Progress & Rewards
     content += `
-        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
-            <h3 style="color: #00ffff; margin-bottom: 10px;">📊 STATISTICS</h3>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; color: #ffffff;">
-                <div>Terminals Hacked: ${this.hackedTerminals || 0}</div>
-                <div>Enemies Eliminated: ${this.enemiesKilledThisMission || 0}</div>
-                <div>Credits Earned: ${this.credits || 0}</div>
-                <div>Research Points: ${this.researchPoints || 0}</div>
-                <div>Quests Completed: ${this.completedQuests ? this.completedQuests.size : 0}</div>
-                <div>Mission Time: ${Math.floor((this.missionTimer || 0) / 60)}:${String((this.missionTimer || 0) % 60).padStart(2, '0')}</div>
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: #ffa500; margin-bottom: 10px;">💰 CURRENT PROGRESS</h3>
+            <div style="padding-left: 20px; color: #ffffff;">
+                <div>💰 Credits earned: ${missionSummary.totalCredits || 0}</div>
+                <div>🔬 Research Points: ${missionSummary.totalResearchPoints || 0}</div>
+                <div>📄 Intel collected: ${missionSummary.intelCollected || 0}</div>
+    `;
+
+    // Show items collected
+    if (missionSummary.itemsCollected && Object.keys(missionSummary.itemsCollected).length > 0) {
+        const itemIcons = {
+            health: '❤️',
+            ammo: '🔫',
+            armor: '🛡️',
+            keycard: '🗝️',
+            explosives: '💣'
+        };
+
+        for (let item in missionSummary.itemsCollected) {
+            const count = missionSummary.itemsCollected[item];
+            if (count > 0) {
+                content += `<div>${itemIcons[item] || '📦'} ${item}: ${count}</div>`;
+            }
+        }
+    }
+
+    content += '</div></div>';
+
+    // Extraction Status
+    content += `
+        <div style="margin-bottom: 20px; padding: 15px; background: ${this.extractionEnabled ? 'rgba(0,255,0,0.1)' : 'rgba(255,255,0,0.1)'}; border-radius: 5px;">
+            <div style="color: ${this.extractionEnabled ? '#00ff00' : '#ffff00'}; text-align: center; font-weight: bold;">
+                ${this.extractionEnabled ? '✅ EXTRACTION POINT ACTIVE - Head to extraction!' : '⏳ Complete objectives to activate extraction'}
             </div>
         </div>
     `;
@@ -1524,10 +1547,8 @@ CyberOpsGame.prototype.showMissionList = function() {
     content += '</div>';
 
     // Show the dialog
-    // Store reference to game instance for the button callback
-    const gameInstance = this;
     this.showHudDialog(
-        '📜 MISSION STATUS',
+        '📊 MISSION PROGRESS',
         content,
         [
             {
@@ -1750,40 +1771,66 @@ CyberOpsGame.prototype.renderNPCs = function(ctx) {
             }
         }
 
-        // Draw quest indicator
+        // Draw quest indicator with enhanced visuals
         if (npc.quests && npc.quests.length > 0) {
+            let questIndicator = null;
+            let indicatorColor = null;
             let hasAvailableQuest = false;
+            let hasCompletedQuest = false;
+            let hasInProgressQuest = false;
+
+            // Check quest status
             for (let quest of npc.quests) {
                 if (!npc.questsGiven.has(quest.id) && !this.completedQuests.has(quest.id)) {
                     if (npc.checkQuestRequirements(quest, this)) {
                         hasAvailableQuest = true;
-                        break;
+                    }
+                } else if (npc.questsGiven.has(quest.id)) {
+                    // Quest was given, check if complete
+                    if (quest.checkCompletion && quest.checkCompletion(this)) {
+                        hasCompletedQuest = true;
+                    } else {
+                        hasInProgressQuest = true;
                     }
                 }
             }
 
-            if (hasAvailableQuest) {
-                // Draw exclamation mark for available quest
-                ctx.fillStyle = '#ffff00';
-                ctx.font = 'bold 20px Arial';
-                ctx.fillText('!', 15, -15);
-            } else if (npc.questsGiven.size > 0) {
-                // Check for completed quests
-                let hasCompletedQuest = false;
-                for (let questId of npc.questsGiven) {
-                    const quest = this.quests[questId];
-                    if (quest && quest.checkCompletion(this)) {
-                        hasCompletedQuest = true;
-                        break;
-                    }
-                }
+            // Determine indicator based on priority: completed > available > in progress
+            if (hasCompletedQuest) {
+                // Quest ready to turn in - golden question mark
+                questIndicator = '❓';
+                indicatorColor = '#ffd700';
+            } else if (hasAvailableQuest) {
+                // Quest available - yellow exclamation
+                questIndicator = '❗';
+                indicatorColor = '#ffff00';
+            } else if (hasInProgressQuest) {
+                // Quest in progress - grey question mark
+                questIndicator = '❓';
+                indicatorColor = '#888888';
+            }
 
-                if (hasCompletedQuest) {
-                    // Draw question mark for quest turn-in
-                    ctx.fillStyle = '#00ff00';
-                    ctx.font = 'bold 20px Arial';
-                    ctx.fillText('?', 15, -15);
-                }
+            // Draw the indicator with animation
+            if (questIndicator) {
+                ctx.save();
+                // Animated bobbing effect
+                const bobOffset = Math.sin(Date.now() * 0.003) * 3;
+
+                // Position above NPC head
+                ctx.translate(0, -40 + bobOffset);
+
+                // Draw glow effect
+                ctx.shadowColor = indicatorColor;
+                ctx.shadowBlur = 10;
+                ctx.font = 'bold 24px Arial';
+                ctx.fillStyle = indicatorColor;
+                ctx.textAlign = 'center';
+                ctx.fillText(questIndicator, 0, 0);
+
+                // Draw again without shadow for clearer visibility
+                ctx.shadowBlur = 0;
+                ctx.fillText(questIndicator, 0, 0);
+                ctx.restore();
             }
         }
 

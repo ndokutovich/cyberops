@@ -543,8 +543,12 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                             console.log(`🚶 TAP MOVEMENT: Moving ${agent.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
 
                             // Show coordinates in notification if in debug/pathfinding mode
-                            if (this.showPathfinding || this.debugMode) {
+                            if (this.showPaths || this.usePathfinding || this.debugMode) {
                                 this.addNotification(`📍 Destination: [${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}]`);
+                                // Also add to event log
+                                if (this.logEvent) {
+                                    this.logEvent(`Agent moving to [${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}]`, 'player');
+                                }
                             }
                         } else {
                             // Squad movement in formation
