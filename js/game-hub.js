@@ -149,54 +149,140 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
 }
     
 CyberOpsGame.prototype.showHallOfGlory = function() {
-        // Hide other screens
-        document.getElementById('syndicateHub').style.display = 'none';
-
-        // Show Hall of Glory
-        const hallScreen = document.getElementById('hallOfGlory');
-        hallScreen.style.display = 'block';
-
-        const noFallenMsg = document.getElementById('noFallenMessage');
-        const fallenList = document.getElementById('fallenAgentsList');
+        let content = '';
 
         if (this.fallenAgents.length === 0) {
-            noFallenMsg.style.display = 'block';
-            fallenList.style.display = 'none';
+            // No fallen agents - show empty state
+            content = `
+                <div style="text-align: center; padding: 40px;">
+                    <div style="font-size: 60px; margin-bottom: 20px;">🎖️</div>
+                    <div style="color: #00ffff; font-size: 24px; margin-bottom: 10px;">
+                        NO FALLEN HEROES YET
+                    </div>
+                    <div style="color: #888; font-size: 14px;">
+                        May your agents always return home safely
+                    </div>
+                </div>
+            `;
         } else {
-            noFallenMsg.style.display = 'none';
-            fallenList.style.display = 'grid';
-            fallenList.innerHTML = '';
+            // Display fallen agents
+            content = `
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <div style="display: grid; gap: 15px;">
+            `;
 
-            // Display each fallen agent
             this.fallenAgents.forEach(agent => {
-                const agentCard = document.createElement('div');
-                agentCard.className = 'fallen-agent-card';
-                agentCard.innerHTML = `
-                    <div class="fallen-agent-header">
-                        <div class="fallen-agent-name">${agent.name}</div>
-                        <div class="fallen-agent-class">${agent.specialization.toUpperCase()}</div>
-                    </div>
-                    <div class="fallen-agent-details">
-                        <div class="fallen-detail">
-                            <span class="detail-label">Fallen in:</span>
-                            <span class="detail-value">${agent.fallenInMission}</span>
+                content += `
+                    <div style="
+                        background: linear-gradient(135deg, rgba(255,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%);
+                        border: 2px solid rgba(255,0,0,0.5);
+                        border-radius: 10px;
+                        padding: 20px;
+                        position: relative;
+                        overflow: hidden;
+                    ">
+                        <!-- Glitch effect overlay -->
+                        <div style="
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            height: 2px;
+                            background: rgba(255,0,0,0.3);
+                            animation: scan 3s linear infinite;
+                        "></div>
+
+                        <!-- Agent Header -->
+                        <div style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 15px;
+                            border-bottom: 1px solid rgba(255,0,0,0.3);
+                            padding-bottom: 10px;
+                        ">
+                            <div>
+                                <div style="color: #ff4444; font-size: 20px; font-weight: bold;">
+                                    ${agent.name}
+                                </div>
+                                <div style="color: #ff8888; font-size: 12px; text-transform: uppercase;">
+                                    ${agent.specialization}
+                                </div>
+                            </div>
+                            <div style="color: #ff0000; font-size: 30px;">☠️</div>
                         </div>
-                        <div class="fallen-detail">
-                            <span class="detail-label">Final words:</span>
-                            <span class="detail-value">"${agent.finalWords}"</span>
+
+                        <!-- Agent Details -->
+                        <div style="display: grid; gap: 10px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #888;">Fallen in:</span>
+                                <span style="color: #ff6666;">${agent.fallenInMission}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #888;">Final words:</span>
+                                <span style="color: #ccc; font-style: italic;">
+                                    "${agent.finalWords}"
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #888;">Skills:</span>
+                                <span style="color: #00ffff;">
+                                    ${agent.skills.join(' • ')}
+                                </span>
+                            </div>
                         </div>
-                        <div class="fallen-detail">
-                            <span class="detail-label">Skills:</span>
-                            <span class="detail-value">${agent.skills.join(', ')}</span>
+
+                        <!-- Memorial Footer -->
+                        <div style="
+                            text-align: center;
+                            margin-top: 15px;
+                            padding-top: 10px;
+                            border-top: 1px solid rgba(255,0,0,0.2);
+                            color: #ff8888;
+                            font-size: 12px;
+                            text-transform: uppercase;
+                            letter-spacing: 2px;
+                        ">
+                            Rest in peace, soldier
                         </div>
-                    </div>
-                    <div class="fallen-agent-footer">
-                        Rest in peace, soldier
                     </div>
                 `;
-                fallenList.appendChild(agentCard);
             });
+
+            content += `
+                    </div>
+                </div>
+
+                <!-- Memorial Quote -->
+                <div style="
+                    margin-top: 30px;
+                    padding: 20px;
+                    background: rgba(0,0,0,0.5);
+                    border-left: 3px solid #ff0000;
+                    text-align: center;
+                    font-style: italic;
+                    color: #aaa;
+                    font-size: 14px;
+                ">
+                    "They shall grow not old, as we that are left grow old;<br>
+                    Age shall not weary them, nor the years condemn.<br>
+                    At the going down of the sun and in the morning<br>
+                    We will remember them."
+                </div>
+            `;
         }
+
+        // Show as HUD dialog with cyberpunk styling
+        this.showHudDialog(
+            '⚰️ HALL OF GLORY',
+            content,
+            [
+                { text: '← BACK TO HUB', action: () => {
+                    this.closeDialog();
+                    this.showSyndicateHub();
+                }}
+            ]
+        );
 }
 
 CyberOpsGame.prototype.showAgentManagement = function() {

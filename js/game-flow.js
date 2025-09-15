@@ -617,12 +617,26 @@ CyberOpsGame.prototype.updateSquadHealth = function() {
 
         this.agents.forEach((agent, index) => {
             const bar = document.createElement('div');
-            bar.className = 'agent-health-bar' + (agent.selected ? ' selected' : '');
+
+            // Add dead class if agent is not alive
+            let className = 'agent-health-bar';
+            if (!agent.alive) {
+                className += ' dead';
+            }
+            if (agent.selected) {
+                className += ' selected';
+            }
+            bar.className = className;
+
             bar.style.pointerEvents = 'auto'; // Explicitly enable pointer events
-            bar.style.cursor = 'pointer'; // Ensure cursor shows as pointer
+            bar.style.cursor = agent.alive ? 'pointer' : 'not-allowed'; // Change cursor for dead agents
+
+            // Calculate health percentage, ensuring it's 0 for dead agents
+            const healthPercent = agent.alive ? Math.max(0, (agent.health / agent.maxHealth) * 100) : 0;
+
             bar.innerHTML = `
-                <div class="health-fill" style="width: ${(agent.health / agent.maxHealth) * 100}%"></div>
-                <div class="agent-name">${agent.name} [${index + 1}]</div>
+                <div class="health-fill" style="width: ${healthPercent}%"></div>
+                <div class="agent-name">${agent.name} [${index + 1}]${!agent.alive ? ' ☠️' : ''}</div>
             `;
 
             // Add click handler to select this agent

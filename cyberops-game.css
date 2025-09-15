@@ -576,7 +576,7 @@ body {
 }
 
 .agent-health-bar {
-    width: 150px;
+    width: 200px; /* Increased from 150px */
     height: 25px;
     margin: 5px 0;
     background: rgba(0,0,0,0.5);
@@ -592,7 +592,18 @@ body {
 .agent-health-bar.selected {
     border: 2px solid #00ffff;
     box-shadow: 0 0 15px rgba(0,255,255,0.5);
-    width: 160px;
+    width: 210px; /* Increased from 160px */
+}
+
+.agent-health-bar.dead {
+    opacity: 0.5;
+    background: rgba(50,0,0,0.5);
+    border-color: #ff0000;
+}
+
+.agent-health-bar.dead .agent-name {
+    color: #ff4444;
+    text-decoration: line-through;
 }
 
 .agent-health-bar:active {
@@ -614,6 +625,7 @@ body {
     font-size: 0.8em;
     color: white;
     text-shadow: 1px 1px 2px black;
+    white-space: nowrap; /* Prevent text wrapping */
 }
 
 /* Action Bar */
