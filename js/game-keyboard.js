@@ -3,6 +3,34 @@
  * Single source of truth for all keyboard bindings and handlers
  */
 
+// Handle interaction key (H) - Check for NPCs first, then use hack ability
+CyberOpsGame.prototype.handleInteractionKey = function() {
+    if (this.currentScreen !== 'game') return;
+
+    // Check if there's a dialog active
+    if (this.dialogActive) {
+        return; // Don't do anything if dialog is open
+    }
+
+    // Get the selected agent (or first agent)
+    const agent = this.agents.find(a => a.selected && a.alive) || this.agents[0];
+    if (!agent) {
+        return; // No agent available
+    }
+
+    // Check for nearby NPC
+    const nearbyNPC = this.getNearbyNPC(agent);
+    if (nearbyNPC) {
+        // Interact with NPC
+        this.interactWithNPC(agent, nearbyNPC);
+        console.log(`💬 Interacting with NPC: ${nearbyNPC.name}`);
+    } else {
+        // No NPC nearby, use hack ability (ability 3)
+        this.useAbilityForAllSelected(3);
+        console.log('🔧 Using hack ability');
+    }
+};
+
 // Initialize keyboard system
 CyberOpsGame.prototype.initKeyboardHandler = function() {
     // Actual keyboard mappings - declarative config
@@ -25,8 +53,8 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         'f': () => this.useAbilityForAllSelected(1),  // Shoot
         'G': () => this.useAbilityForAllSelected(2),  // Grenade
         'g': () => this.useAbilityForAllSelected(2),  // Grenade
-        'H': () => this.useAbilityForAllSelected(3),  // Hack/Interact (only first agent)
-        'h': () => this.useAbilityForAllSelected(3),  // Hack/Interact
+        'H': () => this.handleInteractionKey(),  // Hack/Interact with NPCs or use ability
+        'h': () => this.handleInteractionKey(),  // Handle both cases
         'Q': () => this.useAbilityForAllSelected(4),  // Shield
         'q': () => this.useAbilityForAllSelected(4),  // Shield
 
@@ -58,7 +86,11 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
 
         // Game Control
         ' ': () => this.togglePause(),
-        'Escape': () => this.showPauseMenu()
+        'Escape': () => this.showPauseMenu(),
+
+        // Speed Control
+        'Z': () => this.cycleGameSpeed(),
+        'z': () => this.cycleGameSpeed()
     };
 
     // Movement keys for 3D mode (handled separately)
@@ -232,7 +264,7 @@ CyberOpsGame.prototype.getKeyBindingsDisplay = function() {
         'Combat': [
             { key: 'F', action: 'Fire/Shoot' },
             { key: 'G', action: 'Throw Grenade' },
-            { key: 'H', action: 'Hack/Interact' },
+            { key: 'H', action: 'Hack/Interact with NPCs' },
             { key: 'Q', action: 'Activate Shield' }
         ],
         'Team Commands': [
@@ -256,7 +288,8 @@ CyberOpsGame.prototype.getKeyBindingsDisplay = function() {
         ],
         'Game': [
             { key: 'Space', action: 'Pause Game' },
-            { key: 'Esc', action: 'Pause Menu' }
+            { key: 'Esc', action: 'Pause Menu' },
+            { key: 'Z', action: 'Cycle Speed (1x/2x/4x)' }
         ]
     };
 };

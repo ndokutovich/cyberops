@@ -124,6 +124,14 @@ class CyberOpsGame {
             startTime: 0
         };
 
+        // Game speed acceleration system
+        this.gameSpeed = 1; // 1x, 2x, or 4x
+        this.targetGameSpeed = 1; // Speed we're transitioning to
+        this.speedTransitionTime = 0; // For smooth transitions
+        this.autoSlowdownRange = 10; // Distance to detect enemies for auto-slowdown
+        this.lastSpeedChangeTime = 0;
+        this.speedIndicatorFadeTime = 0;
+
         // Sound effects - initialize early to prevent undefined errors
         this.soundEffects = {
             shoot: null,

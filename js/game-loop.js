@@ -6,13 +6,20 @@ CyberOpsGame.prototype.gameLoop = function() {
         this.updateFPS();
 
         if (this.currentScreen === 'game' && !this.isPaused) {
-            this.update();
-            // Update 3D if in 3D mode
-            if (this.is3DMode) {
-                this.update3D();
-                this.update3DCamera();
-                this.sync3DTo2D();
+            // Run update multiple times based on game speed
+            const updateCount = Math.floor(this.gameSpeed);
+            for (let i = 0; i < updateCount; i++) {
+                this.update();
+                // Update 3D if in 3D mode
+                if (this.is3DMode) {
+                    this.update3D();
+                    this.update3DCamera();
+                    this.sync3DTo2D();
+                }
             }
+
+            // Check for nearby enemies and auto-slowdown
+            this.checkAutoSlowdown();
         }
 
         if (this.currentScreen === 'game') {
@@ -395,7 +402,12 @@ CyberOpsGame.prototype.update = function() {
                 }
             });
         });
-        
+
+        // Update NPCs (only if function exists)
+        if (this.updateNPCs) {
+            this.updateNPCs();
+        }
+
         // Update projectiles
         this.projectiles = this.projectiles.filter(proj => {
             const dx = proj.targetX - proj.x;
@@ -1091,6 +1103,64 @@ CyberOpsGame.prototype.isLowOnAmmo = function() {
         return avgCooldown > 30; // Consider low ammo if cooldowns are high
     });
 }
+
+// Game speed control functions
+CyberOpsGame.prototype.setGameSpeed = function(speed) {
+    if (this.gameSpeed !== speed) {
+        this.gameSpeed = speed; // Actually change the speed!
+        this.targetGameSpeed = speed;
+        this.lastSpeedChangeTime = Date.now();
+        this.speedIndicatorFadeTime = 3000; // Show indicator for 3 seconds
+        console.log(`⚡ Game speed changed to ${speed}x`);
+    }
+};
+
+CyberOpsGame.prototype.cycleGameSpeed = function() {
+    // Cycle through 1x -> 2x -> 4x -> 1x
+    const speeds = [1, 2, 4];
+    const currentIndex = speeds.indexOf(this.gameSpeed);
+    const nextIndex = (currentIndex + 1) % speeds.length;
+    this.setGameSpeed(speeds[nextIndex]);
+};
+
+CyberOpsGame.prototype.checkAutoSlowdown = function() {
+    if (!this.agents || !this.enemies) return;
+
+    // Check if any living enemy is near any living agent
+    let enemyNearby = false;
+
+    for (const agent of this.agents) {
+        if (!agent.alive) continue;
+
+        for (const enemy of this.enemies) {
+            if (!enemy.alive) continue;
+
+            const dx = agent.x - enemy.x;
+            const dy = agent.y - enemy.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < this.autoSlowdownRange) {
+                enemyNearby = true;
+                break;
+            }
+        }
+        if (enemyNearby) break;
+    }
+
+    // Auto-adjust speed based on enemy proximity
+    if (enemyNearby && this.gameSpeed > 1) {
+        // Slow down to 1x when enemies are near
+        this.gameSpeed = 1;
+        this.targetGameSpeed = 1;
+        console.log('⚠️ Enemy detected - slowing to 1x speed');
+        this.speedIndicatorFadeTime = 2000;
+    } else if (!enemyNearby && this.targetGameSpeed > 1 && this.gameSpeed === 1) {
+        // Speed back up when enemies are gone
+        this.gameSpeed = this.targetGameSpeed;
+        console.log(`✅ Area clear - resuming ${this.gameSpeed}x speed`);
+        this.speedIndicatorFadeTime = 2000;
+    }
+};
 
 // Check if a position is blocked by a door
 CyberOpsGame.prototype.isDoorBlocking = function(x, y) {

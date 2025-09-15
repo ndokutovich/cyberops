@@ -109,10 +109,26 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
         this.selectedAgents = [];
 
         // Calculate max agents for this mission (same as in initMission)
-        const maxAgentsForMission = Math.min(4 + Math.floor(this.currentMissionIndex / 2), 6);
+        // Mission 1: 4 agents, Mission 2+: 5 agents, Mission 4+: 6 agents
+        const maxAgentsForMission = this.currentMissionIndex === 0 ? 4 :
+                                     this.currentMissionIndex < 3 ? 5 : 6;
 
         // Use active agents from hub for mission briefing
         const availableAgentsForMission = this.activeAgents.length > 0 ? this.activeAgents : this.agentTemplates;
+
+        // Update squad info display
+        const squadInfo = document.getElementById('squadInfo');
+        if (squadInfo) {
+            const agentStatus = availableAgentsForMission.length < maxAgentsForMission ?
+                `<span style="color: #ffaa00;">⚠️ ${availableAgentsForMission.length}/${maxAgentsForMission} agents available - Hire more agents from the Hub!</span>` :
+                `<span style="color: #00ff00;">✅ ${availableAgentsForMission.length}/${maxAgentsForMission} agents available</span>`;
+            squadInfo.innerHTML = agentStatus;
+        }
+
+        // Show warning if not enough agents are hired for the mission
+        if (availableAgentsForMission.length < maxAgentsForMission) {
+            console.log(`⚠️ Only ${availableAgentsForMission.length} agents available, but mission allows ${maxAgentsForMission}`);
+        }
 
         // Calculate weapon distribution for preview
         let weaponAssignments = [];
@@ -176,6 +192,13 @@ CyberOpsGame.prototype.startMission = function() {
             return;
         }
 
+        // Auto-save before mission if enabled
+        if (this.autoSaveEnabled) {
+            console.log('🔄 Creating pre-mission autosave...');
+            const missionName = this.currentMission ? this.currentMission.title : 'Unknown Mission';
+            this.saveToSlot('pre_mission_autosave', `Pre-Mission: ${missionName}`);
+        }
+
         document.getElementById('missionBriefing').style.display = 'none';
         const gameHUD = document.getElementById('gameHUD');
         gameHUD.style.display = 'block';
@@ -211,6 +234,14 @@ CyberOpsGame.prototype.initMission = function() {
         this.effects = [];
         this.missionTimer = 0;
         this.isPaused = false;
+
+        // Initialize NPC system (only if functions exist)
+        if (this.initNPCSystem) {
+            this.initNPCSystem();
+        }
+        if (this.spawnNPCs) {
+            this.spawnNPCs();
+        }
 
         // Reset mission tracking
         this.intelThisMission = 0;
@@ -278,8 +309,9 @@ CyberOpsGame.prototype.initMission = function() {
         const spawn = this.map.spawn;
 
         // Determine number of agents based on mission difficulty
-        // Mission 1: 4 agents, Mission 2: 5 agents, Mission 3+: 6 agents
-        const maxAgentsForMission = Math.min(4 + Math.floor(this.currentMissionIndex / 2), 6);
+        // Mission 1: 4 agents, Mission 2-3: 5 agents, Mission 4+: 6 agents
+        const maxAgentsForMission = this.currentMissionIndex === 0 ? 4 :
+                                     this.currentMissionIndex < 3 ? 5 : 6;
 
         // Use all hired agents up to the mission limit
         const availableForMission = this.activeAgents.slice(0, maxAgentsForMission);

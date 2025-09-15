@@ -207,7 +207,12 @@ CyberOpsGame.prototype.render = function() {
         this.enemies.forEach(enemy => {
             if (enemy.alive) this.renderEnemy(enemy);
         });
-        
+
+        // Render NPCs (only if function exists)
+        if (this.renderNPCs) {
+            this.renderNPCs(ctx);
+        }
+
         this.agents.forEach(agent => {
             if (agent.alive) {
                 // Render path if exists (for debugging)
@@ -416,6 +421,9 @@ CyberOpsGame.prototype.render = function() {
 
         // Render hotkey help overlay
         this.renderHotkeyHelp();
+
+        // Render speed indicator
+        this.renderSpeedIndicator();
 
         // Render FPS counter
         this.renderFPS();
@@ -1292,7 +1300,63 @@ CyberOpsGame.prototype.renderGate = function(x, y, breached) {
             ctx.textBaseline = 'middle';
             ctx.fillText('GATE', 0, 0);
         }
-        
+
         ctx.restore();
 }
-    
+
+// Render game speed indicator
+CyberOpsGame.prototype.renderSpeedIndicator = function() {
+    const ctx = this.ctx;
+
+    // Always show if speed is not 1x, or show temporarily after changes
+    if (this.gameSpeed === 1 && this.speedIndicatorFadeTime <= 0) return;
+
+    // Keep showing if speed is > 1x
+    if (this.gameSpeed > 1) {
+        this.speedIndicatorFadeTime = Math.max(this.speedIndicatorFadeTime, 1000);
+    }
+
+    // Fade out the indicator over time
+    if (this.speedIndicatorFadeTime > 0) {
+        this.speedIndicatorFadeTime -= 16; // Roughly 60fps
+    }
+
+    const alpha = Math.min(1, this.speedIndicatorFadeTime / 1000);
+    if (alpha <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Position in top-right corner below mission timer
+    const x = this.canvas.width - 100;
+    const y = 60;
+
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(x - 40, y - 15, 80, 30);
+
+    // Border
+    const speedColor = this.gameSpeed === 1 ? '#00ffff' :
+                       this.gameSpeed === 2 ? '#ffff00' : '#ff00ff';
+    ctx.strokeStyle = speedColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - 40, y - 15, 80, 30);
+
+    // Speed text
+    ctx.fillStyle = speedColor;
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${this.gameSpeed}x SPEED`, x, y);
+
+    // Add pulsing effect for high speeds
+    if (this.gameSpeed > 1) {
+        const pulse = Math.sin(Date.now() * 0.005) * 0.3 + 0.7;
+        ctx.globalAlpha = alpha * pulse * 0.5;
+        ctx.strokeStyle = speedColor;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x - 42, y - 17, 84, 34);
+    }
+
+    ctx.restore();
+}

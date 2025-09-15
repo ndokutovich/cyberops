@@ -173,7 +173,12 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         // Always show Try Again button
         const tryAgainBtn = document.createElement('button');
         tryAgainBtn.className = 'menu-button';
-        tryAgainBtn.textContent = 'TRY AGAIN';
+        // Show different text based on autosave status
+        const hasAutosave = localStorage.getItem('cyberops_save_pre_mission_autosave') !== null;
+        tryAgainBtn.textContent = hasAutosave ? '🔄 TRY AGAIN (RESTORE SAVE)' : 'TRY AGAIN';
+        tryAgainBtn.title = hasAutosave ?
+            'Restore your team from the pre-mission autosave' :
+            'Retry mission with current team state (enable autosave in settings for better experience)';
         tryAgainBtn.onclick = () => this.tryAgainMission();
         actionsContainer.appendChild(tryAgainBtn);
         
@@ -207,14 +212,50 @@ CyberOpsGame.prototype.continueToNextMission = function() {
 CyberOpsGame.prototype.tryAgainMission = function() {
         document.getElementById('intermissionDialog').classList.remove('show');
 
-        // Get the actual current mission to restart
-        // Don't decrement if mission failed (index wasn't incremented)
-        // Only use the current index as-is
-        this.currentMission = this.missions[this.currentMissionIndex];
+        // Try to load the pre-mission autosave
+        const preMissionSave = localStorage.getItem('cyberops_save_pre_mission_autosave');
 
-        // Reset mission state and start again
-        console.log(`Restarting Mission ${this.currentMission.id}: ${this.currentMission.title}`);
-        this.startMission();
+        if (preMissionSave) {
+            try {
+                const saveData = JSON.parse(preMissionSave);
+                console.log('📁 Loading pre-mission autosave to restore agent states...');
+
+                // Restore the game state from before the mission
+                this.performLoadGame(saveData);
+
+                // After loading, immediately start the mission again
+                setTimeout(() => {
+                    this.currentMission = this.missions[this.currentMissionIndex];
+                    console.log(`Restarting Mission ${this.currentMission.id}: ${this.currentMission.title} with restored agents`);
+                    this.startMission();
+                }, 100);
+
+                return;
+            } catch (error) {
+                console.error('Failed to load pre-mission save:', error);
+            }
+        }
+
+        // Fallback: If no autosave exists, warn the user
+        console.warn('No pre-mission autosave found.');
+
+        // Show warning dialog to user
+        this.showHudDialog(
+            '⚠️ NO AUTOSAVE FOUND',
+            'Unable to restore pre-mission state. Dead agents cannot be revived.<br><br>' +
+            'Enable "Auto-Save Between Missions" in Settings → Game to allow retrying missions with your original team.',
+            [
+                { text: 'CONTINUE ANYWAY', action: () => {
+                    this.closeDialog();
+                    this.currentMission = this.missions[this.currentMissionIndex];
+                    this.startMission();
+                }},
+                { text: 'RETURN TO HUB', action: () => {
+                    this.closeDialog();
+                    this.showSyndicateHub();
+                }}
+            ]
+        );
 }
     
 CyberOpsGame.prototype.finishCampaign = function() {
@@ -295,6 +336,7 @@ CyberOpsGame.prototype.backToMainMenu = function() {
         document.getElementById('creditsScreen').style.display = 'none';
         document.getElementById('endScreen').style.display = 'none';
         document.getElementById('gameHUD').style.display = 'none';
+        document.getElementById('syndicateHub').style.display = 'none';  // Hide hub
         document.getElementById('intermissionDialog').classList.remove('show');
         document.getElementById('hudDialog').classList.remove('show');
         document.getElementById('missionSelectDialog').classList.remove('show');
