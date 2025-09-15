@@ -13,7 +13,8 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 ### JavaScript Modules (js/ directory)
 - **game-core.js**: Core constructor and initialization
 - **game-events.js**: Event handlers and input management
-- **game-maps.js**: Map generation functions
+- **game-maps.js**: Map generation functions (procedural)
+- **game-maps-data.js**: Declarative map definitions (JSON format)
 - **game-flow.js**: Game flow, missions, and abilities
 - **game-saveload.js**: Save/load system
 - **game-hub.js**: Syndicate hub management
@@ -27,6 +28,9 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-utils.js**: Utility functions and getters/setters
 - **game-keyboard.js**: Centralized keyboard handling system
 - **game-npc.js**: NPC system with dialog, quests, and interactions
+- **game-missions-data.js**: Declarative mission definitions (all 5 missions)
+- **game-mission-executor.js**: Generic mission execution engine
+- **game-mission-integration.js**: Bridges new system with existing code
 - **game-init.js**: Game instantiation and initialization
 
 ### Other Files
@@ -37,7 +41,7 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 ### Key Systems in CyberOpsGame Class
 
 - **Screen Management**: splash, menu, hub, briefing, loadout, game, victory, defeat screens
-- **Mission System**: Campaign with multiple missions, objectives, enemy spawning
+- **Mission System**: Declarative JSON-based missions with dynamic objectives and extraction
 - **Combat System**: Isometric tactical combat with agents, enemies, projectiles, line-of-sight
 - **3D Mode**: Optional Three.js-based 3D view with multiple camera modes, includes NPC rendering
 - **Audio System**: Dynamic music system with level-specific tracks and credits music
@@ -46,6 +50,8 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **NPC System**: Interactive NPCs with dialog trees, quest system, context-sensitive actions
 - **Game Speed**: Adjustable game speed (1x/2x/4x) with auto-slowdown near enemies
 - **Keyboard System**: Centralized keyboard handling with customizable bindings
+- **Interaction System**: Universal H key for terminals, explosives, switches, gates, NPCs
+- **Objective Tracking**: Real-time mission progress with extraction point activation
 
 ## Running the Game
 
@@ -118,6 +124,42 @@ python -m http.server 8000
 - **Quest HUD**: Active quests displayed on-screen during gameplay
 - **Health Bars**: Fixed display for dead agents and text wrapping
 
+## Mission System Architecture
+
+### Declarative Mission Design
+The game uses a comprehensive JSON-based mission system that separates data from logic:
+
+- **MISSION_DEFINITIONS**: Array of mission objects with objectives, enemies, rewards
+- **OBJECTIVE_TYPES**: Interact, Eliminate, Collect, Reach, Survive, Custom
+- **INTERACTION_TARGETS**: Terminal, Explosive, Switch, Gate, Door, NPC
+
+### Mission Flow
+1. Mission loads from JSON definition
+2. Map generates from declarative data (preserving original layouts)
+3. Objectives tracked via `missionTrackers` counters
+4. Extraction enables when all required objectives complete
+5. Mission completes when agents reach extraction point
+
+### Special Interactions
+All interactions use the H key with context-sensitive behavior:
+- **Terminals**: Hack to unlock doors or complete objectives
+- **Explosives**: Plant bombs at designated targets (Mission 3)
+- **Switches**: Activate to disable alarms or systems
+- **Gates**: Breach fortified entrances (Mission 5)
+- **NPCs**: Engage in dialog and receive quests
+
+### Mission Integration
+- `game-mission-executor.js`: Generic objective checking, no hardcoded logic
+- `game-mission-integration.js`: Bridges new system with legacy code
+- `useActionAbility()`: Universal interaction handler
+- Fallback system allows interactions even when not mission objectives
+
+### Map System
+- **Procedural Generation**: Original maps in `game-maps.js`
+- **Declarative Maps**: JSON definitions in `game-maps-data.js`
+- **100% Position Preservation**: All spawn points, terminals, extraction points exact
+- **Map Dimensions**: Corporate (80x80), Government (90x70), Industrial (100x80), etc.
+
 ## Development Best Practices
 
 ### Module Pattern
@@ -139,3 +181,25 @@ python -m http.server 8000
 - Console logging for major events with emojis for easy identification
 - Debug flags for pathfinding, vision cones, etc.
 - Comprehensive error messages with context
+- Check console for mission system initialization messages
+
+## Common Issues and Solutions
+
+### Mission System Issues
+- **Extraction Not Working**: Check if `extractionEnabled = true` when objectives complete
+- **Objectives Not Tracking**: Verify `missionTrackers.enemiesEliminated` increments
+- **H Key Not Working**: Ensure `useActionAbility()` exists and checks all interaction types
+- **Mission Not Loading**: Check console for "Setting currentMissionDef" message
+
+### Integration Checks
+- **Script Order**: Maps data → Missions data → Executor → Integration
+- **Constants**: OBJECTIVE_TYPES and INTERACTION_TARGETS must be defined
+- **Initialization**: `initMissions()` called during game startup
+- **Game Loop**: `updateMissionObjectives()` runs every frame
+
+### Mission Specifics
+- **Mission 1**: Eliminate 8 enemies, extraction at (78, 2)
+- **Mission 2**: Hack 3 terminals for main objective
+- **Mission 3**: Plant explosives, survive 60 seconds
+- **Mission 4**: Eliminate targets without witnesses
+- **Mission 5**: Breach gates, control sectors, capture mainframe
