@@ -45,6 +45,7 @@ function NPC(config) {
 
     // Quest state
     this.questsGiven = new Set();
+    this.questsCompleted = new Set();
     this.dialogState = 'initial'; // initial, quest_given, quest_complete, final
 }
 
@@ -256,6 +257,9 @@ NPC.prototype.giveQuest = function(quest, game) {
                     text: "I'll do it",
                     action: () => {
                         game.addNotification(`📜 New Quest: ${quest.name}`);
+                        if (game.logEvent) {
+                            game.logEvent(`Quest accepted: ${quest.name} from ${this.name}`, 'quest', true);
+                        }
                         this.endDialog(game);
                     }
                 },
@@ -272,6 +276,8 @@ NPC.prototype.giveQuest = function(quest, game) {
 NPC.prototype.completeQuest = function(quest, game) {
         game.completedQuests.add(quest.id);
         quest.active = false;
+        quest.completed = true;
+        quest.rewardClaimed = true;
 
         // Give rewards
         if (quest.rewards) {
@@ -506,6 +512,12 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
                                         game.addNotification(`💰 +${quest.rewards.credits} credits`);
                                         game.addNotification(`🔬 +${quest.rewards.researchPoints} research points`);
 
+                                        // Log quest completion
+                                        if (game.logEvent) {
+                                            game.logEvent(`Quest completed: ${quest.name}`, 'quest', true);
+                                            game.logEvent(`Rewards: ${quest.rewards.credits} credits, ${quest.rewards.researchPoints} RP`, 'reward');
+                                        }
+
                                         // Mark quest as completed
                                         if (!game.completedQuests) game.completedQuests = new Set();
                                         game.completedQuests.add(quest.id);
@@ -673,6 +685,23 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
                                     choices: [
                                         { text: "Thanks for the tip", action: () => {
                                             game.addNotification("🗺️ Secret passage location marked!");
+                                            // Open a secret passage in the east wing (around x:35, y:15)
+                                            if (game.map && game.map.tiles) {
+                                                // Clear a small area to create a passage
+                                                for (let x = 34; x <= 36; x++) {
+                                                    for (let y = 14; y <= 16; y++) {
+                                                        if (game.map.tiles[y] && game.map.tiles[y][x] !== undefined) {
+                                                            game.map.tiles[y][x] = 0; // Make walkable
+                                                        }
+                                                    }
+                                                }
+                                                game.addNotification("💡 A hidden passage opens in the east wing!");
+
+                                                // Add to event log
+                                                if (game.logEvent) {
+                                                    game.logEvent("Maintenance Worker revealed a secret passage in the east wing", 'npc', true);
+                                                }
+                                            }
                                             this.endDialog(game);
                                         }}
                                     ]
@@ -1296,6 +1325,55 @@ CyberOpsGame.prototype.typeText = function(text, callback) {
 CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
     if (!obj) return false;
 
+    // Handle new objective format from MISSION_DEFINITIONS
+    if (typeof OBJECTIVE_TYPES !== 'undefined') {
+        switch(obj.type) {
+            case OBJECTIVE_TYPES.INTERACT:
+                if (obj.tracker && this.missionTrackers) {
+                    const current = this.missionTrackers[obj.tracker] || 0;
+                    const required = obj.count || 1;
+                    return current >= required;
+                }
+                return false;
+
+            case OBJECTIVE_TYPES.ELIMINATE:
+                if (obj.tracker && this.missionTrackers) {
+                    const current = this.missionTrackers[obj.tracker] || 0;
+                    const required = obj.count || 1;
+                    return current >= required;
+                }
+                if (obj.target === 'all') {
+                    return (this.missionTrackers.enemiesEliminated || 0) >= (obj.count || 1);
+                }
+                return false;
+
+            case OBJECTIVE_TYPES.REACH:
+                if (obj.target === 'extraction') {
+                    return this.missionComplete || false;
+                }
+                return false;
+
+            case OBJECTIVE_TYPES.SURVIVE:
+                const survivalTime = obj.duration || obj.time || 0;
+                return this.missionTimer >= survivalTime;
+
+            case OBJECTIVE_TYPES.COLLECT:
+                if (obj.tracker && this.missionTrackers) {
+                    const current = this.missionTrackers[obj.tracker] || 0;
+                    const required = obj.count || 1;
+                    return current >= required;
+                }
+                return false;
+
+            case OBJECTIVE_TYPES.CUSTOM:
+                if (obj.checkFunction && this[obj.checkFunction]) {
+                    return this[obj.checkFunction](obj);
+                }
+                return false;
+        }
+    }
+
+    // Handle old objective format (fallback)
     switch(obj.type) {
         case 'hack_all':
         case 'hack':

@@ -1,117 +1,149 @@
 CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         // Hide game HUD
         document.getElementById('gameHUD').style.display = 'none';
-        
+
         // Update dialog title and message
         const title = victory ? 'MISSION COMPLETE' : 'MISSION FAILED';
         const statusIcon = victory ? '✅' : '❌';
         const statusText = victory ? 'MISSION ACCOMPLISHED' : 'MISSION FAILED';
         const statusColor = victory ? '#00ff00' : '#ff0000';
-        
+
         document.getElementById('intermissionTitle').textContent = title;
         document.querySelector('.status-icon').textContent = statusIcon;
         document.querySelector('.status-text').textContent = statusText;
         document.querySelector('.status-text').style.color = statusColor;
         document.querySelector('.status-text').style.textShadow = `0 0 10px ${statusColor}`;
-        
+
         // Update mission statistics
         document.getElementById('intermissionTime').textContent = document.getElementById('missionTimer').textContent;
         document.getElementById('intermissionEnemies').textContent =
             this.enemies.filter(e => !e.alive).length + '/' + this.enemies.length;
 
-        // Count completed objectives from objectiveStatus
-        let completedObj = 0;
-        let objectiveDetails = [];
+        // Gather comprehensive mission data
+        const missionSummary = this.gatherMissionSummary(victory);
 
-        if (this.objectiveStatus) {
-            for (let objective in this.objectiveStatus) {
-                const completed = this.objectiveStatus[objective];
-                completedObj += completed ? 1 : 0;
-                objectiveDetails.push({
-                    name: objective,
-                    completed: completed
-                });
-            }
-        } else {
-            // Fallback for missions without proper tracking
-            if (victory) completedObj = this.currentMission.objectives.length;
-            this.currentMission.objectives.forEach(obj => {
-                objectiveDetails.push({
-                    name: obj,
-                    completed: victory
-                });
-            });
-        }
-
+        // Display main objectives count
         document.getElementById('intermissionObjectives').textContent =
-            `${completedObj}/${this.currentMission.objectives.length}`;
+            `${missionSummary.completedMainObjectives}/${missionSummary.totalMainObjectives}`;
         document.getElementById('intermissionSquad').textContent =
             `${this.agents.filter(a => a.alive).length}/${this.agents.length} Survived`;
 
-        // Update intel statistics
-        const intelCollected = this.intelThisMission || 0;
-        const researchPointsFromIntel = this.researchPointsThisMission || 0;
-        const researchPointsFromMission = victory && this.currentMission.rewards ?
-            (this.currentMission.rewards.researchPoints || 0) : 0;
-        const totalResearchEarned = researchPointsFromIntel + researchPointsFromMission;
-        const creditsEarned = this.creditsThisMission || 0;
-
+        // Update intel and rewards statistics
         document.getElementById('intermissionIntel').textContent =
-            `${intelCollected} document${intelCollected !== 1 ? 's' : ''}`;
+            `${missionSummary.intelCollected} document${missionSummary.intelCollected !== 1 ? 's' : ''}`;
         document.getElementById('intermissionResearch').textContent =
-            `+${totalResearchEarned} (${researchPointsFromIntel} from intel)`;
+            `+${missionSummary.totalResearchPoints} RP`;
 
         // Add detailed breakdown after the basic stats
         const statsContainer = document.querySelector('.intermission-stats');
 
-        // Add objectives breakdown
-        if (objectiveDetails.length > 0) {
-            let objectivesSection = document.getElementById('objectivesBreakdown');
-            if (!objectivesSection) {
-                objectivesSection = document.createElement('div');
-                objectivesSection.id = 'objectivesBreakdown';
-                objectivesSection.className = 'stat-section';
-                objectivesSection.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);';
-                statsContainer.appendChild(objectivesSection);
-            }
+        // Clear existing breakdown sections
+        ['objectivesBreakdown', 'questsBreakdown', 'rewardsBreakdown', 'itemsBreakdown', 'newAgentsNotice'].forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem) elem.remove();
+        });
 
-            objectivesSection.innerHTML = '<div style="color: #00ffff; margin-bottom: 8px; font-weight: bold;">OBJECTIVES:</div>';
-            objectiveDetails.forEach(obj => {
-                const icon = obj.completed ? '✅' : '❌';
-                const color = obj.completed ? '#00ff00' : '#ff6666';
-                objectivesSection.innerHTML += `
+        // Add main objectives breakdown
+        if (missionSummary.mainObjectives.length > 0) {
+            const objectivesSection = document.createElement('div');
+            objectivesSection.id = 'objectivesBreakdown';
+            objectivesSection.className = 'stat-section';
+            objectivesSection.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);';
+
+            let html = '<div style="color: #00ffff; margin-bottom: 8px; font-weight: bold;">PRIMARY OBJECTIVES:</div>';
+            missionSummary.mainObjectives.forEach(obj => {
+                const icon = obj.completed ? '✅' : obj.required ? '❌' : '⭕';
+                const color = obj.completed ? '#00ff00' : obj.required ? '#ff6666' : '#ffaa00';
+                html += `
                     <div style="margin-left: 15px; color: ${color}; font-size: 0.9em;">
-                        ${icon} ${obj.name}
+                        ${icon} ${obj.description || obj.name}
+                        ${obj.progress ? ` (${obj.progress})` : ''}
                     </div>`;
             });
+            objectivesSection.innerHTML = html;
+            statsContainer.appendChild(objectivesSection);
+        }
+
+        // Add side quests breakdown
+        if (missionSummary.sideQuests.length > 0) {
+            const questsSection = document.createElement('div');
+            questsSection.id = 'questsBreakdown';
+            questsSection.className = 'stat-section';
+            questsSection.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);';
+
+            let html = '<div style="color: #ff00ff; margin-bottom: 8px; font-weight: bold;">SIDE QUESTS:</div>';
+            missionSummary.sideQuests.forEach(quest => {
+                let icon, color, status;
+                if (!quest.discovered) {
+                    // Undiscovered quest - show greyed out
+                    icon = '❓';
+                    color = '#666666';
+                    status = 'Not discovered';
+                } else if (quest.completed && quest.rewardClaimed) {
+                    icon = '✅';
+                    color = '#00ff00';
+                    status = 'Completed';
+                } else if (quest.completed && !quest.rewardClaimed) {
+                    icon = '🎁';
+                    color = '#ffd700';
+                    status = 'Ready to claim';
+                } else if (quest.failed) {
+                    icon = '❌';
+                    color = '#ff6666';
+                    status = 'Failed';
+                } else {
+                    icon = '🔄';
+                    color = '#ffff00';
+                    status = 'In progress';
+                }
+
+                html += `
+                    <div style="margin-left: 15px; color: ${color}; font-size: 0.9em; ${!quest.discovered ? 'opacity: 0.5;' : ''}">
+                        ${icon} ${quest.discovered ? quest.name : '???'} - ${status}
+                        ${quest.discovered && quest.reward ? ` (Reward: ${quest.reward})` : ''}
+                    </div>`;
+            });
+            questsSection.innerHTML = html;
+            statsContainer.appendChild(questsSection);
+        }
+
+        // Add rewards breakdown
+        if (missionSummary.rewards.length > 0) {
+            const rewardsSection = document.createElement('div');
+            rewardsSection.id = 'rewardsBreakdown';
+            rewardsSection.className = 'stat-section';
+            rewardsSection.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 5px;';
+
+            let html = '<div style="color: #ffd700; margin-bottom: 8px; font-weight: bold;">REWARDS EARNED:</div>';
+            missionSummary.rewards.forEach(reward => {
+                html += `
+                    <div style="margin-left: 15px; color: #ffff00; font-size: 0.9em;">
+                        ${reward.icon} ${reward.description}
+                    </div>`;
+            });
+            rewardsSection.innerHTML = html;
+            statsContainer.appendChild(rewardsSection);
         }
 
         // Add new agents notification for victory
         if (victory && !this.completedMissions.includes(this.currentMission.id)) {
-            let newAgentsSection = document.getElementById('newAgentsNotice');
-            if (!newAgentsSection) {
-                newAgentsSection = document.createElement('div');
-                newAgentsSection.id = 'newAgentsNotice';
-                newAgentsSection.className = 'stat-section';
-                newAgentsSection.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(0,255,0,0.1); border: 1px solid rgba(0,255,0,0.3); border-radius: 5px;';
-                statsContainer.appendChild(newAgentsSection);
-            }
+            const newAgentsSection = document.createElement('div');
+            newAgentsSection.id = 'newAgentsNotice';
+            newAgentsSection.className = 'stat-section';
+            newAgentsSection.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(0,255,0,0.1); border: 1px solid rgba(0,255,0,0.3); border-radius: 5px;';
             newAgentsSection.innerHTML = `
                 <div style="color: #00ff00; font-weight: bold; text-align: center;">
                     🆕 2 NEW AGENTS AVAILABLE FOR HIRE AT THE HUB!
                 </div>`;
+            statsContainer.appendChild(newAgentsSection);
         }
 
         // Add items collected breakdown
-        if (this.itemsCollectedThisMission) {
-            let itemsSection = document.getElementById('itemsBreakdown');
-            if (!itemsSection) {
-                itemsSection = document.createElement('div');
-                itemsSection.id = 'itemsBreakdown';
-                itemsSection.className = 'stat-section';
-                itemsSection.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);';
-                statsContainer.appendChild(itemsSection);
-            }
+        if (missionSummary.itemsCollected && Object.keys(missionSummary.itemsCollected).length > 0) {
+            const itemsSection = document.createElement('div');
+            itemsSection.id = 'itemsBreakdown';
+            itemsSection.className = 'stat-section';
+            itemsSection.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);';
 
             const itemIcons = {
                 intel: '📄',
@@ -123,11 +155,11 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
                 keycard: '🗝️'
             };
 
-            let hasItems = false;
             let itemsHTML = '<div style="color: #ffa500; margin-bottom: 8px; font-weight: bold;">ITEMS COLLECTED:</div>';
+            let hasItems = false;
 
-            for (let itemType in this.itemsCollectedThisMission) {
-                const count = this.itemsCollectedThisMission[itemType];
+            for (let itemType in missionSummary.itemsCollected) {
+                const count = missionSummary.itemsCollected[itemType];
                 if (count > 0) {
                     hasItems = true;
                     itemsHTML += `
@@ -139,8 +171,7 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
 
             if (hasItems) {
                 itemsSection.innerHTML = itemsHTML;
-            } else {
-                itemsSection.innerHTML = '<div style="color: #666; font-size: 0.9em;">No items collected</div>';
+                statsContainer.appendChild(itemsSection);
             }
         }
 
@@ -195,7 +226,207 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         // Show the dialog
         document.getElementById('intermissionDialog').classList.add('show');
 }
-    
+
+// Gather comprehensive mission summary data
+CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
+    const summary = {
+        mainObjectives: [],
+        sideQuests: [],
+        rewards: [],
+        itemsCollected: this.itemsCollectedThisMission || {},
+        completedMainObjectives: 0,
+        totalMainObjectives: 0,
+        intelCollected: this.intelThisMission || 0,
+        totalCredits: 0,
+        totalResearchPoints: 0
+    };
+
+    // Gather main objectives from current mission definition
+    if (this.currentMissionDef && this.currentMissionDef.objectives) {
+        summary.totalMainObjectives = this.currentMissionDef.objectives.filter(o => o.required !== false).length;
+
+        this.currentMissionDef.objectives.forEach(obj => {
+            const completed = this.checkObjectiveComplete ? this.checkObjectiveComplete(obj) : false;
+
+            // Build progress string for objectives with counters
+            let progress = '';
+            if (obj.tracker && this.missionTrackers) {
+                const current = this.missionTrackers[obj.tracker] || 0;
+                const required = obj.count || 1;
+                progress = `${current}/${required}`;
+            }
+
+            summary.mainObjectives.push({
+                name: obj.id,
+                description: obj.description || obj.displayText || obj.id,
+                completed: completed,
+                required: obj.required !== false,
+                progress: progress
+            });
+
+            if (completed && obj.required !== false) {
+                summary.completedMainObjectives++;
+            }
+        });
+    } else if (this.currentMission && this.currentMission.objectives) {
+        // Fallback to old mission format
+        summary.totalMainObjectives = this.currentMission.objectives.length;
+        this.currentMission.objectives.forEach(obj => {
+            const completed = victory;
+            summary.mainObjectives.push({
+                name: obj,
+                description: obj,
+                completed: completed,
+                required: true
+            });
+            if (completed) summary.completedMainObjectives++;
+        });
+    }
+
+    // Gather side quests (both active and potential)
+    // First, add active/completed quests from game.quests
+    if (this.quests) {
+        for (let questId in this.quests) {
+            const quest = this.quests[questId];
+            if (quest.active || quest.completed) {
+                let reward = '';
+                if (quest.rewards) {
+                    const rewards = [];
+                    if (quest.rewards.credits) rewards.push(`${quest.rewards.credits} credits`);
+                    if (quest.rewards.researchPoints) rewards.push(`${quest.rewards.researchPoints} RP`);
+                    reward = rewards.join(', ');
+                }
+
+                summary.sideQuests.push({
+                    name: quest.name || questId,
+                    completed: quest.completed || false,
+                    failed: quest.failed || false,
+                    rewardClaimed: quest.rewardClaimed || false,
+                    discovered: true,
+                    reward: reward
+                });
+            }
+        }
+    }
+
+    // Add undiscovered quests from NPCs (greyed out)
+    if (this.npcs) {
+        this.npcs.forEach(npc => {
+            if (npc.quests) {
+                npc.quests.forEach(quest => {
+                    // Check if this quest is already in our list
+                    const alreadyListed = summary.sideQuests.find(q =>
+                        q.name === quest.name || q.name === quest.id
+                    );
+
+                    // If not listed and not given yet, add as undiscovered
+                    if (!alreadyListed && (!npc.questsGiven || !npc.questsGiven.has(quest.id))) {
+                        let reward = '';
+                        if (quest.rewards) {
+                            const rewards = [];
+                            if (quest.rewards.credits) rewards.push(`${quest.rewards.credits} credits`);
+                            if (quest.rewards.researchPoints) rewards.push(`${quest.rewards.researchPoints} RP`);
+                            reward = rewards.join(', ');
+                        }
+
+                        summary.sideQuests.push({
+                            name: quest.name || quest.id,
+                            completed: false,
+                            failed: false,
+                            rewardClaimed: false,
+                            discovered: false,
+                            reward: reward
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    console.log('📋 Side quests collected:', summary.sideQuests.length, summary.sideQuests);
+
+    // The NPCs quests are already collected above in the two previous sections
+    // No need to add them again here
+
+    // Calculate total rewards
+    const baseCredits = this.creditsThisMission || 0;
+    const baseRP = this.researchPointsThisMission || 0;
+
+    // Add mission rewards if victory
+    if (victory) {
+        if (this.currentMissionDef && this.currentMissionDef.rewards) {
+            summary.totalCredits += this.currentMissionDef.rewards.credits || 0;
+            summary.totalResearchPoints += this.currentMissionDef.rewards.researchPoints || 0;
+        } else if (this.currentMission && this.currentMission.rewards) {
+            summary.totalCredits += this.currentMission.rewards.credits || 0;
+            summary.totalResearchPoints += this.currentMission.rewards.researchPoints || 0;
+        }
+    }
+
+    // Add collected rewards
+    summary.totalCredits += baseCredits;
+    summary.totalResearchPoints += baseRP;
+
+    // Add quest rewards
+    if (this.quests) {
+        for (let questId in this.quests) {
+            const quest = this.quests[questId];
+            if (quest.completed && quest.rewards) {
+                summary.totalCredits += quest.rewards.credits || 0;
+                summary.totalResearchPoints += quest.rewards.researchPoints || 0;
+            }
+        }
+    }
+
+    // Build rewards list
+    if (summary.totalCredits > 0) {
+        summary.rewards.push({
+            icon: '💰',
+            description: `${summary.totalCredits} Credits`
+        });
+    }
+
+    if (summary.totalResearchPoints > 0) {
+        summary.rewards.push({
+            icon: '🔬',
+            description: `${summary.totalResearchPoints} Research Points`
+        });
+    }
+
+    if (summary.intelCollected > 0) {
+        summary.rewards.push({
+            icon: '📄',
+            description: `${summary.intelCollected} Intel Documents`
+        });
+    }
+
+    // Add special rewards
+    if (victory && !this.completedMissions.includes(this.currentMission.id)) {
+        summary.rewards.push({
+            icon: '👥',
+            description: '2 New Agents Available'
+        });
+    }
+
+    // Add item rewards
+    const specialItems = ['keycard', 'explosives', 'armor'];
+    specialItems.forEach(item => {
+        if (summary.itemsCollected[item] && summary.itemsCollected[item] > 0) {
+            const itemIcons = {
+                keycard: '🗝️',
+                explosives: '💣',
+                armor: '🛡️'
+            };
+            summary.rewards.push({
+                icon: itemIcons[item] || '📦',
+                description: `${summary.itemsCollected[item]} ${item}`
+            });
+        }
+    });
+
+    return summary;
+}
+
 CyberOpsGame.prototype.continueToNextMission = function() {
         document.getElementById('intermissionDialog').classList.remove('show');
 

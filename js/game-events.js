@@ -541,6 +541,11 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                             agent.targetX = worldPos.x;
                             agent.targetY = worldPos.y;
                             console.log(`🚶 TAP MOVEMENT: Moving ${agent.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+
+                            // Show coordinates in notification if in debug/pathfinding mode
+                            if (this.showPathfinding || this.debugMode) {
+                                this.addNotification(`📍 Destination: [${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}]`);
+                            }
                         } else {
                             // Squad movement in formation
                             const squadSize = Math.ceil(Math.sqrt(selectedAgents.length));

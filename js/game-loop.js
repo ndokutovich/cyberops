@@ -1089,8 +1089,8 @@ CyberOpsGame.prototype.setGameSpeed = function(speed) {
 };
 
 CyberOpsGame.prototype.cycleGameSpeed = function() {
-    // Cycle through 1x -> 2x -> 4x -> 1x
-    const speeds = [1, 2, 4];
+    // Cycle through 1x -> 2x -> 4x -> 8x -> 16x -> 1x
+    const speeds = [1, 2, 4, 8, 16];
     const currentIndex = speeds.indexOf(this.gameSpeed);
     const nextIndex = (currentIndex + 1) % speeds.length;
     this.setGameSpeed(speeds[nextIndex]);

@@ -398,6 +398,7 @@ CyberOpsGame.prototype.performInteraction = function(agent, targetType, target) 
             if (this.logEvent) {
                 this.logEvent(`${agent.name} hacked terminal at [${target.x}, ${target.y}]`, 'hack', true);
             }
+            this.addNotification('🖥️ Terminal hacked!');
             break;
 
         case INTERACTION_TARGETS.EXPLOSIVE:
@@ -410,6 +411,10 @@ CyberOpsGame.prototype.performInteraction = function(agent, targetType, target) 
                 frame: 0
             });
             if (this.playSound) this.playSound('plant', 0.5);
+            if (this.logEvent) {
+                this.logEvent(`${agent.name} planted explosives at [${target.x}, ${target.y}]`, 'player', true);
+            }
+            this.addNotification('💣 Explosives planted!');
             break;
 
         case INTERACTION_TARGETS.SWITCH:
@@ -418,6 +423,9 @@ CyberOpsGame.prototype.performInteraction = function(agent, targetType, target) 
             if (target.disables === 'alarms') {
                 this.alarmsDisabled = true;
                 this.addNotification('🔇 Alarms disabled!');
+                if (this.logEvent) {
+                    this.logEvent(`${agent.name} disabled the alarm system`, 'player', true);
+                }
             }
             break;
 
@@ -430,6 +438,10 @@ CyberOpsGame.prototype.performInteraction = function(agent, targetType, target) 
                 duration: 80,
                 frame: 0
             });
+            if (this.logEvent) {
+                this.logEvent(`${agent.name} breached gate at [${target.x}, ${target.y}]`, 'player', true);
+            }
+            this.addNotification('🚪 Gate breached!');
             break;
     }
 };
@@ -499,6 +511,9 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
         if (!this.extractionEnabled) {
             this.extractionEnabled = true;
             this.addNotification('📍 Extraction point activated! Get to the extraction!');
+            if (this.logEvent) {
+                this.logEvent('All primary objectives complete - extraction point activated!', 'extraction', true);
+            }
 
             // Update objective display to show extraction
             const tracker = document.getElementById('objectiveTracker');
@@ -579,6 +594,18 @@ CyberOpsGame.prototype.checkMainframeCaptured = function(objective) {
     // Check if all prerequisites are met (handled by triggerAfter)
     // If this function is called, prerequisites are already met
     return true;
+};
+
+CyberOpsGame.prototype.checkNoCivilianCasualties = function(objective) {
+    // Check if any civilians have been killed
+    return (this.civilianCasualties || 0) === 0;
+};
+
+CyberOpsGame.prototype.checkAgentsAlive = function(objective) {
+    // Check if minimum number of agents are still alive
+    const minAgents = objective.minAgents || 2;
+    const aliveAgents = this.agents ? this.agents.filter(a => a.alive).length : 0;
+    return aliveAgents >= minAgents;
 };
 
 // Handle enemy elimination

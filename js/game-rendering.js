@@ -1340,9 +1340,12 @@ CyberOpsGame.prototype.renderSpeedIndicator = function() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(x - 40, y - 15, 80, 30);
 
-    // Border
-    const speedColor = this.gameSpeed === 1 ? '#00ffff' :
-                       this.gameSpeed === 2 ? '#ffff00' : '#ff00ff';
+    // Border - different colors for different speeds
+    const speedColor = this.gameSpeed === 1 ? '#00ffff' :     // Cyan for 1x
+                       this.gameSpeed === 2 ? '#ffff00' :     // Yellow for 2x
+                       this.gameSpeed === 4 ? '#ff00ff' :     // Magenta for 4x
+                       this.gameSpeed === 8 ? '#ff8800' :     // Orange for 8x
+                       '#ff0000';                              // Red for 16x
     ctx.strokeStyle = speedColor;
     ctx.lineWidth = 2;
     ctx.strokeRect(x - 40, y - 15, 80, 30);

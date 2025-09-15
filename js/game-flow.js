@@ -229,6 +229,11 @@ CyberOpsGame.prototype.initMission = function() {
             this.cleanup3D();
         }
 
+        // Log mission start
+        if (this.logEvent && this.currentMission) {
+            this.logEvent(`Mission ${this.currentMission.id}: ${this.currentMission.title} started`, 'mission', true);
+        }
+
         // Reset state
         this.agents = [];
         this.enemies = [];

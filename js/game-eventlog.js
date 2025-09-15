@@ -58,15 +58,23 @@ CyberOpsGame.prototype.getEventColor = function(type) {
     const colors = {
         combat: '#ff4444',      // Red for combat
         enemy: '#ff6666',       // Light red for enemy actions
+        player: '#00ff00',      // Green for player actions
+        npc: '#ff00ff',         // Magenta for NPC interactions
         hack: '#00ffff',        // Cyan for hacking
         item: '#ffaa00',        // Gold for items/loot
-        ability: '#ff00ff',     // Magenta for abilities
+        ability: '#8800ff',     // Purple for abilities
         team: '#00ff00',        // Green for team commands
         command: '#00ff00',     // Green for commands
         success: '#00ff00',     // Green for success
-        warning: '#ffff00',     // Yellow for warnings
+        objective: '#ffff00',   // Yellow for objectives
+        quest: '#ff00ff',       // Magenta for quest updates
+        reward: '#ffd700',      // Gold for rewards
+        extraction: '#00ff00',  // Green for extraction point
+        mission: '#00ffff',     // Cyan for mission updates
+        warning: '#ff8800',     // Orange for warnings
         info: '#ffffff',        // White for info
-        agent: '#00aaff'        // Blue for agent actions
+        agent: '#00aaff',       // Blue for agent actions
+        death: '#ff0000'        // Bright red for deaths
     };
     return colors[type] || colors.info;
 };
