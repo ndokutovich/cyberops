@@ -210,7 +210,7 @@ CyberOpsGame.prototype.generateCorporateMap = function() {
         map.terminals = [
             { x: 15, y: 15, hacked: false, id: 0 },
             { x: 40, y: 40, hacked: false, id: 1 },
-            { x: 65, y: 65, hacked: false, id: 2 }
+            { x: 50, y: 70, hacked: false, id: 2 }
         ];
 
         // Add cover positions throughout the map

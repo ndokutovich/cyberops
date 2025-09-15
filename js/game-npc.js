@@ -334,7 +334,24 @@ Quest.prototype.checkObjective = function(objective, game) {
                 );
                 return dist < 2;
 
+            case 'hack':
+                // Simple hack count check
+                return (game.hackedTerminals || 0) >= (objective.count || 1);
+
             case 'interact':
+                // Check for terminal hacking
+                if (objective.targetId && objective.targetId.includes('terminal')) {
+                    // Check if this specific terminal is hacked
+                    if (game.terminals) {
+                        const terminal = game.terminals.find(t =>
+                            t.id === objective.targetId ||
+                            (t.x === objective.x && t.y === objective.y)
+                        );
+                        return terminal && terminal.hacked;
+                    }
+                    // Fallback: check total hacked terminals
+                    return (game.hackedTerminals || 0) > 0;
+                }
                 return game.npcInteractions && game.npcInteractions.has(objective.npcId);
 
             case 'survive':
@@ -472,9 +489,7 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
                         introDialog: 'The corporation has been exploiting workers. Help me teach them a lesson.',
                         completionDialog: 'Excellent work! Their systems are in chaos.',
                         objectives: [
-                            { id: 'hack1', type: 'interact', description: 'Hack terminal 1', targetId: 'terminal_1' },
-                            { id: 'hack2', type: 'interact', description: 'Hack terminal 2', targetId: 'terminal_2' },
-                            { id: 'hack3', type: 'interact', description: 'Hack terminal 3', targetId: 'terminal_3' }
+                            { id: 'hack_all', type: 'hack', count: 3, description: 'Hack 3 terminals' }
                         ],
                         rewards: { credits: 500, researchPoints: 50 }
                     })
@@ -778,9 +793,13 @@ CyberOpsGame.prototype.interactWithNPC = function(agent, npc) {
 
     // Always add a goodbye option at the end
     if (!allChoices.find(c => c.text === "Goodbye" || c.text === "Leave")) {
+        const game = this;  // Capture game reference
         allChoices.push({
             text: "Goodbye",
-            action: () => this.endDialog(this)
+            action: function() {
+                // Use npc.endDialog with proper context
+                npc.endDialog(game);
+            }
         });
     }
 
@@ -812,9 +831,9 @@ CyberOpsGame.prototype.getContextualChoices = function(agent, npc) {
             if (dist <= 3 && !terminal.hacked) {
                 choices.push({
                     text: "🖥️ Hack the nearby terminal",
-                    action: (game) => {
+                    action: function(game) {
                         // Close dialog first
-                        this.closeDialog();
+                        game.closeDialog();
 
                         // Move agent to terminal and hack it
                         agent.targetX = terminal.x;
@@ -843,9 +862,9 @@ CyberOpsGame.prototype.getContextualChoices = function(agent, npc) {
             if (dist <= 3 && !target.destroyed) {
                 choices.push({
                     text: "💣 Plant bomb on nearby target",
-                    action: (game) => {
+                    action: function(game) {
                         // Close dialog first
-                        this.closeDialog();
+                        game.closeDialog();
 
                         // Move agent to target and plant bomb
                         agent.targetX = target.x;
@@ -881,7 +900,7 @@ CyberOpsGame.prototype.getContextualChoices = function(agent, npc) {
         if (nearbyEnemies > 0) {
             choices.push({
                 text: `⚠️ Ask about the ${nearbyEnemies} guard${nearbyEnemies > 1 ? 's' : ''} nearby`,
-                action: (game) => {
+                action: function(game) {
                     game.showDialog({
                         npc: npc,
                         text: nearbyEnemies > 1 ?
@@ -890,9 +909,9 @@ CyberOpsGame.prototype.getContextualChoices = function(agent, npc) {
                         choices: [
                             {
                                 text: "Thanks for the warning",
-                                action: () => {
+                                action: function(game) {
                                     // Go back to main dialog
-                                    this.interactWithNPC(agent, npc);
+                                    game.interactWithNPC(agent, npc);
                                 }
                             }
                         ]
@@ -943,8 +962,8 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
                 <div style="color: #00ffff; font-weight: bold; margin-bottom: 10px; font-size: 18px;">
                     ${dialogData.npc.name}
                 </div>
-                <div id="dialogText" style="color: #fff; min-height: 60px; font-size: 16px; line-height: 1.5;">
-                    <span class="typing-text"></span><span class="cursor">_</span>
+                <div id="dialogText" style="color: #ffffff !important; min-height: 60px; font-size: 16px; line-height: 1.5; width: 100%; word-wrap: break-word; white-space: pre-wrap;">
+                    <span class="typing-text" style="display: inline; white-space: pre-wrap; word-wrap: break-word; color: #ffffff !important;"></span><span class="cursor" style="display: inline; color: #ffffff;">_</span>
                 </div>
             </div>
         </div>
@@ -1004,21 +1023,23 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
     // Type out the text with effect - use setTimeout to ensure DOM is updated
     console.log('Dialog text to display:', dialogData.text);
     if (dialogData.text) {
-        // Use requestAnimationFrame to ensure DOM is ready
+        // TEMPORARY: Skip typing effect and just show text directly to debug visibility
         requestAnimationFrame(() => {
-            // Double-check element exists
-            const textElement = document.querySelector('.typing-text');
-            if (textElement) {
-                this.typeText(dialogData.text, () => {
-                    // Choices are already visible, no need to show them
-                });
-            } else {
-                // Fallback: Just set the text directly
-                console.warn('⚠️ typing-text element not found, using fallback');
-                const dialogTextDiv = document.getElementById('dialogText');
-                if (dialogTextDiv) {
-                    dialogTextDiv.innerHTML = dialogData.text + '<span class="cursor">_</span>';
+            const dialogTextDiv = document.getElementById('dialogText');
+            if (dialogTextDiv) {
+                // Set text directly with forced white color
+                dialogTextDiv.innerHTML = `<span style="color: white !important; font-size: 16px !important; display: inline !important;">${dialogData.text}</span><span class="cursor" style="color: white;">_</span>`;
+                console.log('✅ Text set directly in dialog div');
+
+                // Also try typing effect
+                const textElement = document.querySelector('.typing-text');
+                if (textElement && false) { // Disabled for now
+                    this.typeText(dialogData.text, () => {
+                        // Choices are already visible, no need to show them
+                    });
                 }
+            } else {
+                console.error('❌ Could not find dialogText div!');
             }
         });
     } else {
@@ -1049,6 +1070,32 @@ CyberOpsGame.prototype.typeText = function(text, callback) {
     console.log('✓ Found typing-text element, typing:', text);
     console.log('  Element initial content:', textElement.textContent);
 
+    // Check computed styles to see what's wrong
+    const computedStyle = window.getComputedStyle(textElement);
+    console.log('  Computed styles:', {
+        color: computedStyle.color,
+        backgroundColor: computedStyle.backgroundColor,
+        fontSize: computedStyle.fontSize,
+        display: computedStyle.display,
+        visibility: computedStyle.visibility,
+        opacity: computedStyle.opacity,
+        width: computedStyle.width,
+        height: computedStyle.height,
+        overflow: computedStyle.overflow,
+        position: computedStyle.position,
+        zIndex: computedStyle.zIndex
+    });
+
+    // Make sure element has proper display style and is visible
+    textElement.style.display = 'inline';
+    textElement.style.whiteSpace = 'pre-wrap';
+    textElement.style.wordWrap = 'break-word';
+    textElement.style.width = 'auto';
+    textElement.style.color = '#ffffff';  // Force white color
+    textElement.style.fontSize = '16px';
+    textElement.style.visibility = 'visible';
+    textElement.style.opacity = '1';
+
     // Clear any existing intervals to prevent conflicts
     if (this.currentTypeInterval) {
         clearInterval(this.currentTypeInterval);
@@ -1076,6 +1123,19 @@ CyberOpsGame.prototype.typeText = function(text, callback) {
             clearInterval(this.currentTypeInterval);
             this.currentTypeInterval = null;
             console.log('✓ Typing complete, final text:', textElement.textContent);
+
+            // Final check - what's actually in the DOM?
+            const dialogTextDiv = document.getElementById('dialogText');
+            console.log('  Final DOM check:');
+            console.log('    - Dialog div innerHTML:', dialogTextDiv ? dialogTextDiv.innerHTML : 'NOT FOUND');
+            console.log('    - Text element content:', textElement.textContent);
+            console.log('    - Text element innerHTML:', textElement.innerHTML);
+            console.log('    - Parent computed color:', window.getComputedStyle(dialogTextDiv).color);
+            console.log('    - Text element computed color:', window.getComputedStyle(textElement).color);
+
+            // Try to force visibility one more time
+            textElement.style.cssText = 'color: #ffffff !important; font-size: 16px !important; display: inline !important; visibility: visible !important; opacity: 1 !important;';
+
             if (callback) callback();
         }
     }, 30); // Typing speed
