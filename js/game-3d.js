@@ -377,10 +377,13 @@ CyberOpsGame.prototype.create3DWorld = function() {
         
         // Create agents
         this.createAgents3D();
-        
+
         // Create enemies
         this.createEnemies3D();
-        
+
+        // Create NPCs
+        this.createNPCs3D();
+
         // Create terminals and objectives
         this.createObjectives3D();
 
@@ -651,6 +654,62 @@ CyberOpsGame.prototype.createAgents3D = function() {
         });
 }
     
+CyberOpsGame.prototype.createNPCs3D = function() {
+    // Clear existing NPC meshes
+    if (!this.world3D.npcs) this.world3D.npcs = [];
+
+    // Remove old NPC meshes from scene
+    this.world3D.npcs.forEach(mesh => {
+        this.scene3D.remove(mesh);
+    });
+    this.world3D.npcs = [];
+
+    // Create NPC meshes
+    if (this.npcs) {
+        this.npcs.forEach((npc, index) => {
+            // Create NPC geometry - use a different shape/color to distinguish from agents/enemies
+            const geometry = THREE.CapsuleGeometry ?
+                new THREE.CapsuleGeometry(0.3, 1.5, 4, 8) :
+                new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+
+            // Use NPC's color or default to green
+            const npcColor = npc.color || '#00ff00';
+            const material = new THREE.MeshLambertMaterial({
+                color: npcColor,
+                emissive: npcColor,
+                emissiveIntensity: 0.2
+            });
+
+            const npcMesh = new THREE.Mesh(geometry, material);
+            npcMesh.position.set(
+                (npc.x - (this.map.tiles[0].length / 2)) * 2,
+                1,
+                (npc.y - (this.map.tiles.length / 2)) * 2
+            );
+            npcMesh.castShadow = true;
+
+            // Add NPC data
+            npcMesh.userData = { type: 'npc', index: index, npc: npc };
+
+            // Add a floating indicator above NPC
+            const indicatorGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+            const indicatorMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                emissive: 0x00ffff,
+                emissiveIntensity: 1
+            });
+            const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+            indicator.position.set(0, 2, 0);
+            npcMesh.add(indicator);
+
+            this.scene3D.add(npcMesh);
+            this.world3D.npcs.push(npcMesh);
+        });
+    }
+
+    console.log(`👥 Created ${this.world3D.npcs ? this.world3D.npcs.length : 0} NPC meshes in 3D`);
+};
+
 CyberOpsGame.prototype.createEnemies3D = function() {
         // Clear existing enemy meshes
         this.world3D.enemies = [];
@@ -1791,8 +1850,48 @@ CyberOpsGame.prototype.sync3DTo2D = function() {
                 }
             }
         });
+
+        // Update NPC positions in 3D based on 2D logic
+        if (this.npcs && this.world3D.npcs) {
+            this.npcs.forEach((npc, index) => {
+                const npcMesh = this.world3D.npcs[index];
+                if (npcMesh && npc.alive) {
+                    // Update position
+                    npcMesh.position.set(
+                        (npc.x - this.map.tiles[0].length / 2) * 2,
+                        1,
+                        (npc.y - this.map.tiles.length / 2) * 2
+                    );
+
+                    // Update rotation based on facing angle
+                    if (npc.facingAngle !== undefined) {
+                        npcMesh.rotation.y = -npc.facingAngle + Math.PI / 2;
+                    }
+
+                    // Update visibility
+                    npcMesh.visible = npc.alive;
+
+                    // Make the indicator pulse when near player
+                    const agent = this._selectedAgent;
+                    if (agent && npcMesh.children[0]) {
+                        const dist = Math.sqrt(
+                            Math.pow(npc.x - agent.x, 2) +
+                            Math.pow(npc.y - agent.y, 2)
+                        );
+
+                        // Pulse the indicator if within interaction range
+                        if (dist <= this.npcInteractionRange) {
+                            const pulse = Math.sin(Date.now() * 0.005) * 0.5 + 0.5;
+                            npcMesh.children[0].material.emissiveIntensity = pulse;
+                        } else {
+                            npcMesh.children[0].material.emissiveIntensity = 0.2;
+                        }
+                    }
+                }
+            });
+        }
 }
-    
+
 CyberOpsGame.prototype.render3D = function() {
         if (!this.renderer3D || !this.scene3D || !this.camera3D) return;
 

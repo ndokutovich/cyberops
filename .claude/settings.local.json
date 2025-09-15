@@ -16,7 +16,9 @@
       "Bash(do grep -c \"init3D\" \"$f\")",
       "Bash(for func in \"constructor\" \"init\" \"gameLoop\" \"render\" \"init3D\" \"showSyndicateHub\" \"saveGame\" \"loadGame\")",
       "Bash(do echo -n \"$func: Original=\")",
-      "Bash(start cyberops-game.html)"
+      "Bash(start cyberops-game.html)",
+      "Bash(dir:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

@@ -213,6 +213,11 @@ CyberOpsGame.prototype.render = function() {
             this.renderNPCs(ctx);
         }
 
+        // Render quest HUD (only if function exists)
+        if (this.renderQuestHUD) {
+            this.renderQuestHUD(ctx);
+        }
+
         this.agents.forEach(agent => {
             if (agent.alive) {
                 // Render path if exists (for debugging)
@@ -1124,7 +1129,7 @@ CyberOpsGame.prototype.renderMinimap = function() {
 
                 // Debug: log angle for selected agent
                 if (agent.selected && Math.random() < 0.05) {
-                    console.log(`Rendering vision cone for ${agent.name}, angle: ${(angle * 180 / Math.PI).toFixed(0)}°`);
+                    // Removed debug logging for vision cone
                 }
 
                 mctx.rotate(angle);

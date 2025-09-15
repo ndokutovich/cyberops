@@ -225,6 +225,57 @@ CyberOpsGame.prototype.update = function() {
                 }
             }
 
+            // Check for auto-hack when agent reaches terminal
+            if (agent.autoHackTarget) {
+                const hackDist = Math.sqrt(
+                    Math.pow(agent.autoHackTarget.x - agent.x, 2) +
+                    Math.pow(agent.autoHackTarget.y - agent.y, 2)
+                );
+
+                if (hackDist <= 1.5) {
+                    // Reached terminal, hack it
+                    if (!agent.autoHackTarget.hacked) {
+                        agent.autoHackTarget.hacked = true;
+                        this.hackedTerminals++;
+                        this.addNotification("🖥️ Terminal hacked!");
+
+                        // Play hack sound if available
+                        if (this.playSound) {
+                            this.playSound('hack');
+                        }
+                    }
+                    agent.autoHackTarget = null; // Clear auto-hack flag
+                }
+            }
+
+            // Check for auto-bomb when agent reaches explosive target
+            if (agent.autoBombTarget) {
+                const bombDist = Math.sqrt(
+                    Math.pow(agent.autoBombTarget.x - agent.x, 2) +
+                    Math.pow(agent.autoBombTarget.y - agent.y, 2)
+                );
+
+                if (bombDist <= 1.5) {
+                    // Reached target, plant bomb
+                    if (!agent.autoBombTarget.destroyed) {
+                        agent.autoBombTarget.destroyed = true;
+                        this.destroyedTargets = (this.destroyedTargets || 0) + 1;
+                        this.addNotification("💣 Explosive planted!");
+
+                        // Play bomb sound if available
+                        if (this.playSound) {
+                            this.playSound('explosion');
+                        }
+
+                        // Create explosion effect
+                        if (this.createExplosion) {
+                            this.createExplosion(agent.autoBombTarget.x, agent.autoBombTarget.y);
+                        }
+                    }
+                    agent.autoBombTarget = null; // Clear auto-bomb flag
+                }
+            }
+
             const dx = agent.targetX - agent.x;
             const dy = agent.targetY - agent.y;
             const dist = Math.sqrt(dx * dx + dy * dy);

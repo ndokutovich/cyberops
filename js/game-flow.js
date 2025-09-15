@@ -237,10 +237,16 @@ CyberOpsGame.prototype.initMission = function() {
 
         // Initialize NPC system (only if functions exist)
         if (this.initNPCSystem) {
+            console.log('🎮 Initializing NPC system...');
             this.initNPCSystem();
+        } else {
+            console.warn('⚠️ NPC system not loaded - initNPCSystem not found');
         }
         if (this.spawnNPCs) {
+            console.log('🎮 Spawning NPCs for mission...');
             this.spawnNPCs();
+        } else {
+            console.warn('⚠️ NPC system not loaded - spawnNPCs not found');
         }
 
         // Reset mission tracking

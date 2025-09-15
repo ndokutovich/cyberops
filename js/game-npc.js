@@ -3,6 +3,8 @@
  * Handles neutral NPCs, dialog interactions, and quest management
  */
 
+console.log('🚀 Loading NPC system file...');
+
 // Initialize NPC system
 CyberOpsGame.prototype.initNPCSystem = function() {
     this.npcs = [];
@@ -10,71 +12,89 @@ CyberOpsGame.prototype.initNPCSystem = function() {
     this.dialogQueue = [];
     this.quests = {};
     this.completedQuests = new Set();
-    this.npcInteractionRange = 2.5; // Distance for interaction
+    this.npcInteractionRange = 1.5; // Distance for interaction (same as hack/bomb)
 
     console.log('💬 NPC System initialized');
 };
 
-// NPC class definition
-class NPC {
-    constructor(config) {
-        this.id = config.id || 'npc_' + Date.now();
-        this.name = config.name || 'Citizen';
-        this.x = config.x || 0;
-        this.y = config.y || 0;
-        this.sprite = config.sprite || '👤';
-        this.avatar = config.avatar || '🤖';
-        this.color = config.color || '#00ffff';
-        this.dialog = config.dialog || [];
-        this.quests = config.quests || [];
-        this.currentDialogIndex = 0;
-        this.interacted = false;
-        this.hostile = false;
-        this.alive = true;
-        this.facingAngle = config.facingAngle || 0;
+// NPC constructor function (not ES6 class)
+function NPC(config) {
+    this.id = config.id || 'npc_' + Date.now();
+    this.name = config.name || 'Citizen';
+    this.x = config.x || 0;
+    this.y = config.y || 0;
+    this.sprite = config.sprite || '👤';
+    this.avatar = config.avatar || '🤖';
+    this.color = config.color || '#00ffff';
+    this.dialog = config.dialog || [];
+    this.quests = config.quests || [];
+    this.currentDialogIndex = 0;
+    this.interacted = false;
+    this.hostile = false;
+    this.alive = true;
+    this.facingAngle = config.facingAngle || 0;
 
-        // Movement patterns for ambient NPCs
-        this.movementType = config.movementType || 'stationary'; // stationary, patrol, wander
-        this.patrolPath = config.patrolPath || [];
-        this.patrolIndex = 0;
-        this.moveTimer = 0;
-        this.targetX = this.x;
-        this.targetY = this.y;
-        this.speed = config.speed || 0.5;
+    // Movement patterns for ambient NPCs
+    this.movementType = config.movementType || 'stationary'; // stationary, patrol, wander
+    this.patrolPath = config.patrolPath || [];
+    this.patrolIndex = 0;
+    this.moveTimer = 0;
+    this.targetX = this.x;
+    this.targetY = this.y;
+    this.speed = config.speed || 0.15;  // Reduced from 0.5 for more natural movement
 
-        // Quest state
-        this.questsGiven = new Set();
-        this.dialogState = 'initial'; // initial, quest_given, quest_complete, final
-    }
+    // Quest state
+    this.questsGiven = new Set();
+    this.dialogState = 'initial'; // initial, quest_given, quest_complete, final
+}
 
-    update(game) {
-        if (!this.alive) return;
+// NPC prototype methods
+NPC.prototype.update = function(game) {
+    if (!this.alive) return;
 
         // Update movement
-        if (this.movementType === 'patrol' && this.patrolPath.length > 0) {
-            this.updatePatrol(game);
-        } else if (this.movementType === 'wander') {
-            this.updateWander(game);
-        }
-
-        // Move towards target
-        if (this.targetX !== this.x || this.targetY !== this.y) {
-            const dx = this.targetX - this.x;
-            const dy = this.targetY - this.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist > 0.1) {
-                this.x += (dx / dist) * this.speed * game.gameSpeed;
-                this.y += (dy / dist) * this.speed * game.gameSpeed;
-                this.facingAngle = Math.atan2(dy, dx);
-            } else {
-                this.x = this.targetX;
-                this.y = this.targetY;
-            }
-        }
+    if (this.movementType === 'patrol' && this.patrolPath.length > 0) {
+        this.updatePatrol(game);
+    } else if (this.movementType === 'wander') {
+        this.updateWander(game);
     }
 
-    updatePatrol(game) {
+    // Move towards target
+    if (this.targetX !== this.x || this.targetY !== this.y) {
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 0.1) {
+            // Calculate next position
+            var nextX = this.x + (dx / dist) * this.speed;
+            var nextY = this.y + (dy / dist) * this.speed;
+
+            // Check map boundaries
+            var mapWidth = game.currentMap ? game.currentMap.width : 50;
+            var mapHeight = game.currentMap ? game.currentMap.height : 50;
+            nextX = Math.max(0.5, Math.min(mapWidth - 0.5, nextX));
+            nextY = Math.max(0.5, Math.min(mapHeight - 0.5, nextY));
+
+            // Check for walls
+            if (!game.isWall || !game.isWall(Math.floor(nextX), Math.floor(nextY))) {
+                // NPCs move at constant speed, not affected by game speed
+                this.x = nextX;
+                this.y = nextY;
+                this.facingAngle = Math.atan2(dy, dx);
+            } else {
+                // Stop if we hit a wall
+                this.targetX = this.x;
+                this.targetY = this.y;
+            }
+        } else {
+            this.x = this.targetX;
+            this.y = this.targetY;
+        }
+    }
+};
+
+NPC.prototype.updatePatrol = function(game) {
         if (Math.abs(this.x - this.targetX) < 0.5 && Math.abs(this.y - this.targetY) < 0.5) {
             // Reached patrol point, move to next
             this.patrolIndex = (this.patrolIndex + 1) % this.patrolPath.length;
@@ -84,19 +104,35 @@ class NPC {
         }
     }
 
-    updateWander(game) {
-        this.moveTimer -= game.gameSpeed;
-        if (this.moveTimer <= 0) {
-            // Pick a new random nearby location
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 2 + Math.random() * 3;
-            this.targetX = this.x + Math.cos(angle) * distance;
-            this.targetY = this.y + Math.sin(angle) * distance;
-            this.moveTimer = 120 + Math.random() * 180; // Wait 2-5 seconds before next move
-        }
-    }
+NPC.prototype.updateWander = function(game) {
+    this.moveTimer -= game.gameSpeed;
+    if (this.moveTimer <= 0) {
+        // Pick a new random nearby location
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 2 + Math.random() * 3;
+        var newX = this.x + Math.cos(angle) * distance;
+        var newY = this.y + Math.sin(angle) * distance;
 
-    getNextDialog(game) {
+        // Clamp to map boundaries
+        var mapWidth = game.currentMap ? game.currentMap.width : 50;
+        var mapHeight = game.currentMap ? game.currentMap.height : 50;
+        newX = Math.max(1, Math.min(mapWidth - 1, newX));
+        newY = Math.max(1, Math.min(mapHeight - 1, newY));
+
+        // Check if the target is walkable
+        if (!game.isWall || !game.isWall(Math.floor(newX), Math.floor(newY))) {
+            this.targetX = newX;
+            this.targetY = newY;
+        } else {
+            // Try again immediately if we hit a wall
+            this.moveTimer = 1;
+        }
+
+        this.moveTimer = 120 + Math.random() * 180; // Wait 2-5 seconds before next move
+    }
+};
+
+NPC.prototype.getNextDialog = function(game) {
         // Check for quest completion
         const completedQuest = this.checkQuestCompletion(game);
         if (completedQuest) {
@@ -107,16 +143,21 @@ class NPC {
         for (let quest of this.quests) {
             if (!this.questsGiven.has(quest.id) && !game.completedQuests.has(quest.id)) {
                 if (this.checkQuestRequirements(quest, game)) {
+                    const npc = this;  // Capture NPC reference
                     return {
                         text: quest.introDialog || `I have a task for you, ${game.playerName || 'Agent'}.`,
                         choices: [
                             {
                                 text: "Tell me more",
-                                action: () => this.giveQuest(quest, game)
+                                action: function(game) {
+                                    npc.giveQuest(quest, game);
+                                }
                             },
                             {
                                 text: "Not interested",
-                                action: () => this.endDialog(game)
+                                action: function(game) {
+                                    npc.endDialog(game);
+                                }
                             }
                         ]
                     };
@@ -138,7 +179,7 @@ class NPC {
         };
     }
 
-    checkQuestRequirements(quest, game) {
+NPC.prototype.checkQuestRequirements = function(quest, game) {
         if (!quest.requirements) return true;
 
         // Check various requirement types
@@ -165,7 +206,7 @@ class NPC {
         return true;
     }
 
-    checkQuestCompletion(game) {
+NPC.prototype.checkQuestCompletion = function(game) {
         for (let questId of this.questsGiven) {
             const quest = game.quests[questId];
             if (quest && quest.checkCompletion(game)) {
@@ -183,14 +224,17 @@ class NPC {
         return null;
     }
 
-    giveQuest(quest, game) {
+NPC.prototype.giveQuest = function(quest, game) {
         this.questsGiven.add(quest.id);
         game.quests[quest.id] = quest;
         quest.active = true;
 
+        // Use introDialog if available, otherwise use description
+        const questText = quest.introDialog || quest.description || `I have a task for you: ${quest.name}`;
+
         game.showDialog({
             npc: this,
-            text: quest.description,
+            text: questText,
             choices: [
                 {
                     text: "I'll do it",
@@ -198,12 +242,18 @@ class NPC {
                         game.addNotification(`📜 New Quest: ${quest.name}`);
                         this.endDialog(game);
                     }
+                },
+                {
+                    text: "Not right now",
+                    action: () => {
+                        this.endDialog(game);
+                    }
                 }
             ]
         });
     }
 
-    completeQuest(quest, game) {
+NPC.prototype.completeQuest = function(quest, game) {
         game.completedQuests.add(quest.id);
         quest.active = false;
 
@@ -232,43 +282,42 @@ class NPC {
         this.endDialog(game);
     }
 
-    endDialog(game) {
+NPC.prototype.endDialog = function(game) {
         game.closeDialog();
         this.interacted = true;
         this.currentDialogIndex++;
-    }
+    };
+
+// Quest constructor function (not ES6 class)
+function Quest(config) {
+    this.id = config.id;
+    this.name = config.name;
+    this.description = config.description;
+    this.introDialog = config.introDialog;
+    this.completionDialog = config.completionDialog;
+    this.objectives = config.objectives || [];
+    this.requirements = config.requirements || {};
+    this.rewards = config.rewards || {};
+    this.active = false;
+    this.progress = {};
+
+    // Initialize objective progress
+    var self = this;
+    this.objectives.forEach(function(obj) {
+        self.progress[obj.id] = 0;
+    });
 }
 
-// Quest class
-class Quest {
-    constructor(config) {
-        this.id = config.id;
-        this.name = config.name;
-        this.description = config.description;
-        this.introDialog = config.introDialog;
-        this.completionDialog = config.completionDialog;
-        this.objectives = config.objectives || [];
-        this.requirements = config.requirements || {};
-        this.rewards = config.rewards || {};
-        this.active = false;
-        this.progress = {};
-
-        // Initialize objective progress
-        this.objectives.forEach(obj => {
-            this.progress[obj.id] = 0;
-        });
-    }
-
-    checkCompletion(game) {
-        for (let objective of this.objectives) {
-            if (!this.checkObjective(objective, game)) {
-                return false;
-            }
+Quest.prototype.checkCompletion = function(game) {
+    for (var i = 0; i < this.objectives.length; i++) {
+        if (!this.checkObjective(this.objectives[i], game)) {
+            return false;
         }
-        return true;
     }
+    return true;
+};
 
-    checkObjective(objective, game) {
+Quest.prototype.checkObjective = function(objective, game) {
         switch(objective.type) {
             case 'kill':
                 return (game.enemiesKilledThisMission || 0) >= objective.count;
@@ -294,18 +343,51 @@ class Quest {
             default:
                 return false;
         }
+    };
+
+Quest.prototype.getProgressString = function(game) {
+    var parts = [];
+    for (var i = 0; i < this.objectives.length; i++) {
+        var objective = this.objectives[i];
+        var completed = this.checkObjective(objective, game);
+        var icon = completed ? '✅' : '⬜';
+        parts.push(icon + ' ' + objective.description);
+    }
+    return parts.join('\n');
+};
+
+// Find a valid spawn position near the desired location
+CyberOpsGame.prototype.findValidSpawnPosition = function(desiredX, desiredY) {
+    // First check if desired position is valid
+    if (!this.isWall || !this.isWall(Math.floor(desiredX), Math.floor(desiredY))) {
+        return { x: desiredX, y: desiredY };
     }
 
-    getProgressString(game) {
-        const parts = [];
-        for (let objective of this.objectives) {
-            const completed = this.checkObjective(objective, game);
-            const icon = completed ? '✅' : '⬜';
-            parts.push(`${icon} ${objective.description}`);
+    // Search in expanding circles for a valid position
+    for (let radius = 1; radius <= 5; radius++) {
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+            const testX = desiredX + Math.cos(angle) * radius;
+            const testY = desiredY + Math.sin(angle) * radius;
+
+            // Check map bounds
+            const mapWidth = this.currentMap ? this.currentMap.width : 50;
+            const mapHeight = this.currentMap ? this.currentMap.height : 50;
+
+            if (testX >= 1 && testX < mapWidth - 1 &&
+                testY >= 1 && testY < mapHeight - 1) {
+                // Check if position is not a wall
+                if (!this.isWall || !this.isWall(Math.floor(testX), Math.floor(testY))) {
+                    console.log(`📍 Adjusted NPC spawn from (${desiredX},${desiredY}) to (${testX},${testY})`);
+                    return { x: testX, y: testY };
+                }
+            }
         }
-        return parts.join('\\n');
     }
-}
+
+    // If no valid position found, return a safe default near spawn
+    console.warn(`⚠️ Could not find valid spawn near (${desiredX},${desiredY}), using fallback`);
+    return { x: 5, y: 5 };
+};
 
 // Add NPCs to the current map
 CyberOpsGame.prototype.spawnNPCs = function() {
@@ -318,11 +400,21 @@ CyberOpsGame.prototype.spawnNPCs = function() {
     const npcConfigs = this.getNPCsForMission(this.currentMissionIndex);
 
     for (let config of npcConfigs) {
+        // Validate and adjust spawn position if needed
+        const validPos = this.findValidSpawnPosition(config.x, config.y);
+        config.x = validPos.x;
+        config.y = validPos.y;
+
         const npc = new NPC(config);
         this.npcs.push(npc);
     }
 
     console.log(`👥 Spawned ${this.npcs.length} NPCs for mission ${this.currentMissionIndex + 1}`);
+
+    // Debug: Log NPC positions
+    this.npcs.forEach(npc => {
+        console.log(`  - ${npc.name} at (${npc.x}, ${npc.y}) - ${npc.sprite}`);
+    });
 };
 
 // Get NPC configurations for each mission
@@ -334,8 +426,8 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
             configs.push({
                 id: 'informant_1',
                 name: 'Data Broker',
-                x: 15,
-                y: 15,
+                x: 13,  // Moved away from terminal at (15,15)
+                y: 13,
                 sprite: '🕵️',
                 avatar: '🕵️',
                 color: '#00ff00',
@@ -466,7 +558,7 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
                         name: 'Data Liberation',
                         description: 'Steal classified documents from 3 government terminals.',
                         introDialog: 'The people deserve to know the truth. Help me expose their lies.',
-                        completionDialog: 'The truth will set us free. Here\\'s your payment.',
+                        completionDialog: 'The truth will set us free. Here\'s your payment.',
                         objectives: [
                             { id: 'doc1', type: 'collect', item: 'classified_doc', count: 3, description: 'Collect 3 classified documents' }
                         ],
@@ -513,7 +605,7 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
                         name: 'Stop the Machines',
                         description: 'Destroy the prototype war machines before they go online.',
                         introDialog: 'If these machines go online, thousands will die. Plant explosives at these coordinates.',
-                        completionDialog: 'You\\'ve saved countless lives today. Thank you.',
+                        completionDialog: 'You\'ve saved countless lives today. Thank you.',
                         objectives: [
                             { id: 'plant1', type: 'interact', description: 'Plant explosive at production line', targetId: 'prod_line' },
                             { id: 'plant2', type: 'interact', description: 'Plant explosive at control room', targetId: 'control_room' },
@@ -613,21 +705,33 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
 
 // Check for nearby NPCs that can be interacted with
 CyberOpsGame.prototype.getNearbyNPC = function(agent) {
-    if (!this.npcs) return null;
+    if (!this.npcs) {
+        console.log('    ❌ No NPCs array');
+        return null;
+    }
+
+    console.log(`    Checking ${this.npcs.length} NPCs, range: ${this.npcInteractionRange}`);
 
     for (let npc of this.npcs) {
-        if (!npc.alive) continue;
+        if (!npc.alive) {
+            console.log(`    - ${npc.name}: dead`);
+            continue;
+        }
 
         const dist = Math.sqrt(
             Math.pow(npc.x - agent.x, 2) +
             Math.pow(npc.y - agent.y, 2)
         );
 
+        console.log(`    - ${npc.name} at (${npc.x.toFixed(1)}, ${npc.y.toFixed(1)}): distance = ${dist.toFixed(2)}`);
+
         if (dist <= this.npcInteractionRange) {
+            console.log(`    ✓ NPC in range!`);
             return npc;
         }
     }
 
+    console.log('    ❌ No NPC in range');
     return null;
 };
 
@@ -646,16 +750,159 @@ CyberOpsGame.prototype.interactWithNPC = function(agent, npc) {
     // Get dialog
     const dialog = npc.getNextDialog(this);
 
+    // Debug: Check what dialog was returned
+    console.log('Dialog returned from getNextDialog:', dialog);
+    if (!dialog.text) {
+        console.warn('⚠️ Dialog has no text! Dialog object:', dialog);
+    }
+
+    // Add context-sensitive options based on nearby objects
+    const contextChoices = this.getContextualChoices(agent, npc);
+
+    // Combine NPC dialog choices with context choices
+    const allChoices = [...(dialog.choices || [])];
+
+    // Add context choices at the end
+    if (contextChoices.length > 0) {
+        // Add separator if there are existing choices
+        if (allChoices.length > 0) {
+            // Context choices go after NPC-specific choices
+            contextChoices.forEach(choice => {
+                allChoices.push(choice);
+            });
+        } else {
+            // If no NPC choices, just use context choices
+            allChoices.push(...contextChoices);
+        }
+    }
+
+    // Always add a goodbye option at the end
+    if (!allChoices.find(c => c.text === "Goodbye" || c.text === "Leave")) {
+        allChoices.push({
+            text: "Goodbye",
+            action: () => this.endDialog(this)
+        });
+    }
+
     // Show dialog UI
     this.showDialog({
         npc: npc,
         text: dialog.text,
-        choices: dialog.choices
+        choices: allChoices
     });
 
     // Track interaction
     this.npcInteractions = this.npcInteractions || new Set();
     this.npcInteractions.add(npc.id);
+};
+
+// Get contextual dialog choices based on nearby objects
+CyberOpsGame.prototype.getContextualChoices = function(agent, npc) {
+    const choices = [];
+
+    // Check for nearby terminals
+    if (this.terminals) {
+        for (let terminal of this.terminals) {
+            const dist = Math.sqrt(
+                Math.pow(terminal.x - npc.x, 2) +
+                Math.pow(terminal.y - npc.y, 2)
+            );
+
+            // If terminal is within 3 units of NPC
+            if (dist <= 3 && !terminal.hacked) {
+                choices.push({
+                    text: "🖥️ Hack the nearby terminal",
+                    action: (game) => {
+                        // Close dialog first
+                        this.closeDialog();
+
+                        // Move agent to terminal and hack it
+                        agent.targetX = terminal.x;
+                        agent.targetY = terminal.y;
+
+                        // Set a flag to auto-hack when agent reaches terminal
+                        agent.autoHackTarget = terminal;
+
+                        game.addNotification("📍 Moving to terminal...");
+                    }
+                });
+                break; // Only add one terminal option
+            }
+        }
+    }
+
+    // Check for nearby explosive targets
+    if (this.explosiveTargets) {
+        for (let target of this.explosiveTargets) {
+            const dist = Math.sqrt(
+                Math.pow(target.x - npc.x, 2) +
+                Math.pow(target.y - npc.y, 2)
+            );
+
+            // If explosive target is within 3 units of NPC
+            if (dist <= 3 && !target.destroyed) {
+                choices.push({
+                    text: "💣 Plant bomb on nearby target",
+                    action: (game) => {
+                        // Close dialog first
+                        this.closeDialog();
+
+                        // Move agent to target and plant bomb
+                        agent.targetX = target.x;
+                        agent.targetY = target.y;
+
+                        // Set a flag to auto-bomb when agent reaches target
+                        agent.autoBombTarget = target;
+
+                        game.addNotification("📍 Moving to plant explosive...");
+                    }
+                });
+                break; // Only add one bomb option
+            }
+        }
+    }
+
+    // Check for nearby enemies
+    let nearbyEnemies = 0;
+    if (this.enemies) {
+        for (let enemy of this.enemies) {
+            if (!enemy.alive) continue;
+
+            const dist = Math.sqrt(
+                Math.pow(enemy.x - npc.x, 2) +
+                Math.pow(enemy.y - npc.y, 2)
+            );
+
+            if (dist <= 5) {
+                nearbyEnemies++;
+            }
+        }
+
+        if (nearbyEnemies > 0) {
+            choices.push({
+                text: `⚠️ Ask about the ${nearbyEnemies} guard${nearbyEnemies > 1 ? 's' : ''} nearby`,
+                action: (game) => {
+                    game.showDialog({
+                        npc: npc,
+                        text: nearbyEnemies > 1 ?
+                            "Those guards? They patrol this area regularly. Be careful - they shoot on sight!" :
+                            "That guard? He's been here all day. Very trigger-happy, I'd avoid him.",
+                        choices: [
+                            {
+                                text: "Thanks for the warning",
+                                action: () => {
+                                    // Go back to main dialog
+                                    this.interactWithNPC(agent, npc);
+                                }
+                            }
+                        ]
+                    });
+                }
+            });
+        }
+    }
+
+    return choices;
 };
 
 // Show dialog UI
@@ -671,36 +918,37 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
         dialogContainer.id = 'npcDialogContainer';
         dialogContainer.style.cssText = `
             position: fixed;
-            bottom: 20px;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
-            max-width: 600px;
+            max-width: 800px;
             background: linear-gradient(135deg, rgba(0,0,0,0.95) 0%, rgba(20,20,40,0.95) 100%);
             border: 2px solid #00ffff;
             border-radius: 10px;
-            padding: 20px;
+            padding: 30px;
             z-index: 10000;
             box-shadow: 0 0 30px rgba(0,255,255,0.5);
             font-family: 'Courier New', monospace;
+            font-size: 14px;
         `;
         document.body.appendChild(dialogContainer);
     }
 
     // Build dialog content
     let html = `
-        <div style="display: flex; gap: 20px; margin-bottom: 15px;">
-            <div style="font-size: 48px; line-height: 1;">${dialogData.npc.avatar}</div>
+        <div style="display: flex; gap: 25px; margin-bottom: 20px;">
+            <div style="font-size: 64px; line-height: 1;">${dialogData.npc.avatar}</div>
             <div style="flex: 1;">
-                <div style="color: #00ffff; font-weight: bold; margin-bottom: 5px;">
+                <div style="color: #00ffff; font-weight: bold; margin-bottom: 10px; font-size: 18px;">
                     ${dialogData.npc.name}
                 </div>
-                <div id="dialogText" style="color: #fff; min-height: 40px;">
+                <div id="dialogText" style="color: #fff; min-height: 60px; font-size: 16px; line-height: 1.5;">
                     <span class="typing-text"></span><span class="cursor">_</span>
                 </div>
             </div>
         </div>
-        <div id="dialogChoices" style="display: none;">
+        <div id="dialogChoices" style="margin-top: 20px;">
     `;
 
     // Add choices
@@ -710,14 +958,17 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
                 <button class="dialog-choice" data-index="${index}" style="
                     display: block;
                     width: 100%;
-                    padding: 10px;
-                    margin: 5px 0;
+                    padding: 12px 15px;
+                    margin: 8px 0;
                     background: rgba(0,255,255,0.1);
                     border: 1px solid #00ffff;
                     color: #fff;
                     cursor: pointer;
                     text-align: left;
                     transition: all 0.2s;
+                    font-size: 14px;
+                    font-family: 'Courier New', monospace;
+                    border-radius: 5px;
                 ">
                     ${index + 1}. ${choice.text}
                 </button>
@@ -744,15 +995,35 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
             const index = parseInt(btn.dataset.index);
             const choice = dialogData.choices[index];
             if (choice.action) {
+                // Pass game (this) as parameter to the action
                 choice.action.call(dialogData.npc, this);
             }
         };
     });
 
-    // Type out the text with effect
-    this.typeText(dialogData.text, () => {
-        document.getElementById('dialogChoices').style.display = 'block';
-    });
+    // Type out the text with effect - use setTimeout to ensure DOM is updated
+    console.log('Dialog text to display:', dialogData.text);
+    if (dialogData.text) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+            // Double-check element exists
+            const textElement = document.querySelector('.typing-text');
+            if (textElement) {
+                this.typeText(dialogData.text, () => {
+                    // Choices are already visible, no need to show them
+                });
+            } else {
+                // Fallback: Just set the text directly
+                console.warn('⚠️ typing-text element not found, using fallback');
+                const dialogTextDiv = document.getElementById('dialogText');
+                if (dialogTextDiv) {
+                    dialogTextDiv.innerHTML = dialogData.text + '<span class="cursor">_</span>';
+                }
+            }
+        });
+    } else {
+        console.warn('No text provided for dialog!');
+    }
 
     // Store active dialog
     this.activeDialog = dialogData;
@@ -762,22 +1033,49 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
 CyberOpsGame.prototype.typeText = function(text, callback) {
     const textElement = document.querySelector('.typing-text');
     const cursor = document.querySelector('.cursor');
-    if (!textElement) return;
+
+    if (!textElement) {
+        console.error('❌ Could not find .typing-text element!');
+        // Fallback: try to find the dialog text div directly
+        const dialogTextDiv = document.getElementById('dialogText');
+        if (dialogTextDiv) {
+            // Just set the text directly as fallback
+            dialogTextDiv.innerHTML = text + '<span class="cursor">_</span>';
+        }
+        if (callback) callback();
+        return;
+    }
+
+    console.log('✓ Found typing-text element, typing:', text);
+    console.log('  Element initial content:', textElement.textContent);
+
+    // Clear any existing intervals to prevent conflicts
+    if (this.currentTypeInterval) {
+        clearInterval(this.currentTypeInterval);
+    }
 
     let index = 0;
     textElement.textContent = '';
 
-    const typeInterval = setInterval(() => {
+    // Store interval reference
+    this.currentTypeInterval = setInterval(() => {
         if (index < text.length) {
             textElement.textContent += text[index];
             index++;
+
+            // Debug every 10 characters
+            if (index % 10 === 0) {
+                console.log(`  Typed ${index}/${text.length} characters`);
+            }
 
             // Play typing sound (optional)
             if (this.playSound) {
                 this.playSound('type', 0.1);
             }
         } else {
-            clearInterval(typeInterval);
+            clearInterval(this.currentTypeInterval);
+            this.currentTypeInterval = null;
+            console.log('✓ Typing complete, final text:', textElement.textContent);
             if (callback) callback();
         }
     }, 30); // Typing speed
@@ -804,14 +1102,146 @@ CyberOpsGame.prototype.updateNPCs = function() {
     }
 };
 
+// Render quest objective markers
+CyberOpsGame.prototype.renderQuestMarkers = function(ctx) {
+    if (!this.quests) return;
+
+    // Check all active quests for location objectives
+    for (let questId in this.quests) {
+        const quest = this.quests[questId];
+        if (!quest.active) continue;
+
+        quest.objectives.forEach(obj => {
+            // Render markers for reach objectives
+            if (obj.type === 'reach' && obj.x !== undefined && obj.y !== undefined) {
+                // Use the same coordinate conversion as agents and NPCs
+                const screenPos = this.worldToIsometric(obj.x, obj.y);
+
+                // Check if on screen
+                if (screenPos.x < -50 || screenPos.x > this.canvas.width + 50 ||
+                    screenPos.y < -50 || screenPos.y > this.canvas.height + 50) {
+                    return;
+                }
+
+                ctx.save();
+                ctx.translate(screenPos.x, screenPos.y);
+
+                // Draw pulsing marker
+                const pulse = Math.sin(Date.now() * 0.003) * 0.3 + 0.7;
+
+                // Outer circle
+                ctx.strokeStyle = `rgba(255, 255, 0, ${pulse})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Inner circle
+                ctx.fillStyle = `rgba(255, 255, 0, ${pulse * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, 15, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Objective icon
+                ctx.fillStyle = `rgba(255, 255, 0, ${pulse})`;
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('!', 0, 0);
+
+                // Description
+                ctx.font = '10px Arial';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillText(obj.description || 'Objective', 0, 30);
+
+                ctx.restore();
+            }
+
+            // Render markers for interact objectives (terminals, etc)
+            if (obj.type === 'interact' && obj.targetId) {
+                // Look for the target in the map (you might need to store these positions)
+                // For now, we'll skip this as it requires more map data
+            }
+        });
+    }
+};
+
+// Render quest list in HUD
+CyberOpsGame.prototype.renderQuestHUD = function(ctx) {
+    if (!this.quests || Object.keys(this.quests).length === 0) return;
+
+    const questList = [];
+    for (let questId in this.quests) {
+        const quest = this.quests[questId];
+        if (quest.active) {
+            questList.push(quest);
+        }
+    }
+
+    if (questList.length === 0) return;
+
+    // Draw quest panel
+    const panelX = 10;
+    const panelY = 150;
+    const panelWidth = 250;
+    const lineHeight = 18;
+
+    ctx.save();
+
+    // Panel background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 1;
+
+    let totalHeight = 30 + questList.length * 60; // Approximate height
+    ctx.fillRect(panelX, panelY, panelWidth, totalHeight);
+    ctx.strokeRect(panelX, panelY, panelWidth, totalHeight);
+
+    // Title
+    ctx.fillStyle = '#00ffff';
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillText('📜 ACTIVE MISSIONS', panelX + 10, panelY + 20);
+
+    let yOffset = panelY + 40;
+
+    // List each quest
+    questList.forEach(quest => {
+        // Quest name
+        ctx.fillStyle = '#ffff00';
+        ctx.font = 'bold 12px Courier New';
+        ctx.fillText('▸ ' + quest.name, panelX + 10, yOffset);
+        yOffset += lineHeight;
+
+        // Quest objectives
+        quest.objectives.forEach(obj => {
+            const completed = quest.checkObjective ? quest.checkObjective(obj, this) : false;
+            const icon = completed ? '✓' : '○';
+            const color = completed ? '#00ff00' : '#aaaaaa';
+
+            ctx.fillStyle = color;
+            ctx.font = '11px Courier New';
+            ctx.fillText('  ' + icon + ' ' + obj.description, panelX + 15, yOffset);
+            yOffset += lineHeight;
+        });
+
+        yOffset += 10; // Space between quests
+    });
+
+    ctx.restore();
+};
+
 // Render NPCs
 CyberOpsGame.prototype.renderNPCs = function(ctx) {
     if (!this.npcs) return;
 
+    // Render quest objective markers first
+    this.renderQuestMarkers(ctx);
+
     for (let npc of this.npcs) {
         if (!npc.alive) continue;
 
-        const screenPos = this.worldToScreen(npc.x, npc.y);
+        // Use the same coordinate conversion as agents (worldToIsometric for 2D view)
+        const screenPos = this.worldToIsometric(npc.x, npc.y);
 
         // Check if on screen
         if (screenPos.x < -50 || screenPos.x > this.canvas.width + 50 ||

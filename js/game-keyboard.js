@@ -5,30 +5,47 @@
 
 // Handle interaction key (H) - Check for NPCs first, then use hack ability
 CyberOpsGame.prototype.handleInteractionKey = function() {
-    if (this.currentScreen !== 'game') return;
+    console.log('🔑 H key pressed - handleInteractionKey called');
+
+    if (this.currentScreen !== 'game') {
+        console.log('  ❌ Not in game screen');
+        return;
+    }
 
     // Check if there's a dialog active
     if (this.dialogActive) {
+        console.log('  ❌ Dialog already active');
         return; // Don't do anything if dialog is open
     }
 
     // Get the selected agent (or first agent)
     const agent = this.agents.find(a => a.selected && a.alive) || this.agents[0];
     if (!agent) {
+        console.log('  ❌ No agent available');
         return; // No agent available
     }
 
-    // Check for nearby NPC
-    const nearbyNPC = this.getNearbyNPC(agent);
-    if (nearbyNPC) {
-        // Interact with NPC
-        this.interactWithNPC(agent, nearbyNPC);
-        console.log(`💬 Interacting with NPC: ${nearbyNPC.name}`);
+    console.log(`  ✓ Agent found: ${agent.name} at (${agent.x.toFixed(1)}, ${agent.y.toFixed(1)})`);
+
+    // Check for nearby NPC (only if NPC system is loaded)
+    if (this.getNearbyNPC && this.interactWithNPC) {
+        console.log('  ✓ NPC functions loaded, checking for nearby NPCs...');
+        const nearbyNPC = this.getNearbyNPC(agent);
+        if (nearbyNPC) {
+            // Interact with NPC
+            console.log(`  💬 Found NPC: ${nearbyNPC.name} - initiating interaction`);
+            this.interactWithNPC(agent, nearbyNPC);
+            return;
+        } else {
+            console.log('  ⚠️ No NPC nearby');
+        }
     } else {
-        // No NPC nearby, use hack ability (ability 3)
-        this.useAbilityForAllSelected(3);
-        console.log('🔧 Using hack ability');
+        console.log('  ⚠️ NPC functions not loaded');
     }
+
+    // No NPC nearby or NPC system not loaded, use hack ability (ability 3)
+    console.log('  🔧 Using hack ability instead');
+    this.useAbilityForAllSelected(3);
 };
 
 // Initialize keyboard system
