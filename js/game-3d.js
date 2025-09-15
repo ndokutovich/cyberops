@@ -1816,12 +1816,23 @@ CyberOpsGame.prototype.render3D = function() {
             // Apply frustum culling only - no behavior changes
             this.scene3D.traverse((object) => {
                 if (object.isMesh) {
-                    // Frustum culling - only render objects in view
+                    // Store original visibility if not already stored
+                    if (object.userData.originalVisible === undefined) {
+                        object.userData.originalVisible = object.visible;
+                    }
+
+                    // For enemies, check if they're alive
+                    if (object.userData.type === 'enemy' && object.userData.enemy) {
+                        object.userData.originalVisible = object.userData.enemy.alive;
+                    }
+
+                    // Frustum culling - only render objects in view AND originally visible
                     // This is a pure optimization - objects outside camera view aren't rendered
                     if (!this.frustum3D.intersectsObject(object)) {
                         object.visible = false;
                     } else {
-                        object.visible = true;
+                        // Only make visible if it was originally visible
+                        object.visible = object.userData.originalVisible !== false;
                     }
                 }
             });
