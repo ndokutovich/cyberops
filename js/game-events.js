@@ -181,50 +181,7 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 }
             }
 
-            // 3D Mode Controls - E Key
-            if (e.code === 'KeyE' && this.currentScreen === 'game') {
-                console.log('🔑 E key detected! Checking conditions...');
-                console.log('  - currentScreen:', this.currentScreen);
-                console.log('  - _selectedAgent exists:', !!this._selectedAgent);
-                console.log('  - _selectedAgent details:', this._selectedAgent ? this._selectedAgent.name : 'none');
-                console.log('  - 3D system available:', !!this.scene3D);
-
-                // DEBUG: Check 3D system components
-                if (!this.scene3D) {
-                    console.log('🔍 3D System Debug:');
-                    console.log('  - scene3D:', !!this.scene3D);
-                    console.log('  - renderer3D:', !!this.renderer3D);
-                    console.log('  - camera3D:', !!this.camera3D);
-                    console.log('  - init3D called?', 'checking...');
-                }
-
-                if (this._selectedAgent && this.scene3D) {
-                    console.log('✅ All conditions met! Switching camera mode...');
-                    this.switchCameraMode();
-                    e.preventDefault();
-                    return;
-                } else {
-                    console.log('❌ Conditions not met for camera switch:');
-                    if (!this._selectedAgent) console.log('  - No agent selected - auto-selecting first agent');
-                    if (!this.scene3D) console.log('  - 3D system not available');
-
-                    // Auto-select first agent if none selected
-                    if (!this._selectedAgent && this.agents && this.agents.length > 0) {
-                        const firstAlive = this.agents.find(a => a.alive);
-                        if (firstAlive) {
-                            this._selectedAgent = firstAlive;
-                            firstAlive.selected = true;
-                            console.log('🎯 Auto-selected first alive agent for E key:', firstAlive.name);
-                            // Try switching mode again
-                            if (this.scene3D) {
-                                this.switchCameraMode();
-                                e.preventDefault();
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
+            // E key is now handled in the centralized keyboard handler (game-keyboard.js)
 
             // Quick agent selection with Tab key
             if (e.code === 'Tab') {
