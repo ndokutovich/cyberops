@@ -580,6 +580,15 @@ CyberOpsGame.prototype.update = function() {
                             if (enemy.health <= 0) {
                                 enemy.alive = false;
                                 this.totalEnemiesDefeated++;
+
+                                // Track enemy elimination for mission objectives
+                                if (this.onEnemyEliminated) {
+                                    this.onEnemyEliminated(enemy);
+                                } else {
+                                    // Fallback tracking
+                                    this.enemiesKilledThisMission = (this.enemiesKilledThisMission || 0) + 1;
+                                }
+
                                 // Log enemy death
                                 if (this.logDeath) this.logDeath(enemy);
                             } else {
@@ -670,147 +679,60 @@ CyberOpsGame.prototype.checkMissionStatus = function() {
             return;
         }
         
-        if (this.currentMission.id === 1) {
-            // Data Heist objectives
-            this.objectiveStatus = {
-                'Eliminate all hostiles': aliveEnemies === 0,
-                'Avoid civilian casualties': true, // No civilians in current implementation
-                'Keep at least 2 agents alive': aliveAgents >= 2
-            };
+        // Use the new mission system to check objectives
+        if (this.checkMissionObjectives) {
+            // New comprehensive mission system handles everything
+            this.checkMissionObjectives();
+        } else {
+            // Fallback: Basic objective checking for backward compatibility
+            this.objectiveStatus = {};
 
-            document.getElementById('objectiveTracker').textContent =
-                aliveEnemies > 0 ?
-                `Eliminate enemies: ${deadEnemies}/${this.enemies.length}` :
-                'All enemies eliminated! Reach extraction!';
+            // Simple terminal hacking objective
+            if (this.map && this.map.terminals) {
+                const hackedCount = this.map.terminals.filter(t => t.hacked).length;
+                const totalTerminals = this.map.terminals.length;
 
-            if (aliveEnemies === 0) {
-                const atExtraction = this.agents.some(agent => {
-                    if (!agent.alive) return false;
-                    const dist = Math.sqrt(
-                        Math.pow(agent.x - this.map.extraction.x, 2) + 
-                        Math.pow(agent.y - this.map.extraction.y, 2)
-                    );
-                    return dist < 2;
-                });
-                
-                if (atExtraction) {
-                    this.endMission(true);
+                if (totalTerminals > 0) {
+                    this.objectiveStatus['Hack terminals'] = hackedCount >= Math.min(3, totalTerminals);
+                    document.getElementById('objectiveTracker').textContent =
+                        `Hack terminals: ${hackedCount}/${Math.min(3, totalTerminals)}`;
+
+                    if (hackedCount >= 3) {
+                        this.checkExtractionPoint();
+                    }
                 }
             }
-        } else if (this.currentMission.id === 2) {
-            const hackedCount = this.map.terminals.filter(t => t.hacked).length;
-            const allHacked = hackedCount === this.map.terminals.length;
 
-            // Network Breach objectives
-            this.objectiveStatus = {
-                'Hack all terminals': allHacked,
-                'Extract data': allHacked, // Data extracted when terminals are hacked
-                'Escape undetected': aliveEnemies > 0 ? false : true // Simplified: undetected if no combat
-            };
-
-            document.getElementById('objectiveTracker').textContent =
-                !allHacked ?
-                `Hack terminals: ${hackedCount}/${this.map.terminals.length}` :
-                'All terminals hacked! Reach extraction!';
-            
-            if (allHacked) {
-                const atExtraction = this.agents.some(agent => {
-                    if (!agent.alive) return false;
-                    const dist = Math.sqrt(
-                        Math.pow(agent.x - this.map.extraction.x, 2) + 
-                        Math.pow(agent.y - this.map.extraction.y, 2)
-                    );
-                    return dist < 2;
-                });
-                
-                if (atExtraction) {
-                    this.endMission(true);
-                }
-            }
-        } else if (this.currentMission.id === 3) {
-            // Industrial Sabotage - Plant explosives on 3 targets
-            const plantedCount = this.map.explosiveTargets ? this.map.explosiveTargets.filter(t => t.planted).length : 0;
-            const allPlanted = plantedCount === 3;
-
-            // Sabotage Operation objectives
-            this.objectiveStatus = {
-                'Plant explosives on 3 targets': allPlanted,
-                'Eliminate security team': aliveEnemies === 0,
-                'Extract all agents': false // Will be true when extracted
-            };
-            
-            document.getElementById('objectiveTracker').textContent = 
-                aliveEnemies > 0 ? 
-                `Eliminate security: ${deadEnemies}/${this.enemies.length} | Explosives: ${plantedCount}/3` :
-                allPlanted ? 'All objectives complete! Extract all agents!' : 
-                `Plant explosives: ${plantedCount}/3 | Eliminate remaining security`;
-            
-            if (aliveEnemies === 0 && allPlanted) {
-                const atExtraction = this.agents.some(agent => {
-                    if (!agent.alive) return false;
-                    const dist = Math.sqrt(
-                        Math.pow(agent.x - this.map.extraction.x, 2) + 
-                        Math.pow(agent.y - this.map.extraction.y, 2)
-                    );
-                    return dist < 2;
-                });
-                
-                if (atExtraction) {
-                    this.endMission(true);
-                }
-            }
-        } else if (this.currentMission.id === 4) {
-            // Assassination Contract - Eliminate targets
-            const primaryEliminated = this.map.targets ? this.map.targets.filter(t => t.type === 'primary' && t.eliminated).length : 0;
-            const secondaryEliminated = this.map.targets ? this.map.targets.filter(t => t.type === 'secondary' && t.eliminated).length : 0;
-            const allTargetsEliminated = primaryEliminated === 1 && secondaryEliminated === 2;
-
-            // Assassination Contract objectives
-            this.objectiveStatus = {
-                'Eliminate primary target': primaryEliminated >= 1,
-                'Eliminate secondary targets': secondaryEliminated >= 2,
-                'No witnesses': aliveEnemies === 0
-            };
-            
-            document.getElementById('objectiveTracker').textContent = 
-                `Primary targets: ${primaryEliminated}/1 | Secondary targets: ${secondaryEliminated}/2 | Witnesses: ${deadEnemies}/${this.enemies.length}`;
-            
-            if (allTargetsEliminated && aliveEnemies === 0) {
-                const atExtraction = this.agents.some(agent => {
-                    if (!agent.alive) return false;
-                    const dist = Math.sqrt(
-                        Math.pow(agent.x - this.map.extraction.x, 2) + 
-                        Math.pow(agent.y - this.map.extraction.y, 2)
-                    );
-                    return dist < 2;
-                });
-                
-                if (atExtraction) {
-                    this.endMission(true);
-                }
-            }
-        } else if (this.currentMission.id === 5) {
-            // Final Convergence - Breach gate, control sectors, capture mainframe
-            const gateBreached = this.map.gates ? this.map.gates.filter(g => g.breached).length > 0 : false;
-            const sectorsControlled = this.map.terminals ? this.map.terminals.filter(t => t.hacked).length : 0;
-            const allObjectives = gateBreached && sectorsControlled === 3 && aliveEnemies === 0;
-
-            // Final Convergence objectives
-            this.objectiveStatus = {
-                'Breach main gate': gateBreached,
-                'Control all sectors': sectorsControlled >= 3,
-                'Capture the mainframe': sectorsControlled >= 3 && aliveEnemies === 0
-            };
-            
-            document.getElementById('objectiveTracker').textContent = 
-                `Gate: ${gateBreached ? 'Breached' : 'Secured'} | Sectors: ${sectorsControlled}/3 | Security: ${deadEnemies}/${this.enemies.length}`;
-            
-            if (allObjectives) {
-                this.endMission(true);
+            // Simple enemy elimination objective
+            if (aliveEnemies === 0 && deadEnemies > 0) {
+                this.objectiveStatus['Eliminate all enemies'] = true;
+                document.getElementById('objectiveTracker').textContent = 'All enemies eliminated! Reach extraction!';
+                this.extractionEnabled = true; // Enable extraction
+                this.checkExtractionPoint();
             }
         }
 }
-    
+
+CyberOpsGame.prototype.checkExtractionPoint = function() {
+    if (!this.map || !this.map.extraction) return;
+
+    // Check if extraction is enabled (all objectives complete)
+    if (!this.extractionEnabled) return;
+
+    const atExtraction = this.agents.some(agent => {
+        if (!agent.alive) return false;
+        const dist = Math.sqrt(
+            Math.pow(agent.x - this.map.extraction.x, 2) +
+            Math.pow(agent.y - this.map.extraction.y, 2)
+        );
+        return dist < 2;
+    });
+
+    if (atExtraction) {
+        this.endMission(true);
+    }
+}
+
 CyberOpsGame.prototype.endMission = function(victory) {
         // Keep level music playing until next mission starts
         console.log('🎵 Level music continues after mission end');

@@ -12,7 +12,7 @@ CyberOpsGame.prototype.initNPCSystem = function() {
     this.dialogQueue = [];
     this.quests = {};
     this.completedQuests = new Set();
-    this.npcInteractionRange = 1.5; // Distance for interaction (same as hack/bomb)
+    this.npcInteractionRange = 3; // Distance for interaction (same as hack/bomb)
 
     console.log('💬 NPC System initialized');
 };
@@ -458,58 +458,193 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
         case 0: // Mission 1 - Corporate
             configs.push({
                 id: 'informant_1',
-                name: 'Data Broker',
+                name: 'Marcus "The Broker" Kane',
                 x: 13,  // Moved away from terminal at (15,15)
                 y: 13,
                 sprite: '🕵️',
                 avatar: '🕵️',
                 color: '#00ff00',
                 movementType: 'stationary',
-                dialog: [
-                    {
-                        text: "I've been monitoring corporate communications. They're hiding something big.",
-                        choices: [
-                            { text: "What kind of information?", action: function(game) {
-                                game.showDialog({
-                                    npc: this,
-                                    text: "Security protocols, guard rotations... for the right price.",
-                                    choices: [
-                                        { text: "How much?", action: function(game) {
-                                            if (game.credits >= 100) {
-                                                game.credits -= 100;
-                                                game.addNotification("💰 -100 credits");
-                                                game.addNotification("📍 Guard positions revealed!");
-                                                game.revealEnemyPositions = true;
-                                                this.endDialog(game);
-                                            } else {
-                                                game.showDialog({
-                                                    npc: this,
-                                                    text: "Come back when you have 100 credits.",
-                                                    choices: [{ text: "I'll be back", action: () => this.endDialog(game) }]
-                                                });
-                                            }
-                                        }},
-                                        { text: "Too expensive", action: () => this.endDialog(game) }
-                                    ]
-                                });
-                            }},
-                            { text: "Not interested", action: () => this.endDialog(game) }
-                        ]
-                    }
-                ],
+                questState: {},  // Track quest state for this NPC
+                dialog: [],  // Start with empty dialog - will be handled dynamically
                 quests: [
                     new Quest({
                         id: 'corp_sabotage',
                         name: 'Corporate Sabotage',
                         description: 'Hack 3 terminals to disrupt their operations.',
-                        introDialog: 'The corporation has been exploiting workers. Help me teach them a lesson.',
-                        completionDialog: 'Excellent work! Their systems are in chaos.',
+                        introDialog: 'The corporation has been exploiting workers. Help me teach them a lesson by hacking 3 of their terminals.',
+                        completionDialog: 'Excellent work! Their systems are in chaos. Here\'s your payment.',
                         objectives: [
                             { id: 'hack_all', type: 'hack', count: 3, description: 'Hack 3 terminals' }
                         ],
-                        rewards: { credits: 500, researchPoints: 50 }
+                        rewards: { credits: 500, researchPoints: 50 },
+                        checkCompletion: function(game) {
+                            // Check if player has hacked 3 or more terminals
+                            return (game.hackedTerminals || 0) >= 3;
+                        }
                     })
-                ]
+                ],
+                // Custom dialog handler for Data Broker
+                getNextDialog: function(game) {
+                    const quest = this.quests[0];
+                    const questGiven = this.questsGiven.has(quest.id);
+                    const questCompleted = game.completedQuests && game.completedQuests.has(quest.id);
+                    const questActive = questGiven && !questCompleted;
+
+                    // Check if quest is complete
+                    if (questActive && quest.checkCompletion(game)) {
+                        const npc = this;
+                        return {
+                            text: quest.completionDialog,
+                            choices: [
+                                {
+                                    text: "Claim reward (500 credits, 50 RP)",
+                                    action: function(game) {
+                                        // Give rewards
+                                        game.credits = (game.credits || 0) + quest.rewards.credits;
+                                        game.researchPoints = (game.researchPoints || 0) + quest.rewards.researchPoints;
+                                        game.addNotification(`💰 +${quest.rewards.credits} credits`);
+                                        game.addNotification(`🔬 +${quest.rewards.researchPoints} research points`);
+
+                                        // Mark quest as completed
+                                        if (!game.completedQuests) game.completedQuests = new Set();
+                                        game.completedQuests.add(quest.id);
+                                        quest.active = false;
+
+                                        // Show follow-up dialog with information offer
+                                        game.showDialog({
+                                            npc: npc,
+                                            text: "Pleasure doing business. I also have some valuable intel about guard positions if you're interested.",
+                                            choices: [
+                                                {
+                                                    text: "Tell me more",
+                                                    action: function(game) {
+                                                        npc.offerInformation(game);
+                                                    }
+                                                },
+                                                { text: "Maybe later", action: () => npc.endDialog(game) }
+                                            ]
+                                        });
+                                    }
+                                }
+                            ]
+                        };
+                    }
+
+                    // If quest was completed, offer information
+                    if (questCompleted) {
+                        const npc = this;
+                        return {
+                            text: "Looking for information? I have guard patrol routes available.",
+                            choices: [
+                                {
+                                    text: "What's it cost?",
+                                    action: function(game) {
+                                        npc.offerInformation(game);
+                                    }
+                                },
+                                { text: "Not right now", action: () => this.endDialog(game) }
+                            ]
+                        };
+                    }
+
+                    // If quest is active but not complete
+                    if (questActive) {
+                        const terminalsHacked = game.hackedTerminals || 0;
+                        return {
+                            text: `How's the hacking going? You've compromised ${terminalsHacked} out of 3 terminals so far.`,
+                            choices: [
+                                { text: "Still working on it", action: () => this.endDialog(game) }
+                            ]
+                        };
+                    }
+
+                    // Initial meeting - offer quest
+                    if (!questGiven) {
+                        const npc = this;
+                        return {
+                            text: "Agent, I'm Marcus Kane, information broker. I've been monitoring corporate communications. They're exploiting workers and hiding illegal activities.",
+                            choices: [
+                                {
+                                    text: "How can I help?",
+                                    action: function(game) {
+                                        game.showDialog({
+                                            npc: npc,
+                                            text: quest.introDialog,
+                                            choices: [
+                                                {
+                                                    text: "I'll do it",
+                                                    action: function(game) {
+                                                        // Mark quest as given
+                                                        npc.questsGiven.add(quest.id);
+                                                        if (!game.quests) game.quests = {};
+                                                        game.quests[quest.id] = quest;
+                                                        quest.active = true;
+
+                                                        game.addNotification(`📜 New Quest: ${quest.name}`);
+                                                        game.addNotification(`📍 Objective: Hack 3 terminals`);
+                                                        npc.endDialog(game);
+                                                    }
+                                                },
+                                                {
+                                                    text: "Not interested",
+                                                    action: () => npc.endDialog(game)
+                                                }
+                                            ]
+                                        });
+                                    }
+                                },
+                                { text: "Not my problem", action: () => this.endDialog(game) }
+                            ]
+                        };
+                    }
+
+                    // Fallback
+                    return {
+                        text: "Stay safe out there, Agent.",
+                        choices: [
+                            { text: "You too", action: () => this.endDialog(game) }
+                        ]
+                    };
+                },
+                // Helper function to offer information
+                offerInformation: function(game) {
+                    const npc = this;
+                    game.showDialog({
+                        npc: npc,
+                        text: "Guard patrol routes and positions - 100 credits. This intel could save your life.",
+                        choices: [
+                            {
+                                text: "Buy intel (100 credits)",
+                                action: function(game) {
+                                    if ((game.credits || 0) >= 100) {
+                                        game.credits -= 100;
+                                        game.addNotification("💰 -100 credits");
+                                        game.addNotification("📍 Guard positions revealed!");
+                                        game.revealEnemyPositions = true;
+
+                                        game.showDialog({
+                                            npc: npc,
+                                            text: "I've uploaded the data to your HUD. Guard positions are now visible. Good hunting.",
+                                            choices: [
+                                                { text: "Thanks", action: () => npc.endDialog(game) }
+                                            ]
+                                        });
+                                    } else {
+                                        game.showDialog({
+                                            npc: npc,
+                                            text: `You need 100 credits. You currently have ${game.credits || 0}. Come back when you have the funds.`,
+                                            choices: [
+                                                { text: "I'll be back", action: () => npc.endDialog(game) }
+                                            ]
+                                        });
+                                    }
+                                }
+                            },
+                            { text: "Too expensive", action: () => npc.endDialog(game) }
+                        ]
+                    });
+                }
             });
 
             configs.push({
@@ -1204,10 +1339,27 @@ CyberOpsGame.prototype.showMissionList = function() {
     // Show main mission objectives
     if (this.currentMission && this.currentMission.objectives) {
         this.currentMission.objectives.forEach(obj => {
-            const completed = this.checkObjectiveComplete(obj);
+            // Handle both string objectives (original) and object objectives (new system)
+            let description, completed;
+
+            if (typeof obj === 'string') {
+                // Original format - just strings
+                description = obj;
+                // Simple completion check for string objectives
+                if (obj.includes('Eliminate')) {
+                    completed = this.enemiesKilledThisMission >= 8; // Hardcoded for mission 1
+                } else {
+                    completed = false; // Can't track other string objectives
+                }
+            } else {
+                // New format - objects with description
+                description = obj.description || obj.displayText || 'Unknown objective';
+                completed = this.checkObjectiveComplete(obj);
+            }
+
             const icon = completed ? '✅' : '⬜';
             const color = completed ? '#00ff00' : '#ffffff';
-            content += `<div style="color: ${color}; margin: 5px 0;">${icon} ${obj.description}</div>`;
+            content += `<div style="color: ${color}; margin: 5px 0;">${icon} ${description}</div>`;
         });
     } else {
         content += '<div>No primary objectives</div>';

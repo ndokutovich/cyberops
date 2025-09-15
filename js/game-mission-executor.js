@@ -1,0 +1,703 @@
+// Mission Executor System
+// Generic mission execution engine that interprets mission definitions
+// No hardcoded mission-specific logic
+
+CyberOpsGame.prototype.initMissionSystem = function() {
+    // Initialize mission tracking system
+    this.missionTrackers = {};
+    this.interactedObjects = new Set();
+    this.enemiesEliminatedByType = {};
+    this.survivalTimers = {};
+    this.activeQuests = {};
+
+    console.log('🎮 Mission system initialized');
+};
+
+// Load mission data based on index
+CyberOpsGame.prototype.loadMissionData = function(missionIndex) {
+    const missionDef = MISSION_DEFINITIONS[missionIndex];
+    if (!missionDef) {
+        console.error('❌ Mission definition not found for index:', missionIndex);
+        return null;
+    }
+
+    // Convert definition to game mission format
+    const mission = {
+        id: missionDef.id,
+        name: missionDef.name,
+        title: missionDef.title,
+        description: missionDef.description,
+        briefing: missionDef.briefing,
+        map: missionDef.map.type,
+        // Use objectiveStrings for display if available, otherwise extract descriptions
+        objectives: missionDef.objectiveStrings || missionDef.objectives.map(obj =>
+            obj.description || obj.displayText || 'Complete objective'
+        ),
+        rewards: missionDef.rewards,
+        enemies: missionDef.enemies.count
+    };
+
+    // Store full definition for reference
+    this.currentMissionDef = missionDef;
+
+    return mission;
+};
+
+// Initialize mission from definition
+CyberOpsGame.prototype.initMissionFromDefinition = function() {
+    const missionDef = this.currentMissionDef;
+    if (!missionDef) return;
+
+    // Reset trackers
+    this.missionTrackers = {};
+    this.interactedObjects = new Set();
+    this.enemiesEliminatedByType = {};
+    this.survivalTimers = {};
+
+    // Generate map with objects
+    this.generateMapWithObjects(missionDef.map);
+
+    // NPCs are spawned by the existing spawnNPCs() function in game-flow.js
+    // which is called during initMission()
+    // So we don't need to spawn them here
+    // if (missionDef.npcs) {
+    //     this.spawnMissionNPCs(missionDef.npcs);
+    // }
+
+    // Setup enemy configuration
+    this.setupMissionEnemies(missionDef.enemies);
+
+    // Initialize objective displays
+    this.updateObjectiveDisplay();
+
+    console.log('📋 Mission initialized from definition:', missionDef.name);
+};
+
+// Generate map with mission-defined objects
+CyberOpsGame.prototype.generateMapWithObjects = function(mapDef) {
+    // Check if we should use declarative map
+    if (mapDef.useDeclarativeMap && typeof generateMapFromDefinition !== 'undefined') {
+        // Use the new declarative map system
+        this.map = generateMapFromDefinition(mapDef.type);
+        console.log(`📍 Generated declarative map: ${mapDef.type}`);
+    } else {
+        // Fall back to original procedural generation
+        this.map = this.generateMapFromType(mapDef.type);
+    }
+
+    // Add mission-specific objects (but don't override existing ones)
+    if (mapDef.objects) {
+        // Initialize object arrays if needed
+        if (!this.map.terminals) this.map.terminals = [];
+        if (!this.map.doors) this.map.doors = [];
+        if (!this.map.explosiveTargets) this.map.explosiveTargets = [];
+        if (!this.map.switches) this.map.switches = [];
+        if (!this.map.gates) this.map.gates = [];
+
+        mapDef.objects.forEach(obj => {
+            switch(obj.type) {
+                case 'terminal':
+                    // Don't add terminals if the map already has them
+                    // This preserves the original map's terminal positions
+                    if (this.map.terminals.length === 0) {
+                        this.map.terminals.push({
+                            id: obj.id,
+                            x: obj.x,
+                            y: obj.y,
+                            hacked: false,
+                            hackTime: obj.hackTime || 3,
+                            security: obj.security || 'normal'
+                        });
+                    }
+                    break;
+
+                case 'door':
+                    this.map.doors.push({
+                        id: obj.id,
+                        x: obj.x,
+                        y: obj.y,
+                        locked: obj.locked || false,
+                        keycard: obj.keycard || null
+                    });
+                    break;
+
+                case 'explosive':
+                    this.map.explosiveTargets.push({
+                        id: obj.id,
+                        x: obj.x,
+                        y: obj.y,
+                        planted: false,
+                        plantTime: obj.plantTime || 5
+                    });
+                    break;
+
+                case 'switch':
+                    this.map.switches.push({
+                        id: obj.id,
+                        x: obj.x,
+                        y: obj.y,
+                        activated: false,
+                        disables: obj.disables
+                    });
+                    break;
+
+                case 'gate':
+                    this.map.gates.push({
+                        id: obj.id,
+                        x: obj.x,
+                        y: obj.y,
+                        breached: false
+                    });
+                    break;
+            }
+        });
+    }
+
+    // Only override spawn and extraction points if explicitly provided
+    // This preserves the original map's spawn/extraction points
+    if (mapDef.spawn) {
+        this.map.spawn = mapDef.spawn;
+    }
+    if (mapDef.extraction) {
+        this.map.extraction = mapDef.extraction;
+    }
+};
+
+// Spawn mission NPCs with their quests
+CyberOpsGame.prototype.spawnMissionNPCs = function(npcDefs) {
+    // Mission NPCs are handled by the existing spawnNPCs function
+    // This is just a placeholder for future NPC system integration
+    console.log('📍 Mission NPCs will be spawned by existing NPC system');
+
+    // The existing game-npc.js handles NPC spawning based on mission index
+    // So we don't need to do anything here - NPCs are already spawned
+};
+
+// Setup mission enemies configuration
+CyberOpsGame.prototype.setupMissionEnemies = function(enemyDef) {
+    // Enemy spawning is handled by the existing enemy spawn system
+    // This just stores configuration for reference
+    if (enemyDef) {
+        this.missionEnemyConfig = enemyDef;
+        console.log('⚔️ Enemy configuration stored:', enemyDef.count, 'enemies');
+    }
+};
+
+// Generic action handler (replaces all the specific hackNearestTerminal, etc.)
+CyberOpsGame.prototype.useActionAbility = function(agent) {
+    if (!this.currentMissionDef) return false;
+
+    let actionPerformed = false;
+
+    // Check each objective to see what actions are available
+    this.currentMissionDef.objectives.forEach(obj => {
+        if (actionPerformed) return; // Only perform one action
+        if (obj.completed) return; // Skip completed objectives
+
+        // Check if this objective uses the action key
+        if (obj.actionKey === 'H' || obj.type === OBJECTIVE_TYPES.INTERACT) {
+            const range = obj.actionRange || 3;
+
+            // Find nearest valid target
+            let nearestTarget = null;
+            let nearestDist = Infinity;
+
+            // Get targets based on objective target type
+            let targets = this.getInteractionTargets(obj.target);
+
+            targets.forEach(target => {
+                // Skip if already interacted
+                if (target.hacked || target.planted || target.activated || target.breached) return;
+
+                // Skip if not the right specific target
+                if (obj.specific && !obj.specific.includes(target.id)) return;
+
+                const dist = Math.sqrt(
+                    Math.pow(target.x - agent.x, 2) +
+                    Math.pow(target.y - agent.y, 2)
+                );
+
+                if (dist < nearestDist && dist <= range) {
+                    nearestDist = dist;
+                    nearestTarget = target;
+                }
+            });
+
+            if (nearestTarget) {
+                // Perform the interaction
+                this.performInteraction(agent, obj.target, nearestTarget);
+                actionPerformed = true;
+
+                // Handle the objective tracking
+                OBJECTIVE_HANDLERS.handleInteraction(agent, obj.target, nearestTarget.id, this);
+            }
+        }
+    });
+
+    // If no mission objective requires interaction, still allow interactions with objects
+    // This allows players to interact even when not required by objectives
+    if (!actionPerformed) {
+        const interactionRange = 3;
+        const allTargets = [];
+
+        // Collect all interactable objects
+        if (this.map) {
+            // Terminals - push the actual object reference, not a copy
+            if (this.map.terminals) {
+                this.map.terminals.forEach(t => {
+                    if (!t.hacked) {
+                        t.type = INTERACTION_TARGETS.TERMINAL; // Add type directly to original
+                        allTargets.push(t);
+                    }
+                });
+            }
+
+            // Explosive targets
+            if (this.map.explosiveTargets) {
+                this.map.explosiveTargets.forEach(e => {
+                    if (!e.planted) {
+                        e.type = INTERACTION_TARGETS.EXPLOSIVE;
+                        allTargets.push(e);
+                    }
+                });
+            }
+
+            // Switches
+            if (this.map.switches) {
+                this.map.switches.forEach(s => {
+                    if (!s.activated) {
+                        s.type = INTERACTION_TARGETS.SWITCH;
+                        allTargets.push(s);
+                    }
+                });
+            }
+
+            // Gates
+            if (this.map.gates) {
+                this.map.gates.forEach(g => {
+                    if (!g.breached) {
+                        g.type = INTERACTION_TARGETS.GATE;
+                        allTargets.push(g);
+                    }
+                });
+            }
+
+            // Doors (if implemented)
+            if (this.map.doors) {
+                this.map.doors.forEach(d => {
+                    if (d.locked) {
+                        d.type = INTERACTION_TARGETS.DOOR;
+                        allTargets.push(d);
+                    }
+                });
+            }
+        }
+
+        // Find nearest target
+        let nearestTarget = null;
+        let nearestDist = Infinity;
+
+        allTargets.forEach(target => {
+            const dist = Math.sqrt(
+                Math.pow(target.x - agent.x, 2) +
+                Math.pow(target.y - agent.y, 2)
+            );
+
+            if (dist < nearestDist && dist <= interactionRange) {
+                nearestDist = dist;
+                nearestTarget = target;
+            }
+        });
+
+        // Interact with nearest target
+        if (nearestTarget) {
+            this.performInteraction(agent, nearestTarget.type, nearestTarget);
+
+            // Update appropriate tracker
+            if (!this.missionTrackers) this.missionTrackers = {};
+
+            switch(nearestTarget.type) {
+                case INTERACTION_TARGETS.TERMINAL:
+                    this.hackedTerminals = (this.hackedTerminals || 0) + 1;
+                    this.missionTrackers.terminalsHacked = (this.missionTrackers.terminalsHacked || 0) + 1;
+                    console.log(`🖥️ Terminal hacked! Total: ${this.hackedTerminals}`);
+                    break;
+                case INTERACTION_TARGETS.EXPLOSIVE:
+                    this.missionTrackers.explosivesPlanted = (this.missionTrackers.explosivesPlanted || 0) + 1;
+                    console.log(`💣 Explosive planted! Total: ${this.missionTrackers.explosivesPlanted}`);
+                    break;
+                case INTERACTION_TARGETS.SWITCH:
+                    this.missionTrackers.switchesActivated = (this.missionTrackers.switchesActivated || 0) + 1;
+                    console.log(`🔌 Switch activated! Total: ${this.missionTrackers.switchesActivated}`);
+                    break;
+                case INTERACTION_TARGETS.GATE:
+                    this.missionTrackers.gatesBreached = (this.missionTrackers.gatesBreached || 0) + 1;
+                    console.log(`🚪 Gate breached! Total: ${this.missionTrackers.gatesBreached}`);
+                    break;
+            }
+
+            actionPerformed = true;
+        }
+    }
+
+    // Also check active quests
+    if (!actionPerformed && this.activeQuests) {
+        Object.values(this.activeQuests).forEach(quest => {
+            if (actionPerformed) return;
+
+            quest.objectives.forEach(questObj => {
+                if (actionPerformed) return;
+
+                if (questObj.type === OBJECTIVE_TYPES.INTERACT) {
+                    // Similar logic for quest objectives
+                    const targets = this.getInteractionTargets(questObj.target);
+                    // ... (similar target finding and interaction)
+                }
+            });
+        });
+    }
+
+    return actionPerformed;
+};
+
+// Get interaction targets by type
+CyberOpsGame.prototype.getInteractionTargets = function(targetType) {
+    switch(targetType) {
+        case INTERACTION_TARGETS.TERMINAL:
+            return this.map.terminals || [];
+        case INTERACTION_TARGETS.EXPLOSIVE:
+            return this.map.explosiveTargets || [];
+        case INTERACTION_TARGETS.DOOR:
+            return this.map.doors || [];
+        case INTERACTION_TARGETS.SWITCH:
+            return this.map.switches || [];
+        case INTERACTION_TARGETS.GATE:
+            return this.map.gates || [];
+        case INTERACTION_TARGETS.NPC:
+            return this.npcs || [];
+        default:
+            return [];
+    }
+};
+
+// Perform interaction with target
+CyberOpsGame.prototype.performInteraction = function(agent, targetType, target) {
+    console.log(`🎯 ${agent.name} interacting with ${targetType} at (${target.x}, ${target.y})`);
+
+    switch(targetType) {
+        case INTERACTION_TARGETS.TERMINAL:
+            target.hacked = true;
+            this.effects.push({
+                type: 'hack',
+                x: target.x,
+                y: target.y,
+                duration: 60,
+                frame: 0
+            });
+            if (this.playSound) this.playSound('hack', 0.5);
+            if (this.logEvent) {
+                this.logEvent(`${agent.name} hacked terminal at [${target.x}, ${target.y}]`, 'hack', true);
+            }
+            break;
+
+        case INTERACTION_TARGETS.EXPLOSIVE:
+            target.planted = true;
+            this.effects.push({
+                type: 'explosive',
+                x: target.x,
+                y: target.y,
+                duration: 60,
+                frame: 0
+            });
+            if (this.playSound) this.playSound('plant', 0.5);
+            break;
+
+        case INTERACTION_TARGETS.SWITCH:
+            target.activated = true;
+            // Handle what the switch disables
+            if (target.disables === 'alarms') {
+                this.alarmsDisabled = true;
+                this.addNotification('🔇 Alarms disabled!');
+            }
+            break;
+
+        case INTERACTION_TARGETS.GATE:
+            target.breached = true;
+            this.effects.push({
+                type: 'breach',
+                x: target.x,
+                y: target.y,
+                duration: 80,
+                frame: 0
+            });
+            break;
+    }
+};
+
+// Check mission objectives
+CyberOpsGame.prototype.checkMissionObjectives = function() {
+    if (!this.currentMissionDef) {
+        console.log('⚠️ No currentMissionDef - new mission system not active');
+        return;
+    }
+
+    let allRequiredComplete = true;
+    let anyIncomplete = false;
+
+    this.currentMissionDef.objectives.forEach(obj => {
+        // Check if prerequisites are met
+        if (obj.triggerAfter) {
+            const prereqsMet = obj.triggerAfter.every(prereqId => {
+                const prereq = this.currentMissionDef.objectives.find(o => o.id === prereqId);
+                return prereq && OBJECTIVE_HANDLERS.checkComplete(prereq, this);
+            });
+            if (!prereqsMet) {
+                obj.active = false;
+                return;
+            } else {
+                obj.active = true;
+            }
+        } else {
+            obj.active = true;
+        }
+
+        // Check completion
+        const wasComplete = obj.completed;
+        obj.completed = OBJECTIVE_HANDLERS.checkComplete(obj, this);
+
+        // Handle newly completed objectives
+        if (!wasComplete && obj.completed) {
+            console.log(`✅ Objective completed: ${obj.description}`);
+            this.addNotification(`✅ ${obj.description}`);
+
+            // Give optional objective rewards immediately
+            if (!obj.required && obj.rewards) {
+                this.giveRewards(obj.rewards);
+            }
+
+            // Trigger any events
+            if (obj.onComplete) {
+                this.triggerMissionEvent(obj.onComplete);
+            }
+        }
+
+        // Track overall completion
+        if (obj.required && !obj.completed) {
+            allRequiredComplete = false;
+        }
+        if (!obj.completed) {
+            anyIncomplete = true;
+        }
+    });
+
+    // Update objective display
+    this.updateObjectiveDisplay();
+
+    // Check for mission completion
+    if (allRequiredComplete) {
+        // Only enable extraction once
+        if (!this.extractionEnabled) {
+            this.extractionEnabled = true;
+            this.addNotification('📍 Extraction point activated! Get to the extraction!');
+
+            // Update objective display to show extraction
+            const tracker = document.getElementById('objectiveTracker');
+            if (tracker) {
+                tracker.textContent = 'All objectives complete! Reach extraction point!';
+            }
+        }
+
+        // Don't complete mission yet - wait for extraction
+        // this.completeMission(true);
+    }
+};
+
+// Update objective display
+CyberOpsGame.prototype.updateObjectiveDisplay = function() {
+    const tracker = document.getElementById('objectiveTracker');
+    if (!tracker || !this.currentMissionDef) return;
+
+    // Show primary objective
+    const primaryObj = this.currentMissionDef.objectives.find(o => o.required && o.active && !o.completed);
+    if (primaryObj) {
+        tracker.textContent = OBJECTIVE_HANDLERS.getDisplayText(primaryObj, this);
+    } else if (this.extractionEnabled) {
+        tracker.textContent = 'All objectives complete! Reach extraction point!';
+    } else {
+        tracker.textContent = 'All objectives complete!';
+    }
+
+    // Also update the mission list dialog if it's open
+    const missionDialog = document.querySelector('.mission-list-dialog');
+    if (missionDialog && missionDialog.style.display !== 'none') {
+        // Refresh the mission list
+        this.showMissionList();
+    }
+};
+
+// Give rewards to player
+CyberOpsGame.prototype.giveRewards = function(rewards) {
+    if (rewards.credits) {
+        this.credits = (this.credits || 0) + rewards.credits;
+        this.addNotification(`💰 +${rewards.credits} credits`);
+    }
+    if (rewards.researchPoints) {
+        this.researchPoints = (this.researchPoints || 0) + rewards.researchPoints;
+        this.addNotification(`🔬 +${rewards.researchPoints} research points`);
+    }
+    if (rewards.experience) {
+        this.experience = (this.experience || 0) + rewards.experience;
+        this.addNotification(`⭐ +${rewards.experience} XP`);
+    }
+    if (rewards.unlock) {
+        if (!this.unlocked) this.unlocked = new Set();
+        this.unlocked.add(rewards.unlock);
+        this.addNotification(`🔓 Unlocked: ${rewards.unlock}`);
+    }
+};
+
+// Complete mission
+CyberOpsGame.prototype.completeMission = function(victory) {
+    console.log('🎯 Mission complete!', victory ? 'Victory!' : 'Failed');
+
+    // Give mission rewards if victorious
+    if (victory && this.currentMissionDef) {
+        this.giveRewards(this.currentMissionDef.rewards);
+    }
+
+    // Show intermission screen
+    this.showIntermissionDialog(victory);
+};
+
+// Custom objective check functions
+CyberOpsGame.prototype.checkStealthObjective = function(objective) {
+    // Check if alarms have been triggered
+    return !this.alarmsTriggered;
+};
+
+CyberOpsGame.prototype.checkMainframeCaptured = function(objective) {
+    // Check if all prerequisites are met (handled by triggerAfter)
+    // If this function is called, prerequisites are already met
+    return true;
+};
+
+// Handle enemy elimination
+CyberOpsGame.prototype.onEnemyEliminated = function(enemy) {
+    // Track by type
+    if (enemy.type) {
+        this.enemiesEliminatedByType[enemy.type] = (this.enemiesEliminatedByType[enemy.type] || 0) + 1;
+    }
+
+    // Track total
+    if (!this.missionTrackers) this.missionTrackers = {};
+    this.missionTrackers.enemiesEliminated = (this.missionTrackers.enemiesEliminated || 0) + 1;
+
+    console.log(`💀 Enemy eliminated! Total: ${this.missionTrackers.enemiesEliminated}`);
+
+    // Check objectives
+    this.checkMissionObjectives();
+};
+
+// Handle item collection
+CyberOpsGame.prototype.onItemCollected = function(itemType) {
+    if (!this.missionTrackers) this.missionTrackers = {};
+
+    const tracker = itemType + 'Collected';
+    this.missionTrackers[tracker] = (this.missionTrackers[tracker] || 0) + 1;
+
+    // Check objectives
+    this.checkMissionObjectives();
+};
+
+// Update survival timers
+CyberOpsGame.prototype.updateSurvivalTimers = function(deltaTime) {
+    if (!this.currentMissionDef) return;
+
+    this.currentMissionDef.objectives.forEach(obj => {
+        if (obj.type === OBJECTIVE_TYPES.SURVIVE && obj.active && !obj.completed) {
+            if (!this.survivalTimers[obj.id]) {
+                this.survivalTimers[obj.id] = 0;
+            }
+            this.survivalTimers[obj.id] += deltaTime;
+        }
+    });
+};
+
+// Initialize quest system
+CyberOpsGame.prototype.initQuestSystem = function() {
+    this.activeQuests = {};
+    this.completedQuests = new Set();
+
+    console.log('📜 Quest system initialized');
+};
+
+// Give quest to player
+CyberOpsGame.prototype.giveQuest = function(questId) {
+    const questDef = QUEST_DEFINITIONS[questId];
+    if (!questDef) return false;
+
+    // Check requirements
+    if (questDef.requirements) {
+        if (questDef.requirements.level && this.currentMissionIndex < questDef.requirements.level) {
+            return false;
+        }
+        if (questDef.requirements.credits && (this.credits || 0) < questDef.requirements.credits) {
+            return false;
+        }
+        if (questDef.requirements.completedQuests) {
+            const hasRequired = questDef.requirements.completedQuests.every(qId =>
+                this.completedQuests.has(qId)
+            );
+            if (!hasRequired) return false;
+        }
+    }
+
+    // Add to active quests
+    this.activeQuests[questId] = {
+        ...questDef,
+        startTime: Date.now(),
+        objectives: questDef.objectives.map(o => ({ ...o, completed: false }))
+    };
+
+    this.addNotification(`📜 New Quest: ${questDef.name}`);
+    return true;
+};
+
+// Check quest completion
+CyberOpsGame.prototype.checkQuestCompletion = function() {
+    Object.entries(this.activeQuests).forEach(([questId, quest]) => {
+        let allComplete = true;
+
+        quest.objectives.forEach(obj => {
+            obj.completed = OBJECTIVE_HANDLERS.checkComplete(obj, this);
+            if (!obj.completed) allComplete = false;
+        });
+
+        if (allComplete) {
+            this.completeQuest(questId);
+        }
+    });
+};
+
+// Complete quest
+CyberOpsGame.prototype.completeQuest = function(questId) {
+    const quest = this.activeQuests[questId];
+    if (!quest) return;
+
+    // Give rewards
+    this.giveRewards(quest.rewards);
+
+    // Mark as completed
+    this.completedQuests.add(questId);
+    delete this.activeQuests[questId];
+
+    // Unlock next quests
+    if (quest.rewards.unlocks) {
+        quest.rewards.unlocks.forEach(unlockedQuestId => {
+            // Make quest available from NPCs
+            console.log(`🔓 Unlocked quest: ${unlockedQuestId}`);
+        });
+    }
+
+    this.addNotification(`✅ Quest Complete: ${quest.name}`);
+};

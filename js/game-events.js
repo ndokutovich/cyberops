@@ -99,7 +99,8 @@ CyberOpsGame.prototype.setupEventListeners = function() {
             console.log('⌨️ Keyboard handler initialized in setupEventListeners');
         }
 
-        /* OLD KEYBOARD HANDLERS - DISABLED - Moved to game-keyboard.js
+        /* OLD KEYBOARD HANDLERS - DISABLED - Moved to game-keyboard.js */
+        /* COMMENTED OUT TO PREVENT CONFLICTS
         document.addEventListener('keydown', (e) => {
             // Select All Squad - 'T' key for Team
             if (e.code === 'KeyT' && this.currentScreen === 'game') {
@@ -146,18 +147,18 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                         console.log('💻 Hack hotkey pressed');
                         const hacker = selectedAgents[0];
                         if (!hacker.cooldowns[3] || hacker.cooldowns[3] <= 0) {
-                            // Mission-specific actions
-                            if (this.currentMission && this.currentMission.id === 3) {
-                                this.plantNearestExplosive(hacker);
-                            } else if (this.currentMission && this.currentMission.id === 4) {
-                                this.eliminateNearestTarget(hacker);
-                            } else if (this.currentMission && this.currentMission.id === 5) {
-                                this.breachNearestGate(hacker) || this.hackNearestTerminal(hacker);
+                            // Use generic action system for all interactions
+                            let actionPerformed = false;
+                            if (this.useActionAbility) {
+                                actionPerformed = this.useActionAbility(hacker);
                             } else {
-                                this.hackNearestTerminal(hacker);
+                                // Fallback to terminal hacking
+                                actionPerformed = this.hackNearestTerminal(hacker);
                             }
-                            hacker.cooldowns[3] = 120;
-                            actionTriggered = true;
+                            if (actionPerformed) {
+                                hacker.cooldowns[3] = 120;
+                                actionTriggered = true;
+                            }
                         } else {
                             console.log('⏳ Hack on cooldown:', hacker.cooldowns[3]);
                         }
@@ -224,8 +225,7 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 this.togglePause();
             }
         });
-
-        });  // End of old keydown handler
+        // });  // End of old keydown handler - EXTRA BRACKET REMOVED
 
         document.addEventListener('keyup', (e) => {
             if (this.is3DMode) {
@@ -237,7 +237,7 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 }
             }
         });
-        */ // END OF OLD KEYBOARD HANDLERS - Use game-keyboard.js instead
+        END OF OLD KEYBOARD HANDLERS - Use game-keyboard.js instead */
 
         // Mouse handling for 3D shooting (keep this for mouse interaction)
         this.mouseClicked = false;

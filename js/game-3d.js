@@ -1600,13 +1600,11 @@ CyberOpsGame.prototype.execute3DHack = function() {
         // Use the SAME logic as 2D mode - handle based on mission type
         const agent = this._selectedAgent;
 
-        if (this.currentMission.id === 3) {
-            this.plantNearestExplosive(agent);
-        } else if (this.currentMission.id === 4) {
-            this.eliminateNearestTarget(agent);
-        } else if (this.currentMission.id === 5) {
-            this.breachNearestGate(agent) || this.hackNearestTerminal(agent);
+        // Use generic action system for all mission-specific interactions
+        if (this.useActionAbility) {
+            this.useActionAbility(agent);
         } else {
+            // Fallback to terminal hacking
             this.hackNearestTerminal(agent);
         }
 

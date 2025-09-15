@@ -161,13 +161,23 @@ class CyberOpsGame {
         this.setupCanvas();
         console.log('✅ setupCanvas() completed');
 
-        console.log('🔧 About to call loadMissionData()...');
-        this.loadMissionData();
-        console.log('✅ loadMissionData() completed');
+        console.log('🔧 Initializing game systems...');
 
-        console.log('🔧 About to call initializeHub()...');
+        // Initialize hub first (agents, equipment, etc.)
+        console.log('🏢 Setting up hub...');
         this.initializeHub();
-        console.log('✅ initializeHub() completed');
+
+        // Then override missions with new system if available
+        if (typeof MISSION_DEFINITIONS !== 'undefined') {
+            console.log('🆕 Loading comprehensive mission system...');
+            if (this.initMissions) {
+                this.initMissions();  // This will override the legacy missions
+            }
+        } else {
+            console.log('📦 Using legacy mission definitions');
+        }
+
+        console.log('✅ All systems initialized');
 
         // Initialize equipment system
         console.log('🔧 Initializing equipment system...');

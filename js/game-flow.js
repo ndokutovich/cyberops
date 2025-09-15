@@ -100,7 +100,9 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
         mission.objectives.forEach(obj => {
             const div = document.createElement('div');
             div.className = 'objective-item';
-            div.textContent = '▸ ' + obj;
+            // Handle both object and string formats for backward compatibility
+            const objText = typeof obj === 'string' ? obj : (obj.description || obj.displayText || 'Complete objective');
+            div.textContent = '▸ ' + objText;
             objList.appendChild(div);
         });
 
@@ -250,6 +252,8 @@ CyberOpsGame.prototype.initMission = function() {
         }
 
         // Reset mission tracking
+        this.hackedTerminals = 0;  // Reset terminal hacking counter
+        this.enemiesKilledThisMission = 0;  // Reset enemy kill counter
         this.intelThisMission = 0;
         this.researchPointsThisMission = 0;
         this.creditsThisMission = 0;
@@ -446,12 +450,14 @@ CyberOpsGame.prototype.initMission = function() {
         // Spawn enemies with enhanced variety and positioning
         this.spawnMissionEnemies();
 
-        // Set initial objective with actual enemy count
-        if (this.currentMission.id === 1) {
-            document.getElementById('objectiveTracker').textContent =
-                `Eliminate enemies: 0/${this.enemies.length}`;
+        // Set initial objective from mission definition
+        if (this.updateObjectiveDisplay) {
+            this.updateObjectiveDisplay();
         } else {
-            document.getElementById('objectiveTracker').textContent = 'Hack terminals: 0/3';
+            // Fallback display
+            document.getElementById('objectiveTracker').textContent =
+                this.currentMission.objectives && this.currentMission.objectives[0] ?
+                this.currentMission.objectives[0].description : 'Complete objectives';
         }
 
         this.updateSquadHealth();
@@ -720,14 +726,12 @@ CyberOpsGame.prototype.useAbility = function(abilityIndex) {
                 this.throwGrenade(agent);
                 agent.cooldowns[2] = 180;
                 break;
-            case 3: // Hack/Interact
-                if (this.currentMission.id === 3) {
-                    this.plantNearestExplosive(agent);
-                } else if (this.currentMission.id === 4) {
-                    this.eliminateNearestTarget(agent);
-                } else if (this.currentMission.id === 5) {
-                    this.breachNearestGate(agent) || this.hackNearestTerminal(agent);
+            case 3: // Hack/Interact - Use generic action system
+                // The new mission system handles all interactions generically
+                if (this.useActionAbility) {
+                    this.useActionAbility(agent);
                 } else {
+                    // Fallback to terminal hacking for backward compatibility
                     this.hackNearestTerminal(agent);
                 }
                 agent.cooldowns[3] = 120;
@@ -765,17 +769,18 @@ CyberOpsGame.prototype.useAbilityForAllSelected = function(abilityIndex) {
                     break;
                 case 3: // Hack/Interact - only first agent
                     if (index === 0) {
-                        if (this.currentMission && this.currentMission.id === 3) {
-                            this.plantNearestExplosive(agent);
-                        } else if (this.currentMission && this.currentMission.id === 4) {
-                            this.eliminateNearestTarget(agent);
-                        } else if (this.currentMission && this.currentMission.id === 5) {
-                            this.breachNearestGate(agent) || this.hackNearestTerminal(agent);
+                        // Use generic action system for all interactions
+                        let actionPerformed = false;
+                        if (this.useActionAbility) {
+                            actionPerformed = this.useActionAbility(agent);
                         } else {
-                            this.hackNearestTerminal(agent);
+                            // Fallback to terminal hacking
+                            actionPerformed = this.hackNearestTerminal(agent);
                         }
-                        agent.cooldowns[3] = 120;
-                        anyUsed = true;
+                        if (actionPerformed) {
+                            agent.cooldowns[3] = 120;
+                            anyUsed = true;
+                        }
                     }
                     break;
                 case 4: // Shield - all agents activate
@@ -1214,6 +1219,16 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
 
             if (dist < hackRange) {
                 terminal.hacked = true;
+
+                // Increment the hackedTerminals counter for quest tracking
+                this.hackedTerminals = (this.hackedTerminals || 0) + 1;
+
+                // Also update mission trackers for the new system
+                if (this.missionTrackers) {
+                    this.missionTrackers.terminalsHacked = (this.missionTrackers.terminalsHacked || 0) + 1;
+                }
+
+                console.log(`🖥️ Terminal hacked! Total: ${this.hackedTerminals}`);
 
                 // Log the hacking event
                 if (this.logEvent) {
