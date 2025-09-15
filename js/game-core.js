@@ -304,7 +304,7 @@ CyberOpsGame.prototype.loadMissionData = function() {
 CyberOpsGame.prototype.initializeHub = function() {
         console.log('🏢 Initializing Syndicate Hub...');
 
-        // Initialize available agents with skills
+        // Initialize available agents with skills - 4 hired, 2 available for hire
         this.availableAgents = [
             { id: 1, name: 'Alex "Shadow" Chen', specialization: 'stealth', skills: ['stealth', 'melee'], cost: 1000, hired: true, health: 90, speed: 5, damage: 18 },
             { id: 2, name: 'Maya "Code" Rodriguez', specialization: 'hacker', skills: ['hacker', 'electronics'], cost: 1200, hired: true, health: 70, speed: 4, damage: 12 },

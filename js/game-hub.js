@@ -1,5 +1,11 @@
     // Syndicate Hub System
 CyberOpsGame.prototype.showSyndicateHub = function() {
+        // CRITICAL: Disable 3D mode if active
+        if (this.is3DMode) {
+            console.log('🔄 Disabling 3D mode when entering Hub');
+            this.cleanup3D();
+        }
+
         // Hide all other screens
         document.getElementById('mainMenu').style.display = 'none';
         document.getElementById('gameCompleteScreen').style.display = 'none';

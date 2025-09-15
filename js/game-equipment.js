@@ -414,7 +414,19 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
 
 // Auto-optimize loadouts
 CyberOpsGame.prototype.optimizeLoadouts = function() {
-    // Clear all loadouts first
+    // Initialize loadouts for any new agents first
+    this.activeAgents.forEach(agent => {
+        if (!this.agentLoadouts[agent.id]) {
+            this.agentLoadouts[agent.id] = {
+                weapon: null,
+                armor: null,
+                utility: null,
+                special: null
+            };
+        }
+    });
+
+    // Clear all loadouts
     Object.keys(this.agentLoadouts).forEach(agentId => {
         this.agentLoadouts[agentId] = {
             weapon: null,
@@ -444,27 +456,71 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         }
     });
 
-    // Assign armor and utility based on specialization
-    this.activeAgents.forEach(agent => {
-        // Find best armor
-        const armor = this.equipment.find(e =>
-            e.protection && this.getAvailableCount('equipment', e.id) > 0
-        );
-        if (armor) {
-            this.agentLoadouts[agent.id].armor = armor.id;
+    // Build equipment pools
+    const armorPool = [];
+    const utilityPool = [];
+
+    this.equipment.forEach(item => {
+        if (item.owned > 0) {
+            for (let i = 0; i < item.owned; i++) {
+                if (item.protection) {
+                    armorPool.push({ ...item });
+                } else if (item.hackBonus || item.stealthBonus || item.damage) {
+                    utilityPool.push({ ...item });
+                }
+            }
+        }
+    });
+
+    // Sort equipment by effectiveness
+    armorPool.sort((a, b) => (b.protection || 0) - (a.protection || 0));
+    utilityPool.sort((a, b) => {
+        const aVal = (a.hackBonus || 0) + (a.stealthBonus || 0) + (a.damage || 0);
+        const bVal = (b.hackBonus || 0) + (b.stealthBonus || 0) + (b.damage || 0);
+        return bVal - aVal;
+    });
+
+    // Assign armor and utility to agents
+    this.activeAgents.forEach((agent, index) => {
+        // Assign armor if available
+        if (index < armorPool.length) {
+            this.agentLoadouts[agent.id].armor = armorPool[index].id;
         }
 
-        // Find best utility based on specialization
+        // Assign utility based on specialization or availability
+        let assigned = false;
+
+        // Try to match specialization first
         if (agent.specialization === 'hacker') {
-            const hackKit = this.equipment.find(e =>
-                e.hackBonus && this.getAvailableCount('equipment', e.id) > 0
-            );
-            if (hackKit) this.agentLoadouts[agent.id].utility = hackKit.id;
+            const hackKit = utilityPool.find(item => item.hackBonus && !item.assigned);
+            if (hackKit) {
+                this.agentLoadouts[agent.id].utility = hackKit.id;
+                hackKit.assigned = true;
+                assigned = true;
+            }
         } else if (agent.specialization === 'stealth') {
-            const stealthSuit = this.equipment.find(e =>
-                e.stealthBonus && this.getAvailableCount('equipment', e.id) > 0
-            );
-            if (stealthSuit) this.agentLoadouts[agent.id].utility = stealthSuit.id;
+            const stealthSuit = utilityPool.find(item => item.stealthBonus && !item.assigned);
+            if (stealthSuit) {
+                this.agentLoadouts[agent.id].utility = stealthSuit.id;
+                stealthSuit.assigned = true;
+                assigned = true;
+            }
+        } else if (agent.specialization === 'demolition') {
+            const explosives = utilityPool.find(item => item.damage && !item.assigned);
+            if (explosives) {
+                this.agentLoadouts[agent.id].utility = explosives.id;
+                explosives.assigned = true;
+                assigned = true;
+            }
+        }
+
+        // If no specialization match, assign any available utility
+        if (!assigned) {
+            const anyUtility = utilityPool.find(item => !item.assigned);
+            if (anyUtility) {
+                this.agentLoadouts[agent.id].utility = anyUtility.id;
+                anyUtility.assigned = true;
+            }
         }
     });
 

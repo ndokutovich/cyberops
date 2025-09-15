@@ -30,6 +30,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
 
         // Camera/View
         'E': () => this.toggle3DMode(),
+        'e': () => this.toggle3DMode(), // Handle both cases
         'L': () => this.toggleSquadFollowing(),
 
         // UI Controls
@@ -131,21 +132,42 @@ CyberOpsGame.prototype.cycleAgents = function() {
 };
 
 CyberOpsGame.prototype.toggle3DMode = function() {
+    // RESTORED ORIGINAL FUNCTIONALITY - Cycles through tactical/third/first modes
     console.log('🔑 E key detected! Checking conditions...');
-    console.log('Current 3D mode:', this.is3DMode);
-    console.log('THREE.js loaded:', !!window.THREE);
+    console.log('  - currentScreen:', this.currentScreen);
+    console.log('  - _selectedAgent exists:', !!this._selectedAgent);
+    console.log('  - _selectedAgent details:', this._selectedAgent ? this._selectedAgent.name : 'none');
+    console.log('  - 3D system available:', !!this.scene3D);
 
-    if (!window.THREE) {
-        console.error('❌ Three.js is not loaded!');
+    // Only works in game screen
+    if (this.currentScreen !== 'game') {
+        console.log('⚠️ Cannot toggle 3D mode - not in game screen');
         return;
     }
 
-    if (!this.is3DMode) {
-        console.log('✅ Switching to 3D mode!');
+    // Initialize 3D system if needed
+    if (!this.scene3D) {
+        console.log('🎮 Initializing 3D system first...');
         this.init3D();
+    }
+
+    // Auto-select first agent if none selected
+    if (!this._selectedAgent && this.agents && this.agents.length > 0) {
+        const firstAlive = this.agents.find(a => a.alive);
+        if (firstAlive) {
+            this._selectedAgent = firstAlive;
+            firstAlive.selected = true;
+            console.log('🎯 Auto-selected first alive agent for E key:', firstAlive.name);
+        }
+    }
+
+    if (this._selectedAgent && this.scene3D) {
+        console.log('✅ All conditions met! Switching camera mode...');
+        this.switchCameraMode();
     } else {
-        console.log('✅ Switching to 2D mode!');
-        this.cleanup3D();
+        console.log('❌ Conditions not met for camera switch:');
+        if (!this._selectedAgent) console.log('  - No agent selected');
+        if (!this.scene3D) console.log('  - 3D system not available');
     }
 };
 

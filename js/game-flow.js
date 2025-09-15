@@ -184,6 +184,12 @@ CyberOpsGame.prototype.startMission = function() {
 }
 
 CyberOpsGame.prototype.initMission = function() {
+        // CRITICAL: Ensure 3D mode is off at mission start
+        if (this.is3DMode) {
+            console.log('🔄 Resetting to 2D mode for mission start');
+            this.cleanup3D();
+        }
+
         // Reset state
         this.agents = [];
         this.enemies = [];
@@ -192,8 +198,20 @@ CyberOpsGame.prototype.initMission = function() {
         this.missionTimer = 0;
         this.isPaused = false;
 
-        // Reset mission intel tracking
+        // Reset mission tracking
         this.intelThisMission = 0;
+        this.researchPointsThisMission = 0;
+        this.creditsThisMission = 0;
+        this.itemsCollectedThisMission = {
+            intel: 0,
+            health: 0,
+            ammo: 0,
+            credits: 0,
+            armor: 0,
+            explosives: 0,
+            keycard: 0
+        };
+        this.objectiveStatus = {};
 
         // Initialize event log and team commands
         this.initEventLog();
@@ -238,11 +256,31 @@ CyberOpsGame.prototype.initMission = function() {
         // Spawn agents with equipment and research bonuses using services
         const spawn = this.map.spawn;
 
-        // Prepare all selected agents for weapon distribution
-        const baseAgents = this.selectedAgents.map(selectedAgent => {
-            // Find the actual agent data from activeAgents (has research bonuses)
-            return this.activeAgents.find(a => a.name === selectedAgent.name) || selectedAgent;
-        });
+        // Determine number of agents based on mission difficulty
+        // Mission 1: 4 agents, Mission 2: 5 agents, Mission 3+: 6 agents
+        const maxAgentsForMission = Math.min(4 + Math.floor(this.currentMissionIndex / 2), 6);
+
+        // Use all hired agents up to the mission limit
+        const availableForMission = this.activeAgents.slice(0, maxAgentsForMission);
+
+        // If we have selectedAgents, prioritize them, otherwise use all available
+        let baseAgents;
+        if (this.selectedAgents && this.selectedAgents.length > 0) {
+            // Add selected agents first
+            baseAgents = this.selectedAgents.map(selectedAgent => {
+                return this.activeAgents.find(a => a.name === selectedAgent.name) || selectedAgent;
+            });
+
+            // Add more hired agents if we have room
+            const additionalAgents = availableForMission.filter(
+                agent => !baseAgents.find(a => a.name === agent.name)
+            );
+            baseAgents = [...baseAgents, ...additionalAgents].slice(0, maxAgentsForMission);
+        } else {
+            baseAgents = availableForMission;
+        }
+
+        console.log(`🎯 Mission ${this.currentMissionIndex + 1}: Deploying ${baseAgents.length} agents (max: ${maxAgentsForMission})`);
 
         // Apply loadouts if equipment system is initialized
         let agentsWithLoadouts = baseAgents;
@@ -334,31 +372,13 @@ CyberOpsGame.prototype.initMission = function() {
             console.log('⚠️ No agents available to select!');
         }
 
-        // Spawn enemies
-        for (let i = 0; i < this.currentMission.enemies; i++) {
-            const enemy = {
-                id: 'enemy_' + i,
-                x: 10 + Math.random() * 8,
-                y: 10 + Math.random() * 8,
-                health: 50,
-                maxHealth: 50,
-                speed: 2,
-                damage: 10,
-                alive: true,
-                alertLevel: 0,
-                visionRange: 5,
-                // Add facing direction (random initial direction)
-                facingAngle: Math.random() * Math.PI * 2
-            };
-            enemy.targetX = enemy.x;
-            enemy.targetY = enemy.y;
-            this.enemies.push(enemy);
-        }
+        // Spawn enemies with enhanced variety and positioning
+        this.spawnMissionEnemies();
 
-        // Set initial objective
+        // Set initial objective with actual enemy count
         if (this.currentMission.id === 1) {
             document.getElementById('objectiveTracker').textContent =
-                `Eliminate enemies: 0/${this.currentMission.enemies}`;
+                `Eliminate enemies: 0/${this.enemies.length}`;
         } else {
             document.getElementById('objectiveTracker').textContent = 'Hack terminals: 0/3';
         }
@@ -366,6 +386,176 @@ CyberOpsGame.prototype.initMission = function() {
         this.updateSquadHealth();
         this.centerCameraOnAgents();
 }
+
+// Enhanced enemy spawning system with variety and better positioning
+CyberOpsGame.prototype.spawnMissionEnemies = function() {
+    // Define enemy types with different stats
+    const enemyTypes = [
+        { type: 'guard', health: 50, speed: 2, damage: 10, visionRange: 5, color: '#ff6666' },
+        { type: 'soldier', health: 75, speed: 2.5, damage: 15, visionRange: 6, color: '#ff8888' },
+        { type: 'elite', health: 100, speed: 3, damage: 20, visionRange: 7, color: '#ffaaaa' },
+        { type: 'heavy', health: 150, speed: 1.5, damage: 25, visionRange: 4, color: '#ff4444' },
+        { type: 'sniper', health: 60, speed: 2, damage: 35, visionRange: 10, color: '#ff9999' },
+        { type: 'commander', health: 120, speed: 2.5, damage: 22, visionRange: 8, color: '#ffcccc' }
+    ];
+
+    // Calculate total enemies based on mission difficulty
+    // Base enemies + bonus based on mission index
+    const baseEnemies = this.currentMission.enemies;
+    const bonusEnemies = Math.floor(this.currentMissionIndex * 2); // +2 enemies per mission
+    const totalEnemies = baseEnemies + bonusEnemies;
+
+    console.log(`📊 Spawning ${totalEnemies} enemies (base: ${baseEnemies}, bonus: ${bonusEnemies})`);
+
+    // Determine enemy composition based on mission
+    let enemyComposition = [];
+
+    if (this.currentMissionIndex === 0) {
+        // Mission 1: Mostly guards with some soldiers
+        enemyComposition = Array(Math.floor(totalEnemies * 0.6)).fill('guard')
+            .concat(Array(Math.floor(totalEnemies * 0.4)).fill('soldier'));
+    } else if (this.currentMissionIndex === 1) {
+        // Mission 2: Mix of guards, soldiers, and elites
+        enemyComposition = Array(Math.floor(totalEnemies * 0.3)).fill('guard')
+            .concat(Array(Math.floor(totalEnemies * 0.4)).fill('soldier'))
+            .concat(Array(Math.floor(totalEnemies * 0.3)).fill('elite'));
+    } else if (this.currentMissionIndex === 2) {
+        // Mission 3: Soldiers, elites, and heavies
+        enemyComposition = Array(Math.floor(totalEnemies * 0.3)).fill('soldier')
+            .concat(Array(Math.floor(totalEnemies * 0.3)).fill('elite'))
+            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('heavy'))
+            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('sniper'));
+    } else if (this.currentMissionIndex === 3) {
+        // Mission 4: Elites, snipers, and commanders
+        enemyComposition = Array(Math.floor(totalEnemies * 0.3)).fill('elite')
+            .concat(Array(Math.floor(totalEnemies * 0.3)).fill('sniper'))
+            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('heavy'))
+            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('commander'));
+    } else {
+        // Mission 5+: All types with commanders
+        enemyComposition = Array(Math.floor(totalEnemies * 0.2)).fill('elite')
+            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('heavy'))
+            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('sniper'))
+            .concat(Array(Math.floor(totalEnemies * 0.3)).fill('commander'))
+            .concat(Array(Math.floor(totalEnemies * 0.1)).fill('soldier'));
+    }
+
+    // Ensure we have exactly the right number of enemies
+    while (enemyComposition.length < totalEnemies) {
+        enemyComposition.push('guard');
+    }
+    enemyComposition = enemyComposition.slice(0, totalEnemies);
+
+    // Get strategic positions based on map
+    const strategicPositions = this.getStrategicEnemyPositions(totalEnemies);
+
+    // Spawn enemies
+    enemyComposition.forEach((enemyTypeName, i) => {
+        const enemyTemplate = enemyTypes.find(t => t.type === enemyTypeName) || enemyTypes[0];
+        const position = strategicPositions[i] || { x: 10 + Math.random() * 20, y: 10 + Math.random() * 20 };
+
+        const enemy = {
+            id: 'enemy_' + i,
+            type: enemyTemplate.type,
+            x: position.x,
+            y: position.y,
+            health: enemyTemplate.health + Math.floor(Math.random() * 20) - 10, // Some variation
+            maxHealth: enemyTemplate.health,
+            speed: enemyTemplate.speed + (Math.random() * 0.5 - 0.25),
+            damage: enemyTemplate.damage + Math.floor(Math.random() * 5) - 2,
+            alive: true,
+            alertLevel: 0,
+            visionRange: enemyTemplate.visionRange,
+            color: enemyTemplate.color,
+            facingAngle: Math.random() * Math.PI * 2,
+            patrolRoute: position.patrol || null
+        };
+        enemy.targetX = enemy.x;
+        enemy.targetY = enemy.y;
+        this.enemies.push(enemy);
+    });
+
+    console.log(`⚔️ Enemy composition for mission ${this.currentMissionIndex + 1}:`,
+        enemyComposition.reduce((acc, type) => {
+            acc[type] = (acc[type] || 0) + 1;
+            return acc;
+        }, {})
+    );
+};
+
+// Get strategic enemy positions based on map type
+CyberOpsGame.prototype.getStrategicEnemyPositions = function(count) {
+    const positions = [];
+    const mapWidth = this.map.width || 40;
+    const mapHeight = this.map.height || 30;
+
+    // Define key areas based on map type
+    let keyAreas = [];
+
+    if (this.currentMission.map === 'corporate') {
+        // Corporate: Guards at entrances, patrols in hallways
+        keyAreas = [
+            { x: 10, y: 10, radius: 5 },  // Main entrance
+            { x: 30, y: 10, radius: 5 },  // Side entrance
+            { x: 20, y: 20, radius: 8 },  // Central area
+            { x: 10, y: 25, radius: 5 },  // Security room
+        ];
+    } else if (this.currentMission.map === 'government') {
+        // Government: Heavy security at checkpoints
+        keyAreas = [
+            { x: 15, y: 15, radius: 6 },  // Checkpoint 1
+            { x: 25, y: 15, radius: 6 },  // Checkpoint 2
+            { x: 20, y: 25, radius: 8 },  // Main facility
+        ];
+    } else if (this.currentMission.map === 'industrial') {
+        // Industrial: Spread across facility
+        keyAreas = [
+            { x: 10, y: 10, radius: 6 },  // Storage area
+            { x: 30, y: 10, radius: 6 },  // Production line
+            { x: 20, y: 20, radius: 8 },  // Central control
+            { x: 10, y: 30, radius: 6 },  // Loading dock
+        ];
+    } else if (this.currentMission.map === 'residential') {
+        // Residential: Concentrated around targets
+        keyAreas = [
+            { x: 15, y: 15, radius: 7 },  // Target building 1
+            { x: 25, y: 25, radius: 7 },  // Target building 2
+            { x: 20, y: 10, radius: 5 },  // Perimeter
+        ];
+    } else {
+        // Fortress or default: Heavy defense layers
+        keyAreas = [
+            { x: mapWidth/2, y: 10, radius: 8 },      // Outer defense
+            { x: mapWidth/2, y: mapHeight/2, radius: 10 }, // Inner defense
+            { x: 10, y: mapHeight/2, radius: 6 },     // Left flank
+            { x: mapWidth-10, y: mapHeight/2, radius: 6 }, // Right flank
+        ];
+    }
+
+    // Place enemies around key areas
+    for (let i = 0; i < count; i++) {
+        const area = keyAreas[i % keyAreas.length];
+        const angle = (i / count) * Math.PI * 2;
+        const distance = Math.random() * area.radius;
+
+        const position = {
+            x: Math.max(2, Math.min(mapWidth - 2, area.x + Math.cos(angle) * distance)),
+            y: Math.max(2, Math.min(mapHeight - 2, area.y + Math.sin(angle) * distance))
+        };
+
+        // Add patrol route for some enemies
+        if (Math.random() > 0.5) {
+            position.patrol = [
+                { x: position.x, y: position.y },
+                { x: position.x + Math.random() * 10 - 5, y: position.y + Math.random() * 10 - 5 }
+            ];
+        }
+
+        positions.push(position);
+    }
+
+    return positions;
+};
 
 CyberOpsGame.prototype.centerCameraOnAgents = function() {
         if (this.agents.length === 0) return;

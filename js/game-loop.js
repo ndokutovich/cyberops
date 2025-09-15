@@ -573,18 +573,30 @@ CyberOpsGame.prototype.checkMissionStatus = function() {
         const aliveAgents = this.agents.filter(a => a.alive).length;
         const aliveEnemies = this.enemies.filter(e => e.alive).length;
         const deadEnemies = this.enemies.filter(e => !e.alive).length;
-        
+
+        // Track objective status for mission complete modal
+        if (!this.objectiveStatus) {
+            this.objectiveStatus = {};
+        }
+
         if (aliveAgents === 0) {
             this.endMission(false);
             return;
         }
         
         if (this.currentMission.id === 1) {
-            document.getElementById('objectiveTracker').textContent = 
-                aliveEnemies > 0 ? 
-                `Eliminate enemies: ${deadEnemies}/${this.currentMission.enemies}` :
+            // Data Heist objectives
+            this.objectiveStatus = {
+                'Eliminate all hostiles': aliveEnemies === 0,
+                'Avoid civilian casualties': true, // No civilians in current implementation
+                'Keep at least 2 agents alive': aliveAgents >= 2
+            };
+
+            document.getElementById('objectiveTracker').textContent =
+                aliveEnemies > 0 ?
+                `Eliminate enemies: ${deadEnemies}/${this.enemies.length}` :
                 'All enemies eliminated! Reach extraction!';
-            
+
             if (aliveEnemies === 0) {
                 const atExtraction = this.agents.some(agent => {
                     if (!agent.alive) return false;
@@ -602,9 +614,16 @@ CyberOpsGame.prototype.checkMissionStatus = function() {
         } else if (this.currentMission.id === 2) {
             const hackedCount = this.map.terminals.filter(t => t.hacked).length;
             const allHacked = hackedCount === this.map.terminals.length;
-            
-            document.getElementById('objectiveTracker').textContent = 
-                !allHacked ? 
+
+            // Network Breach objectives
+            this.objectiveStatus = {
+                'Hack all terminals': allHacked,
+                'Extract data': allHacked, // Data extracted when terminals are hacked
+                'Escape undetected': aliveEnemies > 0 ? false : true // Simplified: undetected if no combat
+            };
+
+            document.getElementById('objectiveTracker').textContent =
+                !allHacked ?
                 `Hack terminals: ${hackedCount}/${this.map.terminals.length}` :
                 'All terminals hacked! Reach extraction!';
             
@@ -626,10 +645,17 @@ CyberOpsGame.prototype.checkMissionStatus = function() {
             // Industrial Sabotage - Plant explosives on 3 targets
             const plantedCount = this.map.explosiveTargets ? this.map.explosiveTargets.filter(t => t.planted).length : 0;
             const allPlanted = plantedCount === 3;
+
+            // Sabotage Operation objectives
+            this.objectiveStatus = {
+                'Plant explosives on 3 targets': allPlanted,
+                'Eliminate security team': aliveEnemies === 0,
+                'Extract all agents': false // Will be true when extracted
+            };
             
             document.getElementById('objectiveTracker').textContent = 
                 aliveEnemies > 0 ? 
-                `Eliminate security: ${deadEnemies}/${this.currentMission.enemies} | Explosives: ${plantedCount}/3` :
+                `Eliminate security: ${deadEnemies}/${this.enemies.length} | Explosives: ${plantedCount}/3` :
                 allPlanted ? 'All objectives complete! Extract all agents!' : 
                 `Plant explosives: ${plantedCount}/3 | Eliminate remaining security`;
             
@@ -652,9 +678,16 @@ CyberOpsGame.prototype.checkMissionStatus = function() {
             const primaryEliminated = this.map.targets ? this.map.targets.filter(t => t.type === 'primary' && t.eliminated).length : 0;
             const secondaryEliminated = this.map.targets ? this.map.targets.filter(t => t.type === 'secondary' && t.eliminated).length : 0;
             const allTargetsEliminated = primaryEliminated === 1 && secondaryEliminated === 2;
+
+            // Assassination Contract objectives
+            this.objectiveStatus = {
+                'Eliminate primary target': primaryEliminated >= 1,
+                'Eliminate secondary targets': secondaryEliminated >= 2,
+                'No witnesses': aliveEnemies === 0
+            };
             
             document.getElementById('objectiveTracker').textContent = 
-                `Primary targets: ${primaryEliminated}/1 | Secondary targets: ${secondaryEliminated}/2 | Witnesses: ${deadEnemies}/${this.currentMission.enemies}`;
+                `Primary targets: ${primaryEliminated}/1 | Secondary targets: ${secondaryEliminated}/2 | Witnesses: ${deadEnemies}/${this.enemies.length}`;
             
             if (allTargetsEliminated && aliveEnemies === 0) {
                 const atExtraction = this.agents.some(agent => {
@@ -675,9 +708,16 @@ CyberOpsGame.prototype.checkMissionStatus = function() {
             const gateBreached = this.map.gates ? this.map.gates.filter(g => g.breached).length > 0 : false;
             const sectorsControlled = this.map.terminals ? this.map.terminals.filter(t => t.hacked).length : 0;
             const allObjectives = gateBreached && sectorsControlled === 3 && aliveEnemies === 0;
+
+            // Final Convergence objectives
+            this.objectiveStatus = {
+                'Breach main gate': gateBreached,
+                'Control all sectors': sectorsControlled >= 3,
+                'Capture the mainframe': sectorsControlled >= 3 && aliveEnemies === 0
+            };
             
             document.getElementById('objectiveTracker').textContent = 
-                `Gate: ${gateBreached ? 'Breached' : 'Secured'} | Sectors: ${sectorsControlled}/3 | Security: ${deadEnemies}/${this.currentMission.enemies}`;
+                `Gate: ${gateBreached ? 'Breached' : 'Secured'} | Sectors: ${sectorsControlled}/3 | Security: ${deadEnemies}/${this.enemies.length}`;
             
             if (allObjectives) {
                 this.endMission(true);
@@ -738,20 +778,23 @@ CyberOpsGame.prototype.endMission = function(victory) {
         // Update campaign statistics and rewards
         if (victory) {
             this.totalCampaignTime += this.missionTimer;
-            // Count total available enemies for completed missions, not just killed ones
-            this.totalEnemiesDefeated += this.currentMission.enemies;
-            
+            // Count actual enemies defeated in this mission
+            this.totalEnemiesDefeated += this.enemies.filter(e => !e.alive).length;
+
             // Add to completed missions
             if (!this.completedMissions.includes(this.currentMission.id)) {
                 this.completedMissions.push(this.currentMission.id);
+
+                // Generate 2 new agents available for hire after each completed mission
+                this.generateNewAgentsForHire();
             }
-            
+
             // Award mission rewards
             if (this.currentMission.rewards) {
                 this.credits += this.currentMission.rewards.credits || 0;
                 this.researchPoints += this.currentMission.rewards.researchPoints || 0;
                 this.worldControl += this.currentMission.rewards.worldControl || 0;
-                
+
                 // Cap world control at 100%
                 if (this.worldControl > 100) this.worldControl = 100;
             }
@@ -807,11 +850,60 @@ CyberOpsGame.prototype.generateFinalWords = function(agentName) {
         return finalWords[Math.floor(Math.random() * finalWords.length)];
 }
 
+// Generate new agents available for hire after mission completion
+CyberOpsGame.prototype.generateNewAgentsForHire = function() {
+    const firstNames = ['Marcus', 'Elena', 'Viktor', 'Sophia', 'Dmitri', 'Aria', 'Kane', 'Nova', 'Rex', 'Luna'];
+    const lastNames = ['Stone', 'Black', 'Wolf', 'Steel', 'Cross', 'Hawk', 'Frost', 'Storm', 'Viper', 'Phoenix'];
+    const callsigns = ['Reaper', 'Phantom', 'Striker', 'Wraith', 'Razor', 'Specter', 'Thunder', 'Shadow', 'Venom', 'Blade'];
+
+    const specializations = [
+        { type: 'stealth', skills: ['stealth', 'melee'], health: 85, speed: 5, damage: 20 },
+        { type: 'hacker', skills: ['hacker', 'electronics'], health: 75, speed: 4, damage: 15 },
+        { type: 'assault', skills: ['assault', 'heavy_weapons'], health: 130, speed: 3, damage: 28 },
+        { type: 'sniper', skills: ['sniper', 'stealth'], health: 90, speed: 4, damage: 38 },
+        { type: 'demolition', skills: ['demolition', 'assault'], health: 115, speed: 3, damage: 25 },
+        { type: 'medic', skills: ['medic', 'support'], health: 100, speed: 4, damage: 18 }
+    ];
+
+    // Generate 2 new agents
+    for (let i = 0; i < 2; i++) {
+        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+        const callsign = callsigns[Math.floor(Math.random() * callsigns.length)];
+        const spec = specializations[Math.floor(Math.random() * specializations.length)];
+
+        const newAgent = {
+            id: this.availableAgents.length + 1,
+            name: `${firstName} "${callsign}" ${lastName}`,
+            specialization: spec.type,
+            skills: spec.skills,
+            cost: 1000 + Math.floor(Math.random() * 500) + (this.completedMissions.length * 100),
+            hired: false,
+            health: spec.health + Math.floor(Math.random() * 20) - 10,
+            speed: spec.speed,
+            damage: spec.damage + Math.floor(Math.random() * 10) - 5
+        };
+
+        this.availableAgents.push(newAgent);
+        console.log(`🆕 New agent available for hire: ${newAgent.name} (${newAgent.specialization})`);
+    }
+
+    // Log event
+    if (this.logEvent) {
+        this.logEvent('🆕 2 new agents are available for hire at the Hub!', 'system');
+    }
+}
+
 // Handle collectable item pickup
 CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
     // Log the item pickup if event logging is enabled
     if (this.logItemPickup) {
         this.logItemPickup(agent, item);
+    }
+
+    // Track items collected this mission
+    if (this.itemsCollectedThisMission && item.type) {
+        this.itemsCollectedThisMission[item.type] = (this.itemsCollectedThisMission[item.type] || 0) + 1;
     }
 
     // Use GameServices for collectible calculations
@@ -829,6 +921,7 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
         // Apply effects
         if (effects.credits > 0) {
             this.credits += effects.credits;
+            this.creditsThisMission = (this.creditsThisMission || 0) + effects.credits;
         }
         if (effects.health > 0) {
             agent.health = Math.min(agent.maxHealth, agent.health + effects.health);
@@ -838,6 +931,27 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
         }
         if (effects.researchPoints > 0) {
             this.researchPoints += effects.researchPoints;
+            this.researchPointsThisMission = (this.researchPointsThisMission || 0) + effects.researchPoints;
+
+            // Track intel statistics if this was an intel item
+            if (item.type === 'intel') {
+                this.totalIntelCollected = (this.totalIntelCollected || 0) + 1;
+                this.intelThisMission = (this.intelThisMission || 0) + 1;
+
+                // Track intel by mission
+                if (this.currentMission) {
+                    const missionId = this.currentMission.id;
+                    if (!this.intelByMission) this.intelByMission = {};
+                    this.intelByMission[missionId] = (this.intelByMission[missionId] || 0) + 1;
+                    console.log(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
+                }
+
+                // Unlock intel reports based on collection
+                this.unlockIntelReport();
+
+                console.log(`📊 Total Intel: ${this.totalIntelCollected} documents`);
+                console.log(`📋 Intel this mission: ${this.intelThisMission}`);
+            }
         }
         if (effects.ammo > 0) {
             // Reset ability cooldowns
@@ -863,8 +977,10 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
     // Fallback to old system if services not available
     switch(item.type) {
         case 'credits':
-            this.credits += item.value;
-            console.log(`💰 Collected ${item.value} credits`);
+            const creditValue = item.value || 100;
+            this.credits += creditValue;
+            this.creditsThisMission = (this.creditsThisMission || 0) + creditValue;
+            console.log(`💰 Collected ${creditValue} credits`);
             break;
 
         case 'ammo':
@@ -882,8 +998,9 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
             break;
 
         case 'intel':
-            const researchValue = Math.floor(item.value / 2);
+            const researchValue = item.value ? Math.floor(item.value / 2) : 50; // Default 50 if no value
             this.researchPoints += researchValue;
+            this.researchPointsThisMission = (this.researchPointsThisMission || 0) + researchValue;
 
             // Track intel statistics
             this.totalIntelCollected = (this.totalIntelCollected || 0) + 1;

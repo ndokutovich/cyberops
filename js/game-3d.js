@@ -98,6 +98,9 @@ CyberOpsGame.prototype.init3D = function() {
             canvas3D: !!this.canvas3D,
             gameHUD3D: !!this.gameHUD3D
         });
+
+        // DO NOT auto-enable 3D mode - let the toggle function handle it
+        // The system is initialized but stays in 2D until user presses E
 }
     
 CyberOpsGame.prototype.switchCameraMode = function() {
@@ -162,11 +165,13 @@ CyberOpsGame.prototype.switchCameraMode = function() {
 }
     
 CyberOpsGame.prototype.enable3DMode = function() {
+        console.log('🚀 enable3DMode() called!');
+
         if (!this.scene3D) {
             console.log('❌ Cannot enable 3D mode - no scene3D');
             return;
         }
-        
+
         console.log('🎮 Enabling 3D mode...', 'Camera mode:', this.cameraMode);
         
         this.is3DMode = true;
@@ -228,6 +233,11 @@ CyberOpsGame.prototype.enable3DMode = function() {
         console.log('✅ 3D mode enabled');
 }
     
+CyberOpsGame.prototype.cleanup3D = function() {
+        console.log('🧹 Cleaning up 3D mode...');
+        this.disable3DMode();
+};
+
 CyberOpsGame.prototype.disable3DMode = function() {
         console.log('🎮 Disabling 3D mode...', 'Camera mode:', this.cameraMode);
 
@@ -239,9 +249,13 @@ CyberOpsGame.prototype.disable3DMode = function() {
 
         this.is3DMode = false;
         this.canvas.style.display = 'block';
-        this.container3D.style.display = 'none';
-        this.container3D.style.pointerEvents = 'none';
-        this.hud3D.style.display = 'none';
+        if (this.container3D) {
+            this.container3D.style.display = 'none';
+            this.container3D.style.pointerEvents = 'none';
+        }
+        if (this.hud3D) {
+            this.hud3D.style.display = 'none';
+        }
 
         // Show 2D HUD
         if (this.gameHUD) {

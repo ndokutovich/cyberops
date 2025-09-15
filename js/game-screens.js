@@ -16,32 +16,134 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         
         // Update mission statistics
         document.getElementById('intermissionTime').textContent = document.getElementById('missionTimer').textContent;
-        document.getElementById('intermissionEnemies').textContent = 
+        document.getElementById('intermissionEnemies').textContent =
             this.enemies.filter(e => !e.alive).length + '/' + this.enemies.length;
-        
+
+        // Count completed objectives from objectiveStatus
         let completedObj = 0;
-        if (this.currentMission.id === 1) {
-            if (this.enemies.every(e => !e.alive)) completedObj++;
-            if (victory) completedObj++;
-            if (this.agents.filter(a => a.alive).length >= 2) completedObj++;
+        let objectiveDetails = [];
+
+        if (this.objectiveStatus) {
+            for (let objective in this.objectiveStatus) {
+                const completed = this.objectiveStatus[objective];
+                completedObj += completed ? 1 : 0;
+                objectiveDetails.push({
+                    name: objective,
+                    completed: completed
+                });
+            }
         } else {
-            completedObj = this.map.terminals.filter(t => t.hacked).length;
-            if (victory) completedObj++;
+            // Fallback for missions without proper tracking
+            if (victory) completedObj = this.currentMission.objectives.length;
+            this.currentMission.objectives.forEach(obj => {
+                objectiveDetails.push({
+                    name: obj,
+                    completed: victory
+                });
+            });
         }
-        
-        document.getElementById('intermissionObjectives').textContent = 
+
+        document.getElementById('intermissionObjectives').textContent =
             `${completedObj}/${this.currentMission.objectives.length}`;
         document.getElementById('intermissionSquad').textContent =
             `${this.agents.filter(a => a.alive).length}/${this.agents.length} Survived`;
 
         // Update intel statistics
         const intelCollected = this.intelThisMission || 0;
-        const researchPointsEarned = intelCollected * 25; // Approximate value
+        const researchPointsFromIntel = this.researchPointsThisMission || 0;
+        const researchPointsFromMission = victory && this.currentMission.rewards ?
+            (this.currentMission.rewards.researchPoints || 0) : 0;
+        const totalResearchEarned = researchPointsFromIntel + researchPointsFromMission;
+        const creditsEarned = this.creditsThisMission || 0;
+
         document.getElementById('intermissionIntel').textContent =
             `${intelCollected} document${intelCollected !== 1 ? 's' : ''}`;
         document.getElementById('intermissionResearch').textContent =
-            `+${researchPointsEarned}`;
-        
+            `+${totalResearchEarned} (${researchPointsFromIntel} from intel)`;
+
+        // Add detailed breakdown after the basic stats
+        const statsContainer = document.querySelector('.intermission-stats');
+
+        // Add objectives breakdown
+        if (objectiveDetails.length > 0) {
+            let objectivesSection = document.getElementById('objectivesBreakdown');
+            if (!objectivesSection) {
+                objectivesSection = document.createElement('div');
+                objectivesSection.id = 'objectivesBreakdown';
+                objectivesSection.className = 'stat-section';
+                objectivesSection.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);';
+                statsContainer.appendChild(objectivesSection);
+            }
+
+            objectivesSection.innerHTML = '<div style="color: #00ffff; margin-bottom: 8px; font-weight: bold;">OBJECTIVES:</div>';
+            objectiveDetails.forEach(obj => {
+                const icon = obj.completed ? '✅' : '❌';
+                const color = obj.completed ? '#00ff00' : '#ff6666';
+                objectivesSection.innerHTML += `
+                    <div style="margin-left: 15px; color: ${color}; font-size: 0.9em;">
+                        ${icon} ${obj.name}
+                    </div>`;
+            });
+        }
+
+        // Add new agents notification for victory
+        if (victory && !this.completedMissions.includes(this.currentMission.id)) {
+            let newAgentsSection = document.getElementById('newAgentsNotice');
+            if (!newAgentsSection) {
+                newAgentsSection = document.createElement('div');
+                newAgentsSection.id = 'newAgentsNotice';
+                newAgentsSection.className = 'stat-section';
+                newAgentsSection.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(0,255,0,0.1); border: 1px solid rgba(0,255,0,0.3); border-radius: 5px;';
+                statsContainer.appendChild(newAgentsSection);
+            }
+            newAgentsSection.innerHTML = `
+                <div style="color: #00ff00; font-weight: bold; text-align: center;">
+                    🆕 2 NEW AGENTS AVAILABLE FOR HIRE AT THE HUB!
+                </div>`;
+        }
+
+        // Add items collected breakdown
+        if (this.itemsCollectedThisMission) {
+            let itemsSection = document.getElementById('itemsBreakdown');
+            if (!itemsSection) {
+                itemsSection = document.createElement('div');
+                itemsSection.id = 'itemsBreakdown';
+                itemsSection.className = 'stat-section';
+                itemsSection.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);';
+                statsContainer.appendChild(itemsSection);
+            }
+
+            const itemIcons = {
+                intel: '📄',
+                health: '❤️',
+                ammo: '🔫',
+                credits: '💰',
+                armor: '🛡️',
+                explosives: '💣',
+                keycard: '🗝️'
+            };
+
+            let hasItems = false;
+            let itemsHTML = '<div style="color: #ffa500; margin-bottom: 8px; font-weight: bold;">ITEMS COLLECTED:</div>';
+
+            for (let itemType in this.itemsCollectedThisMission) {
+                const count = this.itemsCollectedThisMission[itemType];
+                if (count > 0) {
+                    hasItems = true;
+                    itemsHTML += `
+                        <div style="margin-left: 15px; color: #ccc; font-size: 0.9em;">
+                            ${itemIcons[itemType] || '•'} ${itemType}: ${count}
+                        </div>`;
+                }
+            }
+
+            if (hasItems) {
+                itemsSection.innerHTML = itemsHTML;
+            } else {
+                itemsSection.innerHTML = '<div style="color: #666; font-size: 0.9em;">No items collected</div>';
+            }
+        }
+
         // Create action buttons based on mission outcome and progress
         const actionsContainer = document.getElementById('intermissionActions');
         actionsContainer.innerHTML = '';
@@ -178,10 +280,16 @@ CyberOpsGame.prototype.restartCampaign = function() {
 }
 
 CyberOpsGame.prototype.backToMainMenu = function() {
+        // CRITICAL: Disable 3D mode if active
+        if (this.is3DMode) {
+            console.log('🔄 Disabling 3D mode when returning to menu');
+            this.cleanup3D();
+        }
+
         // Stop all music including credits (returning to main menu)
         this.stopLevelMusic();
         this.stopCreditsMusic();
-        
+
         // Hide all screens and dialogs
         document.getElementById('gameCompleteScreen').style.display = 'none';
         document.getElementById('creditsScreen').style.display = 'none';
