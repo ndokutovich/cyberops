@@ -92,6 +92,8 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         // UI Controls
         'M': () => this.toggleEventLog(),
         'm': () => this.toggleEventLog(),
+        'J': () => this.showMissionList(),
+        'j': () => this.showMissionList(),
         '?': () => this.toggleHotkeyHelp(),
         '/': (e) => { if (e.shiftKey) this.toggleHotkeyHelp(); },
 
@@ -296,7 +298,8 @@ CyberOpsGame.prototype.getKeyBindingsDisplay = function() {
         'View': [
             { key: 'E', action: 'Toggle 2D/3D Mode' },
             { key: 'L', action: 'Toggle Squad Following' },
-            { key: 'M', action: 'Toggle Mission Log' }
+            { key: 'M', action: 'Toggle Mission Log' },
+            { key: 'J', action: 'Show Mission List' }
         ],
         'Debug': [
             { key: 'P', action: 'Show Path Visualization' },

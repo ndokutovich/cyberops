@@ -147,7 +147,10 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         // Create action buttons based on mission outcome and progress
         const actionsContainer = document.getElementById('intermissionActions');
         actionsContainer.innerHTML = '';
-        
+
+        // Store reference to 'this' for all button callbacks
+        const gameInstance = this;
+
         if (victory && this.currentMissionIndex < this.missions.length - 1) {
             // There's a next mission - show Continue button
             // Mark that we completed this mission
@@ -155,7 +158,7 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
             const continueBtn = document.createElement('button');
             continueBtn.className = 'menu-button';
             continueBtn.textContent = 'CONTINUE';
-            continueBtn.onclick = () => this.continueToNextMission();
+            continueBtn.onclick = function() { gameInstance.continueToNextMission(); };
             actionsContainer.appendChild(continueBtn);
         } else if (victory) {
             // All missions completed - show Game Complete
@@ -163,13 +166,13 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
             const completeBtn = document.createElement('button');
             completeBtn.className = 'menu-button';
             completeBtn.textContent = 'FINISH';
-            completeBtn.onclick = () => this.finishCampaign();
+            completeBtn.onclick = function() { gameInstance.finishCampaign(); };
             actionsContainer.appendChild(completeBtn);
         } else {
             // Mission failed - don't advance
             this.missionJustCompleted = false;
         }
-        
+
         // Always show Try Again button
         const tryAgainBtn = document.createElement('button');
         tryAgainBtn.className = 'menu-button';
@@ -179,14 +182,14 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         tryAgainBtn.title = hasAutosave ?
             'Restore your team from the pre-mission autosave' :
             'Retry mission with current team state (enable autosave in settings for better experience)';
-        tryAgainBtn.onclick = () => this.tryAgainMission();
+        tryAgainBtn.onclick = function() { gameInstance.tryAgainMission(); };
         actionsContainer.appendChild(tryAgainBtn);
-        
+
         // Always show Main Menu button
         const mainMenuBtn = document.createElement('button');
         mainMenuBtn.className = 'menu-button';
         mainMenuBtn.textContent = 'MAIN MENU';
-        mainMenuBtn.onclick = () => this.backToMainMenuFromIntermission();
+        mainMenuBtn.onclick = function() { gameInstance.backToMainMenuFromIntermission(); };
         actionsContainer.appendChild(mainMenuBtn);
         
         // Show the dialog
@@ -265,6 +268,13 @@ CyberOpsGame.prototype.finishCampaign = function() {
     
 CyberOpsGame.prototype.backToMainMenuFromIntermission = function() {
         document.getElementById('intermissionDialog').classList.remove('show');
+        this.backToMainMenu();
+}
+
+// Add close function for intermission dialog X button
+CyberOpsGame.prototype.closeIntermissionDialog = function() {
+        document.getElementById('intermissionDialog').classList.remove('show');
+        // Go back to main menu when closing intermission dialog
         this.backToMainMenu();
 }
 

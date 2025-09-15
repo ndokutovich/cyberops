@@ -1429,11 +1429,24 @@ CyberOpsGame.prototype.showPauseMenu = function() {
 
 CyberOpsGame.prototype.closePauseMenu = function() {
         this.closeDialog();
+        // Also resume the game when closing pause menu
+        if (this.isPaused) {
+            this.isPaused = false;
+            const pauseButton = document.querySelector('.pause-button');
+            if (pauseButton) {
+                pauseButton.textContent = '⏸';
+            }
+            this.resumeLevelMusic();
+        }
 }
 
 CyberOpsGame.prototype.resumeFromPause = function() {
         this.isPaused = false;
-        document.querySelector('.pause-button').textContent = '⏸';
+        const pauseButton = document.querySelector('.pause-button');
+        if (pauseButton) {
+            pauseButton.textContent = '⏸';
+        }
+        this.resumeLevelMusic();
         this.closeDialog();
 }
 

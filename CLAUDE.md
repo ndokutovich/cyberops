@@ -21,10 +21,12 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-screens.js**: Screen management and transitions
 - **game-demoscene.js**: Demoscene attract mode
 - **game-audio.js**: Complete audio system
-- **game-loop.js**: Main game loop and update logic
+- **game-loop.js**: Main game loop and update logic (includes game speed system)
 - **game-rendering.js**: All rendering functions
-- **game-3d.js**: Three.js 3D system
+- **game-3d.js**: Three.js 3D system with NPC support
 - **game-utils.js**: Utility functions and getters/setters
+- **game-keyboard.js**: Centralized keyboard handling system
+- **game-npc.js**: NPC system with dialog, quests, and interactions
 - **game-init.js**: Game instantiation and initialization
 
 ### Other Files
@@ -37,10 +39,13 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **Screen Management**: splash, menu, hub, briefing, loadout, game, victory, defeat screens
 - **Mission System**: Campaign with multiple missions, objectives, enemy spawning
 - **Combat System**: Isometric tactical combat with agents, enemies, projectiles, line-of-sight
-- **3D Mode**: Optional Three.js-based 3D view with multiple camera modes
+- **3D Mode**: Optional Three.js-based 3D view with multiple camera modes, includes NPC rendering
 - **Audio System**: Dynamic music system with level-specific tracks and credits music
 - **Resource Management**: Credits, research points, world control percentage
 - **Agent System**: Agent selection, abilities, equipment, movement, and combat
+- **NPC System**: Interactive NPCs with dialog trees, quest system, context-sensitive actions
+- **Game Speed**: Adjustable game speed (1x/2x/4x) with auto-slowdown near enemies
+- **Keyboard System**: Centralized keyboard handling with customizable bindings
 
 ## Running the Game
 
@@ -78,4 +83,59 @@ python -m http.server 8000
 ### Game State Persistence
 - Mission progress tracked in `completedMissions` array
 - Resource state (credits, research points) maintained across missions
-- No external save system - state lives in memory during session
+- Auto-save system with pre-mission saves for retry functionality
+- Manual save/load functionality with multiple save slots
+
+## Recent Features and Approaches
+
+### NPC System (game-npc.js)
+- **Dialog System**: HTML-based dialog boxes with typing animation effect
+- **Quest System**: Side quests with objectives, rewards, and completion tracking
+- **Context-Sensitive Actions**: NPCs offer different options based on nearby objects (terminals, enemies)
+- **3D Integration**: NPCs render in both 2D and 3D modes with interaction indicators
+- **Coordinate System**: NPCs use world coordinates, properly converted for screen rendering
+
+### Keyboard Handling (game-keyboard.js)
+- **Centralized Bindings**: All keyboard shortcuts in one place for easy modification
+- **Key Features**:
+  - H: Interact with NPCs or hack
+  - Z: Cycle game speed (1x/2x/4x)
+  - J: Show comprehensive mission list
+  - E: Toggle 3D modes (tactical/third/first person)
+  - Tab: Cycle through agents
+  - 1-6: Direct agent selection
+
+### Mission List System
+- **Comprehensive Overview**: Shows primary objectives and all side quests
+- **Quest Tracking**: Visual indicators for quest progress and completion
+- **Statistics**: Tracks terminals hacked, enemies eliminated, credits earned
+- **Rewards Display**: Shows potential rewards for completing quests
+
+### UI/UX Improvements
+- **HUD Dialog System**: Consistent dialog styling across all screens
+- **Hall of Glory**: Memorial for fallen agents with cyberpunk aesthetic
+- **Speed Indicator**: Visual feedback for current game speed
+- **Quest HUD**: Active quests displayed on-screen during gameplay
+- **Health Bars**: Fixed display for dead agents and text wrapping
+
+## Development Best Practices
+
+### Module Pattern
+- Use prototype-based inheritance, NOT ES6 classes
+- Functions attached to `CyberOpsGame.prototype`
+- Example: `CyberOpsGame.prototype.functionName = function() { }`
+
+### Coordinate Systems
+- **World Coordinates**: Used for game logic (agents, NPCs, enemies)
+- **Screen Coordinates**: Converted using `worldToIsometric()` for rendering
+- **3D Coordinates**: Converted with map offset calculations for Three.js
+
+### Error Handling
+- Always check if functions exist before calling (e.g., `if (this.updateNPCs)`)
+- Use safety checks for optional systems
+- Provide fallbacks for missing features
+
+### Debugging
+- Console logging for major events with emojis for easy identification
+- Debug flags for pathfinding, vision cones, etc.
+- Comprehensive error messages with context

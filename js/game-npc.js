@@ -209,13 +209,29 @@ NPC.prototype.checkQuestRequirements = function(quest, game) {
 NPC.prototype.checkQuestCompletion = function(game) {
         for (let questId of this.questsGiven) {
             const quest = game.quests[questId];
-            if (quest && quest.checkCompletion(game)) {
+            if (quest && quest.active && !game.completedQuests.has(questId) && quest.checkCompletion(game)) {
+                const npc = this;
                 return {
                     text: quest.completionDialog || "Well done! You've completed the task.",
                     choices: [
                         {
                             text: "Claim reward",
-                            action: () => this.completeQuest(quest, game)
+                            action: function(game) {
+                                npc.completeQuest(quest, game);
+                                // After claiming reward, show a thank you message
+                                game.showDialog({
+                                    npc: npc,
+                                    text: "Thank you for your help! Check back later for more work.",
+                                    choices: [
+                                        {
+                                            text: "You're welcome",
+                                            action: function(game) {
+                                                npc.endDialog(game);
+                                            }
+                                        }
+                                    ]
+                                });
+                            }
                         }
                     ]
                 };
@@ -283,7 +299,7 @@ NPC.prototype.completeQuest = function(quest, game) {
     }
 
 NPC.prototype.endDialog = function(game) {
-        game.closeDialog();
+        game.closeNPCDialog();
         this.interacted = true;
         this.currentDialogIndex++;
     };
@@ -833,7 +849,7 @@ CyberOpsGame.prototype.getContextualChoices = function(agent, npc) {
                     text: "🖥️ Hack the nearby terminal",
                     action: function(game) {
                         // Close dialog first
-                        game.closeDialog();
+                        game.closeNPCDialog();
 
                         // Move agent to terminal and hack it
                         agent.targetX = terminal.x;
@@ -864,7 +880,7 @@ CyberOpsGame.prototype.getContextualChoices = function(agent, npc) {
                     text: "💣 Plant bomb on nearby target",
                     action: function(game) {
                         // Close dialog first
-                        game.closeDialog();
+                        game.closeNPCDialog();
 
                         // Move agent to target and plant bomb
                         agent.targetX = target.x;
@@ -1141,8 +1157,160 @@ CyberOpsGame.prototype.typeText = function(text, callback) {
     }, 30); // Typing speed
 };
 
+// Check if an objective is complete
+CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
+    if (!obj) return false;
+
+    switch(obj.type) {
+        case 'hack_all':
+        case 'hack':
+            return (this.hackedTerminals || 0) >= (obj.count || 1);
+
+        case 'eliminate_all':
+            return this.enemiesKilledThisMission >= (obj.count || this.totalEnemiesInMission);
+
+        case 'reach_extraction':
+        case 'extract':
+            return this.missionComplete || false;
+
+        case 'survive':
+            return this.missionTimer >= (obj.time || 0);
+
+        case 'collect':
+            return this.inventory && this.inventory[obj.item] >= (obj.count || 1);
+
+        default:
+            return false;
+    }
+};
+
+// Show mission list screen
+CyberOpsGame.prototype.showMissionList = function() {
+    console.log('📜 Showing mission list');
+
+    // Build content for mission list
+    let content = `
+        <div style="padding: 20px;">
+            <h2 style="color: #00ffff; margin-bottom: 20px;">📜 MISSION STATUS</h2>
+    `;
+
+    // Main mission status
+    content += `
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #ffff00; margin-bottom: 10px;">🎯 PRIMARY MISSION</h3>
+            <div style="padding-left: 20px; color: #ffffff;">
+    `;
+
+    // Show main mission objectives
+    if (this.currentMission && this.currentMission.objectives) {
+        this.currentMission.objectives.forEach(obj => {
+            const completed = this.checkObjectiveComplete(obj);
+            const icon = completed ? '✅' : '⬜';
+            const color = completed ? '#00ff00' : '#ffffff';
+            content += `<div style="color: ${color}; margin: 5px 0;">${icon} ${obj.description}</div>`;
+        });
+    } else {
+        content += '<div>No primary objectives</div>';
+    }
+
+    content += '</div></div>';
+
+    // Side quests
+    content += `
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #ffff00; margin-bottom: 10px;">📋 SIDE QUESTS</h3>
+            <div style="padding-left: 20px;">
+    `;
+
+    if (this.quests && Object.keys(this.quests).length > 0) {
+        for (let questId in this.quests) {
+            const quest = this.quests[questId];
+            const completed = this.completedQuests && this.completedQuests.has(questId);
+            const active = quest.active && !completed;
+
+            let statusColor = '#666666';
+            let statusText = 'Not Started';
+
+            if (completed) {
+                statusColor = '#00ff00';
+                statusText = 'COMPLETED';
+            } else if (active) {
+                statusColor = '#ffff00';
+                statusText = 'IN PROGRESS';
+            }
+
+            content += `
+                <div style="margin-bottom: 15px; padding: 10px; border: 1px solid ${statusColor}; border-radius: 5px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: ${statusColor}; font-weight: bold;">${quest.name}</span>
+                        <span style="color: ${statusColor}; font-size: 12px;">[${statusText}]</span>
+                    </div>
+                    <div style="color: #aaaaaa; font-size: 14px; margin-bottom: 5px;">${quest.description}</div>
+            `;
+
+            // Show objectives
+            if (active && quest.objectives) {
+                content += '<div style="margin-top: 10px; padding-left: 10px;">';
+                quest.objectives.forEach(obj => {
+                    const objComplete = quest.checkObjective ? quest.checkObjective(obj, this) : false;
+                    const icon = objComplete ? '✓' : '○';
+                    const color = objComplete ? '#00ff00' : '#ffffff';
+                    content += `<div style="color: ${color}; font-size: 12px; margin: 3px 0;">${icon} ${obj.description}</div>`;
+                });
+                content += '</div>';
+            }
+
+            // Show rewards
+            if (quest.rewards) {
+                content += '<div style="margin-top: 5px; color: #00ffff; font-size: 12px;">Rewards: ';
+                if (quest.rewards.credits) content += `💰 ${quest.rewards.credits} credits `;
+                if (quest.rewards.researchPoints) content += `🔬 ${quest.rewards.researchPoints} RP `;
+                content += '</div>';
+            }
+
+            content += '</div>';
+        }
+    } else {
+        content += '<div style="color: #666666;">No side quests available</div>';
+    }
+
+    content += '</div></div>';
+
+    // Statistics
+    content += `
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
+            <h3 style="color: #00ffff; margin-bottom: 10px;">📊 STATISTICS</h3>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; color: #ffffff;">
+                <div>Terminals Hacked: ${this.hackedTerminals || 0}</div>
+                <div>Enemies Eliminated: ${this.enemiesKilledThisMission || 0}</div>
+                <div>Credits Earned: ${this.credits || 0}</div>
+                <div>Research Points: ${this.researchPoints || 0}</div>
+                <div>Quests Completed: ${this.completedQuests ? this.completedQuests.size : 0}</div>
+                <div>Mission Time: ${Math.floor((this.missionTimer || 0) / 60)}:${String((this.missionTimer || 0) % 60).padStart(2, '0')}</div>
+            </div>
+        </div>
+    `;
+
+    content += '</div>';
+
+    // Show the dialog
+    // Store reference to game instance for the button callback
+    const gameInstance = this;
+    this.showHudDialog(
+        '📜 MISSION STATUS',
+        content,
+        [
+            {
+                text: '← BACK TO GAME',
+                action: 'close'
+            }
+        ]
+    );
+};
+
 // Close dialog
-CyberOpsGame.prototype.closeDialog = function() {
+// Close NPC dialog specifically
+CyberOpsGame.prototype.closeNPCDialog = function() {
     const dialogContainer = document.getElementById('npcDialogContainer');
     if (dialogContainer) {
         dialogContainer.style.display = 'none';
