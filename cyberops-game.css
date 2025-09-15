@@ -571,7 +571,8 @@ body {
     position: absolute;
     top: 70px;
     left: 10px;
-    pointer-events: auto;
+    pointer-events: auto !important; /* Force enable clicks */
+    z-index: 1000; /* Ensure it's above other elements */
 }
 
 .agent-health-bar {
@@ -584,6 +585,7 @@ body {
     overflow: hidden;
     position: relative;
     cursor: pointer;
+    pointer-events: auto !important; /* Force enable clicks */
     transition: all 0.3s;
 }
 

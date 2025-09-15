@@ -22,6 +22,8 @@ class KeybindingService {
         this.registerBinding('selectAgent2', '2', 'Select Agent 2', 'agents');
         this.registerBinding('selectAgent3', '3', 'Select Agent 3', 'agents');
         this.registerBinding('selectAgent4', '4', 'Select Agent 4', 'agents');
+        this.registerBinding('selectAgent5', '5', 'Select Agent 5', 'agents');
+        this.registerBinding('selectAgent6', '6', 'Select Agent 6', 'agents');
         this.registerBinding('cycleAgents', 'Tab', 'Cycle Agents', 'agents');
         this.registerBinding('selectAllAgents', 'T', 'Select All Agents', 'agents');
 
@@ -41,7 +43,7 @@ class KeybindingService {
         this.registerBinding('teamFollow', 'V', 'Team: Follow Leader', 'team');
 
         // Camera & View
-        this.registerBinding('toggle3D', '3', 'Toggle 3D Mode', 'view');
+        // Removed toggle3D from '3' key - E key already handles 3D mode toggle
         this.registerBinding('zoomIn', '=', 'Zoom In', 'view');
         this.registerBinding('zoomOut', '-', 'Zoom Out', 'view');
         this.registerBinding('centerCamera', 'Home', 'Center Camera', 'view');

@@ -211,13 +211,194 @@ CyberOpsGame.prototype.render = function() {
         this.agents.forEach(agent => {
             if (agent.alive) {
                 // Render path if exists (for debugging)
-                if (agent.path && agent.selected && this.showPaths) {
-                    this.renderPath(agent.path, agent.currentPathIndex);
+                if (agent.selected && this.showPaths) {
+                    // Render A* pathfinding path
+                    if (agent.path) {
+                        this.renderPath(agent.path, agent.currentPathIndex, agent.color);
+                    }
+
+                    // Render shift-click waypoints
+                    if (this.agentWaypoints && this.agentWaypoints[agent.id] && this.agentWaypoints[agent.id].length > 0) {
+                        const waypoints = this.agentWaypoints[agent.id];
+
+                        // Debug: Log once per second
+                        if (!this.lastWaypointLog || Date.now() - this.lastWaypointLog > 1000) {
+                            console.log(`📍 P pressed - Showing ${waypoints.length} waypoints for ${agent.name}`);
+                            this.lastWaypointLog = Date.now();
+                        }
+
+                        ctx.save();
+
+                        // Draw waypoint path - match selection circle cyan style
+                        ctx.strokeStyle = '#00ffff'; // Cyan to match selection
+                        ctx.lineWidth = 1.5; // Thinner line for subtlety
+                        ctx.setLineDash([5, 5]); // Keep dashed pattern
+                        ctx.globalAlpha = 0.3; // More subtle transparency
+
+                        ctx.beginPath();
+                        const agentScreen = this.worldToIsometric(agent.x, agent.y);
+                        ctx.moveTo(agentScreen.x, agentScreen.y);
+
+                        // Draw lines to each waypoint
+                        waypoints.forEach((wp, index) => {
+                            const wpScreen = this.worldToIsometric(wp.x, wp.y);
+                            ctx.lineTo(wpScreen.x, wpScreen.y);
+                        });
+                        ctx.stroke();
+
+                        // Draw waypoint markers - match selection circle style
+                        waypoints.forEach((wp, index) => {
+                            const wpScreen = this.worldToIsometric(wp.x, wp.y);
+
+                            // Reset line dash for circles
+                            ctx.setLineDash([]);
+
+                            // Match selection circle style - cyan with transparency
+                            ctx.strokeStyle = '#00ffff';
+                            ctx.lineWidth = 2;
+                            ctx.globalAlpha = 0.3; // Subtle transparency like selection circles
+
+                            // Draw circle outline only, no fill - matches selection style
+                            ctx.beginPath();
+                            ctx.arc(wpScreen.x, wpScreen.y, 10, 0, Math.PI * 2);
+                            ctx.stroke();
+
+                            // Inner smaller circle for emphasis
+                            ctx.globalAlpha = 0.2;
+                            ctx.beginPath();
+                            ctx.arc(wpScreen.x, wpScreen.y, 5, 0, Math.PI * 2);
+                            ctx.stroke();
+
+                            // Waypoint number - subtle cyan text
+                            ctx.globalAlpha = 0.6;
+                            ctx.fillStyle = '#00ffff';
+                            ctx.font = '10px monospace';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(`${index + 1}`, wpScreen.x, wpScreen.y);
+                        });
+
+                        ctx.restore();
+                    }
                 }
                 this.renderAgent(agent);
             }
         });
-        
+
+        // Render destination indicators for all selected agents
+        if (this.destinationIndicators && this.destinationIndicators.length > 0) {
+            this.destinationIndicators.forEach((indicator, index) => {
+                const elapsed = Date.now() - indicator.timestamp;
+                if (elapsed < 5000) { // Show for 5 seconds (increased from 2)
+                    const alpha = Math.max(0.3, 1 - elapsed / 5000); // Keep minimum alpha of 0.3
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+
+                    // Draw destination marker - match waypoint cyan style
+                    const screenPos = this.worldToIsometric(indicator.x, indicator.y);
+
+                    // Use cyan color to match waypoints
+                    ctx.strokeStyle = '#00ffff';
+                    ctx.lineWidth = 2;
+
+                    // Outer circle with subtle pulse
+                    const pulseSize = 15 + Math.sin(elapsed * 0.005) * 3;
+                    ctx.globalAlpha = alpha * 0.4; // More transparent
+                    ctx.beginPath();
+                    ctx.arc(screenPos.x, screenPos.y, pulseSize, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Inner circle
+                    ctx.globalAlpha = alpha * 0.3;
+                    ctx.beginPath();
+                    ctx.arc(screenPos.x, screenPos.y, 8, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Simple crosshair - subtle cyan
+                    ctx.globalAlpha = alpha * 0.5;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    // Horizontal line
+                    ctx.moveTo(screenPos.x - 12, screenPos.y);
+                    ctx.lineTo(screenPos.x - 4, screenPos.y);
+                    ctx.moveTo(screenPos.x + 4, screenPos.y);
+                    ctx.lineTo(screenPos.x + 12, screenPos.y);
+                    // Vertical line
+                    ctx.moveTo(screenPos.x, screenPos.y - 12);
+                    ctx.lineTo(screenPos.x, screenPos.y - 4);
+                    ctx.moveTo(screenPos.x, screenPos.y + 4);
+                    ctx.lineTo(screenPos.x, screenPos.y + 12);
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
+            });
+
+            // Clean up old indicators
+            this.destinationIndicators = this.destinationIndicators.filter(
+                ind => Date.now() - ind.timestamp < 5000
+            );
+        }
+
+        // Render waypoints for selected agents
+        if (this.agentWaypoints) {
+            this.agents.forEach(agent => {
+                if (agent.selected && agent.alive && this.agentWaypoints[agent.id]) {
+                    const waypoints = this.agentWaypoints[agent.id];
+                    if (waypoints.length > 0) {
+                        ctx.save();
+                        ctx.strokeStyle = '#00ffff'; // Cyan to match selection
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([5, 5]);
+                        ctx.globalAlpha = 0.3; // Subtle transparency
+
+                        // Draw line from agent to first waypoint
+                        ctx.beginPath();
+                        const agentScreen = this.worldToIsometric(agent.x, agent.y);
+                        ctx.moveTo(agentScreen.x, agentScreen.y);
+
+                        // Draw lines between waypoints
+                        waypoints.forEach((wp, index) => {
+                            const wpScreen = this.worldToIsometric(wp.x, wp.y);
+                            ctx.lineTo(wpScreen.x, wpScreen.y);
+
+                            // Draw waypoint marker - match selection circle style
+                            ctx.save();
+                            ctx.setLineDash([]);
+
+                            // Match selection circle style - cyan with transparency
+                            ctx.strokeStyle = '#00ffff';
+                            ctx.lineWidth = 2;
+                            ctx.globalAlpha = 0.3;
+
+                            // Draw circle outline only
+                            ctx.beginPath();
+                            ctx.arc(wpScreen.x, wpScreen.y, 10, 0, Math.PI * 2);
+                            ctx.stroke();
+
+                            // Inner circle
+                            ctx.globalAlpha = 0.2;
+                            ctx.beginPath();
+                            ctx.arc(wpScreen.x, wpScreen.y, 5, 0, Math.PI * 2);
+                            ctx.stroke();
+
+                            // Waypoint number - subtle cyan
+                            ctx.globalAlpha = 0.6;
+                            ctx.fillStyle = '#00ffff';
+                            ctx.font = '10px monospace';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(`${index + 1}`, wpScreen.x, wpScreen.y);
+                            ctx.restore();
+                        });
+
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            });
+        }
+
         this.projectiles.forEach(proj => {
             this.renderProjectile(proj);
         });
@@ -391,14 +572,18 @@ CyberOpsGame.prototype.renderDoor = function(x, y, locked) {
 }
 
 // Render agent path for debugging
-CyberOpsGame.prototype.renderPath = function(path, currentIndex = 0) {
+CyberOpsGame.prototype.renderPath = function(path, currentIndex = 0, agentColor = '#00ff00') {
         if (!path || path.length < 2) return;
 
         const ctx = this.ctx;
         ctx.save();
 
-        // Draw path line
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        // Parse the agent's color and create a semi-transparent version
+        const color = agentColor || '#00ff00';
+
+        // Draw path line using agent's color
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.5;
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
 
@@ -415,18 +600,21 @@ CyberOpsGame.prototype.renderPath = function(path, currentIndex = 0) {
 
         // Draw waypoints
         ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
         for (let i = 0; i < path.length; i++) {
             const pos = this.worldToIsometric(path[i].x, path[i].y);
 
             if (i < currentIndex) {
-                // Visited waypoints
+                // Visited waypoints - gray
                 ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
             } else if (i === currentIndex) {
-                // Current waypoint
-                ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+                // Current waypoint - bright agent color
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 1;
             } else {
-                // Future waypoints
-                ctx.fillStyle = 'rgba(0, 255, 0, 0.6)';
+                // Future waypoints - agent color faded
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.6;
             }
 
             ctx.beginPath();

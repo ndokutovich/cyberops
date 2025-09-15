@@ -93,8 +93,10 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
         // Initialize new centralized keyboard handler
-        if (this.initKeyboardHandler) {
+        if (this.initKeyboardHandler && !this.keyboardInitialized) {
             this.initKeyboardHandler();
+            this.keyboardInitialized = true;
+            console.log('⌨️ Keyboard handler initialized in setupEventListeners');
         }
 
         /* OLD KEYBOARD HANDLERS - DISABLED - Moved to game-keyboard.js
@@ -376,7 +378,8 @@ CyberOpsGame.prototype.handleMouseUp = function(e) {
 
             if (!this.isDragging && distance < 10) {
                 // SIMPLIFIED: Just use handleTap for everything!
-                this.handleTap(e.clientX, e.clientY);
+                // Pass the shift key state for waypoint support
+                this.handleTap(e.clientX, e.clientY, e.shiftKey);
                 console.log('🖱️ Mouse UP: Using single handleTap for both selection and movement');
             }
         }
@@ -390,7 +393,7 @@ CyberOpsGame.prototype.handleWheel = function(e) {
         this.zoom = Math.max(0.5, Math.min(2, this.zoom * delta));
 }
 
-CyberOpsGame.prototype.handleTap = function(x, y) {
+CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
         if (this.currentScreen !== 'game' || this.isPaused) return;
 
         // Handle 3D mode shooting
@@ -499,17 +502,75 @@ CyberOpsGame.prototype.handleTap = function(x, y) {
         if (selectedAgents.length > 0) {
             // Check if target position is walkable
             if (this.isWalkable(worldPos.x, worldPos.y)) {
-                if (selectedAgents.length === 1) {
-                    // Single agent movement
-                    const selected = selectedAgents[0];
-                    selected.targetX = worldPos.x;
-                    selected.targetY = worldPos.y;
-                    console.log(`🚶 TAP MOVEMENT: Moving ${selected.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
-                } else {
-                    // Squad movement in square formation
-                    this.moveSquadInFormation(selectedAgents, worldPos.x, worldPos.y);
-                    console.log(`👥 SQUAD MOVEMENT: Moving ${selectedAgents.length} agents in formation to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+                // Initialize waypoints array if needed
+                if (!this.agentWaypoints) {
+                    this.agentWaypoints = {};
                 }
+
+                selectedAgents.forEach((agent, index) => {
+                    // Initialize waypoint list for this agent if needed
+                    if (!this.agentWaypoints[agent.id]) {
+                        this.agentWaypoints[agent.id] = [];
+                    }
+
+                    // If shift is held, add to waypoints; otherwise clear and set new destination
+                    if (shiftKey) {
+                        // Add waypoint
+                        this.agentWaypoints[agent.id].push({ x: worldPos.x, y: worldPos.y });
+                        console.log(`📍 Added waypoint for ${agent.name}: Point #${this.agentWaypoints[agent.id].length}`);
+
+                        // If this is the first waypoint and agent isn't moving, start movement
+                        if (this.agentWaypoints[agent.id].length === 1) {
+                            const agentDx = agent.targetX - agent.x;
+                            const agentDy = agent.targetY - agent.y;
+                            const agentDist = Math.sqrt(agentDx * agentDx + agentDy * agentDy);
+
+                            if (agentDist < 0.5) {
+                                // Agent is stationary, set target to first waypoint
+                                agent.targetX = worldPos.x;
+                                agent.targetY = worldPos.y;
+                                console.log(`🏃 Starting ${agent.name} movement to first waypoint`);
+                            }
+                        }
+                    } else {
+                        // Clear waypoints and set new destination
+                        this.agentWaypoints[agent.id] = [];
+
+                        if (selectedAgents.length === 1) {
+                            // Single agent movement
+                            agent.targetX = worldPos.x;
+                            agent.targetY = worldPos.y;
+                            console.log(`🚶 TAP MOVEMENT: Moving ${agent.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+                        } else {
+                            // Squad movement in formation
+                            const squadSize = Math.ceil(Math.sqrt(selectedAgents.length));
+                            const spacing = 1.5;
+                            const startX = worldPos.x - (squadSize - 1) * spacing / 2;
+                            const startY = worldPos.y - (squadSize - 1) * spacing / 2;
+
+                            const row = Math.floor(index / squadSize);
+                            const col = index % squadSize;
+                            const formationX = startX + col * spacing;
+                            const formationY = startY + row * spacing;
+
+                            if (this.isWalkable(formationX, formationY)) {
+                                agent.targetX = formationX;
+                                agent.targetY = formationY;
+                            } else {
+                                agent.targetX = worldPos.x;
+                                agent.targetY = worldPos.y;
+                            }
+                        }
+                    }
+                });
+
+                // Store destination indicators for all selected agents
+                this.destinationIndicators = selectedAgents.map(agent => ({
+                    x: agent.targetX || worldPos.x,
+                    y: agent.targetY || worldPos.y,
+                    agentColor: agent.color || '#00ff00',
+                    timestamp: Date.now()
+                }));
 
                 this.showTouchIndicator(x, y);
                 // Play a subtle click/move sound

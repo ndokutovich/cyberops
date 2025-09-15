@@ -108,6 +108,9 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
         squadSel.innerHTML = '';
         this.selectedAgents = [];
 
+        // Calculate max agents for this mission (same as in initMission)
+        const maxAgentsForMission = Math.min(4 + Math.floor(this.currentMissionIndex / 2), 6);
+
         // Use active agents from hub for mission briefing
         const availableAgentsForMission = this.activeAgents.length > 0 ? this.activeAgents : this.agentTemplates;
 
@@ -147,15 +150,15 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
                 if (existing !== -1) {
                     this.selectedAgents.splice(existing, 1);
                     card.classList.remove('selected');
-                } else if (this.selectedAgents.length < 4) {
+                } else if (this.selectedAgents.length < maxAgentsForMission) {
                     this.selectedAgents.push({ template: idx, ...agent });
                     card.classList.add('selected');
                 }
             };
             squadSel.appendChild(card);
 
-            // Auto-select all available agents (up to 4)
-            if (idx < Math.min(4, availableAgentsForMission.length)) {
+            // Auto-select all available agents (up to mission max)
+            if (idx < Math.min(maxAgentsForMission, availableAgentsForMission.length)) {
                 card.click();
             }
         });
@@ -174,7 +177,18 @@ CyberOpsGame.prototype.startMission = function() {
         }
 
         document.getElementById('missionBriefing').style.display = 'none';
-        document.getElementById('gameHUD').style.display = 'block';
+        const gameHUD = document.getElementById('gameHUD');
+        gameHUD.style.display = 'block';
+        // Don't override CSS positioning - it's already correctly set as fixed
+        // Just ensure it's visible above the canvas
+
+        // Squad health needs pointer events but not position changes
+        const squadHealth = document.getElementById('squadHealth');
+        if (squadHealth) {
+            squadHealth.style.pointerEvents = 'auto';
+            squadHealth.style.zIndex = '20';
+        }
+
         this.currentScreen = 'game';
         this.initMission();
 
@@ -218,6 +232,13 @@ CyberOpsGame.prototype.initMission = function() {
         this.initTeamCommands();
         this.clearEventLog();
         this.logMissionEvent('start');
+
+        // Initialize keyboard handler
+        if (!this.keyboardInitialized) {
+            this.initKeyboardHandler();
+            this.keyboardInitialized = true;
+            console.log('⌨️ Keyboard handler initialized');
+        }
 
         // CRITICAL: Full 3D mode reset to prevent movement state carryover
         console.log('🔄 Resetting 3D mode state for new mission');
@@ -320,6 +341,18 @@ CyberOpsGame.prototype.initMission = function() {
             agent.alive = true;
             agent.cooldowns = [0, 0, 0, 0, 0];
             agent.facingAngle = Math.PI / 2; // Default facing down/south
+
+            // Assign unique colors to each agent for visualization
+            const agentColors = [
+                '#00ff00',  // Green - Agent 1
+                '#00ffff',  // Cyan - Agent 2
+                '#ffff00',  // Yellow - Agent 3
+                '#ff00ff',  // Magenta - Agent 4
+                '#ff8800',  // Orange - Agent 5
+                '#8888ff'   // Light Blue - Agent 6
+            ];
+            agent.color = agentColors[idx % agentColors.length];
+            console.log(`🎨 Agent ${idx + 1}: ${agent.name} assigned color: ${agent.color}`);
 
             // Ensure required properties exist
             agent.maxHealth = agent.maxHealth || agent.health;
@@ -585,10 +618,38 @@ CyberOpsGame.prototype.updateSquadHealth = function() {
         this.agents.forEach((agent, index) => {
             const bar = document.createElement('div');
             bar.className = 'agent-health-bar' + (agent.selected ? ' selected' : '');
+            bar.style.pointerEvents = 'auto'; // Explicitly enable pointer events
+            bar.style.cursor = 'pointer'; // Ensure cursor shows as pointer
             bar.innerHTML = `
                 <div class="health-fill" style="width: ${(agent.health / agent.maxHealth) * 100}%"></div>
                 <div class="agent-name">${agent.name} [${index + 1}]</div>
             `;
+
+            // Add click handler to select this agent
+            bar.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent event bubbling
+                e.preventDefault(); // Prevent default behavior
+                console.log(`🖱️ Health bar CLICK event for ${agent.name}, alive: ${agent.alive}`);
+
+                if (agent.alive) {
+                    // Directly call selectAgent
+                    this.selectAgent(agent);
+                    console.log(`🎯 Selected ${agent.name} via health bar click`);
+                }
+            });
+
+            // Also handle mousedown as backup
+            bar.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                console.log(`🖱️ Health bar MOUSEDOWN for ${agent.name}, alive: ${agent.alive}`);
+
+                // Try selecting on mousedown as well
+                if (agent.alive) {
+                    this.selectAgent(agent);
+                    console.log(`🎯 Selected ${agent.name} via health bar mousedown`);
+                }
+            });
+
             container.appendChild(bar);
         });
 }

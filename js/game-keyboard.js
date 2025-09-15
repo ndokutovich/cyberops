@@ -7,40 +7,54 @@
 CyberOpsGame.prototype.initKeyboardHandler = function() {
     // Actual keyboard mappings - declarative config
     this.keyBindings = {
-        // Agent Selection (1-4 keys)
+        // Agent Selection (1-6 keys for up to 6 agents)
         '1': () => this.selectAgentByNumber(0),
         '2': () => this.selectAgentByNumber(1),
         '3': () => this.selectAgentByNumber(2),
         '4': () => this.selectAgentByNumber(3),
+        '5': () => this.selectAgentByNumber(4),
+        '6': () => this.selectAgentByNumber(5),
 
         // Agent Control
         'Tab': () => this.cycleAgents(),
         'T': () => this.selectAllSquad(),
+        't': () => this.selectAllSquad(),
 
         // Combat Actions - apply to all selected agents for keyboard shortcuts
         'F': () => this.useAbilityForAllSelected(1),  // Shoot
+        'f': () => this.useAbilityForAllSelected(1),  // Shoot
         'G': () => this.useAbilityForAllSelected(2),  // Grenade
+        'g': () => this.useAbilityForAllSelected(2),  // Grenade
         'H': () => this.useAbilityForAllSelected(3),  // Hack/Interact (only first agent)
+        'h': () => this.useAbilityForAllSelected(3),  // Hack/Interact
         'Q': () => this.useAbilityForAllSelected(4),  // Shield
+        'q': () => this.useAbilityForAllSelected(4),  // Shield
 
         // Team Commands (avoid conflicts)
         'X': () => this.setTeamMode('hold'),
+        'x': () => this.setTeamMode('hold'),
         'C': () => this.setTeamMode('patrol'),
+        'c': () => this.setTeamMode('patrol'),
         'V': () => this.setTeamMode('follow'),
+        'v': () => this.setTeamMode('follow'),
 
         // Camera/View
         'E': () => this.toggle3DMode(),
         'e': () => this.toggle3DMode(), // Handle both cases
         'L': () => this.toggleSquadFollowing(),
+        'l': () => this.toggleSquadFollowing(),
 
         // UI Controls
         'M': () => this.toggleEventLog(),
+        'm': () => this.toggleEventLog(),
         '?': () => this.toggleHotkeyHelp(),
         '/': (e) => { if (e.shiftKey) this.toggleHotkeyHelp(); },
 
         // Debug
         'P': () => this.togglePathVisualization(),
+        'p': () => this.togglePathVisualization(),
         'O': () => this.togglePathfinding(),
+        'o': () => this.togglePathfinding(),
 
         // Game Control
         ' ': () => this.togglePause(),
@@ -60,6 +74,13 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
 
 // Setup keyboard event listeners
 CyberOpsGame.prototype.setupKeyboardListeners = function() {
+    // Prevent duplicate listeners
+    if (this.keyboardListenersSetup) {
+        console.log('⚠️ Keyboard listeners already setup, skipping...');
+        return;
+    }
+    this.keyboardListenersSetup = true;
+
     // Main keyboard handler
     document.addEventListener('keydown', (e) => {
         // Don't process if typing in an input field
@@ -89,10 +110,13 @@ CyberOpsGame.prototype.setupKeyboardListeners = function() {
         // Only process game keys when in game screen
         if (this.currentScreen !== 'game' && e.key !== 'Escape') return;
 
-        // Get the handler for this key
-        const handler = this.keyBindings[e.key] || this.keyBindings[e.key.toUpperCase()];
+        // Get the handler for this key - try both cases and the code
+        const handler = this.keyBindings[e.key] ||
+                       this.keyBindings[e.key.toUpperCase()] ||
+                       this.keyBindings[e.key.toLowerCase()];
 
         if (handler) {
+            console.log(`⌨️ Key pressed: ${e.key}, executing handler`);
             e.preventDefault();
             handler(e);
         }
@@ -201,7 +225,7 @@ CyberOpsGame.prototype.toggleHotkeyHelp = function() {
 CyberOpsGame.prototype.getKeyBindingsDisplay = function() {
     return {
         'Agent Control': [
-            { key: '1-4', action: 'Select Agent 1-4' },
+            { key: '1-6', action: 'Select Agent 1-6' },
             { key: 'Tab', action: 'Cycle Agents' },
             { key: 'T', action: 'Select All Squad' }
         ],

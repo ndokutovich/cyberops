@@ -195,6 +195,29 @@ CyberOpsGame.prototype.update = function() {
                 }
             }
 
+            // Check for waypoints first
+            if (this.agentWaypoints && this.agentWaypoints[agent.id] && this.agentWaypoints[agent.id].length > 0) {
+                const waypoints = this.agentWaypoints[agent.id];
+                const currentWaypoint = waypoints[0];
+
+                // Set target to current waypoint
+                agent.targetX = currentWaypoint.x;
+                agent.targetY = currentWaypoint.y;
+
+                // Check if we've reached the waypoint
+                const wpDx = currentWaypoint.x - agent.x;
+                const wpDy = currentWaypoint.y - agent.y;
+                const wpDist = Math.sqrt(wpDx * wpDx + wpDy * wpDy);
+
+                if (wpDist < 0.5) {
+                    // Reached waypoint, remove it and move to next
+                    waypoints.shift();
+                    if (agent.selected) {
+                        console.log(`✅ ${agent.name} reached waypoint, ${waypoints.length} remaining`);
+                    }
+                }
+            }
+
             const dx = agent.targetX - agent.x;
             const dy = agent.targetY - agent.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -1067,9 +1090,6 @@ CyberOpsGame.prototype.isLowOnAmmo = function() {
         const avgCooldown = agent.cooldowns.reduce((a, b) => a + b, 0) / agent.cooldowns.length;
         return avgCooldown > 30; // Consider low ammo if cooldowns are high
     });
-
-        // Play pickup sound
-        this.playSound('hit', 0.2);
 }
 
 // Check if a position is blocked by a door

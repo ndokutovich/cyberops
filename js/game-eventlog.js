@@ -10,6 +10,23 @@ CyberOpsGame.prototype.initEventLog = function() {
     this.eventLogElement = document.getElementById('eventLogContent');
     this.eventLogExpanded = true; // Start expanded
     this.eventLogMode = 'full'; // 'full' or 'compact'
+
+    // Ensure event log container is interactive
+    const eventLogContainer = document.getElementById('eventLogFull');
+    if (eventLogContainer) {
+        eventLogContainer.style.pointerEvents = 'auto';
+        // Don't change position - it should stay as defined in HTML/CSS
+        eventLogContainer.style.zIndex = '15';
+    }
+
+    // Ensure the entire event log wrapper is interactive
+    const eventLogWrapper = document.getElementById('eventLog');
+    if (eventLogWrapper) {
+        eventLogWrapper.style.pointerEvents = 'auto';
+        // Don't change position from absolute to relative! This breaks the layout
+        // The HTML already has position: absolute with top: 100px, right: 20px
+        eventLogWrapper.style.zIndex = '15';
+    }
 };
 
 // Add event to log
@@ -90,6 +107,14 @@ CyberOpsGame.prototype.updateEventLogUI = function(event) {
     // Remove old entries if too many
     while (logContent.children.length > 20) {
         logContent.removeChild(logContent.lastChild);
+    }
+
+    // Auto-scroll to show the newest entry
+    const eventLogContainer = logContent.parentElement;
+    if (eventLogContainer) {
+        // With flex-direction: column-reverse, newest items are at the bottom
+        // So we need to scroll to the maximum position to see the latest
+        eventLogContainer.scrollTop = eventLogContainer.scrollHeight;
     }
 };
 

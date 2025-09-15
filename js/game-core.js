@@ -428,6 +428,12 @@ CyberOpsGame.prototype.setupCanvas = function() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
 
+        // Ensure canvas doesn't block HUD elements
+        this.canvas.style.position = 'fixed';
+        this.canvas.style.top = '0';
+        this.canvas.style.left = '0';
+        this.canvas.style.zIndex = '1'; // Behind HUD elements
+
         window.addEventListener('resize', () => {
             this.canvas.width = window.innerWidth;
             this.canvas.height = window.innerHeight;
