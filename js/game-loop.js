@@ -142,6 +142,11 @@ CyberOpsGame.prototype.update = function() {
 
         this.missionTimer++;
         const seconds = Math.floor(this.missionTimer / 60);
+
+        // Update team AI for unselected agents
+        if (this.updateTeamAI) {
+            this.updateTeamAI();
+        }
         const minutes = Math.floor(seconds / 60);
         document.getElementById('missionTimer').textContent =
             `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
@@ -216,6 +221,8 @@ CyberOpsGame.prototype.update = function() {
                         if (dist < 1) {
                             item.collected = true;
                             this.handleCollectablePickup(agent, item);
+                            // Log item collection
+                            if (this.logItemCollected) this.logItemCollected(agent, item);
                         }
                     }
                 });
@@ -398,7 +405,19 @@ CyberOpsGame.prototype.update = function() {
                                 agent.shield -= actualDamage;
                             } else {
                                 agent.health -= actualDamage;
-                                if (agent.health <= 0) agent.alive = false;
+                                if (agent.health <= 0) {
+                                    agent.alive = false;
+                                    // Log agent death
+                                    if (this.logDeath) this.logDeath(agent);
+                                } else {
+                                    // Log hit - use projectile owner or generic enemy
+                                    if (this.logCombatHit) {
+                                        const attacker = proj.owner ?
+                                            this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
+                                            { name: 'Enemy' };
+                                        this.logCombatHit(attacker, agent, actualDamage);
+                                    }
+                                }
                             }
                             // Play hit sound
                             this.playSound('hit', 0.3);
@@ -437,7 +456,19 @@ CyberOpsGame.prototype.update = function() {
                                 closestAgent.shield -= actualDamage;
                             } else {
                                 closestAgent.health -= actualDamage;
-                                if (closestAgent.health <= 0) closestAgent.alive = false;
+                                if (closestAgent.health <= 0) {
+                                    closestAgent.alive = false;
+                                    // Log agent death
+                                    if (this.logDeath) this.logDeath(closestAgent);
+                                } else {
+                                    // Log hit - use projectile owner or generic enemy
+                                    if (this.logCombatHit) {
+                                        const attacker = proj.owner ?
+                                            this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
+                                            { name: 'Enemy' };
+                                        this.logCombatHit(attacker, closestAgent, actualDamage);
+                                    }
+                                }
                             }
                             // Play hit sound
                             this.playSound('hit', 0.3);
@@ -463,6 +494,11 @@ CyberOpsGame.prototype.update = function() {
                             if (enemy.health <= 0) {
                                 enemy.alive = false;
                                 this.totalEnemiesDefeated++;
+                                // Log enemy death
+                                if (this.logDeath) this.logDeath(enemy);
+                            } else {
+                                // Log hit
+                                if (this.logCombatHit) this.logCombatHit(proj.agent || { name: 'Agent' }, enemy, actualDamage);
                             }
                             // Play hit sound
                             this.playSound('hit', 0.3);
@@ -497,6 +533,14 @@ CyberOpsGame.prototype.update = function() {
                             if (closestEnemy.health <= 0) {
                                 closestEnemy.alive = false;
                                 this.totalEnemiesDefeated++;
+                                // Log enemy death
+                                if (this.logDeath) this.logDeath(closestEnemy);
+                            } else {
+                                // Log hit
+                                if (this.logCombatHit) {
+                                    const attacker = proj.agent || { name: 'Agent' };
+                                    this.logCombatHit(attacker, closestEnemy, actualDamage);
+                                }
                             }
                             // Play hit sound
                             this.playSound('hit', 0.3);
@@ -719,6 +763,32 @@ CyberOpsGame.prototype.endMission = function(victory) {
         }, 1000); // Brief delay for dramatic effect
 }
 
+// Unlock intel reports based on collection
+CyberOpsGame.prototype.unlockIntelReport = function() {
+    if (!this.unlockedIntelReports) this.unlockedIntelReports = [];
+
+    // Define intel reports that unlock at certain thresholds
+    const intelReports = [
+        { threshold: 1, id: 'first', title: 'ENEMY PATROL ROUTES', content: 'Guards follow predictable patterns. Use this to your advantage.' },
+        { threshold: 3, id: 'basic', title: 'SECURITY PROTOCOLS', content: 'Terminal hacking detected. Increased firewall protection on main servers.' },
+        { threshold: 5, id: 'weapons', title: 'WEAPON SHIPMENTS', content: 'New military-grade weapons arriving. Expect heavier resistance.' },
+        { threshold: 8, id: 'command', title: 'COMMAND STRUCTURE', content: 'Enemy leadership identified. High-value targets marked for elimination.' },
+        { threshold: 10, id: 'fortress', title: 'FORTRESS BLUEPRINTS', content: 'Structural weaknesses found in enemy stronghold. Multiple entry points available.' },
+        { threshold: 15, id: 'master', title: 'MASTER PLAN', content: 'Enemy preparing major offensive. Strike first or face overwhelming force.' },
+        { threshold: 20, id: 'ultimate', title: 'PROJECT OMEGA', content: 'Top secret weapon system discovered. Must be destroyed at all costs.' }
+    ];
+
+    // Check which reports to unlock
+    intelReports.forEach(report => {
+        if (this.totalIntelCollected >= report.threshold) {
+            if (!this.unlockedIntelReports.find(r => r.id === report.id)) {
+                this.unlockedIntelReports.push(report);
+                console.log(`🔓 NEW INTEL REPORT UNLOCKED: ${report.title}`);
+            }
+        }
+    });
+};
+
 // Generate final words for fallen agents
 CyberOpsGame.prototype.generateFinalWords = function(agentName) {
         const finalWords = [
@@ -739,6 +809,11 @@ CyberOpsGame.prototype.generateFinalWords = function(agentName) {
 
 // Handle collectable item pickup
 CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
+    // Log the item pickup if event logging is enabled
+    if (this.logItemPickup) {
+        this.logItemPickup(agent, item);
+    }
+
     // Use GameServices for collectible calculations
     if (window.GameServices && window.GameServices.formulaService) {
         const effects = window.GameServices.formulaService.calculateCollectibleEffect(
@@ -807,8 +882,28 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
             break;
 
         case 'intel':
-            this.researchPoints += Math.floor(item.value / 2);
-            console.log(`📄 Collected intel (+${Math.floor(item.value / 2)} research points)`);
+            const researchValue = Math.floor(item.value / 2);
+            this.researchPoints += researchValue;
+
+            // Track intel statistics
+            this.totalIntelCollected = (this.totalIntelCollected || 0) + 1;
+            this.intelThisMission = (this.intelThisMission || 0) + 1;
+
+            // Track intel by mission
+            if (this.currentMission) {
+                const missionId = this.currentMission.id;
+                if (!this.intelByMission) this.intelByMission = {};
+                this.intelByMission[missionId] = (this.intelByMission[missionId] || 0) + 1;
+                console.log(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
+            }
+
+            // Unlock intel reports based on collection
+            this.unlockIntelReport();
+
+            console.log(`📄 Collected intel (+${researchValue} research points)`);
+            console.log(`📊 Total Intel: ${this.totalIntelCollected} documents`);
+            console.log(`📋 Intel this mission: ${this.intelThisMission}`);
+            console.log(`🗂️ Intel by mission:`, this.intelByMission);
             break;
 
         case 'armor':

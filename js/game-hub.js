@@ -78,6 +78,18 @@ CyberOpsGame.prototype.updateHubStats = function() {
                                       fallenCount === 1 ? '1 Hero' :
                                       `${fallenCount} Heroes`;
         }
+
+        // Update intel status
+        const intelStatus = document.getElementById('intelStatus');
+        if (intelStatus) {
+            const reportsUnlocked = (this.unlockedIntelReports || []).length;
+            const totalIntel = this.totalIntelCollected || 0;
+            if (reportsUnlocked > 0) {
+                intelStatus.innerHTML = `<span style="color: #00ff00;">${reportsUnlocked}</span> Reports`;
+            } else {
+                intelStatus.textContent = `${totalIntel} Intel`;
+            }
+        }
 }
     
 CyberOpsGame.prototype.showMissionsFromHub = function() {
@@ -520,31 +532,123 @@ CyberOpsGame.prototype.completeMissionRewards = function(victory) {
 }
     
 CyberOpsGame.prototype.showIntelligence = function() {
-        this.showHudDialog(
-            '📡 INTELLIGENCE NETWORK',
-            `<div style="text-align: center;">
-                <div style="background: rgba(0,255,255,0.1); padding: 20px; border-radius: 8px;">
-                    <h3 style="color: #fff; margin-bottom: 20px;">CURRENT INTELLIGENCE REPORTS</h3>
-                    <div style="text-align: left; margin: 15px 0;">
-                        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-left: 3px solid #00ffff; margin: 10px 0;">
-                            <strong style="color: #00ffff;">PRIORITY ALERT:</strong><br>
-                            Increased security detected at government facilities
-                        </div>
-                        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-left: 3px solid #ff00ff; margin: 10px 0;">
-                            <strong style="color: #ff00ff;">SURVEILLANCE:</strong><br>
-                            New patrol patterns identified in industrial sectors
-                        </div>
-                        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-left: 3px solid #ffff00; margin: 10px 0;">
-                            <strong style="color: #ffff00;">NETWORK CHATTER:</strong><br>
-                            Enemy communications suggest major operation planning
-                        </div>
-                    </div>
+    // Initialize intel system if needed
+    if (!this.intelByMission) this.intelByMission = {};
+    if (!this.unlockedIntelReports) this.unlockedIntelReports = [];
+
+    // Debug logging
+    console.log('📡 Intel Modal Debug:', {
+        totalIntel: this.totalIntelCollected,
+        thisMission: this.intelThisMission,
+        byMission: this.intelByMission,
+        unlockedReports: this.unlockedIntelReports?.length || 0
+    });
+
+    // Generate content based on actual intel collected
+    let content = '<div style="max-height: 500px; overflow-y: auto;">';
+
+    // Intel Statistics Section
+    content += `
+        <div style="background: rgba(0,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: #00ffff; margin-bottom: 15px;">📊 INTELLIGENCE STATISTICS</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+                    <div style="color: #888; font-size: 0.9em;">Total Intel Collected</div>
+                    <div style="color: #00ffff; font-size: 1.5em; font-weight: bold;">${this.totalIntelCollected || 0}</div>
                 </div>
-            </div>`,
-            [
-                { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
-            ]
-        );
+                <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+                    <div style="color: #888; font-size: 0.9em;">Research Points Earned</div>
+                    <div style="color: #ff00ff; font-size: 1.5em; font-weight: bold;">${Math.floor((this.totalIntelCollected || 0) * 25)}</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+                    <div style="color: #888; font-size: 0.9em;">Reports Unlocked</div>
+                    <div style="color: #00ff00; font-size: 1.5em; font-weight: bold;">${(this.unlockedIntelReports || []).length}/7</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+                    <div style="color: #888; font-size: 0.9em;">Next Report At</div>
+                    <div style="color: #ffa500; font-size: 1.5em; font-weight: bold;">${this.getNextIntelThreshold()}</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Intel by Mission
+    content += `
+        <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: #ff00ff; margin-bottom: 15px;">🗺️ MISSION INTEL</h3>
+            <div style="text-align: left;">
+    `;
+
+    if (this.intelByMission && Object.keys(this.intelByMission).length > 0) {
+        Object.keys(this.intelByMission).forEach(missionId => {
+            const mission = this.missions.find(m => m.id === parseInt(missionId));
+            const missionName = mission ? mission.title : `Mission ${missionId}`;
+            content += `
+                <div style="background: rgba(0,0,0,0.3); padding: 8px; margin: 5px 0; border-radius: 3px;">
+                    <span style="color: #fff;">${missionName}:</span>
+                    <span style="color: #00ffff; margin-left: 10px;">${this.intelByMission[missionId]} documents</span>
+                </div>
+            `;
+        });
+    } else {
+        content += '<div style="color: #888; text-align: center; padding: 10px;">No intel collected yet</div>';
+    }
+
+    content += '</div></div>';
+
+    // Unlocked Intel Reports
+    content += `
+        <div style="background: rgba(0,255,0,0.05); padding: 15px; border-radius: 8px;">
+            <h3 style="color: #00ff00; margin-bottom: 15px;">🔓 DECLASSIFIED REPORTS</h3>
+    `;
+
+    if (this.unlockedIntelReports && this.unlockedIntelReports.length > 0) {
+        this.unlockedIntelReports.forEach(report => {
+            const colors = {
+                first: '#00ffff',
+                basic: '#00ff00',
+                weapons: '#ffa500',
+                command: '#ff00ff',
+                fortress: '#ff0000',
+                master: '#ffff00',
+                ultimate: '#ff00ff'
+            };
+
+            content += `
+                <div style="background: rgba(0,0,0,0.5); padding: 12px; margin: 10px 0; border-left: 3px solid ${colors[report.id] || '#fff'}; border-radius: 3px;">
+                    <strong style="color: ${colors[report.id] || '#fff'};">${report.title}</strong><br>
+                    <span style="color: #ccc; font-size: 0.9em;">${report.content}</span>
+                </div>
+            `;
+        });
+    } else {
+        content += '<div style="color: #888; text-align: center; padding: 20px;">Collect more intel to unlock classified reports</div>';
+    }
+
+    content += '</div></div>';
+
+    this.showHudDialog(
+        '📡 INTELLIGENCE NETWORK',
+        content,
+        [
+            { text: 'RESEARCH LAB', action: () => { this.closeDialog(); this.showResearchLab(); } },
+            { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+        ]
+    );
+};
+
+// Helper function to get next intel threshold
+CyberOpsGame.prototype.getNextIntelThreshold = function() {
+    const thresholds = [1, 3, 5, 8, 10, 15, 20];
+    const current = this.totalIntelCollected || 0;
+
+    for (let threshold of thresholds) {
+        if (current < threshold) {
+            return `${threshold} intel`;
+        }
+    }
+
+    return 'All unlocked!';
 }
     
     // Agent Hiring System

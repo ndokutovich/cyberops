@@ -31,8 +31,16 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         
         document.getElementById('intermissionObjectives').textContent = 
             `${completedObj}/${this.currentMission.objectives.length}`;
-        document.getElementById('intermissionSquad').textContent = 
+        document.getElementById('intermissionSquad').textContent =
             `${this.agents.filter(a => a.alive).length}/${this.agents.length} Survived`;
+
+        // Update intel statistics
+        const intelCollected = this.intelThisMission || 0;
+        const researchPointsEarned = intelCollected * 25; // Approximate value
+        document.getElementById('intermissionIntel').textContent =
+            `${intelCollected} document${intelCollected !== 1 ? 's' : ''}`;
+        document.getElementById('intermissionResearch').textContent =
+            `+${researchPointsEarned}`;
         
         // Create action buttons based on mission outcome and progress
         const actionsContainer = document.getElementById('intermissionActions');
@@ -40,7 +48,8 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         
         if (victory && this.currentMissionIndex < this.missions.length - 1) {
             // There's a next mission - show Continue button
-            this.currentMissionIndex++;
+            // Mark that we completed this mission
+            this.missionJustCompleted = true;
             const continueBtn = document.createElement('button');
             continueBtn.className = 'menu-button';
             continueBtn.textContent = 'CONTINUE';
@@ -48,11 +57,15 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
             actionsContainer.appendChild(continueBtn);
         } else if (victory) {
             // All missions completed - show Game Complete
+            this.missionJustCompleted = true;
             const completeBtn = document.createElement('button');
             completeBtn.className = 'menu-button';
             completeBtn.textContent = 'FINISH';
             completeBtn.onclick = () => this.finishCampaign();
             actionsContainer.appendChild(completeBtn);
+        } else {
+            // Mission failed - don't advance
+            this.missionJustCompleted = false;
         }
         
         // Always show Try Again button
@@ -76,6 +89,12 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
 CyberOpsGame.prototype.continueToNextMission = function() {
         document.getElementById('intermissionDialog').classList.remove('show');
 
+        // Advance to next mission only if we just completed one
+        if (this.missionJustCompleted) {
+            this.currentMissionIndex++;
+            this.missionJustCompleted = false;
+        }
+
         // Apply medical healing between missions if researched
         this.applyMedicalHealing();
 
@@ -85,9 +104,14 @@ CyberOpsGame.prototype.continueToNextMission = function() {
     
 CyberOpsGame.prototype.tryAgainMission = function() {
         document.getElementById('intermissionDialog').classList.remove('show');
-        // Restart current mission - need to decrement since we incremented when showing dialog
-        const currentMissionIndex = this.currentMissionIndex - 1;
-        this.currentMission = this.missions[currentMissionIndex];
+
+        // Get the actual current mission to restart
+        // Don't decrement if mission failed (index wasn't incremented)
+        // Only use the current index as-is
+        this.currentMission = this.missions[this.currentMissionIndex];
+
+        // Reset mission state and start again
+        console.log(`Restarting Mission ${this.currentMission.id}: ${this.currentMission.title}`);
         this.startMission();
 }
     

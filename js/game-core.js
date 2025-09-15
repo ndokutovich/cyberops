@@ -14,6 +14,11 @@ class CyberOpsGame {
         // Enable audio on first user interaction
         this.setupAudioInteraction();
 
+        // Initialize audio volumes (0-1 range)
+        this.masterVolume = 0.5;
+        this.sfxVolume = 0.5;
+        this.musicVolume = 0.3;
+
         // Game State
         this.currentScreen = 'splash';
         this.isPaused = false;
@@ -44,6 +49,13 @@ class CyberOpsGame {
         this.weapons = [];
         this.equipment = [];
         this.completedResearch = [];
+
+        // Intel System
+        this.totalIntelCollected = 0;
+        this.intelThisMission = 0;
+        this.intelReports = [];
+        this.intelByMission = {}; // Track intel per mission
+        this.unlockedIntelReports = [];
 
         // EARLY INITIALIZE: Initialize missions immediately in constructor
         this.missions = [];

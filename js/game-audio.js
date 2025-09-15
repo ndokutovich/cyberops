@@ -369,31 +369,127 @@ CyberOpsGame.prototype.playLevelMusic = function(levelNumber) {
         // Get the audio element for this level
         const levelAudio = this.levelMusicElements[levelNumber];
         console.log(`- levelAudio for level ${levelNumber}:`, levelAudio);
-        
+
         if (!levelAudio) {
-            console.warn(`❌ No audio element found for level ${levelNumber}, falling back to procedural music`);
-            this.playProceduralLevelMusic(levelNumber);
+            console.warn(`❌ No audio element found for level ${levelNumber}, trying dynamic load`);
+            this.tryDynamicMusicLoad(levelNumber);
             return;
         }
-        
+
         console.log(`- levelAudio.src:`, levelAudio.src || levelAudio.currentSrc);
         console.log(`- levelAudio.readyState:`, levelAudio.readyState);
-        
+
         // Set current level music tracking
         this.currentLevelMusic = levelNumber;
         this.currentLevelMusicElement = levelAudio;
-        
+
+        // Apply volume settings
+        levelAudio.volume = (this.musicVolume || 0.3) * (this.masterVolume || 1);
+
         // Play the level music
         levelAudio.currentTime = 0;
         levelAudio.play().then(() => {
             console.log(`✅ Level ${levelNumber} music started successfully`);
-        }).catch(error => {
+        }).catch(async error => {
             console.warn(`❌ Failed to play level ${levelNumber} music:`, error);
-            console.log('🎵 Falling back to procedural level music...');
-            this.playProceduralLevelMusic(levelNumber);
+            console.log('🎵 Trying dynamic load with MP3 fallback...');
+            await this.tryDynamicMusicLoad(levelNumber);
         });
 }
     
+// Try to dynamically load music with format fallback
+CyberOpsGame.prototype.tryDynamicMusicLoad = async function(levelNumber) {
+        console.log(`🎵 Attempting dynamic music load for level ${levelNumber}`);
+
+        // If we have the audio loader, use it
+        if (this.loadAudioFile) {
+            try {
+                const audio = await this.loadAudioFile(`game-level-${levelNumber}`);
+                if (audio) {
+                    audio.loop = true;
+                    audio.volume = (this.musicVolume || 0.3) * (this.masterVolume || 1);
+
+                    // Stop any current music
+                    this.stopLevelMusic();
+
+                    // Play the loaded audio
+                    audio.play();
+                    this.currentLevelMusicElement = audio;
+                    this.currentLevelMusic = levelNumber;
+                    console.log(`✅ Successfully loaded and playing level ${levelNumber} music via dynamic load`);
+                    return;
+                }
+            } catch (err) {
+                console.log(`Dynamic load failed: ${err.message}`);
+            }
+        }
+
+        // If dynamic load fails or unavailable, try creating new audio element with multiple sources
+        console.log('Trying manual audio element creation with format fallback...');
+        const audio = new Audio();
+        audio.loop = true;
+        audio.volume = (this.musicVolume || 0.3) * (this.masterVolume || 1);
+
+        // Try formats in order
+        const formats = [
+            { ext: '.wav', type: 'audio/wav' },
+            { ext: '.mp3', type: 'audio/mpeg' },
+            { ext: '.ogg', type: 'audio/ogg' }
+        ];
+
+        let loaded = false;
+        for (const format of formats) {
+            if (!loaded) {
+                const url = `game-level-${levelNumber}${format.ext}`;
+                console.log(`Trying ${url}...`);
+
+                await new Promise((resolve) => {
+                    audio.src = url;
+
+                    const loadHandler = () => {
+                        console.log(`✅ Loaded ${url} successfully`);
+                        loaded = true;
+
+                        // Stop any current music
+                        this.stopLevelMusic();
+
+                        // Play the audio
+                        audio.play().then(() => {
+                            this.currentLevelMusicElement = audio;
+                            this.currentLevelMusic = levelNumber;
+                            console.log(`✅ Playing level ${levelNumber} music from ${url}`);
+                        }).catch(err => {
+                            console.log(`Failed to play ${url}: ${err.message}`);
+                        });
+
+                        audio.removeEventListener('canplaythrough', loadHandler);
+                        audio.removeEventListener('error', errorHandler);
+                        resolve();
+                    };
+
+                    const errorHandler = () => {
+                        console.log(`Failed to load ${url}`);
+                        audio.removeEventListener('canplaythrough', loadHandler);
+                        audio.removeEventListener('error', errorHandler);
+                        resolve();
+                    };
+
+                    audio.addEventListener('canplaythrough', loadHandler, { once: true });
+                    audio.addEventListener('error', errorHandler, { once: true });
+
+                    // Timeout after 2 seconds
+                    setTimeout(resolve, 2000);
+                });
+            }
+        }
+
+        // If all formats fail, fall back to procedural music
+        if (!loaded) {
+            console.log('All audio formats failed, falling back to procedural music');
+            this.playProceduralLevelMusic(levelNumber);
+        }
+};
+
 CyberOpsGame.prototype.stopLevelMusic = function() {
         console.log('🛑 stopLevelMusic() called:');
         console.log('- currentLevelMusicElement exists:', !!this.currentLevelMusicElement);

@@ -92,51 +92,17 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         // Prevent context menu
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Keyboard Events for 3D mode and squad controls
+        // Initialize new centralized keyboard handler
+        if (this.initKeyboardHandler) {
+            this.initKeyboardHandler();
+        }
+
+        /* OLD KEYBOARD HANDLERS - DISABLED - Moved to game-keyboard.js
         document.addEventListener('keydown', (e) => {
             // Select All Squad - 'T' key for Team
             if (e.code === 'KeyT' && this.currentScreen === 'game') {
                 console.log('🎮 Team Select: Selecting all squad members');
                 this.selectAllSquad();
-                e.preventDefault();
-                return;
-            }
-
-            // Toggle path visualization - 'P' key for debugging
-            if (e.code === 'KeyP' && this.currentScreen === 'game') {
-                this.showPaths = !this.showPaths;
-                console.log('🛤️ Path visualization:', this.showPaths ? 'ON' : 'OFF');
-                e.preventDefault();
-                return;
-            }
-
-            // Toggle hotkey help - '?' key
-            if ((e.code === 'Slash' && e.shiftKey) || e.key === '?') {
-                if (this.currentScreen === 'game') {
-                    this.showHotkeyHelp = !this.showHotkeyHelp;
-                    console.log('❓ Hotkey help:', this.showHotkeyHelp ? 'SHOWN' : 'HIDDEN');
-                    e.preventDefault();
-                    return;
-                }
-            }
-
-            // Toggle pathfinding on/off - 'O' key
-            if (e.code === 'KeyO' && this.currentScreen === 'game') {
-                this.usePathfinding = !this.usePathfinding;
-                console.log('🧭 Pathfinding:', this.usePathfinding ? 'ON' : 'OFF');
-                // Clear existing paths when toggling
-                this.agents.forEach(agent => {
-                    agent.path = null;
-                    agent.lastTargetKey = null;
-                });
-                e.preventDefault();
-                return;
-            }
-
-            // Toggle squad following in 3D mode - 'L' key (foLLow)
-            if (e.code === 'KeyL' && this.currentScreen === 'game') {
-                this.squadFollowing = this.squadFollowing !== false ? false : true;
-                console.log('👥 Squad Following:', this.squadFollowing ? 'ON' : 'OFF');
                 e.preventDefault();
                 return;
             }
@@ -300,6 +266,8 @@ CyberOpsGame.prototype.setupEventListeners = function() {
             }
         });
 
+        });  // End of old keydown handler
+
         document.addEventListener('keyup', (e) => {
             if (this.is3DMode) {
                 switch(e.code) {
@@ -310,8 +278,9 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 }
             }
         });
+        */ // END OF OLD KEYBOARD HANDLERS - Use game-keyboard.js instead
 
-        // Mouse handling for 3D shooting
+        // Mouse handling for 3D shooting (keep this for mouse interaction)
         this.mouseClicked = false;
         this.mouseX = 0;
         this.mouseY = 0;
@@ -605,38 +574,20 @@ CyberOpsGame.prototype.selectAgent = function(agent) {
         this.updateCooldownDisplay();
         this.centerCameraOnAgent(agent);
 
+        // Log agent selection
+        if (this.logEvent) {
+            this.logEvent(`Switched to ${agent.name}`, 'info');
+        }
+
         if ('vibrate' in navigator) {
             navigator.vibrate(10);
         }
 }
 
+// Replaced by centralized keyboard handler in game-keyboard.js
 CyberOpsGame.prototype.handleKeyPress = function(e) {
-        if (this.currentScreen !== 'game') return;
-
-        // Number keys to select agents
-        if (e.key >= '1' && e.key <= '4') {
-            const idx = parseInt(e.key) - 1;
-            if (idx < this.agents.length && this.agents[idx].alive) {
-                this.selectAgent(this.agents[idx]);
-            }
-        }
-
-        // Tab to cycle agents
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            const aliveAgents = this.agents.filter(a => a.alive);
-            if (aliveAgents.length > 0) {
-                const current = aliveAgents.findIndex(a => a.selected);
-                const next = (current + 1) % aliveAgents.length;
-                this.selectAgent(aliveAgents[next]);
-            }
-        }
-
-        // Space to pause
-        if (e.key === ' ') {
-            e.preventDefault();
-            this.togglePause();
-        }
+    // This function is kept for backwards compatibility but is now empty
+    // All keyboard handling is done in game-keyboard.js
 }
 
 CyberOpsGame.prototype.showTouchIndicator = function(x, y) {

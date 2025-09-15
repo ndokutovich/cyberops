@@ -225,7 +225,12 @@ CyberOpsGame.prototype.render = function() {
         this.effects.forEach(effect => {
             this.renderEffect(effect);
         });
-        
+
+        // Draw team mode indicators
+        if (this.drawTeamModeIndicators) {
+            this.drawTeamModeIndicators(ctx);
+        }
+
         ctx.restore();
 
         // Render hotkey help overlay

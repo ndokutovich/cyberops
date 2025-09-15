@@ -51,6 +51,17 @@ CyberOpsGame.prototype.refreshEquipmentUI = function() {
     }
 };
 
+// Update inventory display in equipment screen
+CyberOpsGame.prototype.updateInventoryDisplay = function() {
+    // This function updates the weapon inventory display
+    // Since we handle inventory in the shop tab, this can be a placeholder
+    // or we can add a quick inventory summary here if needed
+    console.log('Inventory updated:', {
+        weapons: this.weapons.filter(w => w.owned > 0).length,
+        totalWeapons: this.weapons.reduce((sum, w) => sum + (w.owned || 0), 0)
+    });
+};
+
 // Update agent list in equipment screen
 CyberOpsGame.prototype.updateAgentList = function() {
     const listEl = document.getElementById('equipmentAgentList');

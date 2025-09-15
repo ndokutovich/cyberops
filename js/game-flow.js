@@ -192,6 +192,15 @@ CyberOpsGame.prototype.initMission = function() {
         this.missionTimer = 0;
         this.isPaused = false;
 
+        // Reset mission intel tracking
+        this.intelThisMission = 0;
+
+        // Initialize event log and team commands
+        this.initEventLog();
+        this.initTeamCommands();
+        this.clearEventLog();
+        this.logMissionEvent('start');
+
         // CRITICAL: Full 3D mode reset to prevent movement state carryover
         console.log('🔄 Resetting 3D mode state for new mission');
 
@@ -426,6 +435,57 @@ CyberOpsGame.prototype.useAbility = function(abilityIndex) {
                 break;
         }
         this.updateCooldownDisplay();
+}
+
+// Use ability for all selected agents (keyboard shortcuts)
+CyberOpsGame.prototype.useAbilityForAllSelected = function(abilityIndex) {
+        if (this.isPaused) return;
+
+        const selectedAgents = this.agents.filter(a => a.selected && a.alive);
+        if (selectedAgents.length === 0) return;
+
+        let anyUsed = false;
+
+        selectedAgents.forEach((agent, index) => {
+            if (agent.cooldowns[abilityIndex] > 0) return;
+
+            switch (abilityIndex) {
+                case 1: // Shoot - all agents shoot
+                    this.shootNearestEnemy(agent);
+                    agent.cooldowns[1] = 60;
+                    anyUsed = true;
+                    break;
+                case 2: // Grenade - all agents throw
+                    this.throwGrenade(agent);
+                    agent.cooldowns[2] = 180;
+                    anyUsed = true;
+                    break;
+                case 3: // Hack/Interact - only first agent
+                    if (index === 0) {
+                        if (this.currentMission && this.currentMission.id === 3) {
+                            this.plantNearestExplosive(agent);
+                        } else if (this.currentMission && this.currentMission.id === 4) {
+                            this.eliminateNearestTarget(agent);
+                        } else if (this.currentMission && this.currentMission.id === 5) {
+                            this.breachNearestGate(agent) || this.hackNearestTerminal(agent);
+                        } else {
+                            this.hackNearestTerminal(agent);
+                        }
+                        agent.cooldowns[3] = 120;
+                        anyUsed = true;
+                    }
+                    break;
+                case 4: // Shield - all agents activate
+                    this.activateShield(agent);
+                    agent.cooldowns[4] = 300;
+                    anyUsed = true;
+                    break;
+            }
+        });
+
+        if (anyUsed) {
+            this.updateCooldownDisplay();
+        }
 }
 
 CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
@@ -667,9 +727,45 @@ CyberOpsGame.prototype.hasLineOfSight = function(x1, y1, x2, y2) {
         return true;
 }
 
-// Sound effect helper
+// Sound effect helper with MP3 fallback
 CyberOpsGame.prototype.playSound = function(soundName, volume = 0.5) {
-        // Use Web Audio API to synthesize sounds since files don't exist
+        // First try to play HTML audio element if it exists
+        const audioElement = document.getElementById(soundName + 'Sound');
+        if (audioElement) {
+            // Check if the audio element can actually play
+            if (audioElement.readyState >= 2) { // HAVE_CURRENT_DATA or better
+                try {
+                    // Clone and play
+                    const audio = audioElement.cloneNode(true);
+                    audio.volume = volume * (this.sfxVolume || 1) * (this.masterVolume || 1);
+                    const playPromise = audio.play();
+
+                    if (playPromise !== undefined) {
+                        playPromise.catch(err => {
+                            console.log(`Audio playback failed for ${soundName}: ${err.message}`);
+                            this.playSynthSound(soundName, volume);
+                        });
+                    }
+                    return;
+                } catch (err) {
+                    console.log(`Error cloning/playing ${soundName}: ${err.message}`);
+                }
+            } else {
+                // Audio not ready, check if it has a source that failed to load
+                console.log(`Audio element ${soundName} not ready (readyState: ${audioElement.readyState})`);
+
+                // Try to reload it
+                audioElement.load();
+
+                // For now, use synthesized sound
+                this.playSynthSound(soundName, volume);
+                return;
+            }
+        } else {
+            console.log(`No audio element found for ${soundName}`);
+        }
+
+        // Fall back to synthesized sounds
         this.playSynthSound(soundName, volume);
 }
 
@@ -815,6 +911,12 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
 
             if (dist < hackRange) {
                 terminal.hacked = true;
+
+                // Log the hacking event
+                if (this.logEvent) {
+                    this.logEvent(`${agent.name} hacked terminal at [${terminal.x}, ${terminal.y}]`, 'hack', true);
+                }
+
                 this.effects.push({
                     type: 'hack',
                     x: terminal.x,
@@ -1081,15 +1183,7 @@ CyberOpsGame.prototype.performReturnToHub = function() {
         this.showSyndicateHub();
 }
 
-CyberOpsGame.prototype.showSettingsFromPause = function() {
-        this.showHudDialog(
-            'SYSTEM SETTINGS',
-            'Settings panel is currently under development.<br><br>Available options will include:<br>• Audio Controls<br>• Graphics Quality<br>• Control Mapping<br>• Game Preferences',
-            [
-                { text: 'BACK', action: () => this.showPauseMenu() }
-            ]
-        );
-}
+// Moved to game-settings.js
 
 CyberOpsGame.prototype.backToMenuFromBriefing = function() {
         document.getElementById('missionBriefing').style.display = 'none';
@@ -1098,10 +1192,4 @@ CyberOpsGame.prototype.backToMenuFromBriefing = function() {
 
     // Removed - replaced by intermission dialog system
 
-CyberOpsGame.prototype.showSettings = function() {
-        this.showHudDialog(
-            'SYSTEM SETTINGS',
-            'Settings panel is currently under development.<br><br>Available options will include:<br>• Audio Controls<br>• Graphics Quality<br>• Control Mapping<br>• Game Preferences',
-            [{ text: 'OK', action: 'close' }]
-        );
-}
+// Moved to game-settings.js
