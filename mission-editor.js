@@ -266,7 +266,7 @@ class MissionEditor {
     handleWheel(e) {
         e.preventDefault();
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        this.zoom = Math.max(0.5, Math.min(2, this.zoom * delta));
+        this.zoom = Math.max(0.25, Math.min(4, this.zoom * delta));
         document.getElementById('zoom-level').value = this.zoom;
         this.canvas.width = this.mission.width * this.tileSize * this.zoom;
         this.canvas.height = this.mission.height * this.tileSize * this.zoom;
