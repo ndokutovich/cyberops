@@ -1,0 +1,287 @@
+// Campaign Integration Layer
+// Bridges the new campaign system with the existing game code
+
+// Initialize campaign system on game start
+CyberOpsGame.prototype.initCampaignSystem = async function() {
+    console.log('🎮 Initializing Campaign System...');
+
+    // Initialize the campaign system
+    await CampaignSystem.init();
+
+    // Check if we should use new campaign system or fallback to old
+    if (this.useCampaignSystem === undefined) {
+        // Check if campaign missions exist
+        const hasCampaignMissions = await this.checkForCampaignMissions();
+        this.useCampaignSystem = hasCampaignMissions;
+    }
+
+    // Always use new campaign system
+    console.log('✅ Using campaign system');
+    await this.loadCampaignMissions();
+};
+
+// Check if campaign missions exist
+CyberOpsGame.prototype.checkForCampaignMissions = async function() {
+    try {
+        // Load campaign metadata
+        const response = await fetch('campaigns/main/campaign.json');
+        if (response.ok) {
+            const campaign = await response.json();
+            console.log('✅ Found campaign:', campaign.name);
+            return true; // Use new campaign system
+        }
+    } catch (e) {
+        console.warn('Campaign not found, falling back to legacy:', e);
+    }
+    return false;
+};
+
+// Load missions from campaign system
+CyberOpsGame.prototype.loadCampaignMissions = async function() {
+    const campaignId = this.currentCampaignId || 'main';
+
+    try {
+        // Load campaign metadata
+        const response = await fetch(`campaigns/${campaignId}/campaign.json`);
+        const campaign = await response.json();
+
+        // Load all mission files
+        this.missions = [];
+        window.CAMPAIGN_MISSIONS = window.CAMPAIGN_MISSIONS || {};
+
+        for (const act of campaign.acts) {
+            for (const missionInfo of act.missions) {
+                try {
+                    // Load the mission script
+                    const script = document.createElement('script');
+                    script.src = `campaigns/${campaignId}/${missionInfo.filename}`;
+                    await new Promise((resolve, reject) => {
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+
+                    // Get the loaded mission data
+                    const missionData = window.CAMPAIGN_MISSIONS[missionInfo.id];
+                    if (missionData) {
+                        // Convert to game format
+                        const gameMission = this.convertToLegacyFormat(missionData, this.missions.length);
+                        this.missions.push(gameMission);
+                        console.log(`✅ Loaded mission: ${missionInfo.name}`);
+                    }
+                } catch (e) {
+                    console.warn(`Failed to load mission ${missionInfo.filename}:`, e);
+                }
+            }
+        }
+
+        console.log(`✅ Loaded ${this.missions.length} missions from campaign`);
+    } catch (e) {
+        console.error('❌ Failed to load campaign:', e);
+        console.error('Campaign system is required. Please check campaigns/main/ folder.');
+        this.missions = [];
+    }
+};
+
+// Convert new mission format to legacy format
+CyberOpsGame.prototype.convertToLegacyFormat = function(missionData, index) {
+    return {
+        id: missionData.missionNumber || index + 1,
+        title: missionData.title || missionData.name,
+        name: missionData.name,
+        description: missionData.description,
+        briefing: missionData.briefing,
+        map: missionData.map || { type: 'corporate' },
+        objectives: missionData.objectives || [],
+        enemies: missionData.enemies || { count: 8 },
+        rewards: missionData.rewards,
+        npcs: missionData.npcs || [],
+
+        // Agent configuration from new system
+        maxAgents: missionData.agents?.max || 4,
+        requiredAgents: missionData.agents?.required || 2,
+        recommendedAgents: missionData.agents?.recommended || 3,
+
+        // Store original data for full features
+        _campaignData: missionData
+    };
+};
+
+// Override agent selection to use mission-specific settings
+CyberOpsGame.prototype.getMaxAgentsForMission = function(missionIndex) {
+    // First check if we have an exported mission file for this index
+    const missionOverride = window.MISSION_OVERRIDES && window.MISSION_OVERRIDES[missionIndex];
+    if (missionOverride && missionOverride.agents) {
+        console.log(`📝 Using mission override for mission ${missionIndex}: ${missionOverride.agents.max} agents`);
+        return missionOverride.agents.max;
+    }
+
+    if (this.missions && this.missions[missionIndex]) {
+        const mission = this.missions[missionIndex];
+
+        // Use mission-specific agent count if available
+        if (mission.maxAgents) {
+            return mission.maxAgents;
+        }
+
+        // Check campaign data
+        if (mission._campaignData?.agents?.max) {
+            return mission._campaignData.agents.max;
+        }
+    }
+
+    // Fallback to old system - but with better defaults
+    if (missionIndex === 0) return 4;  // Mission 1: 4 agents
+    if (missionIndex === 1) return 5;  // Mission 2: 5 agents
+    if (missionIndex === 2) return 5;  // Mission 3: 5 agents
+    if (missionIndex === 3) return 6;  // Mission 4: 6 agents
+    if (missionIndex === 4) return 6;  // Mission 5: 6 agents
+    return 6; // Default for any additional missions
+};
+
+// Override mission loading to support new system
+const originalInitMission = CyberOpsGame.prototype.initMission;
+CyberOpsGame.prototype.initMission = function(missionIndex) {
+    const mission = this.missions[missionIndex];
+
+    // If mission has campaign data, use it for enhanced features
+    if (mission && mission._campaignData) {
+        this.currentMissionData = mission._campaignData;
+
+        // Apply mission-specific settings
+        if (mission._campaignData.map.customTiles) {
+            // Use custom map tiles if provided
+            this.customMapTiles = mission._campaignData.map.customTiles;
+        }
+
+        // Set agent limits
+        this.maxAgentsForMission = mission.maxAgents || 4;
+        this.requiredAgentsForMission = mission.requiredAgents || 2;
+    }
+
+    // Call original init
+    return originalInitMission.call(this, missionIndex);
+};
+
+// Override map generation to use custom tiles if available
+const originalGenerateMapFromType = CyberOpsGame.prototype.generateMapFromType;
+CyberOpsGame.prototype.generateMapFromType = function(mapType) {
+    // Check for custom tiles from mission editor
+    if (this.customMapTiles) {
+        console.log('📝 Using custom map tiles from mission');
+
+        const map = {
+            width: this.customMapTiles[0].length,
+            height: this.customMapTiles.length,
+            tiles: this.customMapTiles,
+            spawn: this.currentMissionData?.map?.spawn || { x: 2, y: 2 },
+            extraction: this.currentMissionData?.map?.extraction || { x: 78, y: 78 },
+            terminals: this.currentMissionData?.map?.terminals || [],
+            doors: this.currentMissionData?.map?.doors || [],
+            cover: [],
+            collectables: [],
+            enemySpawns: []
+        };
+
+        // Add enemies from mission data
+        if (this.currentMissionData?.enemies?.spawns) {
+            map.enemySpawns = this.currentMissionData.enemies.spawns;
+        }
+
+        // Clear custom tiles after use
+        this.customMapTiles = null;
+
+        return map;
+    }
+
+    // Use original generation
+    return originalGenerateMapFromType.call(this, mapType);
+};
+
+// Add campaign selection to main menu
+CyberOpsGame.prototype.showCampaignSelect = function() {
+    // Create campaign selection UI
+    const campaigns = CampaignSystem.campaigns;
+
+    let html = '<div class="campaign-select">';
+    html += '<h2>Select Campaign</h2>';
+
+    for (const [id, campaign] of Object.entries(campaigns)) {
+        const stats = CampaignSystem.getCampaignStats(id);
+        const locked = campaign.locked && !this.isCampaignUnlocked(id);
+
+        html += `
+            <div class="campaign-option ${locked ? 'locked' : ''}"
+                 onclick="${locked ? '' : `game.selectCampaign('${id}')`}">
+                <h3>${campaign.name}</h3>
+                <p>${campaign.description}</p>
+                <div class="campaign-progress">
+                    ${stats ? `Progress: ${stats.percentComplete}%` : 'New Campaign'}
+                </div>
+                ${locked ? '<div class="lock-icon">🔒</div>' : ''}
+            </div>
+        `;
+    }
+
+    html += '<button onclick="game.backToMainMenu()">Back</button>';
+    html += '</div>';
+
+    // Show in UI (you may need to create a campaign select screen)
+    const container = document.getElementById('campaignSelectScreen') ||
+                     document.getElementById('mainMenu');
+    container.innerHTML = html;
+};
+
+// Select a campaign
+CyberOpsGame.prototype.selectCampaign = async function(campaignId) {
+    this.currentCampaignId = campaignId;
+    await this.loadCampaignMissions();
+    this.startCampaign();
+};
+
+// Check if campaign is unlocked
+CyberOpsGame.prototype.isCampaignUnlocked = function(campaignId) {
+    // Check unlock conditions
+    if (campaignId === 'main' || campaignId === 'tutorial' || campaignId === 'custom') {
+        return true; // Always unlocked
+    }
+
+    // Check if purchased/unlocked
+    return localStorage.getItem(`campaign_unlocked_${campaignId}`) === 'true';
+};
+
+// Update mission completion to work with campaign system
+const originalCompleteMission = CyberOpsGame.prototype.completeMission;
+CyberOpsGame.prototype.completeMission = function() {
+    // Mark in campaign system if using it
+    if (this.useCampaignSystem && this.currentMissionData) {
+        CampaignSystem.markMissionComplete(
+            this.currentMissionData.campaign,
+            this.currentMissionData.act,
+            this.currentMissionData.mission
+        );
+
+        // Check for next mission
+        const nextMission = CampaignSystem.getNextMission();
+        if (nextMission) {
+            console.log('Next mission available:', nextMission);
+        }
+    }
+
+    // Call original
+    if (originalCompleteMission) {
+        return originalCompleteMission.call(this);
+    }
+};
+
+// Auto-initialize when game starts
+const originalInitGame = CyberOpsGame.prototype.init;
+CyberOpsGame.prototype.init = async function() {
+    // Initialize campaign system first
+    await this.initCampaignSystem();
+
+    // Call original init
+    if (originalInitGame) {
+        return originalInitGame.call(this);
+    }
+};

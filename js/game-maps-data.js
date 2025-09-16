@@ -78,12 +78,12 @@ const MAP_DEFINITIONS = {
         enemySpawns: [
             { x: 30, y: 30 },
             { x: 50, y: 50 },
-            { x: 20, y: 60 },
-            { x: 60, y: 20 },
+            { x: 20, y: 55 },  // Changed from 60 to 55 (corridor position)
+            { x: 55, y: 20 },  // Changed from 60 to 55 (corridor position)
             { x: 40, y: 40 },
             { x: 25, y: 25 },
             { x: 55, y: 55 },
-            { x: 35, y: 65 }
+            { x: 35, y: 70 }   // Changed from 65 to 70 (corridor position)
         ],
 
         // Collectables

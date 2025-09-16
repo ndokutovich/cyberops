@@ -110,10 +110,12 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
         squadSel.innerHTML = '';
         this.selectedAgents = [];
 
-        // Calculate max agents for this mission (same as in initMission)
-        // Mission 1: 4 agents, Mission 2+: 5 agents, Mission 4+: 6 agents
-        const maxAgentsForMission = this.currentMissionIndex === 0 ? 4 :
-                                     this.currentMissionIndex < 3 ? 5 : 6;
+        // Calculate max agents for this mission
+        // Use mission-specific settings if available, otherwise use defaults
+        const maxAgentsForMission = this.getMaxAgentsForMission ?
+            this.getMaxAgentsForMission(this.currentMissionIndex) :
+            (this.currentMissionIndex === 0 ? 4 :
+             this.currentMissionIndex < 3 ? 5 : 6);
 
         // Use active agents from hub for mission briefing
         const availableAgentsForMission = this.activeAgents.length > 0 ? this.activeAgents : this.agentTemplates;
@@ -315,7 +317,15 @@ CyberOpsGame.prototype.initMission = function() {
         }
 
         // Generate map based on mission map type
-        this.map = this.generateMapFromType(this.currentMission.map);
+        // Handle both old format (string) and new format (object with type and useDeclarativeMap)
+        if (typeof this.currentMission.map === 'object' && this.currentMission.map.useDeclarativeMap && typeof generateMapFromDefinition !== 'undefined') {
+            // Use declarative map system for new campaign missions
+            this.map = generateMapFromDefinition(this.currentMission.map.type);
+            console.log(`📍 Generated declarative map: ${this.currentMission.map.type} (${this.map.width}x${this.map.height})`);
+        } else {
+            // Use procedural generation for legacy missions
+            this.map = this.generateMapFromType(this.currentMission.map);
+        }
 
         // DEBUG: Check if map was modified right after assignment
         console.log('🔍 IMMEDIATE CHECK - Right after generateMapFromType:');
@@ -353,10 +363,12 @@ CyberOpsGame.prototype.initMission = function() {
         // Spawn agents with equipment and research bonuses using services
         const spawn = this.map.spawn;
 
-        // Determine number of agents based on mission difficulty
-        // Mission 1: 4 agents, Mission 2-3: 5 agents, Mission 4+: 6 agents
-        const maxAgentsForMission = this.currentMissionIndex === 0 ? 4 :
-                                     this.currentMissionIndex < 3 ? 5 : 6;
+        // Determine number of agents based on mission settings
+        // Use mission-specific settings if available
+        const maxAgentsForMission = this.getMaxAgentsForMission ?
+            this.getMaxAgentsForMission(this.currentMissionIndex) :
+            (this.currentMissionIndex === 0 ? 4 :
+             this.currentMissionIndex < 3 ? 5 : 6);
 
         // Use all hired agents up to the mission limit
         const availableForMission = this.activeAgents.slice(0, maxAgentsForMission);
@@ -414,6 +426,7 @@ CyberOpsGame.prototype.initMission = function() {
             agent.y = spawn.y + Math.floor(idx / 2);
             agent.targetX = spawn.x + idx % 2;
             agent.targetY = spawn.y + Math.floor(idx / 2);
+            console.log(`🎯 Agent ${idx+1} (${agent.name}) placed at (${agent.x}, ${agent.y})`);
             agent.selected = idx === 0;
             agent.alive = true;
             agent.cooldowns = [0, 0, 0, 0, 0];
@@ -513,7 +526,10 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
 
     // Calculate total enemies based on mission difficulty
     // Base enemies + bonus based on mission index
-    const baseEnemies = this.currentMission.enemies;
+    // Handle both old format (number) and new format (object with count property)
+    const baseEnemies = typeof this.currentMission.enemies === 'number'
+        ? this.currentMission.enemies
+        : (this.currentMission.enemies?.count || 8);
     const bonusEnemies = Math.floor(this.currentMissionIndex * 2); // +2 enemies per mission
     const totalEnemies = baseEnemies + bonusEnemies;
 
@@ -560,11 +576,14 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
 
     // Get strategic positions based on map
     const strategicPositions = this.getStrategicEnemyPositions(totalEnemies);
+    console.log(`📍 Strategic positions for enemies:`, strategicPositions);
+    console.log(`📍 Map enemySpawns:`, this.map.enemySpawns);
 
     // Spawn enemies
     enemyComposition.forEach((enemyTypeName, i) => {
         const enemyTemplate = enemyTypes.find(t => t.type === enemyTypeName) || enemyTypes[0];
         const position = strategicPositions[i] || { x: 10 + Math.random() * 20, y: 10 + Math.random() * 20 };
+        console.log(`🎯 Spawning enemy ${i} (${enemyTypeName}) at:`, position);
 
         const enemy = {
             id: 'enemy_' + i,
@@ -585,6 +604,7 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
         enemy.targetX = enemy.x;
         enemy.targetY = enemy.y;
         this.enemies.push(enemy);
+        console.log(`✅ Enemy ${i} created: ${enemyTypeName} at exact position (${enemy.x}, ${enemy.y}) with health ${enemy.health}`);
     });
 
     console.log(`⚔️ Enemy composition for mission ${this.currentMissionIndex + 1}:`,
@@ -593,6 +613,12 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
             return acc;
         }, {})
     );
+
+    // Verify all enemy positions
+    console.log(`📍 FINAL ENEMY POSITIONS CHECK:`);
+    this.enemies.forEach((enemy, idx) => {
+        console.log(`  Enemy ${idx}: ${enemy.type} at (${enemy.x}, ${enemy.y}) - alive: ${enemy.alive}`);
+    });
 };
 
 // Get strategic enemy positions based on map type
@@ -601,10 +627,50 @@ CyberOpsGame.prototype.getStrategicEnemyPositions = function(count) {
     const mapWidth = this.map.width || 40;
     const mapHeight = this.map.height || 30;
 
+    // First, try to use predefined enemy spawn points from the map
+    if (this.map.enemySpawns && this.map.enemySpawns.length > 0) {
+        console.log(`📍 Using ${this.map.enemySpawns.length} predefined enemy spawn points`);
+
+        // Use all predefined spawns first
+        for (let i = 0; i < Math.min(count, this.map.enemySpawns.length); i++) {
+            const spawn = this.map.enemySpawns[i];
+            // Check if spawn point is walkable
+            const tileValue = this.map.tiles[spawn.y] && this.map.tiles[spawn.y][spawn.x];
+            if (tileValue === 1) {
+                console.log(`⚠️ WARNING: Enemy spawn ${i} at (${spawn.x}, ${spawn.y}) is in a WALL (tile=1)!`);
+            } else {
+                console.log(`✅ Enemy spawn ${i} at (${spawn.x}, ${spawn.y}) is walkable (tile=${tileValue})`);
+            }
+            positions.push({
+                x: spawn.x,
+                y: spawn.y
+            });
+        }
+
+        // If we need more enemies than spawn points, duplicate some positions with slight offsets
+        if (count > this.map.enemySpawns.length) {
+            for (let i = this.map.enemySpawns.length; i < count; i++) {
+                const baseSpawn = this.map.enemySpawns[i % this.map.enemySpawns.length];
+                positions.push({
+                    x: baseSpawn.x + Math.floor(Math.random() * 6 - 3),
+                    y: baseSpawn.y + Math.floor(Math.random() * 6 - 3)
+                });
+            }
+        }
+
+        return positions;
+    }
+
+    // Fallback to procedural positioning based on map type
+    // Get map type (handle both string and object format)
+    const mapType = typeof this.currentMission.map === 'string'
+        ? this.currentMission.map
+        : this.currentMission.map?.type;
+
     // Define key areas based on map type
     let keyAreas = [];
 
-    if (this.currentMission.map === 'corporate') {
+    if (mapType === 'corporate') {
         // Corporate: Guards at entrances, patrols in hallways
         keyAreas = [
             { x: 10, y: 10, radius: 5 },  // Main entrance
@@ -612,14 +678,14 @@ CyberOpsGame.prototype.getStrategicEnemyPositions = function(count) {
             { x: 20, y: 20, radius: 8 },  // Central area
             { x: 10, y: 25, radius: 5 },  // Security room
         ];
-    } else if (this.currentMission.map === 'government') {
+    } else if (mapType === 'government') {
         // Government: Heavy security at checkpoints
         keyAreas = [
             { x: 15, y: 15, radius: 6 },  // Checkpoint 1
             { x: 25, y: 15, radius: 6 },  // Checkpoint 2
             { x: 20, y: 25, radius: 8 },  // Main facility
         ];
-    } else if (this.currentMission.map === 'industrial') {
+    } else if (mapType === 'industrial') {
         // Industrial: Spread across facility
         keyAreas = [
             { x: 10, y: 10, radius: 6 },  // Storage area
@@ -627,7 +693,7 @@ CyberOpsGame.prototype.getStrategicEnemyPositions = function(count) {
             { x: 20, y: 20, radius: 8 },  // Central control
             { x: 10, y: 30, radius: 6 },  // Loading dock
         ];
-    } else if (this.currentMission.map === 'residential') {
+    } else if (mapType === 'residential') {
         // Residential: Concentrated around targets
         keyAreas = [
             { x: 15, y: 15, radius: 7 },  // Target building 1

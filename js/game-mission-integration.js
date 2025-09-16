@@ -9,12 +9,12 @@ CyberOpsGame.prototype.initMissions = function() {
     this.initMissionSystem();
     this.initQuestSystem();
 
-    // Load all mission definitions
-    this.missions = MISSION_DEFINITIONS.map((def, index) => {
-        return this.loadMissionData(index);
-    });
+    // Missions will be loaded by campaign-integration.js
+    if (!this.missions) {
+        this.missions = [];
+    }
 
-    console.log(`📋 Loaded ${this.missions.length} missions`);
+    console.log(`📋 Mission system initialized`);
 };
 
 // Override the hackNearestTerminal function to use the new system
@@ -99,7 +99,7 @@ CyberOpsGame.prototype.initMissionUpdated = function() {
     }
 
     // Initialize from mission definition
-    this.currentMissionDef = MISSION_DEFINITIONS[this.currentMissionIndex];
+    this.currentMissionDef = this.missions && this.missions[this.currentMissionIndex];
     console.log('🎯 Setting currentMissionDef for mission', this.currentMissionIndex, ':', this.currentMissionDef);
     this.initMissionFromDefinition();
 
@@ -254,10 +254,8 @@ CyberOpsGame.prototype.onEnemyDeath = function(enemy) {
     this.enemiesKilledThisMission = this.missionTrackers.enemiesEliminated || 0;
 };
 
-// Initialize the mission system when game starts
-if (typeof game !== 'undefined' && game.initMissions) {
-    console.log('🔄 Reinitializing missions with new system...');
-    game.initMissions();
-}
+// Don't automatically reinitialize - let campaign-integration handle this
+// The missions are already loaded from game-core.js and we want to preserve them
+// unless explicitly using the new campaign system
 
 console.log('✅ Mission system integration loaded');

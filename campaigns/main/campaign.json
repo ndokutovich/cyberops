@@ -1,0 +1,67 @@
+{
+    "id": "main",
+    "name": "Main Campaign",
+    "description": "The primary campaign of CyberOps: Syndicate. Take down the criminal syndicate piece by piece.",
+    "author": "Core Game",
+    "version": "1.0.0",
+
+    "acts": [
+        {
+            "id": 1,
+            "name": "Beginning Operations",
+            "description": "Initial strikes against the syndicate's operations",
+            "missions": [
+                {
+                    "id": "main-01-001",
+                    "filename": "act1/main-01-001.js",
+                    "name": "Corporate Infiltration",
+                    "description": "Infiltrate SecureCorp and steal critical data"
+                },
+                {
+                    "id": "main-01-002",
+                    "filename": "act1/main-01-002.js",
+                    "name": "Network Breach",
+                    "description": "Hack into government systems and extract classified information"
+                },
+                {
+                    "id": "main-01-003",
+                    "filename": "act1/main-01-003.js",
+                    "name": "Industrial Sabotage",
+                    "description": "Infiltrate industrial facility and sabotage critical infrastructure"
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "name": "Escalation",
+            "description": "Direct confrontation with syndicate leadership",
+            "missions": [
+                {
+                    "id": "main-02-001",
+                    "filename": "act2/main-02-001.js",
+                    "name": "Assassination Contract",
+                    "description": "Eliminate high-value targets while maintaining stealth and precision"
+                },
+                {
+                    "id": "main-02-002",
+                    "filename": "act2/main-02-002.js",
+                    "name": "Final Convergence",
+                    "description": "Assault the Syndicate's main headquarters and seize control"
+                }
+            ]
+        }
+    ],
+
+    "requirements": {
+        "minLevel": 1,
+        "prerequisites": []
+    },
+
+    "rewards": {
+        "completion": {
+            "credits": 10000,
+            "researchPoints": 500,
+            "unlocks": ["special_equipment", "elite_agents"]
+        }
+    }
+}

@@ -177,6 +177,24 @@
                     <label>Time Limit: <input type="number" id="time-limit" value="0" min="0"> seconds</label>
                     <label>Credits Reward: <input type="number" id="credits-reward" value="5000" min="0"></label>
                     <label>Research Reward: <input type="number" id="research-reward" value="2" min="0"></label>
+
+                    <h3>Campaign Structure</h3>
+                    <label>Campaign:
+                        <select id="campaign-id">
+                            <option value="main">Main Campaign</option>
+                            <option value="dlc1">DLC: Corporate Wars</option>
+                            <option value="custom">Custom Missions</option>
+                            <option value="tutorial">Tutorial</option>
+                        </select>
+                    </label>
+                    <label>Act Number: <input type="text" id="act-number" value="01" pattern="[0-9]{2}" maxlength="2"></label>
+                    <label>Mission Number: <input type="text" id="mission-number" value="001" pattern="[0-9]{3}" maxlength="3"></label>
+                    <label>Act Name: <input type="text" id="act-name" value="Act 1"></label>
+
+                    <h3>Agent Settings</h3>
+                    <label>Max Agents: <input type="number" id="max-agents" value="4" min="1" max="6"></label>
+                    <label>Required Agents: <input type="number" id="required-agents" value="2" min="1" max="6"></label>
+                    <label>Recommended: <input type="number" id="recommended-agents" value="3" min="1" max="6"></label>
                 </div>
 
                 <!-- Selected Entity Properties -->

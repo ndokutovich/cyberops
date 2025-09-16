@@ -496,7 +496,7 @@ const OBJECTIVE_HANDLERS = {
     // Handle interaction based on objective
     handleInteraction: function(agent, targetType, targetId, game) {
         // Find all objectives that match this interaction
-        const mission = MISSION_DEFINITIONS[game.currentMissionIndex];
+        const mission = game.missions && game.missions[game.currentMissionIndex];
         if (!mission) return false;
 
         let interactionHandled = false;

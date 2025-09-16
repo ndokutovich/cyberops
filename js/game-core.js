@@ -168,14 +168,10 @@ class CyberOpsGame {
         console.log('🏢 Setting up hub...');
         this.initializeHub();
 
-        // Then override missions with new system if available
-        if (typeof MISSION_DEFINITIONS !== 'undefined') {
-            console.log('🆕 Loading comprehensive mission system...');
-            if (this.initMissions) {
-                this.initMissions();  // This will override the legacy missions
-            }
-        } else {
-            console.log('📦 Using legacy mission definitions');
+        // Initialize mission system (required)
+        console.log('🆕 Initializing mission system...');
+        if (this.initMissions) {
+            this.initMissions();
         }
 
         console.log('✅ All systems initialized');
@@ -354,59 +350,12 @@ CyberOpsGame.prototype.initializeHub = function() {
             { id: 4, name: 'Stealth Suit', type: 'equipment', cost: 800, owned: 1, stealthBonus: 25 }
         ];
 
-        // Update missions with expanded content (restore 5 missions instead of 2)
-        this.missions = [
-            {
-                id: 1,
-                title: 'Data Heist',
-                description: 'Infiltrate SecureCorp and steal critical data while avoiding detection.',
-                map: 'corporate',
-                enemies: 8,
-                objectives: ['Eliminate all hostiles', 'Avoid civilian casualties', 'Keep at least 2 agents alive'],
-                requiredSkills: [],
-                rewards: { credits: 2000, researchPoints: 50, worldControl: 5 }
-            },
-            {
-                id: 2,
-                title: 'Network Breach',
-                description: 'Hack into government systems and extract classified information.',
-                map: 'government',
-                enemies: 6,
-                objectives: ['Hack all terminals', 'Extract data', 'Escape undetected'],
-                requiredSkills: ['hacker'],
-                rewards: { credits: 2500, researchPoints: 75, worldControl: 8 }
-            },
-            {
-                id: 3,
-                title: 'Sabotage Operation',
-                description: 'Infiltrate industrial facility and sabotage critical infrastructure.',
-                map: 'industrial',
-                enemies: 10,
-                objectives: ['Plant explosives on 3 targets', 'Eliminate security team', 'Extract all agents'],
-                requiredSkills: ['demolition'],
-                rewards: { credits: 3000, researchPoints: 100, worldControl: 10 }
-            },
-            {
-                id: 4,
-                title: 'Assassination Contract',
-                description: 'Eliminate high-value targets while maintaining stealth and precision.',
-                map: 'residential',
-                enemies: 12,
-                objectives: ['Eliminate primary target', 'Eliminate secondary targets', 'No witnesses'],
-                requiredSkills: ['sniper'],
-                rewards: { credits: 4000, researchPoints: 125, worldControl: 12 }
-            },
-            {
-                id: 5,
-                title: 'Final Convergence',
-                description: 'Assault the Syndicate\'s main headquarters and seize control.',
-                map: 'fortress',
-                enemies: 15,
-                objectives: ['Breach main gate', 'Control all sectors', 'Capture the mainframe'],
-                requiredSkills: ['hacker', 'assault', 'demolition'],
-                rewards: { credits: 5000, researchPoints: 200, worldControl: 25 }
-            }
-        ];
+        // Missions will be loaded by campaign system
+        // Initialize empty array here, will be populated by campaign-integration.js
+        if (!this.missions || this.missions.length === 0) {
+            this.missions = [];
+            console.log('📋 Missions array initialized, waiting for campaign system to populate');
+        }
 
         console.log('🏢 Hub initialized successfully:', {
             availableAgents: this.availableAgents.length,

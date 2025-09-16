@@ -1140,15 +1140,370 @@ class MissionEditor {
     }
 
     exportMission() {
+        // Ask user what format to export
+        const exportFormat = prompt(
+            'Export format:\n' +
+            '1 - Editor format (for backup/sharing)\n' +
+            '2 - Game-ready format (to integrate into game)\n' +
+            '3 - Both formats\n\n' +
+            'Enter 1, 2, or 3:',
+            '1'
+        );
+
+        if (!exportFormat) return;
+
+        if (exportFormat === '1' || exportFormat === '3') {
+            // Export editor format
+            this.exportEditorFormat();
+        }
+
+        if (exportFormat === '2' || exportFormat === '3') {
+            // Export game-ready format
+            this.exportGameFormat();
+        }
+    }
+
+    exportEditorFormat() {
         const dataStr = JSON.stringify(this.mission, null, 2);
         const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
 
-        const exportFileDefaultName = `${this.mission.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+        const exportFileDefaultName = `${this.mission.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_editor.json`;
 
         const linkElement = document.createElement('a');
         linkElement.setAttribute('href', dataUri);
         linkElement.setAttribute('download', exportFileDefaultName);
         linkElement.click();
+    }
+
+    exportGameFormat() {
+        // Convert editor format to game format
+        const gameData = this.convertToGameFormat();
+
+        // Create a JavaScript file that can be directly integrated
+        const jsContent = this.generateGameIntegrationFile(gameData);
+
+        // Get filename from campaign structure
+        const campaignId = document.getElementById('campaign-id').value || 'main';
+        const actNumber = document.getElementById('act-number').value || '01';
+        const missionNumber = document.getElementById('mission-number').value || '001';
+        const filename = `${campaignId}-${actNumber}-${missionNumber}`;
+
+        const dataUri = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(jsContent);
+        const exportFileDefaultName = filename + '.js';
+
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+
+        // Also show integration instructions
+        this.showIntegrationInstructions(exportFileDefaultName);
+    }
+
+    convertToGameFormat() {
+        const gameFormat = {
+            missionDef: {
+                id: this.mission.name.replace(/[^a-z0-9]/gi, '_').toLowerCase(),
+                name: this.mission.name,
+                description: this.mission.description,
+                objectives: this.mission.objectives,
+                rewards: {
+                    credits: this.mission.credits,
+                    researchPoints: this.mission.researchPoints
+                }
+            },
+            mapData: {
+                width: this.mission.width,
+                height: this.mission.height,
+                tiles: this.mission.tiles,
+                spawn: null,
+                extraction: null,
+                terminals: [],
+                doors: [],
+                enemies: [],
+                npcs: [],
+                items: []
+            }
+        };
+
+        // Process entities
+        this.mission.entities.forEach(entity => {
+            switch (entity.type) {
+                case 'spawn-point':
+                    gameFormat.mapData.spawn = { x: entity.x, y: entity.y };
+                    break;
+                case 'extraction':
+                    gameFormat.mapData.extraction = { x: entity.x, y: entity.y };
+                    break;
+                case 'terminal':
+                    gameFormat.mapData.terminals.push({
+                        x: entity.x,
+                        y: entity.y,
+                        hacked: false,
+                        id: gameFormat.mapData.terminals.length
+                    });
+                    break;
+                case 'enemy':
+                    gameFormat.mapData.enemies.push({
+                        x: entity.x,
+                        y: entity.y,
+                        type: entity.enemyType || 'guard',
+                        patrol: entity.patrolRoute || []
+                    });
+                    break;
+                case 'npc':
+                    gameFormat.mapData.npcs.push({
+                        x: entity.x,
+                        y: entity.y,
+                        name: entity.name || 'NPC',
+                        dialog: entity.dialog || [],
+                        quests: entity.quests || []
+                    });
+                    break;
+                case 'item':
+                    gameFormat.mapData.items.push({
+                        x: entity.x,
+                        y: entity.y,
+                        type: entity.itemType,
+                        value: entity.value
+                    });
+                    break;
+            }
+        });
+
+        // Add door tiles
+        for (let y = 0; y < this.mission.height; y++) {
+            for (let x = 0; x < this.mission.width; x++) {
+                if (this.mission.tiles[y][x] === 2) { // Door tile
+                    gameFormat.mapData.doors.push({ x, y, locked: false });
+                }
+            }
+        }
+
+        return gameFormat;
+    }
+
+    generateGameIntegrationFile(gameData) {
+        const timestamp = new Date().toISOString();
+        const campaignId = document.getElementById('campaign-id').value || 'main';
+        const actNumber = document.getElementById('act-number').value || '01';
+        const missionNumber = document.getElementById('mission-number').value || '001';
+        const actName = document.getElementById('act-name').value || 'Act 1';
+        const maxAgents = parseInt(document.getElementById('max-agents').value) || 4;
+        const requiredAgents = parseInt(document.getElementById('required-agents').value) || 2;
+        const recommendedAgents = parseInt(document.getElementById('recommended-agents').value) || 3;
+
+        // Create filename with campaign-act-mission format
+        const filename = `${campaignId}-${actNumber}-${missionNumber}`;
+
+        // Create the modular mission file content
+        let jsContent = `// Campaign: ${campaignId}
+// Act: ${actNumber} - ${actName}
+// Mission: ${missionNumber} - ${this.mission.name}
+// Generated: ${timestamp}
+// This file should be saved as: campaigns/${campaignId}/${filename}.js
+
+REGISTER_MISSION({
+    // Mission identification
+    campaign: '${campaignId}',
+    act: '${actNumber}',
+    mission: '${missionNumber}',
+
+    // Mission metadata
+    name: '${this.mission.name}',
+    title: '${this.mission.name}',
+    description: '${this.mission.description}',
+    briefing: '${this.mission.description}',
+
+    // Story context
+    story: {
+        actProgress: ${parseInt(missionNumber)},
+        previousMission: ${parseInt(missionNumber) > 1 ? `'${campaignId}-${actNumber}-${String(parseInt(missionNumber) - 1).padStart(3, '0')}'` : 'null'},
+        nextMission: '${campaignId}-${actNumber}-${String(parseInt(missionNumber) + 1).padStart(3, '0')}'
+    },
+
+    // Agent configuration
+    agents: {
+        max: ${maxAgents},
+        required: ${requiredAgents},
+        recommended: ${recommendedAgents},
+        startingGear: ['pistol', 'medkit']
+    },
+
+    // Map configuration
+    map: {
+        type: '${this.mission.mapType}',
+        width: ${gameData.mapData.width},
+        height: ${gameData.mapData.height},
+        spawn: ${JSON.stringify(gameData.mapData.spawn)},
+        extraction: ${JSON.stringify(gameData.mapData.extraction)},
+
+        // Terminals
+        terminals: ${JSON.stringify(gameData.mapData.terminals, null, 8)},
+
+        // Doors
+        doors: ${JSON.stringify(gameData.mapData.doors, null, 8)},
+
+        // Custom tiles - full map export
+        customTiles: ${JSON.stringify(gameData.mapData.tiles)}
+    },
+
+    // Mission objectives
+    objectives: ${JSON.stringify(this.mission.objectives, null, 4)},
+
+    // Enemy configuration
+    enemies: {
+        count: ${gameData.mapData.enemies.length},
+        spawns: ${JSON.stringify(gameData.mapData.enemies, null, 8)}
+    },
+
+    // NPCs
+    npcs: ${JSON.stringify(gameData.mapData.npcs, null, 4)},
+
+    // Rewards
+    rewards: {
+        credits: ${this.mission.credits},
+        researchPoints: ${this.mission.researchPoints},
+        experience: ${this.mission.credits / 4},
+        unlocks: ['mission_${String(parseInt(missionNumber) + 1).padStart(3, '0')}']
+    },
+
+    // Mission settings
+    settings: {
+        timeLimit: ${this.mission.timeLimit || 0},
+        difficulty: ${this.mission.difficulty},
+        visibility: 'normal',
+        allowSave: true,
+        allowRetry: true
+    }
+});
+
+        jsContent += `
+// ALTERNATIVE: Direct tile replacement
+// If you prefer to just update the map tiles without changing mission structure:
+/*
+CyberOpsGame.prototype.loadEditorMap_${gameData.missionDef.id} = function() {
+    const mapData = ${JSON.stringify({
+        tiles: gameData.mapData.tiles,
+        spawn: gameData.mapData.spawn,
+        extraction: gameData.mapData.extraction,
+        terminals: gameData.mapData.terminals,
+        enemies: gameData.mapData.enemies
+    }, null, 2)};
+
+    // Apply to current map
+    if (this.map) {
+        this.map.tiles = mapData.tiles;
+        this.map.spawn = mapData.spawn;
+        this.map.extraction = mapData.extraction;
+        this.map.terminals = mapData.terminals;
+
+        // Spawn enemies
+        mapData.enemies.forEach(e => {
+            this.enemies.push({
+                x: e.x,
+                y: e.y,
+                type: e.type,
+                patrol: e.patrol,
+                health: 100,
+                maxHealth: 100
+            });
+        });
+    }
+};
+*/
+`;
+
+        return jsContent;
+    }
+
+    showIntegrationInstructions(filename) {
+        const missionNumber = filename.replace('.js', '');
+        const instructions = `
+MODULAR MISSION SYSTEM - Integration Instructions
+================================================
+
+FILE: ${filename}
+MISSION NUMBER: ${missionNumber}
+
+SIMPLE INTEGRATION:
+==================
+1. Create missions folder if not exists:
+   mkdir missions
+
+2. Save the exported file as:
+   missions/${filename}
+
+3. The mission loader will automatically find it!
+
+THAT'S IT! The game will load missions in sequence:
+- missions/000.js (First mission)
+- missions/001.js (Second mission)
+- missions/002.js (Third mission)
+- etc...
+
+AGENT SYSTEM:
+============
+Each mission now controls its own agent count:
+- Max Agents: ${document.getElementById('max-agents').value || 4}
+- Required Agents: ${document.getElementById('required-agents').value || 2}
+
+This replaces the old system where agent count was tied to game progression.
+
+MISSION MANAGEMENT:
+==================
+To REPLACE a mission:
+- Just save with same number (e.g., 000.js replaces first mission)
+
+To ADD a new mission:
+- Use next available number (e.g., 005.js for 6th mission)
+
+To DISABLE a mission:
+- Rename to .js.disabled
+
+To REORDER missions:
+- Just rename the files (000.js ↔ 001.js)
+
+GIT WORKFLOW:
+============
+# Before changes
+git add -A && git commit -m "Pre-mission edit"
+
+# Add your mission
+cp ${filename} missions/
+
+# Test in game
+
+# Commit if good
+git add missions/${filename}
+git commit -m "Added/Updated mission ${missionNumber}"
+
+# Revert if issues
+git checkout -- missions/${filename}
+
+ADVANTAGES:
+==========
+✅ Each mission is a separate file
+✅ Easy to share individual missions
+✅ Clean git diffs (only changed mission)
+✅ No risk of breaking other missions
+✅ Can have unlimited missions
+✅ Easy to enable/disable missions
+✅ Agent count per mission
+
+EXPORTED CONTENT:
+================
+✅ Complete map layout with custom tiles
+✅ Agent configuration (max/required)
+✅ All entities (spawn, extraction, enemies, NPCs)
+✅ Mission objectives and rewards
+✅ Enemy patrol routes
+✅ NPC dialogs and quests
+✅ Mission-specific settings
+        `;
+
+        alert(instructions.trim());
+        console.log(instructions);
     }
 
     importMission() {
@@ -1475,7 +1830,7 @@ class MissionEditor {
         this.updatePropertiesPanel();
         this.saveToHistory();
 
-        alert(`Loaded mission: ${missionDef.name}`);
+        console.log(`✅ Loaded mission: ${missionDef.name}`);
     }
 
     startPatrolRouteEditor(entityId) {
