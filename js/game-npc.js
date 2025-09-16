@@ -1781,6 +1781,11 @@ CyberOpsGame.prototype.renderNPCs = function(ctx) {
 
             // Check quest status
             for (let quest of npc.quests) {
+                // Skip quests that have been completed and rewards claimed
+                if (quest.rewardClaimed) {
+                    continue;
+                }
+
                 if (!npc.questsGiven.has(quest.id) && !this.completedQuests.has(quest.id)) {
                     if (npc.checkQuestRequirements(quest, this)) {
                         hasAvailableQuest = true;

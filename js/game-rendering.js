@@ -286,6 +286,16 @@ CyberOpsGame.prototype.render = function() {
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             ctx.fillText(`${index + 1}`, wpScreen.x, wpScreen.y);
+
+                            // Show coordinates below waypoint
+                            if (this.showPaths || this.usePathfinding || this.debugMode) {
+                                ctx.globalAlpha = 0.7;
+                                ctx.fillStyle = '#00ffff';
+                                ctx.font = '9px monospace';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'top';
+                                ctx.fillText(`[${Math.round(wp.x)},${Math.round(wp.y)}]`, wpScreen.x, wpScreen.y + 15);
+                            }
                         });
 
                         ctx.restore();
@@ -340,6 +350,16 @@ CyberOpsGame.prototype.render = function() {
                     ctx.lineTo(screenPos.x, screenPos.y + 12);
                     ctx.stroke();
 
+                    // Show coordinates near destination indicator
+                    if (this.showPaths || this.usePathfinding || this.debugMode) {
+                        ctx.globalAlpha = alpha * 0.7;
+                        ctx.fillStyle = '#00ffff';
+                        ctx.font = '9px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'top';
+                        ctx.fillText(`[${Math.round(indicator.x)},${Math.round(indicator.y)}]`, screenPos.x, screenPos.y + 20);
+                    }
+
                     ctx.restore();
                 }
             });
@@ -350,64 +370,7 @@ CyberOpsGame.prototype.render = function() {
             );
         }
 
-        // Render waypoints for selected agents
-        if (this.agentWaypoints) {
-            this.agents.forEach(agent => {
-                if (agent.selected && agent.alive && this.agentWaypoints[agent.id]) {
-                    const waypoints = this.agentWaypoints[agent.id];
-                    if (waypoints.length > 0) {
-                        ctx.save();
-                        ctx.strokeStyle = '#00ffff'; // Cyan to match selection
-                        ctx.lineWidth = 1.5;
-                        ctx.setLineDash([5, 5]);
-                        ctx.globalAlpha = 0.3; // Subtle transparency
-
-                        // Draw line from agent to first waypoint
-                        ctx.beginPath();
-                        const agentScreen = this.worldToIsometric(agent.x, agent.y);
-                        ctx.moveTo(agentScreen.x, agentScreen.y);
-
-                        // Draw lines between waypoints
-                        waypoints.forEach((wp, index) => {
-                            const wpScreen = this.worldToIsometric(wp.x, wp.y);
-                            ctx.lineTo(wpScreen.x, wpScreen.y);
-
-                            // Draw waypoint marker - match selection circle style
-                            ctx.save();
-                            ctx.setLineDash([]);
-
-                            // Match selection circle style - cyan with transparency
-                            ctx.strokeStyle = '#00ffff';
-                            ctx.lineWidth = 2;
-                            ctx.globalAlpha = 0.3;
-
-                            // Draw circle outline only
-                            ctx.beginPath();
-                            ctx.arc(wpScreen.x, wpScreen.y, 10, 0, Math.PI * 2);
-                            ctx.stroke();
-
-                            // Inner circle
-                            ctx.globalAlpha = 0.2;
-                            ctx.beginPath();
-                            ctx.arc(wpScreen.x, wpScreen.y, 5, 0, Math.PI * 2);
-                            ctx.stroke();
-
-                            // Waypoint number - subtle cyan
-                            ctx.globalAlpha = 0.6;
-                            ctx.fillStyle = '#00ffff';
-                            ctx.font = '10px monospace';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(`${index + 1}`, wpScreen.x, wpScreen.y);
-                            ctx.restore();
-                        });
-
-                        ctx.stroke();
-                        ctx.restore();
-                    }
-                }
-            });
-        }
+        // Removed duplicate waypoint rendering - waypoints are already rendered in the agent loop above
 
         this.projectiles.forEach(proj => {
             this.renderProjectile(proj);

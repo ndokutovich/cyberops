@@ -494,7 +494,9 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
         }
 
         // Track overall completion
-        if (obj.required && !obj.completed) {
+        // Treat objectives without 'required' field as required by default
+        const isRequired = obj.required !== false;
+        if (isRequired && !obj.completed) {
             allRequiredComplete = false;
         }
         if (!obj.completed) {
