@@ -493,8 +493,33 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
             return; // Don't move if we selected an agent
         }
 
-        // If no agent selected, move the currently selected agent(s)
+        // If no agent selected, check for door clicks first
         const worldPos = this.screenToWorld(x, y);
+
+        // Check if clicking on a door
+        if (this.map && this.map.doors) {
+            for (let door of this.map.doors) {
+                const dx = Math.abs(worldPos.x - door.x);
+                const dy = Math.abs(worldPos.y - door.y);
+                if (dx < 1 && dy < 1) {
+                    // Clicked on a door
+                    if (door.locked) {
+                        const terminal = this.map.terminals ? this.map.terminals.find(t => t.id === door.linkedTerminal) : null;
+                        if (terminal && !terminal.hacked) {
+                            this.addNotification(`🔒 Door locked! Hack terminal ${door.linkedTerminal + 1} to unlock.`);
+                        } else if (terminal && terminal.hacked) {
+                            this.addNotification(`🔓 This door should be unlocked...`);
+                            door.locked = false; // Fix the door state
+                        } else {
+                            this.addNotification(`🔒 This door is locked!`);
+                        }
+                    } else {
+                        this.addNotification(`🚪 Door is open - you can pass through.`);
+                    }
+                    return; // Don't move agents when clicking on doors
+                }
+            }
+        }
 
         // Get all selected agents
         const selectedAgents = this.agents.filter(a => a.selected && a.alive);

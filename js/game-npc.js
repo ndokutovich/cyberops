@@ -41,7 +41,7 @@ function NPC(config) {
     this.moveTimer = 0;
     this.targetX = this.x;
     this.targetY = this.y;
-    this.speed = config.speed || 0.15;  // Reduced from 0.5 for more natural movement
+    this.speed = config.speed || 0.05;  // Reduced to match agent speed for natural movement
 
     // Quest state
     this.questsGiven = new Set();
@@ -67,9 +67,10 @@ NPC.prototype.update = function(game) {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist > 0.1) {
-            // Calculate next position
-            var nextX = this.x + (dx / dist) * this.speed;
-            var nextY = this.y + (dy / dist) * this.speed;
+            // Calculate next position - apply game speed multiplier like agents
+            const moveSpeed = this.speed * (game.gameSpeed || 1);
+            var nextX = this.x + (dx / dist) * moveSpeed;
+            var nextY = this.y + (dy / dist) * moveSpeed;
 
             // Check map boundaries
             var mapWidth = game.currentMap ? game.currentMap.width : 50;
@@ -77,9 +78,17 @@ NPC.prototype.update = function(game) {
             nextX = Math.max(0.5, Math.min(mapWidth - 0.5, nextX));
             nextY = Math.max(0.5, Math.min(mapHeight - 0.5, nextY));
 
-            // Check for walls
-            if (!game.isWall || !game.isWall(Math.floor(nextX), Math.floor(nextY))) {
-                // NPCs move at constant speed, not affected by game speed
+            // Check for walls with better collision detection
+            const checkX = Math.floor(nextX);
+            const checkY = Math.floor(nextY);
+
+            // Check all corners of the NPC's position
+            const canMove = !game.isWall(checkX, checkY) &&
+                           !game.isWall(Math.ceil(nextX), checkY) &&
+                           !game.isWall(checkX, Math.ceil(nextY)) &&
+                           !game.isWall(Math.ceil(nextX), Math.ceil(nextY));
+
+            if (canMove) {
                 this.x = nextX;
                 this.y = nextY;
                 this.facingAngle = Math.atan2(dy, dx);
