@@ -102,6 +102,8 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         'p': () => this.togglePathVisualization(),
         'O': () => this.togglePathfinding(),
         'o': () => this.togglePathfinding(),
+        'U': () => this.toggleFogOfWar(),
+        'u': () => this.toggleFogOfWar(),
 
         // Game Control
         ' ': () => this.togglePause(),
@@ -304,6 +306,7 @@ CyberOpsGame.prototype.getKeyBindingsDisplay = function() {
         'Debug': [
             { key: 'P', action: 'Show Path Visualization' },
             { key: 'O', action: 'Toggle Pathfinding' },
+            { key: 'U', action: 'Toggle Fog of War' },
             { key: '?', action: 'Show This Help' }
         ],
         'Game': [

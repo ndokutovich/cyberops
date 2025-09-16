@@ -155,41 +155,94 @@ CyberOpsGame.prototype.render = function() {
 
             if (this.map.cover) {
                 this.map.cover.forEach(cover => {
+                    // Skip rendering if in fog and location is unexplored
+                    if (this.fogEnabled && this.fogOfWar) {
+                        const tileX = Math.floor(cover.x);
+                        const tileY = Math.floor(cover.y);
+                        if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                            return; // Don't render in unexplored areas
+                        }
+                    }
                     this.renderCover(cover.x, cover.y);
                 });
             }
             
             if (this.map.terminals) {
                 this.map.terminals.forEach(terminal => {
+                    // Skip rendering if in fog and location is unexplored
+                    if (this.fogEnabled && this.fogOfWar) {
+                        const tileX = Math.floor(terminal.x);
+                        const tileY = Math.floor(terminal.y);
+                        if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                            return; // Don't render in unexplored areas
+                        }
+                    }
                     this.renderTerminal(terminal.x, terminal.y, terminal.hacked);
                 });
             }
             
             if (this.map.explosiveTargets) {
                 this.map.explosiveTargets.forEach(target => {
+                    // Skip rendering if in fog and location is unexplored
+                    if (this.fogEnabled && this.fogOfWar) {
+                        const tileX = Math.floor(target.x);
+                        const tileY = Math.floor(target.y);
+                        if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                            return; // Don't render in unexplored areas
+                        }
+                    }
                     this.renderExplosiveTarget(target.x, target.y, target.planted);
                 });
             }
             
             if (this.map.targets) {
                 this.map.targets.forEach(target => {
+                    // Skip rendering if in fog and location is unexplored
+                    if (this.fogEnabled && this.fogOfWar) {
+                        const tileX = Math.floor(target.x);
+                        const tileY = Math.floor(target.y);
+                        if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                            return; // Don't render in unexplored areas
+                        }
+                    }
                     this.renderAssassinationTarget(target.x, target.y, target.type, target.eliminated);
                 });
             }
             
             if (this.map.gates) {
                 this.map.gates.forEach(gate => {
+                    // Skip rendering if in fog and location is unexplored
+                    if (this.fogEnabled && this.fogOfWar) {
+                        const tileX = Math.floor(gate.x);
+                        const tileY = Math.floor(gate.y);
+                        if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                            return; // Don't render in unexplored areas
+                        }
+                    }
                     this.renderGate(gate.x, gate.y, gate.breached);
                 });
             }
             
             if (this.map.extraction) {
-                this.renderExtractionPoint(this.map.extraction.x, this.map.extraction.y);
+                // Skip rendering if in fog and location is unexplored
+                if (!this.fogEnabled || !this.fogOfWar ||
+                    this.fogOfWar[Math.floor(this.map.extraction.y)] &&
+                    this.fogOfWar[Math.floor(this.map.extraction.y)][Math.floor(this.map.extraction.x)] !== 0) {
+                    this.renderExtractionPoint(this.map.extraction.x, this.map.extraction.y);
+                }
             }
 
             // Render doors
             if (this.map.doors) {
                 this.map.doors.forEach(door => {
+                    // Skip rendering if in fog and location is unexplored
+                    if (this.fogEnabled && this.fogOfWar) {
+                        const tileX = Math.floor(door.x);
+                        const tileY = Math.floor(door.y);
+                        if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                            return; // Don't render in unexplored areas
+                        }
+                    }
                     this.renderDoor(door.x, door.y, door.locked);
                 });
             }
@@ -198,6 +251,14 @@ CyberOpsGame.prototype.render = function() {
             if (this.map.collectables) {
                 this.map.collectables.forEach(item => {
                     if (!item.collected) {
+                        // Skip rendering if in fog and location is unexplored
+                        if (this.fogEnabled && this.fogOfWar) {
+                            const tileX = Math.floor(item.x);
+                            const tileY = Math.floor(item.y);
+                            if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                                return; // Don't render in unexplored areas
+                            }
+                        }
                         this.renderCollectable(item.x, item.y, item.type);
                     }
                 });
@@ -205,7 +266,17 @@ CyberOpsGame.prototype.render = function() {
         }
         
         this.enemies.forEach(enemy => {
-            if (enemy.alive) this.renderEnemy(enemy);
+            if (enemy.alive) {
+                // Skip rendering if in fog and location is unexplored
+                if (this.fogEnabled && this.fogOfWar) {
+                    const tileX = Math.floor(enemy.x);
+                    const tileY = Math.floor(enemy.y);
+                    if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                        return; // Don't render in unexplored areas
+                    }
+                }
+                this.renderEnemy(enemy);
+            }
         });
 
         // Render NPCs (only if function exists)
@@ -401,7 +472,13 @@ CyberOpsGame.prototype.render = function() {
     
 CyberOpsGame.prototype.renderMap = function() {
         const ctx = this.ctx;
-        
+
+        // Debug log once per toggle (commented out to reduce spam)
+        // if (this._lastFogState !== this.fogEnabled) {
+        //     console.log('RenderMap - fogEnabled:', this.fogEnabled);
+        //     this._lastFogState = this.fogEnabled;
+        // }
+
         for (let y = 0; y < this.map.height; y++) {
             for (let x = 0; x < this.map.width; x++) {
                 const tile = this.map.tiles[y][x];
@@ -418,19 +495,35 @@ CyberOpsGame.prototype.renderMap = function() {
                 ctx.closePath();
                 
                 if (tile === 0) {
-                    ctx.fillStyle = '#1a1a2e';
+                    // Walkable floor - MUCH brighter when fog is disabled
+                    // Make it even MORE obvious with cyan tint when fog is off
+                    ctx.fillStyle = this.fogEnabled ? '#1a1a2e' : '#6a8ace';
                     ctx.fill();
-                    ctx.strokeStyle = '#16213e';
+                    ctx.strokeStyle = this.fogEnabled ? '#16213e' : '#80a0ff';
+
+                    // Add stronger glow when fog is disabled
+                    if (!this.fogEnabled) {
+                        ctx.shadowColor = '#8888ff';
+                        ctx.shadowBlur = 4;
+                    }
                 } else {
-                    ctx.fillStyle = '#0f0f1e';
+                    // Wall - also MUCH brighter when fog is disabled
+                    ctx.fillStyle = this.fogEnabled ? '#0f0f1e' : '#4a4a8e';
                     ctx.fill();
-                    ctx.strokeStyle = '#2a2a3e';
-                    ctx.fillStyle = '#1f1f3e';
+                    ctx.strokeStyle = this.fogEnabled ? '#2a2a3e' : '#6060a0';
+                    ctx.fillStyle = this.fogEnabled ? '#1f1f3e' : '#5555aa';
                     ctx.fillRect(-this.tileWidth / 2, -20, this.tileWidth, 20);
+
+                    // Add stronger glow when fog is disabled
+                    if (!this.fogEnabled) {
+                        ctx.shadowColor = '#aaaaff';
+                        ctx.shadowBlur = 5;
+                    }
                 }
-                
+
                 ctx.lineWidth = 1;
                 ctx.stroke();
+                ctx.shadowBlur = 0; // Reset shadow
                 ctx.restore();
             }
         }
@@ -481,7 +574,9 @@ CyberOpsGame.prototype.renderTerminal = function(x, y, hacked) {
     
 // Render fog of war overlay
 CyberOpsGame.prototype.renderFogOfWar = function() {
-        if (!this.fogOfWar) return;
+        if (!this.fogOfWar || !this.fogEnabled) {
+            return; // Skip rendering when fog is disabled
+        }
 
         const ctx = this.ctx;
 

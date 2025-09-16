@@ -61,6 +61,18 @@ CyberOpsGame.prototype.isWalkable = function(x, y) {
             return false;
         }
 
+        // Check if this is an unlocked door position
+        if (this.map.doors) {
+            for (let door of this.map.doors) {
+                // Check if we're at a door position (with some tolerance for floating point)
+                const atDoor = Math.abs(door.x - tileX) < 1 && Math.abs(door.y - tileY) < 1;
+                if (atDoor && !door.locked) {
+                    // Unlocked door - allow passage
+                    return true;
+                }
+            }
+        }
+
         return this.map.tiles[tileY][tileX] === 0;
 }
 

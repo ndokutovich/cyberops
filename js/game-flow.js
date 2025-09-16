@@ -317,6 +317,36 @@ CyberOpsGame.prototype.initMission = function() {
         // Generate map based on mission map type
         this.map = this.generateMapFromType(this.currentMission.map);
 
+        // DEBUG: Check if map was modified right after assignment
+        console.log('🔍 IMMEDIATE CHECK - Right after generateMapFromType:');
+        console.log('  tile[6][6]:', this.map.tiles[6][6], '(should be 0)');
+        console.log('  tile[3][3]:', this.map.tiles[3][3]);
+
+        // MAP TRACE 5: After map assignment - Check ALL rooms
+        console.log('🔍 MAP TRACE 5 - After map assignment, checking ALL rooms:');
+
+        // Check each room position
+        const roomPositions = [
+            {x: 5, y: 5}, {x: 25, y: 5}, {x: 45, y: 5}, {x: 65, y: 5},
+            {x: 5, y: 25}, {x: 25, y: 25}, {x: 45, y: 25}, {x: 65, y: 25},
+            {x: 5, y: 45}, {x: 25, y: 45}, {x: 45, y: 45}, {x: 65, y: 45},
+            {x: 5, y: 65}, {x: 25, y: 65}, {x: 45, y: 65}, {x: 65, y: 65}
+        ];
+
+        roomPositions.forEach((room, idx) => {
+            if (room.y + 10 < this.map.height && room.x + 10 < this.map.width) {
+                // Check a small area of each room
+                let sample = '';
+                for (let dy = 0; dy < 3; dy++) {
+                    for (let dx = 0; dx < 5; dx++) {
+                        sample += this.map.tiles[room.y + dy][room.x + dx] === 0 ? '.' : '#';
+                    }
+                    if (dy < 2) sample += '|';
+                }
+                console.log(`  Room ${idx+1} at (${room.x},${room.y}): ${sample}`);
+            }
+        });
+
         // Initialize fog of war
         this.initializeFogOfWar();
 
@@ -915,9 +945,133 @@ CyberOpsGame.prototype.initializeFogOfWar = function() {
         }
 }
 
+// Toggle fog of war visibility
+CyberOpsGame.prototype.toggleFogOfWar = function() {
+    this.fogEnabled = !this.fogEnabled;
+    this.addNotification(this.fogEnabled ? '🌫️ Fog of War enabled' : '👁️ Fog of War disabled');
+    console.log('🌫️ Fog of War:', this.fogEnabled ? 'ENABLED' : 'DISABLED');
+
+    // Check specific tiles
+    if (this.map && this.map.tiles) {
+        console.log('🔍 Checking specific tile values:');
+        const tilesToCheck = [
+            {x: 40, y: 50},
+            {x: 30, y: 30},
+            {x: 25, y: 25},
+            {x: 26, y: 26},
+            {x: 27, y: 27},
+            {x: 45, y: 45},
+            {x: 46, y: 46},
+            {x: 47, y: 47}
+        ];
+        tilesToCheck.forEach(pos => {
+            const tileValue = this.map.tiles[pos.y][pos.x];
+            console.log(`  Tile[${pos.y}][${pos.x}] = ${tileValue} (${tileValue === 0 ? 'walkable' : 'wall'})`);
+        });
+    }
+
+    // Debug: Log map structure when fog is disabled
+    if (!this.fogEnabled && this.map && this.map.tiles) {
+        // Create a smaller sample of the map for analysis
+        const mapSample = {
+            width: this.map.width,
+            height: this.map.height,
+            roomArea: {},
+            corridorArea: {},
+            fullMap: []
+        };
+
+        // Check first room area (ACTUALLY at x:5-16, y:5-16)
+        for (let y = 5; y <= 15; y++) {
+            let row = '';
+            for (let x = 5; x <= 15; x++) {
+                const tile = this.map.tiles[y][x];
+                row += tile === 0 ? '.' : '#';
+            }
+            mapSample.roomArea[`row_${y}`] = row;
+        }
+
+        // Check corridor area at y=25
+        for (let y = 24; y <= 27; y++) {
+            let row = '';
+            for (let x = 10; x <= 20; x++) {
+                const tile = this.map.tiles[y][x];
+                row += tile === 0 ? '.' : '#';
+            }
+            mapSample.corridorArea[`row_${y}`] = row;
+        }
+
+        // Get full map as string (limited to 20x20 for visibility)
+        for (let y = 0; y < Math.min(20, this.map.height); y++) {
+            let row = '';
+            for (let x = 0; x < Math.min(30, this.map.width); x++) {
+                const tile = this.map.tiles[y][x];
+                row += tile === 0 ? '.' : '#';
+            }
+            mapSample.fullMap.push(row);
+        }
+
+        console.log('=== MAP STRUCTURE DEBUG ===');
+        console.log('Map size:', mapSample.width, 'x', mapSample.height);
+        console.log('First room area (5,5 to 15,15):');
+        Object.entries(mapSample.roomArea).forEach(([key, val]) => {
+            console.log(`  ${key}: ${val}`);
+        });
+        console.log('Corridor area at y=25:');
+        Object.entries(mapSample.corridorArea).forEach(([key, val]) => {
+            console.log(`  ${key}: ${val}`);
+        });
+        console.log('Full map (0,0 to 30,20) - "." = walkable, "#" = wall:');
+        mapSample.fullMap.forEach((row, index) => {
+            console.log(`Row ${index.toString().padStart(2, '0')}: ${row}`);
+        });
+
+        // Also log as JSON for easy copy
+        console.log('JSON for analysis:', JSON.stringify(mapSample));
+
+        // Show a visual map of the center area
+        console.log('\n🗺️ Visual map of center area (35,35) to (55,55):');
+        for (let y = 35; y <= 55; y++) {
+            let row = '';
+            for (let x = 35; x <= 55; x++) {
+                row += this.map.tiles[y][x] === 0 ? '.' : '#';
+            }
+            console.log(`Row ${y}: ${row}`);
+        }
+    }
+
+    // Update button text
+    const fogBtn = document.getElementById('fogBtn');
+    if (fogBtn) {
+        fogBtn.innerHTML = this.fogEnabled ? '🌫️ FOG: ON' : '👁️ FOG: OFF';
+        fogBtn.style.background = this.fogEnabled ? 'rgba(100, 50, 150, 0.8)' : 'rgba(50, 150, 100, 0.8)';
+        fogBtn.style.borderColor = this.fogEnabled ? '#9966ff' : '#66ff99';
+    }
+
+    // Handle fog state changes
+    if (!this.fogEnabled && this.fogOfWar) {
+        // Disabling fog - reveal entire map
+        for (let y = 0; y < this.map.height; y++) {
+            for (let x = 0; x < this.map.width; x++) {
+                this.fogOfWar[y][x] = 2; // Make everything visible
+            }
+        }
+    } else if (this.fogEnabled && this.fogOfWar) {
+        // Re-enabling fog - reset to unexplored except current visible areas
+        for (let y = 0; y < this.map.height; y++) {
+            for (let x = 0; x < this.map.width; x++) {
+                // Reset to unexplored
+                this.fogOfWar[y][x] = 0;
+            }
+        }
+        // Immediately update visibility based on current agent positions
+        this.updateFogOfWar();
+    }
+}
+
 // Update fog of war based on agent positions
 CyberOpsGame.prototype.updateFogOfWar = function() {
-        if (!this.fogOfWar || !this.agents) return;
+        if (!this.fogOfWar || !this.agents || !this.fogEnabled) return;
 
         // Initialize line of sight cache if needed
         if (!this.losCache) {
@@ -1256,7 +1410,35 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
                     this.map.doors.forEach(door => {
                         if (door.linkedTerminal === terminal.id) {
                             door.locked = false;
+                            // Clear the wall tiles at the door position to allow passage
+                            const doorX = Math.floor(door.x);
+                            const doorY = Math.floor(door.y);
+
+                            // Clear a 3x3 area around the door to ensure passage
+                            for (let dy = -1; dy <= 1; dy++) {
+                                for (let dx = -1; dx <= 1; dx++) {
+                                    const tileY = doorY + dy;
+                                    const tileX = doorX + dx;
+                                    if (this.map.tiles[tileY] && this.map.tiles[tileY][tileX] !== undefined) {
+                                        this.map.tiles[tileY][tileX] = 0; // Make walkable
+                                    }
+                                }
+                            }
+
+                            // Also clear a path in the main directions for corridors
+                            for (let i = -2; i <= 2; i++) {
+                                // Horizontal corridor
+                                if (this.map.tiles[doorY] && this.map.tiles[doorY][doorX + i] !== undefined) {
+                                    this.map.tiles[doorY][doorX + i] = 0;
+                                }
+                                // Vertical corridor
+                                if (this.map.tiles[doorY + i] && this.map.tiles[doorY + i][doorX] !== undefined) {
+                                    this.map.tiles[doorY + i][doorX] = 0;
+                                }
+                            }
+
                             console.log(`🔓 Door at (${door.x}, ${door.y}) unlocked by terminal ${terminal.id}`);
+                            this.addNotification(`🔓 Door at [${door.x}, ${door.y}] is now open!`);
                         }
                     });
                 }

@@ -533,6 +533,23 @@
             <div class="minimap-content" id="minimapContent"></div>
         </div>
 
+        <!-- Fog Toggle Button -->
+        <div style="position: absolute; bottom: 210px; left: 20px;">
+            <button class="fog-toggle-btn" onclick="game.toggleFogOfWar()" title="Toggle Fog of War (U)" style="
+                background: rgba(100, 50, 150, 0.8);
+                border: 2px solid #9966ff;
+                color: white;
+                padding: 10px 15px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+                transition: all 0.3s;
+                min-width: 120px;
+            " id="fogBtn">
+                🌫️ FOG: ON
+            </button>
+        </div>
+
         <!-- Team Commands -->
         <div class="team-commands" style="position: absolute; bottom: 150px; left: 20px; display: flex; gap: 10px;">
             <button class="team-command-btn" onclick="game.setTeamMode('hold')" title="Hold Position (H)" style="

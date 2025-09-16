@@ -94,6 +94,7 @@ CyberOpsGame.prototype.generateMapFromType = function(mapType) {
 
 // Mission 1: Data Heist - Massive corporate office complex
 CyberOpsGame.prototype.generateCorporateMap = function() {
+        console.log('🏢 generateCorporateMap CALLED - generating new map');
         const width = 80;
         const height = 80;
         const map = {
@@ -143,8 +144,6 @@ CyberOpsGame.prototype.generateCorporateMap = function() {
             }
         }
 
-        // Debug: Log spawn area status
-        console.log(`🏢 Corporate map spawn area cleared: x:0-10, y:75-79`);
 
         // Clear extraction area (top right)
         for (let x = 75; x <= 79; x++) {
@@ -173,7 +172,7 @@ CyberOpsGame.prototype.generateCorporateMap = function() {
             map.tiles[10][x] = 0;
         }
 
-        // Create office rooms
+        // Create office rooms - ORIGINAL PATTERN
         for (let rx = 5; rx < width - 10; rx += 20) {
             for (let ry = 5; ry < height - 10; ry += 20) {
                 // Room boundaries
@@ -196,7 +195,43 @@ CyberOpsGame.prototype.generateCorporateMap = function() {
             }
         }
 
-        // Add doors (locked areas requiring terminal hacking)
+        // REMOVED: The wall-adding fix was making rooms too small
+        // The original code already creates rooms, we just need to ensure they stay walkable
+
+        // Re-clear the corridors that might have been overwritten by room walls
+        // Horizontal main corridors
+        for (let y = 10; y < height - 10; y += 15) {
+            for (let x = 1; x < width - 1; x++) {
+                map.tiles[y][x] = 0;
+                map.tiles[y + 1][x] = 0;
+            }
+        }
+
+        // Vertical main corridors
+        for (let x = 10; x < width - 10; x += 15) {
+            for (let y = 1; y < height - 1; y++) {
+                map.tiles[y][x] = 0;
+                map.tiles[y][x + 1] = 0;
+            }
+        }
+
+        // Re-clear spawn and extraction connections
+        for (let y = 70; y < 79; y++) {
+            map.tiles[y][2] = 0;
+            map.tiles[y][3] = 0;
+        }
+        for (let x = 2; x < 11; x++) {
+            map.tiles[70][x] = 0;
+        }
+        for (let y = 2; y < 11; y++) {
+            map.tiles[y][77] = 0;
+            map.tiles[y][78] = 0;
+        }
+        for (let x = 70; x < 79; x++) {
+            map.tiles[10][x] = 0;
+        }
+
+        // Add doors (locked areas requiring terminal hacking) - ORIGINAL POSITIONS
         map.doors = [
             { x: 20, y: 10, locked: true, linkedTerminal: 0 },
             { x: 40, y: 10, locked: true, linkedTerminal: 1 },
@@ -246,15 +281,25 @@ CyberOpsGame.prototype.generateCorporateMap = function() {
             }
         }
 
-        // VERIFY spawn area is walkable
-        console.log(`🔍 Verifying corporate map spawn area:`);
-        for (let y = 76; y <= 79; y++) {
-            let row = '';
-            for (let x = 0; x <= 5; x++) {
-                row += map.tiles[y][x] === 0 ? '.' : '#';
-            }
-            console.log(`  Row ${y}: ${row}`);
-        }
+        // Final debug check - Check multiple rooms
+        console.log(`🔍 FINAL CHECK - All room interiors:`);
+        const roomsToCheck = [
+            {x: 5, y: 5, label: "Top-left"},
+            {x: 25, y: 5, label: "Top-mid-left"},
+            {x: 45, y: 5, label: "Top-mid-right"},
+            {x: 65, y: 5, label: "Top-right"},
+            {x: 5, y: 25, label: "Mid-left"},
+            {x: 25, y: 25, label: "Center"},
+            {x: 45, y: 25, label: "Mid-right"},
+            {x: 5, y: 45, label: "Bottom-left"},
+            {x: 25, y: 45, label: "Bottom-mid-left"},
+            {x: 45, y: 45, label: "Bottom-mid-right"}
+        ];
+
+        roomsToCheck.forEach(room => {
+            const interior = map.tiles[room.y + 1] ? map.tiles[room.y + 1][room.x + 1] : undefined;
+            console.log(`  ${room.label} room (${room.x},${room.y}): interior[${room.y+1}][${room.x+1}] = ${interior} (should be 0)`);
+        });
 
         return map;
 }

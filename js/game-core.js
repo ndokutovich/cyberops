@@ -87,6 +87,7 @@ class CyberOpsGame {
 
         // Fog of war system
         this.fogOfWar = null; // 2D array for fog state
+        this.fogEnabled = true; // Toggle for fog of war visibility
         this.permanentFog = true; // If true, explored areas stay visible
         this.viewRadius = 8; // Base view radius for agents (doubled from 4)
         this.ghostViewBonus = 1.5; // Ghost agents see 50% further

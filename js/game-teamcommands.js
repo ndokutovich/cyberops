@@ -245,7 +245,7 @@ CyberOpsGame.prototype.drawTeamModeIndicators = function(ctx) {
 
     this.agents.forEach(agent => {
         if (!agent.selected && agent.alive) {
-            const screenPos = this.worldToScreen(agent.x, agent.y);
+            const screenPos = this.worldToIsometric(agent.x, agent.y);
 
             // Draw mode indicator
             ctx.font = '10px Arial';
@@ -259,7 +259,7 @@ CyberOpsGame.prototype.drawTeamModeIndicators = function(ctx) {
                     // Draw hold position circle
                     const holdPos = this.holdPositions[agent.id];
                     if (holdPos) {
-                        const holdScreen = this.worldToScreen(holdPos.x, holdPos.y);
+                        const holdScreen = this.worldToIsometric(holdPos.x, holdPos.y);
                         ctx.strokeStyle = 'rgba(0, 150, 255, 0.5)';
                         ctx.lineWidth = 2;
                         ctx.beginPath();
@@ -279,7 +279,7 @@ CyberOpsGame.prototype.drawTeamModeIndicators = function(ctx) {
                         ctx.lineWidth = 1;
                         ctx.beginPath();
                         patrolPoints.forEach((point, index) => {
-                            const pointScreen = this.worldToScreen(point.x, point.y);
+                            const pointScreen = this.worldToIsometric(point.x, point.y);
                             if (index === 0) {
                                 ctx.moveTo(pointScreen.x, pointScreen.y);
                             } else {

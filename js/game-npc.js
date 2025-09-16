@@ -78,17 +78,8 @@ NPC.prototype.update = function(game) {
             nextX = Math.max(0.5, Math.min(mapWidth - 0.5, nextX));
             nextY = Math.max(0.5, Math.min(mapHeight - 0.5, nextY));
 
-            // Check for walls with better collision detection
-            const checkX = Math.floor(nextX);
-            const checkY = Math.floor(nextY);
-
-            // Check all corners of the NPC's position
-            const canMove = !game.isWall(checkX, checkY) &&
-                           !game.isWall(Math.ceil(nextX), checkY) &&
-                           !game.isWall(checkX, Math.ceil(nextY)) &&
-                           !game.isWall(Math.ceil(nextX), Math.ceil(nextY));
-
-            if (canMove) {
+            // Check for walls - use the existing isWall check pattern
+            if (!game.isWall || !game.isWall(Math.floor(nextX), Math.floor(nextY))) {
                 this.x = nextX;
                 this.y = nextY;
                 this.facingAngle = Math.atan2(dy, dx);
@@ -1602,6 +1593,15 @@ CyberOpsGame.prototype.renderQuestMarkers = function(ctx) {
         quest.objectives.forEach(obj => {
             // Render markers for reach objectives
             if (obj.type === 'reach' && obj.x !== undefined && obj.y !== undefined) {
+                // Skip rendering if in fog and location is unexplored
+                if (this.fogEnabled && this.fogOfWar) {
+                    const tileX = Math.floor(obj.x);
+                    const tileY = Math.floor(obj.y);
+                    if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                        return; // Don't render in unexplored areas
+                    }
+                }
+
                 // Use the same coordinate conversion as agents and NPCs
                 const screenPos = this.worldToIsometric(obj.x, obj.y);
 
@@ -1727,6 +1727,15 @@ CyberOpsGame.prototype.renderNPCs = function(ctx) {
 
     for (let npc of this.npcs) {
         if (!npc.alive) continue;
+
+        // Skip rendering if in fog and location is unexplored
+        if (this.fogEnabled && this.fogOfWar) {
+            const tileX = Math.floor(npc.x);
+            const tileY = Math.floor(npc.y);
+            if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                continue; // Don't render in unexplored areas
+            }
+        }
 
         // Use the same coordinate conversion as agents (worldToIsometric for 2D view)
         const screenPos = this.worldToIsometric(npc.x, npc.y);

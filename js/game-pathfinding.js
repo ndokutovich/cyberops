@@ -29,7 +29,8 @@ CyberOpsGame.prototype.findPath = function(startX, startY, endX, endY) {
     }
 
     // Limit pathfinding iterations to prevent performance issues
-    const maxIterations = 500;
+    // Increased to handle large maps (80x80 = 6400 tiles max)
+    const maxIterations = 2000;
     let iterations = 0;
 
     // A* implementation
