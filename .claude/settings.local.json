@@ -18,7 +18,8 @@
       "Bash(do echo -n \"$func: Original=\")",
       "Bash(start cyberops-game.html)",
       "Bash(dir:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(start mission-editor.html)"
     ],
     "deny": [],
     "ask": []

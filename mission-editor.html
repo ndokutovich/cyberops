@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberOps Mission Editor</title>
+    <link rel="stylesheet" href="mission-editor.css">
+</head>
+<body>
+    <div id="editor-container">
+        <!-- Top Toolbar -->
+        <div id="toolbar">
+            <div class="toolbar-section">
+                <button id="new-mission" class="toolbar-btn">📄 New</button>
+                <button id="load-mission" class="toolbar-btn">📂 Load</button>
+                <select id="load-game-mission" class="toolbar-btn" style="padding: 6px;">
+                    <option value="">Load Game Mission...</option>
+                    <option value="0">Mission 1: Corporate Infiltration</option>
+                    <option value="1">Mission 2: Government Facility</option>
+                    <option value="2">Mission 3: Industrial Sabotage</option>
+                    <option value="3">Mission 4: Slums Extraction</option>
+                    <option value="4">Mission 5: Research Lab Assault</option>
+                </select>
+                <button id="save-mission" class="toolbar-btn">💾 Save</button>
+                <button id="export-mission" class="toolbar-btn">📤 Export</button>
+                <button id="import-mission" class="toolbar-btn">📥 Import</button>
+            </div>
+            <div class="toolbar-section">
+                <button id="test-mission" class="toolbar-btn primary">🎮 Test Mission</button>
+                <button id="validate-mission" class="toolbar-btn">✅ Validate</button>
+            </div>
+            <div class="toolbar-section">
+                <label>Grid: <input type="checkbox" id="show-grid" checked></label>
+                <label>Snap: <input type="checkbox" id="snap-to-grid" checked></label>
+                <label>Zoom: <input type="range" id="zoom-level" min="0.5" max="2" step="0.1" value="1"></label>
+            </div>
+        </div>
+
+        <!-- Main Editor Area -->
+        <div id="editor-main">
+            <!-- Left Panel - Tools -->
+            <div id="tools-panel">
+                <div class="panel-header">Tools</div>
+
+                <!-- Tile Tools -->
+                <div class="tool-section">
+                    <h3>Map Tiles</h3>
+                    <div class="tool-grid">
+                        <button class="tool-btn active" data-tool="floor" data-tile="0">
+                            <div class="tool-preview floor"></div>
+                            <span>Floor</span>
+                        </button>
+                        <button class="tool-btn" data-tool="wall" data-tile="1">
+                            <div class="tool-preview wall"></div>
+                            <span>Wall</span>
+                        </button>
+                        <button class="tool-btn" data-tool="door" data-tile="2">
+                            <div class="tool-preview door"></div>
+                            <span>Door</span>
+                        </button>
+                        <button class="tool-btn" data-tool="terminal" data-tile="3">
+                            <div class="tool-preview terminal"></div>
+                            <span>Terminal</span>
+                        </button>
+                        <button class="tool-btn" data-tool="cover" data-tile="4">
+                            <div class="tool-preview cover"></div>
+                            <span>Cover</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Entity Tools -->
+                <div class="tool-section">
+                    <h3>Entities</h3>
+                    <div class="tool-grid">
+                        <button class="tool-btn" data-tool="spawn-point">
+                            <div class="tool-preview spawn"></div>
+                            <span>Spawn</span>
+                        </button>
+                        <button class="tool-btn" data-tool="extraction">
+                            <div class="tool-preview extraction"></div>
+                            <span>Extract</span>
+                        </button>
+                        <button class="tool-btn" data-tool="enemy">
+                            <div class="tool-preview enemy"></div>
+                            <span>Enemy</span>
+                        </button>
+                        <button class="tool-btn" data-tool="npc">
+                            <div class="tool-preview npc"></div>
+                            <span>NPC</span>
+                        </button>
+                        <button class="tool-btn" data-tool="waypoint">
+                            <div class="tool-preview waypoint"></div>
+                            <span>Waypoint</span>
+                        </button>
+                        <button class="tool-btn" data-tool="item">
+                            <div class="tool-preview item"></div>
+                            <span>Item</span>
+                        </button>
+                        <button class="tool-btn" data-tool="explosive">
+                            <div class="tool-preview explosive"></div>
+                            <span>Explosive</span>
+                        </button>
+                        <button class="tool-btn" data-tool="switch">
+                            <div class="tool-preview switch"></div>
+                            <span>Switch</span>
+                        </button>
+                        <button class="tool-btn" data-tool="gate">
+                            <div class="tool-preview gate"></div>
+                            <span>Gate</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Brush Tools -->
+                <div class="tool-section">
+                    <h3>Brush Mode</h3>
+                    <div class="tool-grid">
+                        <button class="brush-btn active" data-brush="single">Single</button>
+                        <button class="brush-btn" data-brush="line">Line</button>
+                        <button class="brush-btn" data-brush="rect">Rectangle</button>
+                        <button class="brush-btn" data-brush="fill">Fill</button>
+                        <button class="brush-btn" data-brush="select">Select</button>
+                        <button class="brush-btn" data-brush="erase">Erase</button>
+                    </div>
+                    <label>Size: <input type="range" id="brush-size" min="1" max="10" value="1"></label>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="tool-section">
+                    <h3>Quick Actions</h3>
+                    <button class="action-btn" id="generate-room">🏢 Generate Room</button>
+                    <button class="action-btn" id="generate-corridor">🛤️ Generate Corridor</button>
+                    <button class="action-btn" id="clear-map">🗑️ Clear Map</button>
+                    <button class="action-btn" id="auto-walls">🧱 Auto Walls</button>
+                </div>
+            </div>
+
+            <!-- Center - Map Canvas -->
+            <div id="map-container">
+                <canvas id="map-canvas"></canvas>
+                <div id="entity-overlay"></div>
+                <div id="selection-box"></div>
+                <div id="coordinates">X: 0, Y: 0</div>
+            </div>
+
+            <!-- Right Panel - Properties -->
+            <div id="properties-panel">
+                <div class="panel-header">Properties</div>
+
+                <!-- Mission Properties -->
+                <div class="properties-section" id="mission-properties">
+                    <h3>Mission Settings</h3>
+                    <label>Name: <input type="text" id="mission-name" value="New Mission"></label>
+                    <label>Description: <textarea id="mission-desc" rows="3"></textarea></label>
+                    <label>Map Type:
+                        <select id="map-type">
+                            <option value="corporate">Corporate</option>
+                            <option value="government">Government</option>
+                            <option value="industrial">Industrial</option>
+                            <option value="slums">Slums</option>
+                            <option value="research">Research</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </label>
+                    <label>Width: <input type="number" id="map-width" value="80" min="20" max="200"></label>
+                    <label>Height: <input type="number" id="map-height" value="80" min="20" max="200"></label>
+                    <label>Difficulty:
+                        <select id="mission-difficulty">
+                            <option value="1">Easy</option>
+                            <option value="2">Normal</option>
+                            <option value="3">Hard</option>
+                            <option value="4">Expert</option>
+                            <option value="5">Nightmare</option>
+                        </select>
+                    </label>
+                    <label>Time Limit: <input type="number" id="time-limit" value="0" min="0"> seconds</label>
+                    <label>Credits Reward: <input type="number" id="credits-reward" value="5000" min="0"></label>
+                    <label>Research Reward: <input type="number" id="research-reward" value="2" min="0"></label>
+                </div>
+
+                <!-- Selected Entity Properties -->
+                <div class="properties-section" id="entity-properties" style="display:none;">
+                    <h3>Entity Properties</h3>
+                    <div id="entity-props-content"></div>
+                </div>
+
+                <!-- Objectives Editor -->
+                <div class="properties-section">
+                    <h3>Mission Objectives</h3>
+                    <div id="objectives-list"></div>
+                    <button class="action-btn" id="add-objective">+ Add Objective</button>
+                </div>
+
+                <!-- NPCs and Dialogs -->
+                <div class="properties-section">
+                    <h3>NPCs & Dialogs</h3>
+                    <div id="npcs-list"></div>
+                    <button class="action-btn" id="add-npc">+ Add NPC</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Panel - Timeline/Events -->
+        <div id="bottom-panel">
+            <div class="panel-header">
+                <span>Events & Triggers</span>
+                <button class="minimize-btn" id="toggle-bottom">▼</button>
+            </div>
+            <div id="events-content">
+                <div id="events-timeline"></div>
+                <button class="action-btn" id="add-event">+ Add Event</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialogs -->
+    <div id="objective-dialog" class="dialog" style="display:none;">
+        <div class="dialog-content">
+            <h2>Edit Objective</h2>
+            <label>Type:
+                <select id="obj-type">
+                    <option value="interact">Interact</option>
+                    <option value="eliminate">Eliminate</option>
+                    <option value="collect">Collect</option>
+                    <option value="reach">Reach</option>
+                    <option value="survive">Survive</option>
+                    <option value="defend">Defend</option>
+                    <option value="escort">Escort</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </label>
+            <label>Target: <input type="text" id="obj-target"></label>
+            <label>Count: <input type="number" id="obj-count" value="1" min="1"></label>
+            <label>Description: <textarea id="obj-desc" rows="2"></textarea></label>
+            <label>Required: <input type="checkbox" id="obj-required" checked></label>
+            <label>Hidden: <input type="checkbox" id="obj-hidden"></label>
+            <div class="dialog-buttons">
+                <button id="save-objective">Save</button>
+                <button id="cancel-objective">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="npc-dialog" class="dialog" style="display:none;">
+        <div class="dialog-content">
+            <h2>Edit NPC</h2>
+            <label>Name: <input type="text" id="npc-name"></label>
+            <label>Type:
+                <select id="npc-type">
+                    <option value="civilian">Civilian</option>
+                    <option value="informant">Informant</option>
+                    <option value="merchant">Merchant</option>
+                    <option value="guard">Guard</option>
+                    <option value="scientist">Scientist</option>
+                    <option value="hacker">Hacker</option>
+                </select>
+            </label>
+            <label>Position: X: <input type="number" id="npc-x" min="0"> Y: <input type="number" id="npc-y" min="0"></label>
+
+            <h3>Dialog Tree</h3>
+            <div id="dialog-tree-editor">
+                <textarea id="npc-dialog" rows="10" placeholder="Enter dialog in JSON format"></textarea>
+            </div>
+
+            <h3>Quests</h3>
+            <div id="npc-quests">
+                <textarea id="npc-quests-data" rows="5" placeholder="Enter quests in JSON format"></textarea>
+            </div>
+
+            <div class="dialog-buttons">
+                <button id="save-npc">Save</button>
+                <button id="cancel-npc">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Input for Loading -->
+    <input type="file" id="file-input" accept=".json" style="display:none;">
+
+    <!-- Load game data files -->
+    <script src="js/game-missions-data.js"></script>
+    <script src="js/game-maps-data.js"></script>
+    <script src="mission-editor.js"></script>
+</body>
+</html>
