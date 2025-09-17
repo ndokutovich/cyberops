@@ -151,9 +151,6 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                             let actionPerformed = false;
                             if (this.useActionAbility) {
                                 actionPerformed = this.useActionAbility(hacker);
-                            } else {
-                                // Fallback to terminal hacking
-                                actionPerformed = this.hackNearestTerminal(hacker);
                             }
                             if (actionPerformed) {
                                 hacker.cooldowns[3] = 120;

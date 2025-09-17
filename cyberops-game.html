@@ -9,9 +9,8 @@
     <title>CyberOps: Syndicate</title>
     <link rel="stylesheet" href="cyberops-game.css">
     
-    <!-- Three.js Library - LOCAL FILE -->
-    <script src="three.js" onload="console.log('✅ Three.js loaded from LOCAL FILE!');"
-                          onerror="console.error('❌ Failed to load local three.js file!');"></script>
+    <!-- Three.js r180 Library - ES Module -->
+    <script type="module" src="three-loader.js"></script>
     
 </head>
 <body>
@@ -454,7 +453,7 @@
     <canvas id="gameCanvas"></canvas>
     
     <!-- 3D Canvas Container -->
-    <div id="game3DContainer" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; display: none; pointer-events: none;">
+    <div id="game3DContainer" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 90; display: none; pointer-events: none;">
         <!-- Three.js canvas will be inserted here -->
     </div>
     
@@ -953,7 +952,7 @@
     </div>
 
     <script src="js/game-events.js"></script>
-    <script src="js/game-maps.js"></script>
+    <!-- game-maps.js removed - all maps now embedded in mission files -->
     <script src="js/game-flow.js"></script>
     <script src="js/game-saveload.js"></script>
     <script src="js/game-hub.js"></script>
@@ -966,6 +965,10 @@
     <script src="js/game-loop.js"></script>
     <script src="js/game-pathfinding.js"></script>
     <script src="js/game-rendering.js"></script>
+
+    <!-- Three.js r180 ES Module -->
+    <script type="module" src="lib/three-loader.js"></script>
+
     <script src="js/game-3d.js"></script>
     <script src="js/game-utils.js"></script>
 

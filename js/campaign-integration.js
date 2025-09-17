@@ -8,33 +8,11 @@ CyberOpsGame.prototype.initCampaignSystem = async function() {
     // Initialize the campaign system
     await CampaignSystem.init();
 
-    // Check if we should use new campaign system or fallback to old
-    if (this.useCampaignSystem === undefined) {
-        // Check if campaign missions exist
-        const hasCampaignMissions = await this.checkForCampaignMissions();
-        this.useCampaignSystem = hasCampaignMissions;
-    }
-
-    // Always use new campaign system
+    // Always use campaign system - no fallback
     console.log('✅ Using campaign system');
     await this.loadCampaignMissions();
 };
 
-// Check if campaign missions exist
-CyberOpsGame.prototype.checkForCampaignMissions = async function() {
-    try {
-        // Load campaign metadata
-        const response = await fetch('campaigns/main/campaign.json');
-        if (response.ok) {
-            const campaign = await response.json();
-            console.log('✅ Found campaign:', campaign.name);
-            return true; // Use new campaign system
-        }
-    } catch (e) {
-        console.warn('Campaign not found, falling back to legacy:', e);
-    }
-    return false;
-};
 
 // Load missions from campaign system
 CyberOpsGame.prototype.loadCampaignMissions = async function() {
@@ -144,8 +122,8 @@ CyberOpsGame.prototype.getMaxAgentsForMission = function(missionIndex) {
         }
     }
 
-    // Default fallback - no hardcoded mission knowledge
-    return 4; // Default agent count
+    // Mission must define agent count
+    throw new Error('Mission missing agent count configuration');
 };
 
 // Override mission loading to support new system
@@ -172,40 +150,14 @@ CyberOpsGame.prototype.initMission = function(missionIndex) {
     return originalInitMission.call(this, missionIndex);
 };
 
-// Override map generation to use custom tiles if available
-const originalGenerateMapFromType = CyberOpsGame.prototype.generateMapFromType;
-CyberOpsGame.prototype.generateMapFromType = function(mapType) {
-    // Check for custom tiles from mission editor
-    if (this.customMapTiles) {
-        console.log('📝 Using custom map tiles from mission');
-
-        const map = {
-            width: this.customMapTiles[0].length,
-            height: this.customMapTiles.length,
-            tiles: this.customMapTiles,
-            spawn: this.currentMissionData?.map?.spawn || { x: 2, y: 2 },
-            extraction: this.currentMissionData?.map?.extraction || { x: 78, y: 78 },
-            terminals: this.currentMissionData?.map?.terminals || [],
-            doors: this.currentMissionData?.map?.doors || [],
-            cover: [],
-            collectables: [],
-            enemySpawns: []
-        };
-
-        // Add enemies from mission data
-        if (this.currentMissionData?.enemies?.spawns) {
-            map.enemySpawns = this.currentMissionData.enemies.spawns;
-        }
-
-        // Clear custom tiles after use
-        this.customMapTiles = null;
-
-        return map;
-    }
-
-    // Use original generation
-    return originalGenerateMapFromType.call(this, mapType);
-};
+// generateMapFromType is no longer needed - all maps are embedded
+// Keeping a stub just in case something still references it
+if (!CyberOpsGame.prototype.generateMapFromType) {
+    CyberOpsGame.prototype.generateMapFromType = function(mapType) {
+        console.error('❌ generateMapFromType called but all maps must be embedded!');
+        throw new Error('Procedural generation removed - all maps must be embedded in mission files');
+    };
+}
 
 // Add campaign selection to main menu
 CyberOpsGame.prototype.showCampaignSelect = function() {

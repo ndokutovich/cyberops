@@ -13,8 +13,6 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 ### JavaScript Modules (js/ directory)
 - **game-core.js**: Core constructor and initialization
 - **game-events.js**: Event handlers and input management
-- **game-maps.js**: Map generation functions (procedural)
-- **game-maps-data.js**: Declarative map definitions (JSON format)
 - **game-flow.js**: Game flow, missions, and abilities
 - **game-saveload.js**: Save/load system
 - **game-hub.js**: Syndicate hub management
@@ -27,16 +25,33 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-3d.js**: Three.js 3D system with NPC support
 - **game-utils.js**: Utility functions and getters/setters
 - **game-keyboard.js**: Centralized keyboard handling system
-- **game-npc.js**: NPC system with dialog, quests, and interactions
-- **game-missions-data.js**: Declarative mission definitions (all 5 missions)
+- **game-npc.js**: NPC system - loads NPCs from campaign files, no hardcoded content
+- **game-campaign-integration.js**: Loads campaigns and missions from external files
+- **game-pathfinding.js**: A* pathfinding algorithm
+- **game-teamcommands.js**: Team movement and formation commands
 - **game-mission-executor.js**: Generic mission execution engine
 - **game-mission-integration.js**: Bridges new system with existing code
 - **game-init.js**: Game instantiation and initialization
 
+### Campaign Files (campaigns/ directory)
+- **campaigns/main/**: Main campaign with 5 acts
+  - **act1/**: Missions main-01-001.js through main-01-003.js
+  - **act2/**: Missions main-02-001.js and main-02-002.js
+  - Each mission file contains complete embedded map data and all mission-specific content
+
+### REMOVED/DEPRECATED FILES
+- **game-maps.js**: DELETED - no procedural generation, all maps embedded
+- **game-maps-data.js**: DELETED - maps now embedded in mission files
+- **game-missions-data.js**: DELETED - missions now in campaign files
+
 ### Other Files
-- **cyberops-game.html** (660 lines): HTML structure with module loading
+- **cyberops-game.html**: HTML structure with module loading
 - **cyberops-game.css** (2579 lines): All styling including animations, HUD, and screen transitions
-- **three.js**: Local Three.js library for 3D rendering capabilities
+
+### Library Files (lib/ directory)
+- **lib/three.module.min.js**: Three.js r180 ES6 module
+- **lib/three.core.min.js**: Three.js core dependencies
+- **lib/three-loader.js**: Module loader that converts Three.js ES6 module to global scope
 
 ### Key Systems in CyberOpsGame Class
 
@@ -81,10 +96,19 @@ python -m http.server 8000
 - Multiple audio tracks for different levels and screens
 - Music files (.mp3/.wav) are gitignored but expected to exist
 
-### 3D System Integration
-- Three.js loaded from local file
-- 3D mode toggleable with camera mode switching (tactical/third-person/first-person)
-- 3D container and HUD separate from main canvas
+### 3D System Integration (Three.js r180)
+- Three.js r180 loaded as ES6 module and exposed globally via lib/three-loader.js
+- Module files in lib/ directory: three.module.min.js and three.core.min.js (dependencies)
+- 3D mode toggleable with E key, cycles through camera modes:
+  - Tactical (2D): Standard isometric view
+  - Isometric (3D): Bird's eye 3D view
+  - Third-person: Behind selected agent
+  - First-person: From agent's perspective
+- 3D container (#game3DContainer) overlays the 2D canvas when active
+- WebGL renderer with shadows, frustum culling for performance
+- Uses CapsuleGeometry for agents (requires Three.js r152+)
+- 3D world created once per mission, not recreated on camera switches
+- Separate HUD for 3D mode with crosshair and mode indicator
 
 ### Game State Persistence
 - Mission progress tracked in `completedMissions` array
@@ -124,12 +148,55 @@ python -m http.server 8000
 - **Quest HUD**: Active quests displayed on-screen during gameplay
 - **Health Bars**: Fixed display for dead agents and text wrapping
 
-## Mission System Architecture
+## Campaign and Mission Architecture
+
+### Complete Separation of Engine and Content
+The game achieves "3rd normal form" - the engine knows NOTHING about specific campaigns or missions. All content is loaded dynamically from external campaign files.
+
+### Campaign System
+- **Campaign Files**: Each campaign is a directory with acts and missions
+- **Mission Files**: Self-contained JavaScript files with embedded maps
+- **Dynamic Loading**: `game-campaign-integration.js` loads campaigns at runtime
+- **No Hardcoded Content**: Engine contains zero mission-specific code
+
+### Campaign Loading Process
+1. **HTML loads**: cyberops-game.html includes game-campaign-integration.js
+2. **Campaign auto-registers**: Each mission file self-registers with CampaignSystem
+3. **Mission selection**: Player selects from available missions in hub
+4. **Dynamic loading**: Mission data loaded at runtime, including embedded map
+5. **NPC spawning**: NPCs loaded from mission definition, not hardcoded
+
+### Mission File Structure
+Each mission file (e.g., `campaigns/main/act1/main-01-001.js`) is self-contained:
+```javascript
+(function() {
+    const mission = {
+        id: 'main-01-001',
+        campaign: 'main',
+        act: 1,
+        map: {
+            embedded: {
+                tiles: [
+                    "################...", // String array, one per row
+                    "################...", // Each string = map width chars
+                ],
+                spawn: { x: 2, y: 78 },
+                extraction: { x: 78, y: 2 },
+                terminals: [...],
+                doors: [...],
+                npcs: [...]
+            }
+        },
+        objectives: [...],
+        rewards: { credits: 2000, researchPoints: 50 }
+    };
+
+    // Self-registration
+    CampaignSystem.registerMission('main', 1, 'main-01-001', mission);
+})();
+```
 
 ### Declarative Mission Design
-The game uses a comprehensive JSON-based mission system that separates data from logic:
-
-- **MISSION_DEFINITIONS**: Array of mission objects with objectives, enemies, rewards
 - **OBJECTIVE_TYPES**: Interact, Eliminate, Collect, Reach, Survive, Custom
 - **INTERACTION_TARGETS**: Terminal, Explosive, Switch, Gate, Door, NPC
 
@@ -155,10 +222,49 @@ All interactions use the H key with context-sensitive behavior:
 - Fallback system allows interactions even when not mission objectives
 
 ### Map System
-- **Procedural Generation**: Original maps in `game-maps.js`
-- **Declarative Maps**: JSON definitions in `game-maps-data.js`
-- **100% Position Preservation**: All spawn points, terminals, extraction points exact
+- **Embedded Maps Only**: All maps are embedded in mission files as string arrays
+- **String-Based Format**: Each tile row is a string, '#' for walls, '.' for floors
+- **Efficient Storage**: ~150 lines per mission vs 14,000+ lines in old format
 - **Map Dimensions**: Corporate (80x80), Government (90x70), Industrial (100x80), etc.
+- **NO Procedural Generation**: All procedural generation code completely removed
+
+## Critical Architecture Principles
+
+### NEVER Use Old Approaches
+- **NEVER** create procedural map generation - all maps are embedded
+- **NEVER** hardcode mission data in engine files
+- **NEVER** put NPCs, quests, or content in engine code
+- **NEVER** use browser-based tools for data conversion - use Node.js
+- **ALWAYS** keep complete separation between engine and content
+- **ALWAYS** use campaign files for all mission-specific content
+
+### Content Location Rules
+- **Mission Content**: ONLY in `campaigns/*/act*/mission.js` files
+- **Engine Code**: ONLY generic systems in `js/game-*.js` files
+- **NPCs and Quests**: ONLY in mission definition files
+- **Maps**: ONLY as embedded string arrays in mission files
+
+## Major Cleanup Process Completed
+
+### What Was Removed
+1. **Procedural Map Generation**: 973 lines reduced to 22-line stub
+2. **Hardcoded NPCs**: 400+ lines of NPCs removed from game-npc.js
+3. **Hardcoded Missions**: All mission data moved to campaign files
+4. **game-maps-data.js**: Completely deleted (was 14,000+ lines)
+5. **game-missions-data.js**: Completely deleted
+6. **Intermediate Tools**: All test HTML files and conversion scripts removed
+
+### Storage Efficiency Achieved
+- **Old Format**: 14,000+ lines per mission (object per tile)
+- **New Format**: ~150 lines per mission (string arrays)
+- **Reduction**: 99% smaller file sizes
+
+### Why This Architecture
+- **3rd Normal Form**: Complete separation like database normalization
+- **Engine Independence**: Engine can run ANY campaign without modification
+- **Content Portability**: Campaigns are self-contained modules
+- **Maintainability**: Clear separation of concerns
+- **Performance**: Smaller files, faster loading
 
 ## Development Best Practices
 
@@ -190,6 +296,21 @@ All interactions use the H key with context-sensitive behavior:
 
 ## Common Issues and Solutions
 
+### 3D Mode Issues
+- **3D Mode Not Working (E key)**:
+  - Check console for "✅ Three.js r180 loaded!"
+  - Ensure three.module.min.js and three.core.min.js are in lib/ directory
+  - Container must have non-zero dimensions and proper z-index
+  - Renderer alpha should be false for proper background rendering
+- **3D World Not Visible**:
+  - Check "🎨 Rendering 3D" logs for scene children count
+  - Verify container3D display is "block" when 3D enabled
+  - Canvas element needs absolute positioning within container
+- **Performance Issues in 3D**:
+  - Frustum culling automatically hides off-screen objects
+  - Pixel ratio limited to 2 for high-DPI displays
+  - Consider reducing shadow map size if needed
+
 ### Mission System Issues
 - **Extraction Not Working**: Check if `extractionEnabled = true` when objectives complete
 - **Objectives Not Tracking**: Verify `missionTrackers.enemiesEliminated` increments
@@ -197,14 +318,15 @@ All interactions use the H key with context-sensitive behavior:
 - **Mission Not Loading**: Check console for "Setting currentMissionDef" message
 
 ### Integration Checks
-- **Script Order**: Maps data → Missions data → Executor → Integration
+- **Script Order**: Campaign integration → Mission executor → Mission integration
+- **Campaign Loading**: Campaigns load from `campaigns/` directory at runtime
 - **Constants**: OBJECTIVE_TYPES and INTERACTION_TARGETS must be defined
 - **Initialization**: `initMissions()` called during game startup
 - **Game Loop**: `updateMissionObjectives()` runs every frame
 
-### Mission Specifics
-- **Mission 1**: Eliminate 8 enemies, extraction at (78, 2)
-- **Mission 2**: Hack 3 terminals for main objective
-- **Mission 3**: Plant explosives, survive 60 seconds
-- **Mission 4**: Eliminate targets without witnesses
-- **Mission 5**: Breach gates, control sectors, capture mainframe
+### Working with Missions
+- **To modify a mission**: Edit the corresponding file in `campaigns/main/act*/`
+- **To add items**: Add to the `embedded` section of the mission file
+- **To add NPCs**: Add to the `npcs` array with spawn location and quests
+- **To change map**: Edit the `tiles` string array (keep width consistent!)
+- **Map characters**: '#' = wall, '.' = floor, other chars for special tiles

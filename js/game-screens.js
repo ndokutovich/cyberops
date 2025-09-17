@@ -268,19 +268,6 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
                 summary.completedMainObjectives++;
             }
         });
-    } else if (this.currentMission && this.currentMission.objectives) {
-        // Fallback to old mission format
-        summary.totalMainObjectives = this.currentMission.objectives.length;
-        this.currentMission.objectives.forEach(obj => {
-            const completed = victory;
-            summary.mainObjectives.push({
-                name: obj,
-                description: obj,
-                completed: completed,
-                required: true
-            });
-            if (completed) summary.completedMainObjectives++;
-        });
     }
 
     // Gather side quests (both active and potential)

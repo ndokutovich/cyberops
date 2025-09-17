@@ -371,8 +371,7 @@ Quest.prototype.checkObjective = function(objective, game) {
                         );
                         return terminal && terminal.hacked;
                     }
-                    // Fallback: check total hacked terminals
-                    return (game.hackedTerminals || 0) > 0;
+                    return false; // No terminal hacked
                 }
                 return game.npcInteractions && game.npcInteractions.has(objective.npcId);
 
@@ -423,9 +422,8 @@ CyberOpsGame.prototype.findValidSpawnPosition = function(desiredX, desiredY) {
         }
     }
 
-    // If no valid position found, return a safe default near spawn
-    console.warn(`⚠️ Could not find valid spawn near (${desiredX},${desiredY}), using fallback`);
-    return { x: 5, y: 5 };
+    // Must have valid spawn position from map
+    throw new Error(`No valid spawn position found near (${desiredX},${desiredY}). Check map definition.`);
 };
 
 // Add NPCs to the current map
@@ -509,7 +507,7 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
         });
     }
 
-    // No fallback - NPCs must come from mission files
+    // NPCs must come from mission files
     return configs;
 };
 
@@ -988,9 +986,8 @@ CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
         }
     }
 
-    // Handle old objective format (fallback)
+    // Check objective type
     switch(obj.type) {
-        case 'hack_all':
         case 'hack':
             return (this.hackedTerminals || 0) >= (obj.count || 1);
 
@@ -1062,12 +1059,6 @@ CyberOpsGame.prototype.showMissionList = function() {
                     ${!obj.required ? ' <span style="color: #888;">(Optional)</span>' : ''}
                 </div>
             `;
-        });
-    } else if (this.currentMission && this.currentMission.objectives) {
-        // Fallback to old system if new system not available
-        this.currentMission.objectives.forEach(obj => {
-            const description = typeof obj === 'string' ? obj : (obj.description || 'Unknown objective');
-            content += `<div style="color: #ffffff; margin: 5px 0;">⬜ ${description}</div>`;
         });
     } else {
         content += '<div style="color: #888;">No objectives available</div>';

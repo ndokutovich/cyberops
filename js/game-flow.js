@@ -285,6 +285,9 @@ CyberOpsGame.prototype.initMission = function() {
         // CRITICAL: Full 3D mode reset to prevent movement state carryover
         console.log('🔄 Resetting 3D mode state for new mission');
 
+        // Reset 3D world creation flag for new mission
+        this.world3DCreated = false;
+
         // Reset all 3D movement keys
         this.keys3D = {
             w: false,
@@ -324,16 +327,18 @@ CyberOpsGame.prototype.initMission = function() {
                 this.map = this.generateMapFromEmbeddedDefinition(this.currentMission.map);
                 console.log(`📍 Generated map: ${this.currentMission.map.type} (${this.map.width}x${this.map.height})`);
             } else {
-                // Use procedural generation
-                this.map = this.generateMapFromType(this.currentMission.map.type || this.currentMission.map);
+                // No embedded map available - this should never happen in new architecture
+                console.error('❌ Mission has no embedded map! All missions must have embedded maps.');
+                throw new Error('Mission missing embedded map data');
             }
         } else {
-            // Use procedural generation for legacy missions with string map type
-            this.map = this.generateMapFromType(this.currentMission.map);
+            // Legacy string map type - this should never happen in new architecture
+            console.error('❌ Mission using legacy string map type! All missions must have embedded maps.');
+            throw new Error('Mission using legacy map format');
         }
 
         // DEBUG: Check if map was modified right after assignment
-        console.log('🔍 IMMEDIATE CHECK - Right after generateMapFromType:');
+        console.log('🔍 IMMEDIATE CHECK - Map loaded:');
         console.log('  tile[6][6]:', this.map.tiles[6][6], '(should be 0)');
         console.log('  tile[3][3]:', this.map.tiles[3][3]);
 
@@ -412,13 +417,6 @@ CyberOpsGame.prototype.initMission = function() {
                     { ...agent },
                     this.completedResearch || []
                 );
-            });
-        } else {
-            // Fallback to old system
-            modifiedAgents = agentsWithLoadouts.map(agent => {
-                const modified = { ...agent };
-                this.applyMissionResearchBonuses(modified);
-                return modified;
             });
         }
 
@@ -506,11 +504,6 @@ CyberOpsGame.prototype.initMission = function() {
         // Set initial objective from mission definition
         if (this.updateObjectiveDisplay) {
             this.updateObjectiveDisplay();
-        } else {
-            // Fallback display
-            document.getElementById('objectiveTracker').textContent =
-                this.currentMission.objectives && this.currentMission.objectives[0] ?
-                this.currentMission.objectives[0].description : 'Complete objectives';
         }
 
         this.updateSquadHealth();
@@ -800,9 +793,6 @@ CyberOpsGame.prototype.useAbility = function(abilityIndex) {
                 // The new mission system handles all interactions generically
                 if (this.useActionAbility) {
                     this.useActionAbility(agent);
-                } else {
-                    // Fallback to terminal hacking for backward compatibility
-                    this.hackNearestTerminal(agent);
                 }
                 agent.cooldowns[3] = 120;
                 break;
@@ -843,9 +833,6 @@ CyberOpsGame.prototype.useAbilityForAllSelected = function(abilityIndex) {
                         let actionPerformed = false;
                         if (this.useActionAbility) {
                             actionPerformed = this.useActionAbility(agent);
-                        } else {
-                            // Fallback to terminal hacking
-                            actionPerformed = this.hackNearestTerminal(agent);
                         }
                         if (actionPerformed) {
                             agent.cooldowns[3] = 120;
@@ -948,9 +935,6 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                         // Track enemy elimination for mission objectives
                         if (this.onEnemyEliminated) {
                             this.onEnemyEliminated(enemy);
-                        } else {
-                            // Fallback tracking
-                            this.enemiesKilledThisMission = (this.enemiesKilledThisMission || 0) + 1;
                         }
 
                         console.log(`💥 Grenade killed enemy at (${enemy.x}, ${enemy.y})`);

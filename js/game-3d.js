@@ -39,8 +39,8 @@ CyberOpsGame.prototype.init3D = function() {
         
         // Create scene
         this.scene3D = new THREE.Scene();
-        this.scene3D.background = new THREE.Color(0x0a0e1a);
-        this.scene3D.fog = new THREE.Fog(0x0a0e1a, 30, 100); // Increased fog distance for better visibility
+        this.scene3D.background = new THREE.Color(0x1a1f2e);  // Slightly brighter background
+        this.scene3D.fog = new THREE.Fog(0x1a1f2e, 50, 200);  // Much further fog for better visibility
         
         // Create cameras
         this.camera3D = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -48,38 +48,66 @@ CyberOpsGame.prototype.init3D = function() {
         // Create renderer with optimizations
         this.renderer3D = new THREE.WebGLRenderer({
             antialias: true,
-            alpha: true,
+            alpha: false, // Changed to false to ensure background renders
             powerPreference: "high-performance"  // Pure optimization - use high-performance GPU
         });
         this.renderer3D.setSize(window.innerWidth, window.innerHeight);
         this.renderer3D.shadowMap.enabled = true;  // Keep shadows as before
         this.renderer3D.shadowMap.type = THREE.PCFSoftShadowMap;  // Keep original shadow quality
         this.renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
+        this.renderer3D.toneMapping = THREE.ACESFilmicToneMapping;  // Better tone mapping for brightness
+        this.renderer3D.toneMappingExposure = 1.5;  // Increase exposure for brighter scene
         
         // Add to container
         this.container3D.appendChild(this.renderer3D.domElement);
         this.canvas3D = this.renderer3D.domElement;
+
+        // Debug: Ensure canvas is visible
+        this.canvas3D.style.display = 'block';
+        this.canvas3D.style.position = 'absolute';
+        this.canvas3D.style.top = '0';
+        this.canvas3D.style.left = '0';
+        this.canvas3D.style.width = '100%';
+        this.canvas3D.style.height = '100%';
+        this.canvas3D.style.zIndex = '1';
+        console.log('📐 3D Canvas created:', {
+            width: this.canvas3D.width,
+            height: this.canvas3D.height,
+            parent: this.canvas3D.parentElement?.id,
+            style: this.canvas3D.style.cssText
+        });
         
-        // Add lighting
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+        // Add lighting - MUCH brighter for better visibility
+        const ambientLight = new THREE.AmbientLight(0x808080, 0.8);  // Doubled ambient light intensity
         this.scene3D.add(ambientLight);
-        
-        const directionalLight = new THREE.DirectionalLight(0x00ffff, 0.8);
-        directionalLight.position.set(10, 20, 10);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);  // White light, stronger
+        directionalLight.position.set(10, 30, 10);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
         directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 100;
+        directionalLight.shadow.camera.left = -50;
+        directionalLight.shadow.camera.right = 50;
+        directionalLight.shadow.camera.top = 50;
+        directionalLight.shadow.camera.bottom = -50;
         this.scene3D.add(directionalLight);
-        
+
+        // Additional fill lighting from different angles
+        const fillLight1 = new THREE.DirectionalLight(0x00ccff, 0.4);  // Cyan fill light
+        fillLight1.position.set(-10, 15, -10);
+        this.scene3D.add(fillLight1);
+
         // Additional atmospheric lighting
-        const pinkLight = new THREE.PointLight(0xff00ff, 0.5, 30);
+        const pinkLight = new THREE.PointLight(0xff00ff, 0.3, 50);  // Reduced intensity, increased range
         pinkLight.position.set(-5, 10, -5);
         this.scene3D.add(pinkLight);
         
         // Initialize 3D HUD
         this.gameHUD3D = document.getElementById('game3DHUD');
         console.log('- 3D HUD found:', !!this.gameHUD3D);
-        
+
         // Initialize other 3D components
         this.world3D = {
             agents: [],
@@ -88,7 +116,7 @@ CyberOpsGame.prototype.init3D = function() {
             terminals: [],
             extraction: null
         };
-        
+
         console.log('✅ 3D system initialized successfully');
         console.log('📊 3D System Components:', {
             scene3D: !!this.scene3D,
@@ -173,13 +201,21 @@ CyberOpsGame.prototype.enable3DMode = function() {
         }
 
         console.log('🎮 Enabling 3D mode...', 'Camera mode:', this.cameraMode);
-        
+
         this.is3DMode = true;
         this.canvas.style.display = 'none';
         this.container3D.style.display = 'block';
         this.container3D.style.pointerEvents = 'auto';
         this.hud3D.style.display = 'block';
-        
+
+        // Debug: Check container dimensions
+        console.log('📐 Container3D dimensions:', {
+            width: this.container3D.offsetWidth,
+            height: this.container3D.offsetHeight,
+            display: this.container3D.style.display,
+            visibility: window.getComputedStyle(this.container3D).visibility
+        });
+
         // Hide 2D HUD
         if (this.gameHUD) {
             this.gameHUD.style.display = 'none';
@@ -188,8 +224,11 @@ CyberOpsGame.prototype.enable3DMode = function() {
         // Add crosshair to center of screen
         this.addCrosshair();
 
-        // Create/update 3D world
-        this.create3DWorld();
+        // Create 3D world only if it doesn't exist yet
+        if (!this.world3DCreated) {
+            this.create3DWorld();
+            this.world3DCreated = true;
+        }
 
         // Set initial camera position
         if (this.camera3D) {
@@ -245,6 +284,11 @@ CyberOpsGame.prototype.disable3DMode = function() {
         if (document.pointerLockElement) {
             console.log('🔓 Releasing pointer lock for tactical mode');
             document.exitPointerLock();
+        }
+
+        // Reset world created flag when leaving game mode
+        if (this.currentScreen !== 'game') {
+            this.world3DCreated = false;
         }
 
         this.is3DMode = false;
@@ -549,9 +593,9 @@ CyberOpsGame.prototype.createGround = function() {
         // Create ground plane
         const geometry = new THREE.PlaneGeometry(mapWidth * 2, mapHeight * 2);
         const material = new THREE.MeshLambertMaterial({
-            color: 0x1a1a2e,
-            transparent: true,
-            opacity: 0.8
+            color: 0x2a2a3e,  // Brighter ground color
+            transparent: false,  // No transparency for better visibility
+            opacity: 1.0
         });
 
         const ground = new THREE.Mesh(geometry, material);
@@ -572,9 +616,9 @@ CyberOpsGame.prototype.createGround = function() {
                 if (this.map.tiles[y][x] === 1) { // Wall tile
                     const wallGeometry = new THREE.BoxGeometry(2, 3, 2);
                     const wallMaterial = new THREE.MeshLambertMaterial({
-                        color: 0x444466,
-                        emissive: 0x000033,
-                        emissiveIntensity: 0.1
+                        color: 0x666688,  // Brighter wall color
+                        emissive: 0x111144,  // Brighter emissive
+                        emissiveIntensity: 0.2  // Increased emissive intensity
                     });
 
                     const wall = new THREE.Mesh(wallGeometry, wallMaterial);
@@ -630,10 +674,8 @@ CyberOpsGame.prototype.createAgents3D = function() {
         this.agents.forEach((agent, index) => {
             if (!agent.alive) return;
             
-        // Create agent geometry (fallback for older Three.js versions)
-        const geometry = THREE.CapsuleGeometry ? 
-            new THREE.CapsuleGeometry(0.3, 1.5, 4, 8) : 
-            new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+        // Create agent geometry (CapsuleGeometry for Three.js r180)
+        const geometry = new THREE.CapsuleGeometry(0.3, 1.5, 4, 8);
             const material = new THREE.MeshLambertMaterial({ 
                 color: agent === this.selectedAgent ? 0x00ffff : 0x00ff00
             });
@@ -668,9 +710,7 @@ CyberOpsGame.prototype.createNPCs3D = function() {
     if (this.npcs) {
         this.npcs.forEach((npc, index) => {
             // Create NPC geometry - use a different shape/color to distinguish from agents/enemies
-            const geometry = THREE.CapsuleGeometry ?
-                new THREE.CapsuleGeometry(0.3, 1.5, 4, 8) :
-                new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+            const geometry = new THREE.CapsuleGeometry(0.3, 1.5, 4, 8);
 
             // Use NPC's color or default to green
             const npcColor = npc.color || '#00ff00';
@@ -694,9 +734,7 @@ CyberOpsGame.prototype.createNPCs3D = function() {
             // Add a floating indicator above NPC
             const indicatorGeometry = new THREE.SphereGeometry(0.2, 8, 8);
             const indicatorMaterial = new THREE.MeshBasicMaterial({
-                color: 0x00ffff,
-                emissive: 0x00ffff,
-                emissiveIntensity: 1
+                color: 0x00ffff
             });
             const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
             indicator.position.set(0, 2, 0);
@@ -715,10 +753,8 @@ CyberOpsGame.prototype.createEnemies3D = function() {
         this.world3D.enemies = [];
 
         this.enemies.forEach((enemy, index) => {
-            // Create enemy geometry (fallback for older Three.js versions)
-            const geometry = THREE.CapsuleGeometry ?
-                new THREE.CapsuleGeometry(0.3, 1.5, 4, 8) :
-                new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8);
+            // Create enemy geometry (CapsuleGeometry for Three.js r180)
+            const geometry = new THREE.CapsuleGeometry(0.3, 1.5, 4, 8);
             const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
 
             const enemyMesh = new THREE.Mesh(geometry, material);
@@ -795,8 +831,7 @@ CyberOpsGame.prototype.createObjectives3D = function() {
                 if (target.planted) {
                     const lightGeometry = new THREE.SphereGeometry(0.1, 4, 4);
                     const lightMaterial = new THREE.MeshBasicMaterial({
-                        color: 0xff0000,
-                        emissive: 0xff0000
+                        color: 0xff0000
                     });
                     const light = new THREE.Mesh(lightGeometry, lightMaterial);
                     light.position.y = 0.7;
@@ -1603,9 +1638,6 @@ CyberOpsGame.prototype.execute3DHack = function() {
         // Use generic action system for all mission-specific interactions
         if (this.useActionAbility) {
             this.useActionAbility(agent);
-        } else {
-            // Fallback to terminal hacking
-            this.hackNearestTerminal(agent);
         }
 
         // Visual feedback for hacked terminals in 3D
@@ -1891,7 +1923,14 @@ CyberOpsGame.prototype.sync3DTo2D = function() {
 }
 
 CyberOpsGame.prototype.render3D = function() {
-        if (!this.renderer3D || !this.scene3D || !this.camera3D) return;
+        if (!this.renderer3D || !this.scene3D || !this.camera3D) {
+            console.warn('❌ render3D early return - missing:', {
+                renderer: !!this.renderer3D,
+                scene: !!this.scene3D,
+                camera: !!this.camera3D
+            });
+            return;
+        }
 
         if (this.renderer3D && this.scene3D && this.camera3D) {
             // Update camera matrices for frustum culling
@@ -1944,6 +1983,18 @@ CyberOpsGame.prototype.render3D = function() {
                 const shakeZ = (Math.random() - 0.5) * this.screenShake.intensity * 0.1;
                 this.camera3D.position.x += shakeX;
                 this.camera3D.position.z += shakeZ;
+            }
+
+            // Add debug once per second
+            if (!this.lastRenderDebug || Date.now() - this.lastRenderDebug > 1000) {
+                this.lastRenderDebug = Date.now();
+                const visibleCount = this.scene3D.children.filter(c => c.visible).length;
+                console.log('🎨 Rendering 3D:', {
+                    sceneChildren: this.scene3D.children.length,
+                    visibleChildren: visibleCount,
+                    cameraPos: this.camera3D.position,
+                    containerDisplay: this.container3D.style.display
+                });
             }
 
             this.renderer3D.render(this.scene3D, this.camera3D);
@@ -2123,14 +2174,7 @@ CyberOpsGame.prototype.getObjectiveText = function() {
             return this.currentMission.objectives[0];
         }
         
-        // Fallback objectives based on mission type
-        switch(this.currentMissionIndex) {
-            case 0: return 'Eliminate all hostiles';
-            case 1: return 'Hack all terminals';
-            case 2: return 'Plant explosives';
-            case 3: return 'Eliminate targets';
-            case 4: return 'Breach the fortress';
-            default: return 'Complete mission objectives';
-        }
+        // Mission must define objectives
+        return 'Complete mission objectives';
 }
     

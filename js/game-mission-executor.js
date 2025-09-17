@@ -150,10 +150,9 @@ CyberOpsGame.prototype.generateMapWithObjects = function(mapDef) {
                 console.log(`   Tiles array: ${this.map.tiles.length} rows`);
             }
         } else {
-            // Fall back to original procedural generation
-            console.log(`⚠️ Falling back to procedural generation for type: ${mapDef.type}`);
-            this.map = this.generateMapFromType(mapDef.type);
-            console.log(`📍 Generated procedural map: ${mapDef.type} (${this.map.width}x${this.map.height})`);
+            // No embedded map - this should never happen in new architecture
+            console.error(`❌ Map type ${mapDef.type} has no embedded data! All maps must be embedded.`);
+            throw new Error('Map missing embedded data');
         }
     }
 

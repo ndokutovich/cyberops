@@ -76,42 +76,7 @@ CyberOpsGame.prototype.isWalkable = function(x, y) {
         return this.map.tiles[tileY][tileX] === 0;
 }
 
-// Simple movement without pathfinding (fallback)
-CyberOpsGame.prototype.moveAgentSimple = function(agent) {
-        const dx = agent.targetX - agent.x;
-        const dy = agent.targetY - agent.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist > 0.1) {
-            // Update facing angle when moving
-            agent.facingAngle = Math.atan2(dy, dx);
-
-            const moveSpeed = agent.speed / 60;
-            const moveX = (dx / dist) * moveSpeed;
-            const moveY = (dy / dist) * moveSpeed;
-
-            const newX = agent.x + moveX;
-            const newY = agent.y + moveY;
-
-            // Check collision before moving
-            if (this.canMoveTo(agent.x, agent.y, newX, newY)) {
-                agent.x = newX;
-                agent.y = newY;
-            } else {
-                // Try to slide along walls
-                // Try horizontal movement only
-                if (this.canMoveTo(agent.x, agent.y, newX, agent.y)) {
-                    agent.x = newX;
-                    agent.facingAngle = dx > 0 ? 0 : Math.PI;
-                }
-                // Try vertical movement only
-                else if (this.canMoveTo(agent.x, agent.y, agent.x, newY)) {
-                    agent.y = newY;
-                    agent.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
-                }
-            }
-        }
-}
+// Movement is always with pathfinding - no simple movement fallback
 
 CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
         // Check if target position is walkable
@@ -304,13 +269,8 @@ CyberOpsGame.prototype.update = function() {
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist > 0.1) {
-                // Try pathfinding first, with fallback to simple movement
-                if (this.usePathfinding !== false) {
-                    this.moveAgentWithPathfinding(agent);
-                } else {
-                    // Fallback to simple movement
-                    this.moveAgentSimple(agent);
-                }
+                // Always use pathfinding
+                this.moveAgentWithPathfinding(agent);
             }
             // Agent is standing still - keep last facing direction
 
@@ -497,17 +457,9 @@ CyberOpsGame.prototype.update = function() {
                         if (agent && agent.alive) {
                             let actualDamage = proj.damage;
 
-                            // Use GameServices for damage calculation if available
-                            if (window.GameServices && window.GameServices.formulaService) {
-                                actualDamage = window.GameServices.formulaService.calculateDamageAfterArmor(
-                                    proj.damage,
-                                    agent.protection || 0
-                                );
-                            } else {
-                                // Fallback: Apply protection bonus from equipment
-                                if (agent.protection) {
-                                    actualDamage = Math.max(1, actualDamage - agent.protection);
-                                }
+                            // Apply protection bonus from equipment
+                            if (agent.protection) {
+                                actualDamage = Math.max(1, actualDamage - agent.protection);
                             }
 
                             if (agent.shield > 0) {
@@ -549,17 +501,9 @@ CyberOpsGame.prototype.update = function() {
                         if (closestAgent) {
                             let actualDamage = proj.damage;
 
-                            // Use GameServices for damage calculation if available
-                            if (window.GameServices && window.GameServices.formulaService) {
-                                actualDamage = window.GameServices.formulaService.calculateDamageAfterArmor(
-                                    proj.damage,
-                                    closestAgent.protection || 0
-                                );
-                            } else {
-                                // Fallback
-                                if (closestAgent.protection) {
-                                    actualDamage = Math.max(1, actualDamage - closestAgent.protection);
-                                }
+                            // Apply protection
+                            if (closestAgent.protection) {
+                                actualDamage = Math.max(1, actualDamage - closestAgent.protection);
                             }
                             if (closestAgent.shield > 0) {
                                 closestAgent.shield -= actualDamage;
@@ -607,9 +551,6 @@ CyberOpsGame.prototype.update = function() {
                                 // Track enemy elimination for mission objectives
                                 if (this.onEnemyEliminated) {
                                     this.onEnemyEliminated(enemy);
-                                } else {
-                                    // Fallback tracking
-                                    this.enemiesKilledThisMission = (this.enemiesKilledThisMission || 0) + 1;
                                 }
 
                                 // Log enemy death
@@ -706,33 +647,6 @@ CyberOpsGame.prototype.checkMissionStatus = function() {
         if (this.checkMissionObjectives) {
             // New comprehensive mission system handles everything
             this.checkMissionObjectives();
-        } else {
-            // Fallback: Basic objective checking for backward compatibility
-            this.objectiveStatus = {};
-
-            // Simple terminal hacking objective
-            if (this.map && this.map.terminals) {
-                const hackedCount = this.map.terminals.filter(t => t.hacked).length;
-                const totalTerminals = this.map.terminals.length;
-
-                if (totalTerminals > 0) {
-                    this.objectiveStatus['Hack terminals'] = hackedCount >= Math.min(3, totalTerminals);
-                    document.getElementById('objectiveTracker').textContent =
-                        `Hack terminals: ${hackedCount}/${Math.min(3, totalTerminals)}`;
-
-                    if (hackedCount >= 3) {
-                        this.checkExtractionPoint();
-                    }
-                }
-            }
-
-            // Simple enemy elimination objective
-            if (aliveEnemies === 0 && deadEnemies > 0) {
-                this.objectiveStatus['Eliminate all enemies'] = true;
-                document.getElementById('objectiveTracker').textContent = 'All enemies eliminated! Reach extraction!';
-                this.extractionEnabled = true; // Enable extraction
-                this.checkExtractionPoint();
-            }
         }
 }
 
@@ -1005,64 +919,8 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
         return;
     }
 
-    // Fallback to old system if services not available
-    switch(item.type) {
-        case 'credits':
-            const creditValue = item.value || 100;
-            this.credits += creditValue;
-            this.creditsThisMission = (this.creditsThisMission || 0) + creditValue;
-            console.log(`💰 Collected ${creditValue} credits`);
-            break;
-
-        case 'ammo':
-            console.log(`🔫 Collected ammo`);
-            break;
-
-        case 'health':
-            const healAmount = Math.min(item.value, agent.maxHealth - agent.health);
-            agent.health += healAmount;
-            console.log(`❤️ Healed ${healAmount} HP`);
-            break;
-
-        case 'keycard':
-            console.log(`🗝️ Collected keycard`);
-            break;
-
-        case 'intel':
-            const researchValue = item.value ? Math.floor(item.value / 2) : 50; // Default 50 if no value
-            this.researchPoints += researchValue;
-            this.researchPointsThisMission = (this.researchPointsThisMission || 0) + researchValue;
-
-            // Track intel statistics
-            this.totalIntelCollected = (this.totalIntelCollected || 0) + 1;
-            this.intelThisMission = (this.intelThisMission || 0) + 1;
-
-            // Track intel by mission
-            if (this.currentMission) {
-                const missionId = this.currentMission.id;
-                if (!this.intelByMission) this.intelByMission = {};
-                this.intelByMission[missionId] = (this.intelByMission[missionId] || 0) + 1;
-                console.log(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
-            }
-
-            // Unlock intel reports based on collection
-            this.unlockIntelReport();
-
-            console.log(`📄 Collected intel (+${researchValue} research points)`);
-            console.log(`📊 Total Intel: ${this.totalIntelCollected} documents`);
-            console.log(`📋 Intel this mission: ${this.intelThisMission}`);
-            console.log(`🗂️ Intel by mission:`, this.intelByMission);
-            break;
-
-        case 'armor':
-            agent.protection = (agent.protection || 0) + 5;
-            console.log(`🛡️ Armor upgraded (+5 protection)`);
-            break;
-
-        case 'explosives':
-            console.log(`💣 Collected explosives`);
-            break;
-    }
+    // Collectables removed - all rewards come from mission completion
+    console.warn('⚠️ Old collectable system called but no longer supported');
 
     // Visual feedback
     this.effects.push({
