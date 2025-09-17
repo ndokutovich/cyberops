@@ -99,9 +99,17 @@ CyberOpsGame.prototype.initMissionUpdated = function() {
     }
 
     // Initialize from mission definition
-    this.currentMissionDef = this.missions && this.missions[this.currentMissionIndex];
+    const mission = this.missions && this.missions[this.currentMissionIndex];
+    // Use _campaignData if available (has full mission data including NPCs)
+    this.currentMissionDef = mission?._campaignData || mission;
     console.log('🎯 Setting currentMissionDef for mission', this.currentMissionIndex, ':', this.currentMissionDef);
     this.initMissionFromDefinition();
+
+    // Spawn NPCs now that mission definition is loaded
+    if (this.spawnNPCs) {
+        console.log('🎮 Spawning NPCs for mission after definition loaded...');
+        this.spawnNPCs();
+    }
 
     // Track terminal hacking properly
     if (!this.missionTrackers) this.missionTrackers = {};

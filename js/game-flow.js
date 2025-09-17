@@ -244,18 +244,12 @@ CyberOpsGame.prototype.initMission = function() {
         this.missionTimer = 0;
         this.isPaused = false;
 
-        // Initialize NPC system (only if functions exist)
+        // Initialize NPC system (NPCs will be spawned after mission definition is loaded)
         if (this.initNPCSystem) {
             console.log('🎮 Initializing NPC system...');
             this.initNPCSystem();
         } else {
             console.warn('⚠️ NPC system not loaded - initNPCSystem not found');
-        }
-        if (this.spawnNPCs) {
-            console.log('🎮 Spawning NPCs for mission...');
-            this.spawnNPCs();
-        } else {
-            console.warn('⚠️ NPC system not loaded - spawnNPCs not found');
         }
 
         // Reset mission tracking
@@ -549,35 +543,25 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
     // Determine enemy composition based on mission
     let enemyComposition = [];
 
-    if (this.currentMissionIndex === 0) {
-        // Mission 1: Mostly guards with some soldiers
-        enemyComposition = Array(Math.floor(totalEnemies * 0.6)).fill('guard')
-            .concat(Array(Math.floor(totalEnemies * 0.4)).fill('soldier'));
-    } else if (this.currentMissionIndex === 1) {
-        // Mission 2: Mix of guards, soldiers, and elites
-        enemyComposition = Array(Math.floor(totalEnemies * 0.3)).fill('guard')
-            .concat(Array(Math.floor(totalEnemies * 0.4)).fill('soldier'))
-            .concat(Array(Math.floor(totalEnemies * 0.3)).fill('elite'));
-    } else if (this.currentMissionIndex === 2) {
-        // Mission 3: Soldiers, elites, and heavies
-        enemyComposition = Array(Math.floor(totalEnemies * 0.3)).fill('soldier')
-            .concat(Array(Math.floor(totalEnemies * 0.3)).fill('elite'))
-            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('heavy'))
-            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('sniper'));
-    } else if (this.currentMissionIndex === 3) {
-        // Mission 4: Elites, snipers, and commanders
-        enemyComposition = Array(Math.floor(totalEnemies * 0.3)).fill('elite')
-            .concat(Array(Math.floor(totalEnemies * 0.3)).fill('sniper'))
-            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('heavy'))
-            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('commander'));
-    } else {
-        // Mission 5+: All types with commanders
-        enemyComposition = Array(Math.floor(totalEnemies * 0.2)).fill('elite')
-            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('heavy'))
-            .concat(Array(Math.floor(totalEnemies * 0.2)).fill('sniper'))
-            .concat(Array(Math.floor(totalEnemies * 0.3)).fill('commander'))
-            .concat(Array(Math.floor(totalEnemies * 0.1)).fill('soldier'));
-    }
+    // Dynamic difficulty scaling based on mission index
+    const difficultyLevel = Math.min(this.currentMissionIndex, 4);
+
+    // Scale enemy mix based on difficulty
+    const guardRatio = Math.max(0.1, 0.6 - difficultyLevel * 0.125);
+    const soldierRatio = 0.3;
+    const eliteRatio = Math.min(0.3, difficultyLevel * 0.075);
+    const heavyRatio = Math.min(0.2, difficultyLevel * 0.05);
+    const sniperRatio = Math.min(0.2, difficultyLevel * 0.05);
+    const commanderRatio = Math.min(0.3, difficultyLevel * 0.075);
+
+    // Build enemy composition dynamically
+    enemyComposition = []
+        .concat(Array(Math.floor(totalEnemies * guardRatio)).fill('guard'))
+        .concat(Array(Math.floor(totalEnemies * soldierRatio)).fill('soldier'))
+        .concat(Array(Math.floor(totalEnemies * eliteRatio)).fill('elite'))
+        .concat(Array(Math.floor(totalEnemies * heavyRatio)).fill('heavy'))
+        .concat(Array(Math.floor(totalEnemies * sniperRatio)).fill('sniper'))
+        .concat(Array(Math.floor(totalEnemies * commanderRatio)).fill('commander'));
 
     // Ensure we have exactly the right number of enemies
     while (enemyComposition.length < totalEnemies) {
@@ -672,53 +656,27 @@ CyberOpsGame.prototype.getStrategicEnemyPositions = function(count) {
         return positions;
     }
 
-    // Fallback to procedural positioning based on map type
-    // Get map type (handle both string and object format)
-    const mapType = typeof this.currentMission.map === 'string'
-        ? this.currentMission.map
-        : this.currentMission.map?.type;
-
-    // Define key areas based on map type
+    // Dynamic key area generation based on map size
+    // Create strategic points without knowing map type
     let keyAreas = [];
 
-    if (mapType === 'corporate') {
-        // Corporate: Guards at entrances, patrols in hallways
-        keyAreas = [
-            { x: 10, y: 10, radius: 5 },  // Main entrance
-            { x: 30, y: 10, radius: 5 },  // Side entrance
-            { x: 20, y: 20, radius: 8 },  // Central area
-            { x: 10, y: 25, radius: 5 },  // Security room
-        ];
-    } else if (mapType === 'government') {
-        // Government: Heavy security at checkpoints
-        keyAreas = [
-            { x: 15, y: 15, radius: 6 },  // Checkpoint 1
-            { x: 25, y: 15, radius: 6 },  // Checkpoint 2
-            { x: 20, y: 25, radius: 8 },  // Main facility
-        ];
-    } else if (mapType === 'industrial') {
-        // Industrial: Spread across facility
-        keyAreas = [
-            { x: 10, y: 10, radius: 6 },  // Storage area
-            { x: 30, y: 10, radius: 6 },  // Production line
-            { x: 20, y: 20, radius: 8 },  // Central control
-            { x: 10, y: 30, radius: 6 },  // Loading dock
-        ];
-    } else if (mapType === 'residential') {
-        // Residential: Concentrated around targets
-        keyAreas = [
-            { x: 15, y: 15, radius: 7 },  // Target building 1
-            { x: 25, y: 25, radius: 7 },  // Target building 2
-            { x: 20, y: 10, radius: 5 },  // Perimeter
-        ];
-    } else {
-        // Fortress or default: Heavy defense layers
-        keyAreas = [
-            { x: mapWidth/2, y: 10, radius: 8 },      // Outer defense
-            { x: mapWidth/2, y: mapHeight/2, radius: 10 }, // Inner defense
-            { x: 10, y: mapHeight/2, radius: 6 },     // Left flank
-            { x: mapWidth-10, y: mapHeight/2, radius: 6 }, // Right flank
-        ];
+    // Generate 3-5 key areas based on map dimensions
+    const numAreas = 3 + Math.floor(Math.random() * 3);
+
+    // Always include key strategic points
+    keyAreas.push(
+        { x: mapWidth/2, y: mapHeight/2, radius: 8 },  // Center
+        { x: mapWidth * 0.2, y: mapHeight * 0.2, radius: 6 },  // Corner 1
+        { x: mapWidth * 0.8, y: mapHeight * 0.8, radius: 6 }   // Corner 2
+    );
+
+    // Add random strategic points
+    for (let i = keyAreas.length; i < numAreas; i++) {
+        keyAreas.push({
+            x: 10 + Math.random() * (mapWidth - 20),
+            y: 10 + Math.random() * (mapHeight - 20),
+            radius: 5 + Math.random() * 5
+        });
     }
 
     // Place enemies around key areas

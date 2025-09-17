@@ -52,6 +52,20 @@ CyberOpsGame.prototype.loadCampaignMissions = async function() {
         for (const act of campaign.acts) {
             for (const missionInfo of act.missions) {
                 try {
+                    // Load NPCs file first if not already loaded
+                    if (!window.CAMPAIGN_NPC_TEMPLATES || !window.CAMPAIGN_NPC_TEMPLATES[campaignId]) {
+                        const npcScript = document.createElement('script');
+                        npcScript.src = `campaigns/${campaignId}/npcs.js`;
+                        await new Promise((resolve, reject) => {
+                            npcScript.onload = resolve;
+                            npcScript.onerror = () => {
+                                console.warn(`No NPCs file for campaign ${campaignId}`);
+                                resolve(); // Don't fail if no NPCs
+                            };
+                            document.head.appendChild(npcScript);
+                        });
+                    }
+
                     // Load the mission script
                     const script = document.createElement('script');
                     script.src = `campaigns/${campaignId}/${missionInfo.filename}`;
@@ -130,13 +144,8 @@ CyberOpsGame.prototype.getMaxAgentsForMission = function(missionIndex) {
         }
     }
 
-    // Fallback to old system - but with better defaults
-    if (missionIndex === 0) return 4;  // Mission 1: 4 agents
-    if (missionIndex === 1) return 5;  // Mission 2: 5 agents
-    if (missionIndex === 2) return 5;  // Mission 3: 5 agents
-    if (missionIndex === 3) return 6;  // Mission 4: 6 agents
-    if (missionIndex === 4) return 6;  // Mission 5: 6 agents
-    return 6; // Default for any additional missions
+    // Default fallback - no hardcoded mission knowledge
+    return 4; // Default agent count
 };
 
 // Override mission loading to support new system
