@@ -32,9 +32,6 @@ CyberOpsGame.prototype.loadScreenMusic = function(screenName) {
         this.initScreenMusicSystem();
     }
 
-    // Stop ALL old music systems before starting new track
-    this.stopAllOldMusic();
-
     // Stop current screen music
     if (this.screenMusic.currentTrack) {
         this.stopScreenMusic();
@@ -387,53 +384,6 @@ CyberOpsGame.prototype.fileExists = function(filepath) {
     ];
 
     return knownFiles.includes(filepath.split('/').pop());
-};
-
-// Stop all old music systems
-CyberOpsGame.prototype.stopAllOldMusic = function() {
-    console.log('🛑 Stopping all old music systems');
-
-    // Stop HTML audio elements
-    if (this.gameAudio) {
-        this.gameAudio.pause();
-        this.gameAudio.currentTime = 0;
-    }
-    if (this.creditsAudio) {
-        this.creditsAudio.pause();
-        this.creditsAudio.currentTime = 0;
-    }
-
-    // Stop all level music
-    for (let i = 1; i <= 5; i++) {
-        const levelAudio = document.getElementById(`levelMusic${i}`);
-        if (levelAudio) {
-            levelAudio.pause();
-            levelAudio.currentTime = 0;
-        }
-    }
-
-    // Stop procedural music nodes
-    if (this.mainMenuMusicNode) {
-        this.mainMenuMusicNode.disconnect();
-        this.mainMenuMusicNode = null;
-    }
-    if (this.splashMusicNode) {
-        this.splashMusicNode.disconnect();
-        this.splashMusicNode = null;
-    }
-    if (this.levelMusicNode) {
-        this.levelMusicNode.disconnect();
-        this.levelMusicNode = null;
-    }
-    if (this.creditsMusicNode) {
-        this.creditsMusicNode.disconnect();
-        this.creditsMusicNode = null;
-    }
-
-    // Clear playing flags
-    this.creditsPlaying = false;
-    this.currentLevelMusic = null;
-    this.currentLevelMusicElement = null;
 };
 
 // Initialize on load

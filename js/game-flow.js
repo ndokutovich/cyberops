@@ -231,19 +231,9 @@ CyberOpsGame.prototype.startMission = function() {
         // Stop ALL existing music before starting mission
         console.log('🎵 Stopping all music for mission start');
 
-        // Stop old music systems
-        this.stopLevelMusic();
-        this.stopMainMenuMusic();
-        this.stopCreditsMusic();
-
-        // Stop screen music system
+        // Stop screen music system (handles all non-mission music)
         if (this.stopScreenMusic) {
             this.stopScreenMusic();
-        }
-
-        // Also use the comprehensive stop function
-        if (this.stopAllOldMusic) {
-            this.stopAllOldMusic();
         }
 
         // Also cleanup any existing music system tracks

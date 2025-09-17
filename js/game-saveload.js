@@ -383,9 +383,9 @@ CyberOpsGame.prototype.returnToInitialScreen = function() {
         console.log('Returning to initial screen');
 
         // Stop all music
-        this.stopMainMenuMusic();
-        this.stopLevelMusic();
-        this.stopCreditsMusic();
+        if (this.stopScreenMusic) {
+            this.stopScreenMusic();
+        }
 
         // Clear demoscene timer and hide demoscene
         this.clearDemosceneTimer();

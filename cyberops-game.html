@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="cyberops-game.css">
     
     <!-- Three.js r180 Library - ES Module -->
-    <script type="module" src="three-loader.js"></script>
+    <script type="module" src="lib/three-loader.js"></script>
     
 </head>
 <body>
@@ -175,64 +175,14 @@
         <!-- Audio element for unified menu music track -->
         <!-- 3D Engine - Three.js moved to head section to load earlier -->
         
-        <audio id="gameMusic" preload="auto" loop>
-            <source src="game-music.wav" type="audio/wav">
-            <source src="game-music.mp3" type="audio/mpeg">
-        </audio>
 
-        <!-- Mission Level Music Tracks -->
-        <audio id="levelMusic1" preload="none">
-            <source src="game-level-1.wav" type="audio/wav">
-            <source src="game-level-1.mp3" type="audio/mpeg">
-        </audio>
         
-        <audio id="levelMusic2" preload="none">
-            <source src="game-level-2.wav" type="audio/wav">
-            <source src="game-level-2.mp3" type="audio/mpeg">
-        </audio>
         
-        <audio id="levelMusic3" preload="none">
-            <source src="game-level-3.wav" type="audio/wav">
-            <source src="game-level-3.mp3" type="audio/mpeg">
-        </audio>
         
-        <audio id="levelMusic4" preload="none">
-            <source src="game-level-4.wav" type="audio/wav">
-            <source src="game-level-4.mp3" type="audio/mpeg">
-        </audio>
         
-        <audio id="levelMusic5" preload="none">
-            <source src="game-level-5.wav" type="audio/wav">
-            <source src="game-level-5.mp3" type="audio/mpeg">
-        </audio>
         
-        <!-- Credits Music Track -->
-        <audio id="creditsMusic" preload="none" loop>
-            <source src="game-credits.wav" type="audio/wav">
-            <source src="game-credits.mp3" type="audio/mpeg">
-        </audio>
 
-        <!-- Weapon Sound Effects -->
-        <audio id="shootSound" preload="auto">
-            <source src="sfx-shoot.wav" type="audio/wav">
-            <source src="sfx-shoot.mp3" type="audio/mpeg">
-        </audio>
-        <audio id="explosionSound" preload="auto">
-            <source src="sfx-explosion.wav" type="audio/wav">
-            <source src="sfx-explosion.mp3" type="audio/mpeg">
-        </audio>
-        <audio id="hackSound" preload="auto">
-            <source src="sfx-hack.wav" type="audio/wav">
-            <source src="sfx-hack.mp3" type="audio/mpeg">
-        </audio>
-        <audio id="shieldSound" preload="auto">
-            <source src="sfx-shield.wav" type="audio/wav">
-            <source src="sfx-shield.mp3" type="audio/mpeg">
-        </audio>
-        <audio id="hitSound" preload="auto">
-            <source src="sfx-hit.wav" type="audio/wav">
-            <source src="sfx-hit.mp3" type="audio/mpeg">
-        </audio>
+        <!-- Audio elements removed - using dynamic audio loading via JavaScript -->
 
     <!-- Main Menu -->
     <div id="mainMenu">
@@ -961,6 +911,7 @@
     <script src="js/game-screens.js"></script>
     <script src="js/game-demoscene.js"></script>
     <script src="js/game-audio.js"></script>
+    <script src="js/game-audio-redirects.js"></script>
     <script src="js/game-audioloader.js"></script>
     <script src="js/game-music-config.js"></script>
     <script src="js/game-music-system.js"></script>
@@ -968,10 +919,6 @@
     <script src="js/game-loop.js"></script>
     <script src="js/game-pathfinding.js"></script>
     <script src="js/game-rendering.js"></script>
-
-    <!-- Three.js r180 ES Module -->
-    <script type="module" src="lib/three-loader.js"></script>
-
     <script src="js/game-3d.js"></script>
     <script src="js/game-utils.js"></script>
 

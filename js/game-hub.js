@@ -29,8 +29,7 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
             this.cleanupMusicSystem();
         }
 
-        // Also stop any level music that might be playing
-        this.stopLevelMusic();
+        // Mission music is stopped by music system cleanup
 
         // Handle music transition based on where we're coming from
         if (this.transitionScreenMusic && previousScreen && previousScreen !== 'game') {
