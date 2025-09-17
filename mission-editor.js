@@ -1222,7 +1222,10 @@ class MissionEditor {
                 doors: [],
                 enemies: [],
                 npcs: [],
-                items: []
+                items: [],
+                explosives: [],
+                switches: [],
+                gates: []
             }
         };
 
@@ -1268,6 +1271,31 @@ class MissionEditor {
                         value: entity.value
                     });
                     break;
+                case 'explosive':
+                    gameFormat.mapData.explosives.push({
+                        x: entity.x,
+                        y: entity.y,
+                        id: `explosive_${gameFormat.mapData.explosives.length}`,
+                        planted: false
+                    });
+                    break;
+                case 'switch':
+                    gameFormat.mapData.switches.push({
+                        x: entity.x,
+                        y: entity.y,
+                        id: `switch_${gameFormat.mapData.switches.length}`,
+                        activated: false,
+                        target: entity.target || null
+                    });
+                    break;
+                case 'gate':
+                    gameFormat.mapData.gates.push({
+                        x: entity.x,
+                        y: entity.y,
+                        id: `gate_${gameFormat.mapData.gates.length}`,
+                        breached: false
+                    });
+                    break;
             }
         });
 
@@ -1283,6 +1311,31 @@ class MissionEditor {
         return gameFormat;
     }
 
+    generateEmbeddedMapData(mapData) {
+        // Convert full tile array to embedded format with spawn and extraction points
+        const embeddedData = {
+            spawn: mapData.spawn,
+            extraction: mapData.extraction,
+            customTiles: []
+        };
+
+        // Only include non-floor tiles in customTiles for efficiency
+        for (let y = 0; y < mapData.height; y++) {
+            for (let x = 0; x < mapData.width; x++) {
+                const tileValue = mapData.tiles[y][x];
+                if (tileValue !== 0) { // Not a floor tile
+                    embeddedData.customTiles.push({
+                        x: x,
+                        y: y,
+                        type: tileValue
+                    });
+                }
+            }
+        }
+
+        return embeddedData;
+    }
+
     generateGameIntegrationFile(gameData) {
         const timestamp = new Date().toISOString();
         const campaignId = document.getElementById('campaign-id').value || 'main';
@@ -1296,210 +1349,166 @@ class MissionEditor {
         // Create filename with campaign-act-mission format
         const filename = `${campaignId}-${actNumber}-${missionNumber}`;
 
-        // Create the modular mission file content
+        // Generate the embedded map data from tiles
+        const embeddedMap = this.generateEmbeddedMapData(gameData.mapData);
+
+        // Create the modular mission file content matching campaign system format
         let jsContent = `// Campaign: ${campaignId}
-// Act: ${actNumber} - ${actName}
+// Act: ${parseInt(actNumber)} - ${actName}
 // Mission: ${missionNumber} - ${this.mission.name}
 // Generated: ${timestamp}
-// This file should be saved as: campaigns/${campaignId}/${filename}.js
+// This file should be saved as: campaigns/${campaignId}/act${parseInt(actNumber)}/${filename}.js
 
-REGISTER_MISSION({
-    // Mission identification
-    campaign: '${campaignId}',
-    act: '${actNumber}',
-    mission: '${missionNumber}',
+(function() {
+    // Register mission with campaign system
+    if (typeof REGISTER_MISSION !== 'undefined') {
+        REGISTER_MISSION({
+            id: '${filename}',
+            campaign: '${campaignId}',
+            act: ${parseInt(actNumber)},
+            actName: '${actName}',
+            missionNumber: ${parseInt(missionNumber)},
+            name: '${this.mission.name}',
+            description: '${this.mission.description || ''}',
+            briefing: \`${this.mission.description || 'Complete all objectives'}\`,
 
-    // Mission metadata
-    name: '${this.mission.name}',
-    title: '${this.mission.name}',
-    description: '${this.mission.description}',
-    briefing: '${this.mission.description}',
+            // Map configuration with embedded data
+            mapConfig: {
+                type: '${this.mission.mapType}',
+                width: ${gameData.mapData.width},
+                height: ${gameData.mapData.height},
+                embedded: ${JSON.stringify(embeddedMap, null, 8)}
+            },
 
-    // Story context
-    story: {
-        actProgress: ${parseInt(missionNumber)},
-        previousMission: ${parseInt(missionNumber) > 1 ? `'${campaignId}-${actNumber}-${String(parseInt(missionNumber) - 1).padStart(3, '0')}'` : 'null'},
-        nextMission: '${campaignId}-${actNumber}-${String(parseInt(missionNumber) + 1).padStart(3, '0')}'
-    },
+            // Mission objectives
+            objectives: ${JSON.stringify(this.mission.objectives || [], null, 8)},
 
-    // Agent configuration
-    agents: {
-        max: ${maxAgents},
-        required: ${requiredAgents},
-        recommended: ${recommendedAgents},
-        startingGear: ['pistol', 'medkit']
-    },
+            // Enemy spawns
+            enemies: ${JSON.stringify(gameData.mapData.enemies || [], null, 8)},
 
-    // Map configuration
-    map: {
-        type: '${this.mission.mapType}',
-        width: ${gameData.mapData.width},
-        height: ${gameData.mapData.height},
-        spawn: ${JSON.stringify(gameData.mapData.spawn)},
-        extraction: ${JSON.stringify(gameData.mapData.extraction)},
+            // NPCs with dialog and quests
+            npcs: ${JSON.stringify(gameData.mapData.npcs || [], null, 8)},
 
-        // Terminals
-        terminals: ${JSON.stringify(gameData.mapData.terminals, null, 8)},
+            // Interactive objects
+            interactables: {
+                terminals: ${JSON.stringify(gameData.mapData.terminals || [], null, 12)},
+                explosives: ${JSON.stringify(gameData.mapData.explosives || [], null, 12)},
+                switches: ${JSON.stringify(gameData.mapData.switches || [], null, 12)},
+                gates: ${JSON.stringify(gameData.mapData.gates || [], null, 12)}
+            },
 
-        // Doors
-        doors: ${JSON.stringify(gameData.mapData.doors, null, 8)},
+            // Agent configuration
+            agentConfig: {
+                maxAgents: ${maxAgents},
+                requiredAgents: ${requiredAgents},
+                recommendedAgents: ${recommendedAgents}
+            },
 
-        // Custom tiles - full map export
-        customTiles: ${JSON.stringify(gameData.mapData.tiles)}
-    },
+            // Rewards
+            rewards: {
+                credits: ${this.mission.credits || 5000},
+                researchPoints: ${this.mission.researchPoints || 2}
+            },
 
-    // Mission objectives
-    objectives: ${JSON.stringify(this.mission.objectives, null, 4)},
-
-    // Enemy configuration
-    enemies: {
-        count: ${gameData.mapData.enemies.length},
-        spawns: ${JSON.stringify(gameData.mapData.enemies, null, 8)}
-    },
-
-    // NPCs
-    npcs: ${JSON.stringify(gameData.mapData.npcs, null, 4)},
-
-    // Rewards
-    rewards: {
-        credits: ${this.mission.credits},
-        researchPoints: ${this.mission.researchPoints},
-        experience: ${this.mission.credits / 4},
-        unlocks: ['mission_${String(parseInt(missionNumber) + 1).padStart(3, '0')}']
-    },
-
-    // Mission settings
-    settings: {
-        timeLimit: ${this.mission.timeLimit || 0},
-        difficulty: ${this.mission.difficulty},
-        visibility: 'normal',
-        allowSave: true,
-        allowRetry: true
-    }
-});
-
-        jsContent += `
-// ALTERNATIVE: Direct tile replacement
-// If you prefer to just update the map tiles without changing mission structure:
-/*
-CyberOpsGame.prototype.loadEditorMap_${gameData.missionDef.id} = function() {
-    const mapData = ${JSON.stringify({
-        tiles: gameData.mapData.tiles,
-        spawn: gameData.mapData.spawn,
-        extraction: gameData.mapData.extraction,
-        terminals: gameData.mapData.terminals,
-        enemies: gameData.mapData.enemies
-    }, null, 2)};
-
-    // Apply to current map
-    if (this.map) {
-        this.map.tiles = mapData.tiles;
-        this.map.spawn = mapData.spawn;
-        this.map.extraction = mapData.extraction;
-        this.map.terminals = mapData.terminals;
-
-        // Spawn enemies
-        mapData.enemies.forEach(e => {
-            this.enemies.push({
-                x: e.x,
-                y: e.y,
-                type: e.type,
-                patrol: e.patrol,
-                health: 100,
-                maxHealth: 100
-            });
+            // Mission settings
+            settings: {
+                timeLimit: ${this.mission.timeLimit || 0},
+                difficulty: ${this.mission.difficulty || 2}
+            }
         });
     }
-};
-*/
-`;
+})();`;
 
         return jsContent;
     }
 
     showIntegrationInstructions(filename) {
-        const missionNumber = filename.replace('.js', '');
+        const campaignId = document.getElementById('campaign-id').value || 'main';
+        const actNumber = document.getElementById('act-number').value || '01';
+        const missionNumber = document.getElementById('mission-number').value || '001';
+
         const instructions = `
-MODULAR MISSION SYSTEM - Integration Instructions
+CAMPAIGN MISSION SYSTEM - Integration Instructions
 ================================================
 
-FILE: ${filename}
-MISSION NUMBER: ${missionNumber}
+FILE: ${filename}.js
+CAMPAIGN: ${campaignId}
+ACT: ${actNumber}
+MISSION: ${missionNumber}
 
-SIMPLE INTEGRATION:
+INTEGRATION STEPS:
 ==================
-1. Create missions folder if not exists:
-   mkdir missions
+1. Create campaign folder structure:
+   campaigns/${campaignId}/act${parseInt(actNumber)}/
 
 2. Save the exported file as:
-   missions/${filename}
+   campaigns/${campaignId}/act${parseInt(actNumber)}/${filename}.js
 
-3. The mission loader will automatically find it!
+3. Add to mission-editor.html (if not already):
+   <script src="campaigns/${campaignId}/act${parseInt(actNumber)}/${filename}.js"></script>
 
-THAT'S IT! The game will load missions in sequence:
-- missions/000.js (First mission)
-- missions/001.js (Second mission)
-- missions/002.js (Third mission)
-- etc...
+4. The mission will be automatically registered!
 
-AGENT SYSTEM:
-============
-Each mission now controls its own agent count:
-- Max Agents: ${document.getElementById('max-agents').value || 4}
-- Required Agents: ${document.getElementById('required-agents').value || 2}
-
-This replaces the old system where agent count was tied to game progression.
-
-MISSION MANAGEMENT:
+CAMPAIGN STRUCTURE:
 ==================
-To REPLACE a mission:
-- Just save with same number (e.g., 000.js replaces first mission)
+campaigns/
+├── main/           (Main campaign)
+│   ├── act1/
+│   │   ├── main-01-001.js
+│   │   ├── main-01-002.js
+│   │   └── main-01-003.js
+│   └── act2/
+│       ├── main-02-001.js
+│       └── main-02-002.js
+├── dlc1/           (DLC campaigns)
+└── custom/         (User missions)
 
-To ADD a new mission:
-- Use next available number (e.g., 005.js for 6th mission)
+EMBEDDED MAP SYSTEM:
+===================
+Maps are now embedded directly in mission files:
+- No separate map data files needed
+- Efficient storage (only non-floor tiles)
+- Complete map preservation
+- Easy distribution
 
-To DISABLE a mission:
-- Rename to .js.disabled
+MISSION FEATURES:
+================
+✅ Embedded map data (spawn, extraction, tiles)
+✅ Mission objectives with types
+✅ Enemy spawns and patrol routes
+✅ NPCs with dialogs and quests
+✅ Interactive objects (terminals, explosives, switches, gates)
+✅ Agent configuration per mission
+✅ Rewards and difficulty settings
 
-To REORDER missions:
-- Just rename the files (000.js ↔ 001.js)
+TESTING:
+========
+1. Open mission-editor.html
+2. Use "Load Game Mission" to verify
+3. Click "Test Mission" to play
 
 GIT WORKFLOW:
 ============
 # Before changes
-git add -A && git commit -m "Pre-mission edit"
+git status
 
 # Add your mission
-cp ${filename} missions/
+git add campaigns/${campaignId}/act${parseInt(actNumber)}/${filename}.js
 
-# Test in game
+# Commit
+git commit -m "Add mission: ${this.mission.name}"
 
-# Commit if good
-git add missions/${filename}
-git commit -m "Added/Updated mission ${missionNumber}"
-
-# Revert if issues
-git checkout -- missions/${filename}
+# Push to repository
+git push
 
 ADVANTAGES:
 ==========
-✅ Each mission is a separate file
-✅ Easy to share individual missions
-✅ Clean git diffs (only changed mission)
-✅ No risk of breaking other missions
-✅ Can have unlimited missions
-✅ Easy to enable/disable missions
-✅ Agent count per mission
-
-EXPORTED CONTENT:
-================
-✅ Complete map layout with custom tiles
-✅ Agent configuration (max/required)
-✅ All entities (spawn, extraction, enemies, NPCs)
-✅ Mission objectives and rewards
-✅ Enemy patrol routes
-✅ NPC dialogs and quests
-✅ Mission-specific settings
+✅ Organized campaign structure
+✅ Act-based progression
+✅ Embedded maps (no external dependencies)
+✅ Campaign metadata support
+✅ Easy mission sharing
+✅ Clean version control
         `;
 
         alert(instructions.trim());
@@ -1622,25 +1631,31 @@ EXPORTED CONTENT:
         }
     }
 
-    loadGameMission(missionIndex) {
-        // Check if game data is loaded
-        if (typeof MISSION_DEFINITIONS === 'undefined' || typeof MAP_DEFINITIONS === 'undefined') {
-            alert('Game mission data not loaded. Please refresh the page.');
+    loadGameMission(missionId) {
+        // Check if campaign missions are loaded
+        if (typeof CAMPAIGN_MISSIONS === 'undefined') {
+            alert('Campaign missions not loaded. Please refresh the page.');
             return;
         }
 
-        const missionDef = MISSION_DEFINITIONS[missionIndex];
+        let missionDef = CAMPAIGN_MISSIONS[missionId];
         if (!missionDef) {
-            alert('Mission not found.');
-            return;
+            // Try loading by index for backward compatibility
+            const missions = Object.values(CAMPAIGN_MISSIONS);
+            if (missions[missionId]) {
+                missionDef = missions[missionId];
+            } else {
+                alert('Mission not found: ' + missionId);
+                return;
+            }
         }
 
-        console.log('Loading game mission:', missionDef.name);
+        console.log('Loading campaign mission:', missionDef.name);
 
-        // Get map definition
-        const mapDef = MAP_DEFINITIONS[missionDef.map.type];
-        if (!mapDef) {
-            alert('Map definition not found for: ' + missionDef.map.type);
+        // Mission now has embedded map data
+        const mapDef = missionDef.map;
+        if (!mapDef || (!mapDef.generation && !mapDef.embedded)) {
+            alert('Mission does not have map data (neither generation nor embedded)');
             return;
         }
 
@@ -1648,7 +1663,7 @@ EXPORTED CONTENT:
         this.mission = {
             name: missionDef.name,
             description: missionDef.description,
-            mapType: missionDef.map.type,
+            mapType: mapDef.type || 'custom',
             width: mapDef.width || 80,
             height: mapDef.height || 80,
             difficulty: missionDef.difficulty || 2,
@@ -1658,29 +1673,31 @@ EXPORTED CONTENT:
             tiles: [],
             entities: [],
             objectives: missionDef.objectives || [],
-            npcs: [],
+            npcs: missionDef.npcs || [],
             events: []
         };
 
-        // Generate the map tiles
-        this.generateMapFromType(missionDef.map.type);
+        // Generate map tiles from embedded definition
+        this.generateMapFromEmbeddedDefinition(mapDef);
 
-        // Add spawn point from map definition
-        if (mapDef.spawn) {
+        // Add spawn point from map definition (check embedded first, then root)
+        const spawn = mapDef.embedded?.spawn || mapDef.spawn;
+        if (spawn) {
             this.mission.entities.push({
                 type: 'spawn-point',
-                x: mapDef.spawn.x,
-                y: mapDef.spawn.y,
+                x: spawn.x,
+                y: spawn.y,
                 id: Date.now()
             });
         }
 
-        // Add extraction point from map definition
-        if (mapDef.extraction) {
+        // Add extraction point from map definition (check embedded first, then root)
+        const extraction = mapDef.embedded?.extraction || mapDef.extraction;
+        if (extraction) {
             this.mission.entities.push({
                 type: 'extraction',
-                x: mapDef.extraction.x,
-                y: mapDef.extraction.y,
+                x: extraction.x,
+                y: extraction.y,
                 id: Date.now() + 1
             });
         }
@@ -1784,12 +1801,12 @@ EXPORTED CONTENT:
             });
         }
 
-        // Add NPCs
+        // Add NPCs from embedded mission data
         if (missionDef.npcs) {
             missionDef.npcs.forEach((npc, index) => {
-                // Handle both position formats (some missions use x,y directly, others use position object)
-                const npcX = npc.position ? npc.position.x : npc.x;
-                const npcY = npc.position ? npc.position.y : npc.y;
+                // Handle multiple position formats: spawn, position, or x/y directly
+                const npcX = npc.spawn ? npc.spawn.x : (npc.position ? npc.position.x : npc.x);
+                const npcY = npc.spawn ? npc.spawn.y : (npc.position ? npc.position.y : npc.y);
 
                 if (npcX !== undefined && npcY !== undefined) {
                     this.mission.npcs.push({
@@ -2165,10 +2182,218 @@ EXPORTED CONTENT:
                 break;
         }
     }
+
+    generateMapFromEmbeddedDefinition(mapDef) {
+        // Initialize tiles array
+        this.mission.tiles = [];
+        for (let y = 0; y < mapDef.height; y++) {
+            this.mission.tiles[y] = [];
+            for (let x = 0; x < mapDef.width; x++) {
+                this.mission.tiles[y][x] = 0; // Default to walkable
+            }
+        }
+
+        // Check if we have embedded tiles (new format)
+        if (mapDef.embedded && mapDef.embedded.tiles) {
+            console.log('Loading embedded tiles...');
+
+            // Check if tiles are in string array format (new efficient format)
+            if (typeof mapDef.embedded.tiles[0] === 'string') {
+                const tileMap = {
+                    '#': 1,  // wall
+                    '.': 0,  // floor
+                    'D': 0,  // door (walkable)
+                    'W': 1,  // window (blocks)
+                    'T': 0,  // terminal (walkable)
+                    'C': 0,  // cover (walkable)
+                    'E': 0,  // explosive (walkable)
+                    'G': 0,  // gate (walkable)
+                    'S': 0   // switch (walkable)
+                };
+
+                for (let y = 0; y < mapDef.height; y++) {
+                    const row = mapDef.embedded.tiles[y] || '';
+                    for (let x = 0; x < mapDef.width; x++) {
+                        const char = row[x] || '.';
+                        this.mission.tiles[y][x] = tileMap[char] !== undefined ? tileMap[char] : 0;
+                    }
+                }
+                console.log('Loaded string-based embedded tiles');
+            } else if (mapDef.embedded.customTiles) {
+                // Old object-based format
+                mapDef.embedded.customTiles.forEach(tile => {
+                    if (tile.y >= 0 && tile.y < mapDef.height &&
+                        tile.x >= 0 && tile.x < mapDef.width) {
+                        this.mission.tiles[tile.y][tile.x] = tile.type;
+                    }
+                });
+            }
+
+            // Load items from embedded data
+            if (mapDef.embedded.items) {
+                mapDef.embedded.items.forEach(item => {
+                    this.mission.entities.push({
+                        type: item.type,
+                        x: item.x,
+                        y: item.y,
+                        id: item.id || this.mission.entities.length
+                    });
+                });
+            }
+
+            return; // Done loading embedded tiles
+        }
+
+        // Otherwise use generation rules (old format)
+        const gen = mapDef.generation;
+        if (!gen) {
+            console.error('No generation rules or embedded tiles in map definition');
+            return;
+        }
+
+        // Set base tile type
+        if (gen.baseType === 'walls') {
+            for (let y = 0; y < mapDef.height; y++) {
+                for (let x = 0; x < mapDef.width; x++) {
+                    this.mission.tiles[y][x] = 1;
+                }
+            }
+        }
+
+        // Add borders if specified
+        if (gen.borders) {
+            for (let x = 0; x < mapDef.width; x++) {
+                this.mission.tiles[0][x] = 1;
+                this.mission.tiles[mapDef.height - 1][x] = 1;
+            }
+            for (let y = 0; y < mapDef.height; y++) {
+                this.mission.tiles[y][0] = 1;
+                this.mission.tiles[y][mapDef.width - 1] = 1;
+            }
+        }
+
+        // Generate grid-based rooms
+        if (gen.rooms && gen.rooms.type === 'grid') {
+            const rooms = gen.rooms;
+            for (let x = rooms.startX; x < mapDef.width - rooms.roomWidth; x += rooms.stepX) {
+                for (let y = rooms.startY; y < mapDef.height - rooms.roomHeight; y += rooms.stepY) {
+                    // Clear room interior
+                    for (let rx = x; rx < x + rooms.roomWidth && rx < mapDef.width; rx++) {
+                        for (let ry = y; ry < y + rooms.roomHeight && ry < mapDef.height; ry++) {
+                            this.mission.tiles[ry][rx] = 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add corridors
+        if (gen.corridors) {
+            gen.corridors.forEach(corridor => {
+                if (corridor.type === 'horizontal') {
+                    for (let y = corridor.startY; y <= corridor.endY && y < mapDef.height; y += corridor.stepY) {
+                        for (let x = 0; x < mapDef.width; x++) {
+                            for (let w = 0; w < corridor.width && y + w < mapDef.height; w++) {
+                                this.mission.tiles[y + w][x] = 0;
+                            }
+                        }
+                    }
+                } else if (corridor.type === 'vertical') {
+                    for (let x = corridor.startX; x <= corridor.endX && x < mapDef.width; x += corridor.stepX) {
+                        for (let y = 0; y < mapDef.height; y++) {
+                            for (let w = 0; w < corridor.width && x + w < mapDef.width; w++) {
+                                this.mission.tiles[y][x + w] = 0;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Clear specific areas
+        if (gen.clearAreas) {
+            gen.clearAreas.forEach(area => {
+                for (let x = area.x1; x <= area.x2 && x < mapDef.width; x++) {
+                    for (let y = area.y1; y <= area.y2 && y < mapDef.height; y++) {
+                        this.mission.tiles[y][x] = 0;
+                    }
+                }
+            });
+        }
+
+        // Industrial map generation
+        if (gen.docks) {
+            gen.docks.forEach(dock => {
+                for (let x = dock.x1; x <= dock.x2 && x < mapDef.width; x++) {
+                    for (let y = dock.y1; y <= dock.y2 && y < mapDef.height; y++) {
+                        this.mission.tiles[y][x] = 0;
+                    }
+                }
+            });
+        }
+
+        // Residential map buildings
+        if (gen.buildings) {
+            gen.buildings.forEach(building => {
+                for (let x = building.x; x < building.x + building.width && x < mapDef.width; x++) {
+                    for (let y = building.y; y < building.y + building.height && y < mapDef.height; y++) {
+                        this.mission.tiles[y][x] = 1; // Buildings are walls
+                    }
+                }
+            });
+        }
+
+        // Fortress map courtyards
+        if (gen.courtyards) {
+            gen.courtyards.forEach(court => {
+                for (let x = court.x1; x <= court.x2 && x < mapDef.width; x++) {
+                    for (let y = court.y1; y <= court.y2 && y < mapDef.height; y++) {
+                        this.mission.tiles[y][x] = 0;
+                    }
+                }
+            });
+        }
+
+        // Clear spawn and extraction areas
+        if (mapDef.spawn) {
+            for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    const y = mapDef.spawn.y + dy;
+                    const x = mapDef.spawn.x + dx;
+                    if (y >= 0 && y < mapDef.height && x >= 0 && x < mapDef.width) {
+                        this.mission.tiles[y][x] = 0;
+                    }
+                }
+            }
+        }
+
+        if (mapDef.extraction) {
+            for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    const y = mapDef.extraction.y + dy;
+                    const x = mapDef.extraction.x + dx;
+                    if (y >= 0 && y < mapDef.height && x >= 0 && x < mapDef.width) {
+                        this.mission.tiles[y][x] = 0;
+                    }
+                }
+            }
+        }
+
+        console.log('Generated map from embedded definition:', mapDef.width + 'x' + mapDef.height);
+    }
 }
 
 // Initialize editor when page loads
 let editor;
 window.addEventListener('DOMContentLoaded', () => {
-    editor = new MissionEditor();
+    // Wait a bit for campaign missions to load
+    setTimeout(() => {
+        // Initialize global CAMPAIGN_MISSIONS if not already
+        window.CAMPAIGN_MISSIONS = window.CAMPAIGN_MISSIONS || {};
+
+        editor = new MissionEditor();
+
+        // Check if missions loaded
+        console.log('Campaign missions loaded:', Object.keys(window.CAMPAIGN_MISSIONS || {}));
+    }, 100);
 });

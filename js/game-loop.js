@@ -231,8 +231,19 @@ CyberOpsGame.prototype.update = function() {
                 if (wpDist < 0.5) {
                     // Reached waypoint, remove it and move to next
                     waypoints.shift();
+
+                    // Update the main waypoints array reference
+                    this.agentWaypoints[agent.id] = waypoints;
+
                     if (agent.selected) {
                         console.log(`✅ ${agent.name} reached waypoint, ${waypoints.length} remaining`);
+                    }
+
+                    // If there are more waypoints, update target to next one
+                    if (waypoints.length > 0) {
+                        agent.targetX = waypoints[0].x;
+                        agent.targetY = waypoints[0].y;
+                        console.log(`📍 Moving to next waypoint: (${waypoints[0].x.toFixed(1)}, ${waypoints[0].y.toFixed(1)})`);
                     }
                 }
             }

@@ -317,13 +317,24 @@ CyberOpsGame.prototype.initMission = function() {
         }
 
         // Generate map based on mission map type
-        // Handle both old format (string) and new format (object with type and useDeclarativeMap)
-        if (typeof this.currentMission.map === 'object' && this.currentMission.map.useDeclarativeMap && typeof generateMapFromDefinition !== 'undefined') {
-            // Use declarative map system for new campaign missions
-            this.map = generateMapFromDefinition(this.currentMission.map.type);
-            console.log(`📍 Generated declarative map: ${this.currentMission.map.type} (${this.map.width}x${this.map.height})`);
+        // Handle both old format (string) and new format (object with embedded data)
+        if (typeof this.currentMission.map === 'object') {
+            if (this.currentMission.map.embedded && this.loadMapFromEmbeddedTiles) {
+                // Mission has embedded tiles (new format) - load them directly
+                console.log('🗺️ Loading embedded tiles from mission');
+                this.map = this.loadMapFromEmbeddedTiles(this.currentMission.map);
+                console.log(`📍 Loaded embedded map: ${this.currentMission.map.type} (${this.map.width}x${this.map.height})`);
+            } else if (this.currentMission.map.generation && this.generateMapFromEmbeddedDefinition) {
+                // Mission has generation rules (old format) - generate from rules
+                console.log('🗺️ Generating map from rules');
+                this.map = this.generateMapFromEmbeddedDefinition(this.currentMission.map);
+                console.log(`📍 Generated map: ${this.currentMission.map.type} (${this.map.width}x${this.map.height})`);
+            } else {
+                // Use procedural generation
+                this.map = this.generateMapFromType(this.currentMission.map.type || this.currentMission.map);
+            }
         } else {
-            // Use procedural generation for legacy missions
+            // Use procedural generation for legacy missions with string map type
             this.map = this.generateMapFromType(this.currentMission.map);
         }
 
@@ -974,6 +985,17 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                     enemy.health -= 50;
                     if (enemy.health <= 0) {
                         enemy.alive = false;
+                        this.totalEnemiesDefeated++;
+
+                        // Track enemy elimination for mission objectives
+                        if (this.onEnemyEliminated) {
+                            this.onEnemyEliminated(enemy);
+                        } else {
+                            // Fallback tracking
+                            this.enemiesKilledThisMission = (this.enemiesKilledThisMission || 0) + 1;
+                        }
+
+                        console.log(`💥 Grenade killed enemy at (${enemy.x}, ${enemy.y})`);
                     }
                 }
             });

@@ -28,6 +28,12 @@
                     "filename": "act1/main-01-003.js",
                     "name": "Industrial Sabotage",
                     "description": "Infiltrate industrial facility and sabotage critical infrastructure"
+                },
+                {
+                    "id": "main-01-004",
+                    "filename": "act1/main-01-004.js",
+                    "name": "Stealth Recon",
+                    "description": "Complete reconnaissance without being detected"
                 }
             ]
         },

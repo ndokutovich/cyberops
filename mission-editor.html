@@ -296,9 +296,22 @@
     <!-- File Input for Loading -->
     <input type="file" id="file-input" accept=".json" style="display:none;">
 
-    <!-- Load game data files -->
-    <script src="js/game-missions-data.js"></script>
-    <script src="js/game-maps-data.js"></script>
+    <!-- Initialize CAMPAIGN_MISSIONS global -->
+    <script>
+        window.CAMPAIGN_MISSIONS = window.CAMPAIGN_MISSIONS || {};
+    </script>
+
+    <!-- Load campaign system and missions -->
+    <script src="js/campaign-system.js"></script>
+    <script src="js/mission-loader.js"></script>
+
+    <!-- Load all campaign missions -->
+    <script src="campaigns/main/act1/main-01-001.js"></script>
+    <script src="campaigns/main/act1/main-01-002.js"></script>
+    <script src="campaigns/main/act1/main-01-003.js"></script>
+    <script src="campaigns/main/act2/main-02-001.js"></script>
+    <script src="campaigns/main/act2/main-02-002.js"></script>
+
     <script src="mission-editor.js"></script>
 </body>
 </html>

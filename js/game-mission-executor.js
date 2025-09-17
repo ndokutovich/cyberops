@@ -127,10 +127,28 @@ CyberOpsGame.prototype.generateMapWithObjects = function(mapDef) {
         if (mapDef.customData) {
             console.log('🗺️ Loading custom map from editor');
             this.loadCustomMapFromEditor(mapDef.customData);
-        } else if (mapDef.useDeclarativeMap && typeof generateMapFromDefinition !== 'undefined') {
-            // Use the new declarative map system
-            this.map = generateMapFromDefinition(mapDef.type);
-            console.log(`📍 Generated declarative map: ${mapDef.type} (${this.map.width}x${this.map.height})`);
+        } else if (mapDef.embedded) {
+            // Mission has embedded tile data (new format)
+            console.log(`🗺️ Loading embedded tiles for: ${mapDef.name || mapDef.type}`);
+            this.map = this.loadMapFromEmbeddedTiles(mapDef);
+            if (!this.map || !this.map.tiles) {
+                console.error('❌ Failed to load embedded tiles!');
+                console.error('Map object:', this.map);
+            } else {
+                console.log(`📍 Loaded embedded map: ${mapDef.type} (${this.map.width}x${this.map.height})`);
+                console.log(`   Tiles array: ${this.map.tiles.length} rows`);
+            }
+        } else if (mapDef.generation) {
+            // Mission has generation rules (old format)
+            console.log(`🗺️ Generating map from rules: ${mapDef.name || mapDef.type}`);
+            this.map = this.generateMapFromEmbeddedDefinition(mapDef);
+            if (!this.map || !this.map.tiles) {
+                console.error('❌ Failed to generate map from definition!');
+                console.error('Map object:', this.map);
+            } else {
+                console.log(`📍 Generated map: ${mapDef.type} (${this.map.width}x${this.map.height})`);
+                console.log(`   Tiles array: ${this.map.tiles.length} rows`);
+            }
         } else {
             // Fall back to original procedural generation
             console.log(`⚠️ Falling back to procedural generation for type: ${mapDef.type}`);
@@ -938,4 +956,425 @@ CyberOpsGame.prototype.loadCustomMapFromEditor = function(customData) {
         terminals: this.map.terminals.length,
         items: this.map.items.length
     });
+};
+
+// Load map from embedded tiles (new format)
+CyberOpsGame.prototype.loadMapFromEmbeddedTiles = function(mapDef) {
+    console.log('🔧 Loading map from embedded tiles');
+    console.log('   Map definition:', {
+        width: mapDef.width,
+        height: mapDef.height,
+        hasEmbedded: !!mapDef.embedded,
+        type: mapDef.type
+    });
+
+    const map = {
+        width: mapDef.width,
+        height: mapDef.height,
+        spawn: mapDef.embedded.spawn || mapDef.spawn,
+        extraction: mapDef.embedded.extraction || mapDef.extraction,
+        tiles: [],
+        items: [],
+        doors: mapDef.embedded.doors || mapDef.doors || [],
+        terminals: [],
+        coverPositions: mapDef.embedded.coverCount || mapDef.coverPositions || 0,
+        enemySpawns: mapDef.enemySpawns || []
+    };
+
+    // Parse embedded tiles from 2D array format
+    const tilesData = mapDef.embedded.tiles;
+
+    // Check if tiles are in 2D string array format (new efficient format)
+    if (typeof tilesData[0] === 'string') {
+        console.log('   Using efficient string-based tile format');
+
+        // Decode character-based tile format
+        const tileMap = {
+            '#': 1,  // wall
+            '.': 0,  // floor
+            'D': 0,  // door (walkable)
+            'W': 1,  // window (blocks)
+            'T': 0,  // terminal (walkable)
+            'C': 0,  // cover (walkable)
+            'E': 0,  // explosive (walkable)
+            'G': 0,  // gate (walkable initially)
+            'S': 0   // switch (walkable)
+        };
+
+        for (let y = 0; y < mapDef.height; y++) {
+            map.tiles[y] = [];
+            const row = tilesData[y] || '';
+            for (let x = 0; x < mapDef.width; x++) {
+                const char = row[x] || '.';
+                map.tiles[y][x] = tileMap[char] !== undefined ? tileMap[char] : 0;
+            }
+        }
+    } else {
+        // Handle old format or initialize as floor
+        for (let y = 0; y < mapDef.height; y++) {
+            map.tiles[y] = [];
+            for (let x = 0; x < mapDef.width; x++) {
+                map.tiles[y][x] = 0;
+            }
+        }
+
+        // Apply custom tiles if in old format
+        if (mapDef.embedded && mapDef.embedded.customTiles) {
+            console.log(`   Applying ${mapDef.embedded.customTiles.length} custom tiles`);
+            mapDef.embedded.customTiles.forEach(tile => {
+                if (tile.y >= 0 && tile.y < mapDef.height &&
+                    tile.x >= 0 && tile.x < mapDef.width) {
+                    map.tiles[tile.y][tile.x] = tile.type;
+                }
+            });
+        }
+    }
+
+    // Add items from embedded data (terminals, explosives, etc)
+    if (mapDef.embedded.items) {
+        mapDef.embedded.items.forEach(item => {
+            if (item.type === 'terminal') {
+                map.terminals.push({
+                    x: item.x,
+                    y: item.y,
+                    hacked: false,
+                    id: item.id
+                });
+            }
+            // Store other items too
+            map.items.push(item);
+        });
+    }
+
+    console.log('✅ Map loaded from embedded tiles');
+    return map;
+};
+
+// Generate map from embedded mission definition (old format with generation rules)
+CyberOpsGame.prototype.generateMapFromEmbeddedDefinition = function(mapDef) {
+    console.log('🔧 Starting map generation from embedded definition');
+    console.log('   Map definition:', {
+        width: mapDef.width,
+        height: mapDef.height,
+        hasGeneration: !!mapDef.generation,
+        type: mapDef.type
+    });
+
+    const map = {
+        width: mapDef.width,
+        height: mapDef.height,
+        spawn: mapDef.spawn,
+        extraction: mapDef.extraction,
+        tiles: [],
+        items: [],
+        doors: mapDef.doors || [],
+        terminals: mapDef.terminals || [],
+        explosiveTargets: mapDef.explosiveTargets || [],
+        gates: mapDef.gates || [],
+        switches: mapDef.switches || [],
+        turrets: mapDef.turrets || [],
+        targets: mapDef.targets || [],
+        civilians: mapDef.civilians || [],
+        hazards: mapDef.hazards || [],
+        collectables: mapDef.collectables || [],
+        boss: mapDef.boss || null,
+        coverPositions: mapDef.coverPositions || 60,
+        enemySpawns: mapDef.enemySpawns || []
+    };
+
+    // Initialize tiles array
+    for (let y = 0; y < map.height; y++) {
+        map.tiles[y] = [];
+        for (let x = 0; x < map.width; x++) {
+            map.tiles[y][x] = 0; // Default to walkable
+        }
+    }
+
+    const gen = mapDef.generation;
+    if (!gen) {
+        console.error('No generation rules in embedded map definition');
+        return map;
+    }
+
+    // Set base tile type
+    if (gen.baseType === 'walls') {
+        // Fill with walls
+        for (let y = 0; y < map.height; y++) {
+            for (let x = 0; x < map.width; x++) {
+                map.tiles[y][x] = 1;
+            }
+        }
+    }
+
+    // Add borders if specified
+    if (gen.borders) {
+        for (let x = 0; x < map.width; x++) {
+            map.tiles[0][x] = 1;
+            map.tiles[map.height - 1][x] = 1;
+        }
+        for (let y = 0; y < map.height; y++) {
+            map.tiles[y][0] = 1;
+            map.tiles[y][map.width - 1] = 1;
+        }
+    }
+
+    // Generate grid-based rooms (corporate, government)
+    if (gen.rooms && gen.rooms.type === 'grid') {
+        const rooms = gen.rooms;
+        for (let x = rooms.startX; x < map.width - rooms.roomWidth; x += rooms.stepX) {
+            for (let y = rooms.startY; y < map.height - rooms.roomHeight; y += rooms.stepY) {
+                // Clear room interior
+                for (let rx = x; rx < x + rooms.roomWidth && rx < map.width; rx++) {
+                    for (let ry = y; ry < y + rooms.roomHeight && ry < map.height; ry++) {
+                        map.tiles[ry][rx] = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    // Add corridors
+    if (gen.corridors) {
+        gen.corridors.forEach(corridor => {
+            if (corridor.type === 'horizontal') {
+                for (let y = corridor.startY; y <= corridor.endY && y < map.height; y += corridor.stepY) {
+                    for (let x = 0; x < map.width; x++) {
+                        for (let w = 0; w < corridor.width && y + w < map.height; w++) {
+                            map.tiles[y + w][x] = 0;
+                        }
+                    }
+                }
+            } else if (corridor.type === 'vertical') {
+                for (let x = corridor.startX; x <= corridor.endX && x < map.width; x += corridor.stepX) {
+                    for (let y = 0; y < map.height; y++) {
+                        for (let w = 0; w < corridor.width && x + w < map.width; w++) {
+                            map.tiles[y][x + w] = 0;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Clear specific areas
+    if (gen.clearAreas) {
+        gen.clearAreas.forEach(area => {
+            for (let x = area.x1; x <= area.x2 && x < map.width; x++) {
+                for (let y = area.y1; y <= area.y2 && y < map.height; y++) {
+                    map.tiles[y][x] = 0;
+                }
+            }
+        });
+    }
+
+    // Industrial map generation
+    if (gen.docks) {
+        gen.docks.forEach(dock => {
+            for (let x = dock.x1; x <= dock.x2 && x < map.width; x++) {
+                for (let y = dock.y1; y <= dock.y2 && y < map.height; y++) {
+                    map.tiles[y][x] = 0;
+                }
+            }
+        });
+    }
+
+    if (gen.catwalks) {
+        gen.catwalks.forEach(walk => {
+            for (let x = walk.x1; x <= walk.x2 && x < map.width; x++) {
+                for (let y = walk.y1; y <= walk.y2 && y < map.height; y++) {
+                    map.tiles[y][x] = 0;
+                }
+            }
+        });
+    }
+
+    if (gen.assemblyLines) {
+        gen.assemblyLines.forEach(line => {
+            for (let x = line.x; x < line.x + line.width && x < map.width; x++) {
+                for (let y = line.y; y < line.y + line.height && y < map.height; y++) {
+                    map.tiles[y][x] = 1; // Assembly lines are obstacles
+                }
+            }
+        });
+    }
+
+    if (gen.controlRooms) {
+        gen.controlRooms.forEach(room => {
+            // Clear room interior
+            for (let x = room.x + 1; x < room.x + room.width - 1 && x < map.width; x++) {
+                for (let y = room.y + 1; y < room.y + room.height - 1 && y < map.height; y++) {
+                    map.tiles[y][x] = 0;
+                }
+            }
+        });
+    }
+
+    // Residential map generation
+    if (gen.buildings) {
+        gen.buildings.forEach(building => {
+            for (let x = building.x; x < building.x + building.width && x < map.width; x++) {
+                for (let y = building.y; y < building.y + building.height && y < map.height; y++) {
+                    map.tiles[y][x] = 1; // Buildings are walls
+                }
+            }
+        });
+    }
+
+    if (gen.park) {
+        const park = gen.park;
+        for (let x = park.x; x < park.x + park.width && x < map.width; x++) {
+            for (let y = park.y; y < park.y + park.height && y < map.height; y++) {
+                map.tiles[y][x] = 0;
+            }
+        }
+    }
+
+    if (gen.alleyways) {
+        gen.alleyways.forEach(alley => {
+            for (let x = alley.x1; x <= alley.x2 && x < map.width; x++) {
+                for (let y = alley.y1; y <= alley.y2 && y < map.height; y++) {
+                    map.tiles[y][x] = 0;
+                }
+            }
+        });
+    }
+
+    // Fortress map generation
+    if (gen.courtyards) {
+        gen.courtyards.forEach(court => {
+            for (let x = court.x1; x <= court.x2 && x < map.width; x++) {
+                for (let y = court.y1; y <= court.y2 && y < map.height; y++) {
+                    map.tiles[y][x] = 0;
+                }
+            }
+        });
+    }
+
+    if (gen.core) {
+        for (let x = gen.core.x1; x <= gen.core.x2 && x < map.width; x++) {
+            for (let y = gen.core.y1; y <= gen.core.y2 && y < map.height; y++) {
+                map.tiles[y][x] = 0;
+            }
+        }
+    }
+
+    if (gen.gateways) {
+        gen.gateways.forEach(gateway => {
+            for (let x = gateway.x1; x <= gateway.x2 && x < map.width; x++) {
+                for (let y = gateway.y1; y <= gateway.y2 && y < map.height; y++) {
+                    map.tiles[y][x] = 0;
+                }
+            }
+        });
+    }
+
+    if (gen.towers) {
+        gen.towers.forEach(tower => {
+            const r = tower.radius;
+            for (let x = Math.max(0, tower.x - r); x <= Math.min(map.width - 1, tower.x + r); x++) {
+                for (let y = Math.max(0, tower.y - r); y <= Math.min(map.height - 1, tower.y + r); y++) {
+                    const dist = Math.sqrt((x - tower.x) ** 2 + (y - tower.y) ** 2);
+                    if (dist <= r) {
+                        map.tiles[y][x] = 0;
+                    }
+                }
+            }
+        });
+    }
+
+    if (gen.passages) {
+        gen.passages.forEach(passage => {
+            for (let x = passage.x1; x <= passage.x2 && x < map.width; x++) {
+                for (let y = passage.y1; y <= passage.y2 && y < map.height; y++) {
+                    map.tiles[y][x] = 0;
+                }
+            }
+        });
+    }
+
+    // Carve passages around doors to ensure they're accessible
+    if (mapDef.doors) {
+        mapDef.doors.forEach(door => {
+            // Clear the door tile and adjacent tiles
+            map.tiles[door.y][door.x] = 0;
+            if (door.y > 0) map.tiles[door.y - 1][door.x] = 0;
+            if (door.y < map.height - 1) map.tiles[door.y + 1][door.x] = 0;
+            if (door.x > 0) map.tiles[door.y][door.x - 1] = 0;
+            if (door.x < map.width - 1) map.tiles[door.y][door.x + 1] = 0;
+        });
+    }
+
+    // CRITICAL: Clear spawn and extraction areas LAST to override any walls
+    // Clear larger area around spawn point (5x5 area)
+    if (map.spawn) {
+        console.log(`🎯 Clearing spawn area at (${map.spawn.x}, ${map.spawn.y})`);
+        for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+                const y = map.spawn.y + dy;
+                const x = map.spawn.x + dx;
+                if (y >= 0 && y < map.height && x >= 0 && x < map.width) {
+                    map.tiles[y][x] = 0;
+                    // Log what we're clearing
+                    if (Math.abs(dy) <= 1 && Math.abs(dx) <= 1) {
+                        console.log(`  Clearing tile at (${x}, ${y})`);
+                    }
+                }
+            }
+        }
+    }
+
+    // Clear larger area around extraction point (5x5 area)
+    if (map.extraction) {
+        console.log(`🚁 Clearing extraction area at (${map.extraction.x}, ${map.extraction.y})`);
+        for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+                const y = map.extraction.y + dy;
+                const x = map.extraction.x + dx;
+                if (y >= 0 && y < map.height && x >= 0 && x < map.width) {
+                    map.tiles[y][x] = 0;
+                    // Log what we're clearing
+                    if (Math.abs(dy) <= 1 && Math.abs(dx) <= 1) {
+                        console.log(`  Clearing tile at (${x}, ${y})`);
+                    }
+                }
+            }
+        }
+
+        // Double-check extraction point is clear
+        if (map.tiles[map.extraction.y] && map.tiles[map.extraction.y][map.extraction.x] !== 0) {
+            console.error('❌ Extraction point still blocked after clearing!');
+            map.tiles[map.extraction.y][map.extraction.x] = 0;
+        }
+    }
+
+    // Generate cover positions
+    const coverCount = mapDef.coverPositions || 60;
+    for (let i = 0; i < coverCount; i++) {
+        let attempts = 0;
+        while (attempts < 100) {
+            const x = Math.floor(Math.random() * map.width);
+            const y = Math.floor(Math.random() * map.height);
+            if (map.tiles[y][x] === 0) {
+                map.items.push({
+                    type: 'cover',
+                    x: x,
+                    y: y
+                });
+                break;
+            }
+            attempts++;
+        }
+    }
+
+    console.log(`📦 Generated embedded map "${mapDef.name}" (${map.width}x${map.height})`);
+    console.log(`   - Doors: ${map.doors.length}, Terminals: ${map.terminals.length}`);
+    console.log(`   - Enemy spawns: ${map.enemySpawns.length}`);
+    console.log(`   - Tiles array: ${map.tiles ? map.tiles.length + ' rows' : 'MISSING!'}`);
+
+    // Validate tiles array before returning
+    if (!map.tiles || map.tiles.length === 0) {
+        console.error('❌ Map tiles array is missing or empty!');
+    }
+
+    return map;
 };

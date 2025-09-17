@@ -20,7 +20,9 @@
       "Bash(dir:*)",
       "Bash(node:*)",
       "Bash(start mission-editor.html)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(git restore:*)",
+      "Bash(del game-maps-data.js)"
     ],
     "deny": [],
     "ask": []

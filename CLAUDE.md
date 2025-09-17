@@ -162,6 +162,11 @@ All interactions use the H key with context-sensitive behavior:
 
 ## Development Best Practices
 
+### Tooling and Automation
+- **Use Node.js for intermediate tasks**: When generating data, converting formats, or performing batch operations, use Node.js scripts rather than browser-based tools or manual copy-paste approaches
+- **Keep the app as HTML SPA**: The game itself should remain a simple HTML single-page application without any Node.js build process or dependencies
+- **Examples of Node.js tasks**: Map generation, batch file updates, data conversion, validation scripts
+
 ### Module Pattern
 - Use prototype-based inheritance, NOT ES6 classes
 - Functions attached to `CyberOpsGame.prototype`

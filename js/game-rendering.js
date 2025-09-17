@@ -479,8 +479,22 @@ CyberOpsGame.prototype.renderMap = function() {
         //     this._lastFogState = this.fogEnabled;
         // }
 
+        // Safety check for map tiles
+        if (!this.map.tiles || this.map.tiles.length === 0) {
+            console.error('❌ Map tiles not initialized in renderMap!', {
+                map: this.map,
+                hasTiles: !!this.map.tiles,
+                tilesLength: this.map.tiles ? this.map.tiles.length : 0
+            });
+            return;
+        }
+
         for (let y = 0; y < this.map.height; y++) {
             for (let x = 0; x < this.map.width; x++) {
+                if (!this.map.tiles[y]) {
+                    console.error(`❌ Map tiles row ${y} is undefined!`);
+                    continue;
+                }
                 const tile = this.map.tiles[y][x];
                 const isoPos = this.worldToIsometric(x, y);
                 
