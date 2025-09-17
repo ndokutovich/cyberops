@@ -262,13 +262,30 @@ CyberOpsGame.prototype.moveAgentWithPathfinding = function(agent) {
         // Only recalculate path if target changed significantly
         const targetKey = `${Math.floor(agent.targetX)},${Math.floor(agent.targetY)}`;
 
+        // Only recalculate path if destination actually changed
         if (!agent.path || agent.lastTargetKey !== targetKey) {
-            agent.path = this.findPath(agent.x, agent.y, agent.targetX, agent.targetY);
-            agent.lastTargetKey = targetKey;
-            agent.currentPathIndex = 0;
+            // Check if we're already very close to the target (within 1 tile)
+            const distToTarget = Math.sqrt(
+                Math.pow(agent.targetX - agent.x, 2) +
+                Math.pow(agent.targetY - agent.y, 2)
+            );
 
-            if (agent.selected && agent.path) {
-                console.log(`📍 Path calculated for ${agent.name}: ${agent.path.length} waypoints`);
+            // If very close and clicking same area, don't recalculate
+            if (distToTarget < 1 && agent.lastTargetKey === targetKey) {
+                return;
+            }
+
+            const newPath = this.findPath(agent.x, agent.y, agent.targetX, agent.targetY);
+
+            // Only reset if we got a valid new path
+            if (newPath && newPath.length > 0) {
+                agent.path = newPath;
+                agent.lastTargetKey = targetKey;
+                agent.currentPathIndex = 0;
+
+                if (agent.selected) {
+                    console.log(`📍 Path calculated for ${agent.name}: ${agent.path.length} waypoints`);
+                }
             }
         }
 

@@ -16,6 +16,9 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
         document.getElementById('intermissionDialog').classList.remove('show');
         document.getElementById('hudDialog').classList.remove('show');
 
+        // Capture previous screen before updating
+        const previousScreen = this.currentScreen;
+
         // Show hub
         document.getElementById('syndicateHub').style.display = 'flex';
         this.currentScreen = 'hub';
@@ -29,10 +32,15 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
         // Also stop any level music that might be playing
         this.stopLevelMusic();
 
-        // Start menu music
-        if (this.playMainMenuMusic) {
-            console.log('🎵 Starting menu music in hub');
-            this.playMainMenuMusic();
+        // Handle music transition based on where we're coming from
+        if (this.transitionScreenMusic && previousScreen && previousScreen !== 'game') {
+            // Use transition system if coming from another screen (not from mission)
+            console.log(`🎵 Transitioning music from ${previousScreen} to hub`);
+            this.transitionScreenMusic(previousScreen, 'hub');
+        } else if (this.loadScreenMusic) {
+            // Direct load if no previous screen or coming from mission
+            console.log('🎵 Loading hub music');
+            this.loadScreenMusic('hub');
         }
 
         this.updateHubStats();

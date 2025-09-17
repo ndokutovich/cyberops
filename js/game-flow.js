@@ -95,6 +95,10 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
         document.getElementById('missionTitle').textContent = `Mission ${mission.id}: ${mission.title}`;
         document.getElementById('missionDesc').textContent = mission.description;
 
+        // Continue main theme music during briefing (don't change music yet)
+        console.log('🎵 Mission briefing - keeping main theme music playing');
+        // Music will only change when mission actually starts
+
         const objList = document.getElementById('objectivesList');
         objList.innerHTML = '';
         mission.objectives.forEach(obj => {
@@ -225,9 +229,22 @@ CyberOpsGame.prototype.startMission = function() {
         }
 
         // Stop ALL existing music before starting mission
+        console.log('🎵 Stopping all music for mission start');
+
+        // Stop old music systems
         this.stopLevelMusic();
         this.stopMainMenuMusic();
         this.stopCreditsMusic();
+
+        // Stop screen music system
+        if (this.stopScreenMusic) {
+            this.stopScreenMusic();
+        }
+
+        // Also use the comprehensive stop function
+        if (this.stopAllOldMusic) {
+            this.stopAllOldMusic();
+        }
 
         // Also cleanup any existing music system tracks
         if (this.musicSystem && this.cleanupMusicSystem) {

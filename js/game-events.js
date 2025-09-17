@@ -559,18 +559,26 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                         this.agentWaypoints[agent.id] = [];
 
                         if (selectedAgents.length === 1) {
-                            // Single agent movement
-                            agent.targetX = worldPos.x;
-                            agent.targetY = worldPos.y;
-                            console.log(`🚶 TAP MOVEMENT: Moving ${agent.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+                            // Single agent movement - only update if target changed significantly
+                            const targetChanged = !agent.targetX || !agent.targetY ||
+                                                Math.abs(agent.targetX - worldPos.x) > 0.3 ||
+                                                Math.abs(agent.targetY - worldPos.y) > 0.3;
 
-                            // Show coordinates in notification if in debug/pathfinding mode
-                            if (this.showPaths || this.usePathfinding || this.debugMode) {
-                                this.addNotification(`📍 Destination: [${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}]`);
-                                // Also add to event log
-                                if (this.logEvent) {
-                                    this.logEvent(`Agent moving to [${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}]`, 'player');
+                            if (targetChanged) {
+                                agent.targetX = worldPos.x;
+                                agent.targetY = worldPos.y;
+                                console.log(`🚶 TAP MOVEMENT: Moving ${agent.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+
+                                // Show coordinates in notification if in debug/pathfinding mode
+                                if (this.showPaths || this.usePathfinding || this.debugMode) {
+                                    this.addNotification(`📍 Destination: [${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}]`);
+                                    // Also add to event log
+                                    if (this.logEvent) {
+                                        this.logEvent(`Agent moving to [${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}]`, 'player');
+                                    }
                                 }
+                            } else {
+                                console.log(`🔄 Agent already heading to this location`);
                             }
                         } else {
                             // Squad movement in formation
@@ -584,12 +592,23 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                             const formationX = startX + col * spacing;
                             const formationY = startY + row * spacing;
 
+                            let newTargetX, newTargetY;
                             if (this.isWalkable(formationX, formationY)) {
-                                agent.targetX = formationX;
-                                agent.targetY = formationY;
+                                newTargetX = formationX;
+                                newTargetY = formationY;
                             } else {
-                                agent.targetX = worldPos.x;
-                                agent.targetY = worldPos.y;
+                                newTargetX = worldPos.x;
+                                newTargetY = worldPos.y;
+                            }
+
+                            // Only update if target changed significantly
+                            const targetChanged = !agent.targetX || !agent.targetY ||
+                                                Math.abs(agent.targetX - newTargetX) > 0.3 ||
+                                                Math.abs(agent.targetY - newTargetY) > 0.3;
+
+                            if (targetChanged) {
+                                agent.targetX = newTargetX;
+                                agent.targetY = newTargetY;
                             }
                         }
                     }
@@ -604,8 +623,9 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                 }));
 
                 this.showTouchIndicator(x, y);
-                // Play a subtle click/move sound
-                this.playSound('hit', 0.05);
+                // Removed hit sound - doesn't make sense for movement
+                // Could play a movement/click sound here if we had one
+                // this.playSound('move', 0.05);
             } else {
                 console.log(`🚫 Cannot move to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}) - obstacle detected`);
                 // Could show a different indicator for invalid moves

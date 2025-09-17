@@ -498,7 +498,13 @@ CyberOpsGame.prototype.closeIntermissionDialog = function() {
 
 CyberOpsGame.prototype.showGameCompleteScreen = function() {
         // Start credits music when game is completed
-        this.playCreditsMusic();
+        if (this.loadScreenMusic) {
+            console.log('🎵 Loading victory music');
+            this.loadScreenMusic('victory');
+        } else if (this.playCreditsMusic) {
+            // Fallback to old system
+            this.playCreditsMusic();
+        }
         
         // Hide other screens
         document.getElementById('endScreen').style.display = 'none';
@@ -523,11 +529,17 @@ CyberOpsGame.prototype.showGameCompleteScreen = function() {
 CyberOpsGame.prototype.showCredits = function() {
         this.clearDemosceneTimer(); // Clear timer when user takes action
         
-        // Don't restart credits music if it's already playing
+        // Start credits music if not already playing
         if (!this.creditsPlaying) {
-            this.playCreditsMusic();
+            if (this.loadScreenMusic) {
+                console.log('🎵 Loading credits music');
+                this.loadScreenMusic('credits');
+            } else if (this.playCreditsMusic) {
+                // Fallback to old system
+                this.playCreditsMusic();
+            }
         }
-        
+
         document.getElementById('gameCompleteScreen').style.display = 'none';
         document.getElementById('creditsScreen').style.display = 'flex';
         this.currentScreen = 'credits';
@@ -579,11 +591,12 @@ CyberOpsGame.prototype.backToMainMenu = function() {
         this.currentScreen = 'menu';
         this.updateMenuState();
 
-        // Start menu music
-        if (this.playMainMenuMusic) {
-            console.log('🎵 Starting menu music');
-            this.playMainMenuMusic();
+        // Use new screen music system ONLY
+        if (this.loadScreenMusic) {
+            console.log('🎵 Loading menu music');
+            this.loadScreenMusic('menu');
         }
+        // Removed fallback to prevent duplicate audio
 
         // Start demoscene idle timer
         this.startDemosceneIdleTimer();
@@ -836,16 +849,18 @@ CyberOpsGame.prototype.finalizeSplashToMenu = function() {
         // Start demoscene idle timer
         this.startDemosceneIdleTimer();
         
-        // Seek to main menu section if skipped, or let it continue naturally
-        if (this.audioEnabled) {
+        // Handle music transition from splash to menu
+        if (this.transitionScreenMusic) {
+            // Use the new declarative transition system
+            console.log('🎵 Transitioning music from splash to menu');
+            this.transitionScreenMusic('splash', 'menu');
+        } else if (this.audioEnabled) {
+            // Fallback to old system if needed
             if (this.splashSkipped) {
-                // If skipped, seek to 10.7 seconds (main menu section)
                 console.log('Splash skipped - seeking to menu music section');
                 this.playMainMenuMusic();
             } else {
-                // If natural progression, music continues seamlessly without seeking
                 console.log('Natural splash transition - music continues without artifacts');
-                // No currentTime change - avoid audio artifacts from seeking
             }
         }
         

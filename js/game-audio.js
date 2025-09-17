@@ -242,6 +242,14 @@ CyberOpsGame.prototype.playProcedualMusic = function(musicData) {
     
 CyberOpsGame.prototype.playSplashMusic = function() {
         console.log('playSplashMusic called:');
+
+        // REDIRECT TO NEW SCREEN MUSIC SYSTEM
+        if (this.loadScreenMusic) {
+            console.log('🎵 Redirecting to new screen music system for splash');
+            this.loadScreenMusic('splash');
+            return;
+        }
+
         console.log('- audioEnabled:', this.audioEnabled);
         console.log('- gameAudio exists:', !!this.gameAudio);
         console.log('- gameAudio element:', this.gameAudio);
@@ -289,15 +297,23 @@ CyberOpsGame.prototype.stopSplashMusic = function() {
     
 CyberOpsGame.prototype.playMainMenuMusic = function() {
         console.log('playMainMenuMusic called:');
+
+        // REDIRECT TO NEW SCREEN MUSIC SYSTEM
+        if (this.loadScreenMusic) {
+            console.log('🎵 Redirecting to new screen music system for menu');
+            this.loadScreenMusic('menu');
+            return;
+        }
+
         console.log('- audioEnabled:', this.audioEnabled);
         console.log('- gameAudio exists:', !!this.gameAudio);
         console.log('- MUSIC_MENU_START_TIME:', this.MUSIC_MENU_START_TIME);
-        
+
         if (!this.audioEnabled) {
             console.log('Audio not enabled, skipping main menu music');
             return;
         }
-        
+
         if (!this.gameAudio) {
             console.warn('Game audio element not found, falling back to procedural music');
             this.playProceduralMainMenuMusic();
@@ -626,16 +642,23 @@ CyberOpsGame.prototype.generateLevelMusicData = function(levelNumber) {
 
     // Credits Music System
 CyberOpsGame.prototype.playCreditsMusic = function() {
+        // REDIRECT TO NEW SCREEN MUSIC SYSTEM
+        if (this.loadScreenMusic) {
+            console.log('🎵 Redirecting to new screen music system for credits');
+            this.loadScreenMusic('credits');
+            return;
+        }
+
         if (!this.audioEnabled) {
             console.log('Audio not enabled, skipping credits music');
             return;
         }
-        
+
         if (this.creditsPlaying) {
             console.log('Credits music already playing, not restarting');
             return; // Don't restart if already playing
         }
-        
+
         console.log('Starting credits music...');
         console.log('- creditsAudio exists:', !!this.creditsAudio);
         console.log('- creditsAudio element:', this.creditsAudio);

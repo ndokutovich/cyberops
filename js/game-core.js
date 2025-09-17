@@ -174,6 +174,12 @@ class CyberOpsGame {
             this.initMissions();
         }
 
+        // Initialize screen music system
+        console.log('🎵 Initializing screen music system...');
+        if (this.initScreenMusicSystem) {
+            this.initScreenMusicSystem();
+        }
+
         console.log('✅ All systems initialized');
 
         // Initialize equipment system
