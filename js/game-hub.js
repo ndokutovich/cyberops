@@ -19,12 +19,22 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
         // Show hub
         document.getElementById('syndicateHub').style.display = 'flex';
         this.currentScreen = 'hub';
-        
-        // Log music continuation in hub
-        if (this.currentLevelMusic) {
-            console.log(`🎵 Level ${this.currentLevelMusic} music continues playing in Syndicate Hub`);
+
+        // Stop mission music and cleanup music system
+        if (this.musicSystem && this.cleanupMusicSystem) {
+            console.log('🛑 Stopping mission music when returning to hub');
+            this.cleanupMusicSystem();
         }
-        
+
+        // Also stop any level music that might be playing
+        this.stopLevelMusic();
+
+        // Start menu music
+        if (this.playMainMenuMusic) {
+            console.log('🎵 Starting menu music in hub');
+            this.playMainMenuMusic();
+        }
+
         this.updateHubStats();
 }
     

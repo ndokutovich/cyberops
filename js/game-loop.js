@@ -20,6 +20,11 @@ CyberOpsGame.prototype.gameLoop = function() {
 
             // Check for nearby enemies and auto-slowdown
             this.checkAutoSlowdown();
+
+            // Update music system based on game state
+            if (this.musicSystem && this.musicSystem.config) {
+                this.updateMusicState();
+            }
         }
 
         if (this.currentScreen === 'game') {
@@ -671,8 +676,11 @@ CyberOpsGame.prototype.checkExtractionPoint = function() {
 }
 
 CyberOpsGame.prototype.endMission = function(victory) {
-        // Keep level music playing until next mission starts
-        console.log('🎵 Level music continues after mission end');
+        // Clean up music system but keep music playing
+        if (this.musicSystem && victory) {
+            this.playVictoryMusic();
+        }
+        console.log('🎵 Music continues after mission end');
 
         this.isPaused = true;
 

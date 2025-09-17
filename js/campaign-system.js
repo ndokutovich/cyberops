@@ -27,8 +27,9 @@ const CampaignSystem = {
         try {
             await this.loadCampaignIndex();
         } catch (e) {
-            console.log('No campaign index found, scanning for campaigns...');
-            await this.scanForCampaigns();
+            console.log('No campaign index found, using hardcoded campaigns...');
+            // Don't scan for files - use known campaign structure
+            this.loadHardcodedCampaigns();
         }
     },
 
@@ -53,7 +54,41 @@ const CampaignSystem = {
         });
     },
 
-    // Scan for campaign directories
+    // Load hardcoded campaign structure (no file scanning)
+    loadHardcodedCampaigns() {
+        this.campaigns = {
+            'main': {
+                id: 'main',
+                name: 'Main Campaign',
+                description: 'The primary CyberOps storyline',
+                folder: 'main',
+                acts: [
+                    {
+                        id: '01',
+                        name: 'Act 1',
+                        missions: [
+                            { id: '001', filename: 'act1/main-01-001', name: 'Corporate Infiltration' },
+                            { id: '002', filename: 'act1/main-01-002', name: 'Network Breach' },
+                            { id: '003', filename: 'act1/main-01-003', name: 'Industrial Sabotage' },
+                            { id: '004', filename: 'act1/main-01-004', name: 'Stealth Recon' }
+                        ]
+                    },
+                    {
+                        id: '02',
+                        name: 'Act 2',
+                        missions: [
+                            { id: '001', filename: 'act2/main-02-001', name: 'Assassination Contract' },
+                            { id: '002', filename: 'act2/main-02-002', name: 'Final Convergence' }
+                        ]
+                    }
+                ]
+            }
+        };
+
+        console.log('✅ Loaded hardcoded campaign structure');
+    },
+
+    // Scan for campaign directories (DEPRECATED - causes 404 errors)
     async scanForCampaigns() {
         // Default campaign structure if no index found
         this.campaigns = {
@@ -161,11 +196,12 @@ const CampaignSystem = {
     // Load a specific mission
     async loadMission(campaignId, actId, missionId) {
         const filename = `${campaignId}-${actId}-${missionId}`;
+        const actFolder = `act${parseInt(actId)}`;
         console.log(`📋 Loading mission: ${filename}`);
 
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = `campaigns/${campaignId}/${filename}.js`;
+            script.src = `campaigns/${campaignId}/${actFolder}/${filename}.js`;
 
             window.REGISTER_MISSION = (missionData) => {
                 // Add campaign/act context

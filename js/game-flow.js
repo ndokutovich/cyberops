@@ -219,9 +219,52 @@ CyberOpsGame.prototype.startMission = function() {
         this.currentScreen = 'game';
         this.initMission();
 
-        // Start level-specific music
-        const levelNumber = (this.currentMissionIndex % 5) + 1; // Cycle through 1-5 for any number of missions
-        this.playLevelMusic(levelNumber);
+        // Initialize music system if needed
+        if (!this.musicSystem) {
+            this.initMusicSystem();
+        }
+
+        // Stop ALL existing music before starting mission
+        this.stopLevelMusic();
+        this.stopMainMenuMusic();
+        this.stopCreditsMusic();
+
+        // Also cleanup any existing music system tracks
+        if (this.musicSystem && this.cleanupMusicSystem) {
+            this.cleanupMusicSystem();
+            // Reinitialize after cleanup
+            this.initMusicSystem();
+        }
+
+        // Load mission-specific music configuration
+        if (this.currentMissionDef) {
+            // Add default music config if mission doesn't have one
+            if (!this.currentMissionDef.music) {
+                // Map mission index to the appropriate level music
+                const missionToMusic = {
+                    0: 'main-01-001',  // Mission 1 -> Level 1 music
+                    1: 'main-01-002',  // Mission 2 -> Level 2 music
+                    2: 'main-01-003',  // Mission 3 -> Level 3 music
+                    3: 'main-01-004',  // Mission 4 -> Level 4 music
+                    4: 'main-02-001',  // Mission 5 -> Level 5 music
+                    5: 'main-02-002'   // Mission 6 -> Level 1 music
+                };
+
+                const missionKey = missionToMusic[this.currentMissionIndex] || 'main-01-001';
+
+                this.currentMissionDef.music = {
+                    ambient: {
+                        file: `music/missions/${missionKey}/ambient.mp3`,
+                        volume: 0.6,
+                        loop: true,
+                        fadeIn: 2000
+                    }
+                };
+            }
+
+            console.log('🎵 Loading mission music configuration');
+            this.loadMissionMusic(this.currentMissionDef);
+        }
 }
 
 CyberOpsGame.prototype.initMission = function() {

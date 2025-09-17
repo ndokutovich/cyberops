@@ -559,6 +559,11 @@ CyberOpsGame.prototype.backToMainMenu = function() {
         this.stopLevelMusic();
         this.stopCreditsMusic();
 
+        // Also cleanup music system if active
+        if (this.musicSystem && this.cleanupMusicSystem) {
+            this.cleanupMusicSystem();
+        }
+
         // Hide all screens and dialogs
         document.getElementById('gameCompleteScreen').style.display = 'none';
         document.getElementById('creditsScreen').style.display = 'none';
@@ -573,7 +578,13 @@ CyberOpsGame.prototype.backToMainMenu = function() {
         document.getElementById('mainMenu').style.display = 'flex';
         this.currentScreen = 'menu';
         this.updateMenuState();
-        
+
+        // Start menu music
+        if (this.playMainMenuMusic) {
+            console.log('🎵 Starting menu music');
+            this.playMainMenuMusic();
+        }
+
         // Start demoscene idle timer
         this.startDemosceneIdleTimer();
 }

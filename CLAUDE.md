@@ -20,6 +20,7 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-screens.js**: Screen management and transitions
 - **game-demoscene.js**: Demoscene attract mode
 - **game-audio.js**: Complete audio system
+- **game-music-system.js**: Dynamic multi-track mission music system with event triggers
 - **game-loop.js**: Main game loop and update logic (includes game speed system)
 - **game-rendering.js**: All rendering functions
 - **game-3d.js**: Three.js 3D system with NPC support
@@ -53,13 +54,28 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **lib/three.core.min.js**: Three.js core dependencies
 - **lib/three-loader.js**: Module loader that converts Three.js ES6 module to global scope
 
+### Music Files (music/ directory)
+- **music/global/**: Shared music tracks (menu, credits, fallbacks)
+  - ambient_generic.mp3, menu.mp3, credits.mp3
+- **music/missions/**: Mission-specific music
+  - main-01-001/ambient.mp3 (Level 1 music)
+  - main-01-002/ambient.mp3 (Level 2 music)
+  - main-01-003/ambient.mp3 (Level 3 music)
+  - main-01-004/ambient.mp3 (Level 4 music)
+  - main-02-001/ambient.mp3 (Level 5 music)
+  - main-02-002/ambient.mp3 (Level 1 music reused)
+
 ### Key Systems in CyberOpsGame Class
 
 - **Screen Management**: splash, menu, hub, briefing, loadout, game, victory, defeat screens
 - **Mission System**: Declarative JSON-based missions with dynamic objectives and extraction
 - **Combat System**: Isometric tactical combat with agents, enemies, projectiles, line-of-sight
 - **3D Mode**: Optional Three.js-based 3D view with multiple camera modes, includes NPC rendering
-- **Audio System**: Dynamic music system with level-specific tracks and credits music
+- **Audio System**: Dynamic music system with mission-specific multi-track support
+  - Ambient, combat, stealth, alert, and victory tracks per mission
+  - Event-triggered music changes (objectives, health, timer)
+  - Smooth crossfading between tracks with priority system
+  - Fallback to global tracks if mission tracks unavailable
 - **Resource Management**: Credits, research points, world control percentage
 - **Agent System**: Agent selection, abilities, equipment, movement, and combat
 - **NPC System**: Interactive NPCs with dialog trees, quest system, context-sensitive actions

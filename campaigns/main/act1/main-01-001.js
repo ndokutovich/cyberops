@@ -229,6 +229,17 @@
             experience: 500
         },
 
+        // Music Configuration
+        music: {
+            // Use the existing level 1 music as ambient
+            ambient: {
+                file: "music/missions/main-01-001/ambient.mp3",
+                volume: 0.6,
+                loop: true,
+                fadeIn: 2000
+            }
+        },
+
         // NPCs
         npcs: [
             {
