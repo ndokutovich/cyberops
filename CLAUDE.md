@@ -295,6 +295,83 @@ All interactions use the H key with context-sensitive behavior:
 - **Maintainability**: Clear separation of concerns
 - **Performance**: Smaller files, faster loading
 
+## Mission Editor System
+
+The mission editor (`mission-editor.html` and `mission-editor.js`) provides comprehensive campaign management and map editing capabilities.
+
+### Campaign Management Features
+- **Full CRUD Operations**: Create, Read, Update, Delete for all campaign content types
+- **IndexedDB Persistence**: Campaigns stored in browser storage for seamless switching
+- **Import/Export**: Support for ZIP archives and directory imports
+- **Mission Reordering**: Visual up/down arrows and dedicated reorder dialog
+- **Act Management**: Create/delete acts with descriptive titles (Beginning Operations, Escalation, etc.)
+
+### Key Implementation Details
+- **Unified Mission Loading**: Single flow whether selecting from dropdown or clicking Map Editor button
+- **Mission Dropdown**: Shows current mission in caption ("Current: Mission Name")
+- **Auto-refresh**: Mission list updates automatically after any CRUD operation
+- **Visual Feedback**: Green notification slides when mission loads, dialog auto-closes
+
+### Campaign Storage Architecture
+1. **Loading Priority** (in order):
+   - IndexedDB (last saved campaign)
+   - Window.MAIN_CAMPAIGN_CONTENT (from code)
+   - Default campaign creation
+2. **Mission Sync**: Missions from CAMPAIGN_MISSIONS merged into campaign.missions array
+3. **Persistence**: All changes saved to IndexedDB automatically
+
+### Mission Structure Requirements
+New missions created via editor include:
+- **Embedded map data**: 40x40 starter map with walls
+- **Proper ID format**: `campaign-act-mission` (e.g., main-01-003)
+- **Complete map object**: tiles, spawn, extraction, terminals, etc.
+- **Default objectives**: At least one objective for valid mission
+
+## Lessons Learned from Development
+
+### 1. Async/Await Consistency
+**Issue**: Mixed callback and async patterns causing timing issues
+**Solution**: Use async/await throughout, mark all async functions properly
+```javascript
+// Bad
+function saveCampaign() {
+    this.saveCampaignToDB(campaign);
+}
+
+// Good
+async saveCampaign() {
+    await this.saveCampaignToDB(campaign);
+}
+```
+
+### 2. Global State Synchronization
+**Issue**: CAMPAIGN_MISSIONS and campaign.missions getting out of sync
+**Solution**: Always sync both directions with explicit sync functions
+```javascript
+syncMissionsToGlobal() {
+    window.CAMPAIGN_MISSIONS = {};
+    this.currentCampaign.missions.forEach(m => {
+        window.CAMPAIGN_MISSIONS[m.id] = m;
+    });
+}
+```
+
+### 3. UI State Management
+**Issue**: Dropdown selections resetting after operations
+**Solution**: Preserve selection state, update caption to show current selection
+
+### 4. Data Structure Consistency
+**Issue**: Missions without required embedded map data couldn't load
+**Solution**: Always create complete data structures, even with defaults
+
+### 5. Event Handler Cleanup
+**Issue**: Memory leaks from duplicate event listeners
+**Solution**: Check for existing elements/listeners before adding new ones
+
+### 6. Visual Feedback Importance
+**Issue**: Users uncertain if operations completed
+**Solution**: Add notifications, loading states, and success confirmations
+
 ## Development Best Practices
 
 ### Tooling and Automation
@@ -322,6 +399,47 @@ All interactions use the H key with context-sensitive behavior:
 - Debug flags for pathfinding, vision cones, etc.
 - Comprehensive error messages with context
 - Check console for mission system initialization messages
+
+## Common Pitfalls to Avoid
+
+### 1. Method Name Typos
+**Never** assume method names - always verify:
+- `saveCampaignToDB()` not `saveCampaign()`
+- `refreshMissionList()` not `refresh()` or `update()`
+
+### 2. Missing Async/Await
+**Always** check if a function is async before calling:
+```javascript
+// Will cause errors if function is async
+this.saveCampaignToDB(campaign);
+
+// Correct
+await this.saveCampaignToDB(campaign);
+```
+
+### 3. State Synchronization
+**Always** update all related state when making changes:
+- Update both `campaign.missions` AND `window.CAMPAIGN_MISSIONS`
+- Refresh UI components after data changes
+- Save to IndexedDB after modifications
+
+### 4. Initialization Timing
+**Never** assume components are ready:
+```javascript
+// Bad - may not be initialized
+campaignManager.loadMissions();
+
+// Good - check initialization
+if (campaignManager && campaignManager.isInitialized) {
+    campaignManager.loadMissions();
+}
+```
+
+### 5. UI Refresh Patterns
+**Always** refresh UI after data operations:
+- `loadMissions()` - refresh missions tab
+- `refreshMissionList()` - refresh dropdown
+- `saveCampaignToDB()` - persist changes
 
 ## Common Issues and Solutions
 
