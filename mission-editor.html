@@ -292,44 +292,171 @@
     <!-- File Input for Loading -->
     <input type="file" id="file-input" accept=".json" style="display:none;">
 
-    <!-- Campaign Configuration Dialog -->
-    <div id="campaign-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000;">
-        <div style="background: #1a1a2e; border: 2px solid #0a0e27; border-radius: 8px; padding: 20px; max-width: 800px; margin: 50px auto; max-height: 90vh; overflow-y: auto;">
-            <h2 style="color: #00ff41; margin-bottom: 20px;">Campaign Configuration</h2>
+    <!-- Campaign Management Dialog -->
+    <div id="campaign-dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000;">
+        <div style="background: #1a1a2e; border: 2px solid #00ff41; border-radius: 8px; padding: 20px; max-width: 95%; width: 1200px; margin: 20px auto; max-height: 95vh; overflow-y: auto;">
+            <h2 style="color: #00ff41; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <span>📚 Campaign Management System</span>
+                <button id="campaign-close" style="background: #ff073a; color: white; border: none; padding: 5px 15px; cursor: pointer; border-radius: 4px;">✖ Close</button>
+            </h2>
 
-            <div style="margin-bottom: 20px;">
-                <h3>Campaign Overview</h3>
-                <div id="campaign-overview" style="background: #0a0e27; padding: 10px; border-radius: 4px;">
-                    Loading campaign data...
+            <!-- Tab Navigation -->
+            <div style="display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #00ff41;">
+                <button class="campaign-tab active" data-tab="overview" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Overview</button>
+                <button class="campaign-tab" data-tab="missions" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Missions</button>
+                <button class="campaign-tab" data-tab="agents" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Agents</button>
+                <button class="campaign-tab" data-tab="weapons" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Weapons & Equipment</button>
+                <button class="campaign-tab" data-tab="enemies" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Enemy Types</button>
+                <button class="campaign-tab" data-tab="research" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Research Tree</button>
+                <button class="campaign-tab" data-tab="intel" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Intel & Story</button>
+                <button class="campaign-tab" data-tab="music" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Music & Audio</button>
+            </div>
+
+            <!-- Tab Content Areas -->
+            <div id="campaign-tabs-content">
+                <!-- Overview Tab -->
+                <div id="tab-overview" class="campaign-tab-content" style="display: block;">
+                    <h3>Campaign Management</h3>
+
+                    <!-- Campaign Selector -->
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,255,65,0.1); border: 1px solid #00ff41; border-radius: 5px;">
+                        <h4 style="color: #00ff41; margin-top: 0;">📚 Campaign Library</h4>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="campaign-selector" style="flex: 1; background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 8px; font-size: 14px;">
+                                <option value="">Loading campaigns...</option>
+                            </select>
+                            <button id="campaign-switch" style="padding: 8px 15px; background: #00ffff; color: #1a1a2e; border: none; cursor: pointer; border-radius: 4px;">🔄 Load Campaign</button>
+                            <button id="campaign-delete" style="padding: 8px 15px; background: #ff073a; color: white; border: none; cursor: pointer; border-radius: 4px;">🗑️ Delete</button>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4>Campaign Actions</h4>
+                            <button id="campaign-new" style="display: block; width: 100%; margin: 5px 0; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">🆕 Create New Campaign</button>
+                            <button id="campaign-duplicate" style="display: block; width: 100%; margin: 5px 0; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">📋 Duplicate Current Campaign</button>
+                            <button id="campaign-import-zip" style="display: block; width: 100%; margin: 5px 0; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">📦 Import Campaign (ZIP)</button>
+                            <button id="campaign-import-dir" style="display: block; width: 100%; margin: 5px 0; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">📁 Import Campaign (Folder)</button>
+                            <button id="campaign-export-zip" style="display: block; width: 100%; margin: 5px 0; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">💾 Export Campaign (ZIP)</button>
+                        </div>
+                        <div>
+                            <h4>Basic Settings</h4>
+                            <label style="display: block; margin: 10px 0;">
+                                Campaign ID: <input type="text" id="campaign-id-edit" value="main" style="width: 100%; background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 5px;">
+                            </label>
+                            <label style="display: block; margin: 10px 0;">
+                                Campaign Name: <input type="text" id="campaign-name-edit" value="Corporate Domination" style="width: 100%; background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 5px;">
+                            </label>
+                            <label style="display: block; margin: 10px 0;">
+                                Description: <textarea id="campaign-desc" rows="3" style="width: 100%; background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 5px;">Take control of the city's corporate infrastructure</textarea>
+                            </label>
+                            <button id="campaign-save-overview" style="display: block; width: 100%; margin: 10px 0; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer; font-weight: bold;">💾 Save Campaign to Storage</button>
+                            <div id="save-status" style="margin: 5px 0; padding: 5px; color: #88ff88; text-align: center; font-size: 12px;"></div>
+                        </div>
+                    </div>
+
+                    <h4>Starting Resources</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                        <label>Credits: <input type="number" id="start-credits" value="10000" style="width: 100%; background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 5px;"></label>
+                        <label>Research Points: <input type="number" id="start-research" value="150" style="width: 100%; background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 5px;"></label>
+                        <label>World Control: <input type="number" id="start-control" value="15" style="width: 100%; background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 5px;"></label>
+                    </div>
+                </div>
+
+                <!-- Missions Tab -->
+                <div id="tab-missions" class="campaign-tab-content" style="display: none;">
+                    <h3>Mission Structure</h3>
+
+                    <!-- Mission Controls -->
+                    <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                        <button id="add-mission" style="padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">➕ Add New Mission</button>
+                        <button id="add-act" style="padding: 10px; background: #00ffff; color: #1a1a2e; border: none; cursor: pointer;">📁 Add New Act</button>
+                        <button id="reorder-missions" style="padding: 10px; background: #ff9800; color: white; border: none; cursor: pointer;">🔄 Reorder Missions</button>
+                        <button id="import-mission-file" style="padding: 10px; background: #9c27b0; color: white; border: none; cursor: pointer;">📥 Import Mission File</button>
+                    </div>
+
+                    <!-- Mission Structure Display -->
+                    <div id="campaign-structure" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 500px; overflow-y: auto;">
+                        <!-- Will be populated with campaign structure -->
+                    </div>
+                </div>
+
+                <!-- Agents Tab -->
+                <div id="tab-agents" class="campaign-tab-content" style="display: none;">
+                    <h3>Campaign Agents</h3>
+                    <button id="add-agent" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">➕ Add New Agent</button>
+                    <div id="agents-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 500px; overflow-y: auto;">
+                        <!-- Will be populated with agents -->
+                    </div>
+                </div>
+
+                <!-- Weapons & Equipment Tab -->
+                <div id="tab-weapons" class="campaign-tab-content" style="display: none;">
+                    <h3>Weapons & Equipment</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4>Weapons</h4>
+                            <button id="add-weapon" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">➕ Add Weapon</button>
+                            <div id="weapons-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 400px; overflow-y: auto;">
+                                <!-- Will be populated with weapons -->
+                            </div>
+                        </div>
+                        <div>
+                            <h4>Equipment</h4>
+                            <button id="add-equipment" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">➕ Add Equipment</button>
+                            <div id="equipment-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 400px; overflow-y: auto;">
+                                <!-- Will be populated with equipment -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enemy Types Tab -->
+                <div id="tab-enemies" class="campaign-tab-content" style="display: none;">
+                    <h3>Enemy Types</h3>
+                    <button id="add-enemy" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">➕ Add Enemy Type</button>
+                    <div id="enemies-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 500px; overflow-y: auto;">
+                        <!-- Will be populated with enemy types -->
+                    </div>
+                </div>
+
+                <!-- Research Tree Tab -->
+                <div id="tab-research" class="campaign-tab-content" style="display: none;">
+                    <h3>Research Tree</h3>
+                    <button id="add-research" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">➕ Add Research Item</button>
+                    <div id="research-tree" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 500px; overflow-y: auto;">
+                        <!-- Will be populated with research tree -->
+                    </div>
+                </div>
+
+                <!-- Intel & Story Tab -->
+                <div id="tab-intel" class="campaign-tab-content" style="display: none;">
+                    <h3>Intel Reports & Story</h3>
+                    <button id="add-intel" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">➕ Add Intel Report</button>
+                    <div id="intel-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 500px; overflow-y: auto;">
+                        <!-- Will be populated with intel reports -->
+                    </div>
+                </div>
+
+                <!-- Music & Audio Tab -->
+                <div id="tab-music" class="campaign-tab-content" style="display: none;">
+                    <h3>Music & Audio Configuration</h3>
+                    <div id="music-config" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 500px; overflow-y: auto;">
+                        <!-- Will be populated with music configuration -->
+                    </div>
                 </div>
             </div>
 
-            <div style="margin-bottom: 20px;">
-                <h3>Mission Structure</h3>
-                <div id="campaign-structure" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 400px; overflow-y: auto;">
-                    <!-- Will be populated with campaign structure -->
-                </div>
-            </div>
-
-            <div style="margin-bottom: 20px;">
-                <h3>Campaign Settings</h3>
-                <label style="display: block; margin: 10px 0;">
-                    Campaign Name: <input type="text" id="campaign-name" value="main" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 5px;">
-                </label>
-                <label style="display: block; margin: 10px 0;">
-                    Total Research Points: <input type="number" id="campaign-research" value="10" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 5px;">
-                </label>
-                <label style="display: block; margin: 10px 0;">
-                    Total Credits Goal: <input type="number" id="campaign-credits" value="50000" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; padding: 5px;">
-                </label>
-            </div>
-
-            <div style="text-align: right;">
-                <button id="campaign-export" style="background: #00ff41; color: #1a1a2e; border: none; padding: 10px 20px; margin: 0 5px; cursor: pointer;">Export Campaign</button>
-                <button id="campaign-close" style="background: #ff073a; color: white; border: none; padding: 10px 20px; margin: 0 5px; cursor: pointer;">Close</button>
+            <!-- Save Changes Button -->
+            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #00ff41;">
+                <button id="campaign-save" style="background: #00ff41; color: #1a1a2e; border: none; padding: 15px 40px; margin: 0 5px; cursor: pointer; font-size: 16px; font-weight: bold;">💾 Save All Changes</button>
             </div>
         </div>
     </div>
+
+    <!-- Hidden file inputs for imports -->
+    <input type="file" id="import-zip-input" accept=".zip" style="display:none;">
+    <input type="file" id="import-dir-input" webkitdirectory directory multiple style="display:none;">
 
     <!-- Initialize CAMPAIGN_MISSIONS global -->
     <script>
