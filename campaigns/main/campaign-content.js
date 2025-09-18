@@ -650,43 +650,84 @@
             effectDuration: 5000 // ms
         },
 
-        // Map type configurations
-        mapTypes: {
-            corporate: {
-                name: 'Corporate',
-                tileSet: 'corporate',
-                ambientLight: '#001133',
-                fogColor: '#000022',
-                musicTrack: 'corporate_ambient'
+        // Music Configuration
+        music: {
+            // Screen music
+            screens: {
+                splash: {
+                    file: 'game-music.mp3',
+                    fallback: 'music/global/menu.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
+                menu: {
+                    file: 'game-music.mp3',
+                    fallback: 'music/global/menu.mp3',
+                    volume: 0.6,
+                    loop: true,
+                    fadeIn: 2000,
+                    startTime: 10.6  // Skip intro when coming from splash
+                },
+                hub: {
+                    file: 'game-music.mp3',
+                    fallback: 'music/global/menu.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1500
+                },
+                credits: {
+                    file: 'game-credits.mp3',
+                    fallback: 'music/global/credits.mp3',
+                    volume: 0.7,
+                    loop: true,
+                    fadeIn: 2000
+                },
+                hallOfGlory: {
+                    file: 'music/screens/memorial.mp3',
+                    fallback: 'music/global/somber.mp3',
+                    volume: 0.3,
+                    loop: true,
+                    fadeIn: 3000
+                }
             },
-            industrial: {
-                name: 'Industrial',
-                tileSet: 'industrial',
-                ambientLight: '#110011',
-                fogColor: '#220011',
-                musicTrack: 'industrial_ambient'
+
+            // Mission music paths
+            missions: {
+                basePath: 'music/missions/',
+                globalPath: 'music/global/',
+
+                // Default tracks for missions without specific music
+                defaults: {
+                    ambient: 'ambient_generic.mp3',
+                    combat: 'combat_generic.mp3',
+                    stealth: 'stealth_generic.mp3',
+                    alert: 'alert_generic.mp3',
+                    victory: 'victory_generic.mp3'
+                },
+
+                // Mission-specific music (by mission ID)
+                specific: {
+                    'main-01-001': { ambient: 'main-01-001/ambient.mp3' },
+                    'main-01-002': { ambient: 'main-01-002/ambient.mp3' },
+                    'main-01-003': { ambient: 'main-01-003/ambient.mp3' },
+                    'main-01-004': { ambient: 'main-01-004/ambient.mp3' },
+                    'main-02-001': { ambient: 'main-02-001/ambient.mp3' },
+                    'main-02-002': { ambient: 'main-02-002/ambient.mp3' }
+                },
+
+                // Music state configuration
+                states: {
+                    ambient: { volume: 0.6, fadeIn: 2000, loop: true, priority: 0 },
+                    stealth: { volume: 0.4, fadeIn: 1500, loop: true, priority: 1 },
+                    combat: { volume: 0.8, fadeIn: 500, loop: true, priority: 2 },
+                    alert: { volume: 0.7, fadeIn: 800, loop: true, priority: 3 },
+                    victory: { volume: 0.8, fadeIn: 500, loop: false, priority: 10 }
+                }
             },
-            government: {
-                name: 'Government',
-                tileSet: 'government',
-                ambientLight: '#003311',
-                fogColor: '#002211',
-                musicTrack: 'government_ambient'
-            },
-            underground: {
-                name: 'Underground',
-                tileSet: 'underground',
-                ambientLight: '#110000',
-                fogColor: '#220000',
-                musicTrack: 'underground_ambient'
-            },
-            fortress: {
-                name: 'Fortress',
-                tileSet: 'fortress',
-                ambientLight: '#000033',
-                fogColor: '#000044',
-                musicTrack: 'fortress_ambient'
-            }
+
+            // Sound effects configuration would go here too
+            // But that's a larger refactor for another time
         }
     };
 

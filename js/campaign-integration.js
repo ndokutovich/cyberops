@@ -154,10 +154,13 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
                 console.log('✅ Loaded gameplay constants');
             }
 
-            // Load map type configurations
-            if (content.mapTypes) {
-                this.mapTypes = content.mapTypes;
-                console.log(`✅ Loaded ${Object.keys(content.mapTypes).length} map type configurations`);
+            // Load music configuration
+            if (content.music) {
+                this.campaignMusic = content.music;
+                console.log('✅ Loaded music configuration');
+
+                // Could update the GAME_MUSIC_CONFIG here if we want to override the hardcoded one
+                // For now, just store it for use by music systems
             }
 
             console.log('✅ Campaign content fully loaded');
