@@ -370,7 +370,15 @@ global: {
 ```
 
 #### Screen Music Configuration
-Each screen can have multiple tracks with transitions:
+Each screen can have multiple tracks with transitions. The music system uses intelligent continuation and conditional timing:
+
+**Critical Music Flow Behavior:**
+1. **Splash Screen**: Plays `game-music.mp3` from 0 seconds
+2. **Menu Screen**:
+   - If splash was SKIPPED → starts at 10.6 seconds (skips intro)
+   - If splash NOT skipped → continues naturally from where splash left off
+3. **Hub Screen**: Continues same music track without restart (type: 'continue')
+
 ```javascript
 screens: {
     splash: {
@@ -381,15 +389,64 @@ screens: {
                 volume: 0.5,
                 loop: true,
                 fadeIn: 1000,
-                startTime: 0  // Conditional start times for splash skip
+                startTime: 0  // Always start from beginning
+            }
+        },
+        events: [{
+            id: 'skip',
+            trigger: 'user_input',
+            action: 'transitionToMenu',
+            markSkipped: true  // Sets splashSkipped flag
+        }],
+        transitions: {
+            toMenu: { type: 'continue' }  // Music continues, doesn't restart
+        }
+    },
+    menu: {
+        tracks: {
+            main: {
+                file: 'game-music.mp3',  // Same file as splash
+                volume: 0.6,
+                loop: true,
+                fadeIn: 2000,
+                startTime: 10.6,  // Skip intro if splash was skipped
+                startTimeCondition: 'splashSkipped'  // ONLY use startTime if condition met
             }
         },
         transitions: {
-            toMenu: { type: 'continue' }  // Seamless continuation
+            toHub: {
+                type: 'continue',  // Continue same music
+                volumeAdjust: 0.8  // Reduce volume in hub
+            }
+        }
+    },
+    hub: {
+        tracks: {
+            ambient: {  // Note: 'ambient' not 'main' for hub
+                file: 'game-music.mp3',
+                volume: 0.5,
+                loop: true,
+                fadeIn: 1500
+                // No startTime - continues from current position
+            },
+            alert: {  // Secondary track for special events
+                file: 'music/screens/hub-alert.mp3',
+                volume: 0.7,
+                loop: false,
+                priority: 2,
+                trigger: 'low_resources'
+            }
         }
     }
 }
 ```
+
+**Important Implementation Notes:**
+- Campaign music config MUST match this exact structure with `tracks` wrapper
+- The `startTimeCondition` is critical for proper skip behavior
+- Hub uses `ambient` track name, not `main`
+- All screens use same `game-music.mp3` for seamless transitions
+- Transition `type: 'continue'` prevents music restart between screens
 
 #### Mission Music Configuration
 Dynamic multi-track system with state-based switching:
