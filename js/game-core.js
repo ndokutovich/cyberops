@@ -10,6 +10,9 @@ class CyberOpsGame {
         // Initialize HUD elements
         this.gameHUD = document.getElementById('gameHUD');
 
+        // Initialize canvas and core game state
+        this.initializeCanvasAndState();
+
         // Enable audio on first user interaction
         this.setupAudioInteraction();
 
@@ -203,6 +206,48 @@ class CyberOpsGame {
             console.log('🔧 Force calling initializeHub() again as emergency fix...');
             this.initializeHub();
         }
+    }
+
+    initializeCanvasAndState() {
+        console.log('🎨 Initializing canvas and game state');
+
+        // Isometric Settings
+        this.tileWidth = 64;
+        this.tileHeight = 32;
+        this.cameraX = 0;
+        this.cameraY = 0;
+        this.zoom = 1;
+
+        // Input State
+        this.touches = {};
+        this.lastTouchDistance = 0;
+        this.isDragging = false;
+        this.mouseDown = false;
+
+        // Game Objects
+        this.agents = [];
+        this.enemies = [];
+        this.projectiles = [];
+        this.effects = [];
+        this.animatingTiles = [];
+
+        // Audio system
+        this.splashSkipped = false;
+        this.audioEnabled = false;
+
+        // Get canvas elements (already set in constructor)
+        // this.canvas and this.ctx already initialized
+
+        // Set initial canvas size
+        this.resizeCanvas();
+
+        // Add resize listener
+        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.resizeCanvas(), 100);
+        });
+
+        console.log('✅ Canvas and game state initialized');
     }
 
     initializeAudio() {
