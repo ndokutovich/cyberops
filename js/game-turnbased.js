@@ -51,12 +51,6 @@ CyberOpsGame.prototype.initTurnBasedMode = function() {
     if (this.logEvent) {
         this.logEvent('Turn-based mode activated', 'combat', true);
     }
-
-    // Show AP display
-    const apDisplay = document.getElementById('tbApDisplay');
-    if (apDisplay) {
-        apDisplay.style.display = 'block';
-    }
 };
 
 // Toggle turn-based mode
@@ -136,19 +130,13 @@ CyberOpsGame.prototype.exitTurnBasedMode = function() {
         agent.targetY = undefined;
     });
 
-    if (this.addNotification) {
-        this.addNotification('Turn-based mode: OFF');
+    if (this.logEvent) {
+        this.logEvent('Turn-based mode: OFF', 'system');
     }
 
     console.log('✅ TBM: Turn-based mode deactivated');
     if (this.logEvent) {
         this.logEvent('Turn-based mode deactivated', 'system');
-    }
-
-    // Hide AP display
-    const apDisplay = document.getElementById('tbApDisplay');
-    if (apDisplay) {
-        apDisplay.style.display = 'none';
     }
 };
 
@@ -212,10 +200,9 @@ CyberOpsGame.prototype.buildTurnQueue = function() {
     this.turnQueue = allUnits;
     this.turnRound++;
 
-    // Add notification and log for new round
+    // Log new round
     if (this.turnRound > 1) {
         const msg = `Round ${this.turnRound} begins!`;
-        if (this.addNotification) this.addNotification(msg);
         if (this.logEvent) this.logEvent(msg, 'combat', true);
     }
 
@@ -246,25 +233,11 @@ CyberOpsGame.prototype.calculateInitiative = function(unit) {
     return initiative;
 };
 
-// Update the dedicated AP display
+// Update the dedicated AP display (removed - now shown in objective tracker)
 CyberOpsGame.prototype.updateTurnBasedAPDisplay = function() {
-    const apValue = document.getElementById('tbApValue');
-    if (!apValue || !this.currentTurnUnit) return;
-
-    const unit = this.currentTurnUnit;
-    const unitName = unit.unit.name || `${unit.type} ${unit.unit.id}`;
-
-    // Update the display
-    apValue.textContent = `${unit.ap} / ${unit.maxAp}`;
-    apValue.style.color = unit.ap > 0 ? '#ffff00' : '#ff4444';
-
-    // Update the title too
-    const apDisplay = document.getElementById('tbApDisplay');
-    if (apDisplay) {
-        const titleDiv = apDisplay.querySelector('div:first-child');
-        if (titleDiv) {
-            titleDiv.textContent = `${unitName.toUpperCase()} AP`;
-        }
+    // AP is now shown in the objective tracker, so just update that
+    if (this.updateObjectiveDisplay) {
+        this.updateObjectiveDisplay();
     }
 };
 
@@ -308,7 +281,6 @@ CyberOpsGame.prototype.startTurn = function(index) {
 
         // Add visual notification and log
         const turnMsg = `${turnData.unit.name}'s turn (${turnData.ap} AP)`;
-        if (this.addNotification) this.addNotification(turnMsg);
         if (this.logEvent) this.logEvent(turnMsg, 'combat');
     }
 
@@ -512,11 +484,11 @@ CyberOpsGame.prototype.handleTurnBasedMovement = function(targetX, targetY) {
     const turnsNeeded = pathSegments.length;
     const apCost = Math.min(actualCost, turnData.ap);
 
-    if (this.addNotification) {
+    if (this.logEvent) {
         if (turnsNeeded === 1) {
-            this.addNotification(`📍 Path planned (${apCost} AP) - Click marker to confirm`);
+            this.logEvent(`Path planned (${apCost} AP) - Click marker to confirm`, 'info');
         } else {
-            this.addNotification(`📍 Path planned (${turnsNeeded} turns) - Click marker to confirm`);
+            this.logEvent(`Path planned (${turnsNeeded} turns) - Click marker to confirm`, 'info');
         }
     }
 
@@ -626,9 +598,7 @@ CyberOpsGame.prototype.executePendingMovement = function() {
         console.log(`🚶 TBM Movement Complete: ${moveMsg}`);
         if (this.logEvent) this.logEvent(moveMsg, 'movement');
 
-        if (this.addNotification) {
-            this.addNotification(`Moved ${currentSegment.cost} tiles (${turnData.ap} AP remaining)`);
-        }
+        // Movement cost already logged above in the main movement message
 
         // Auto-end turn if no AP left
         if (turnData.ap <= 0) {

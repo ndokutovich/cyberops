@@ -860,16 +860,16 @@ CyberOpsGame.prototype.useAbility = function(abilityIndex) {
         // In turn-based mode, check AP and handle differently
         if (this.turnBasedMode) {
             if (!this.currentTurnUnit || this.currentTurnUnit.unit !== agent) {
-                if (this.addNotification) {
-                    this.addNotification("Not this agent's turn!");
+                if (this.logEvent) {
+                    this.logEvent("Not this agent's turn!", 'warning');
                 }
                 return;
             }
 
             const apCost = this.actionCosts ? (this.actionCosts.shoot || 4) : 4;
             if (this.currentTurnUnit.ap < apCost) {
-                if (this.addNotification) {
-                    this.addNotification(`Not enough AP! Need ${apCost} AP`);
+                if (this.logEvent) {
+                    this.logEvent(`Not enough AP! Need ${apCost} AP`, 'warning');
                 }
                 return;
             }
@@ -896,8 +896,8 @@ CyberOpsGame.prototype.useAbility = function(abilityIndex) {
                 if (this.turnBasedMode && this.currentTurnUnit) {
                     const grenadeCost = 6;
                     if (this.currentTurnUnit.ap < grenadeCost) {
-                        if (this.addNotification) {
-                            this.addNotification(`Not enough AP! Need ${grenadeCost} AP`);
+                        if (this.logEvent) {
+                            this.logEvent(`Not enough AP! Need ${grenadeCost} AP`, 'warning');
                         }
                         return;
                     }
@@ -918,8 +918,8 @@ CyberOpsGame.prototype.useAbility = function(abilityIndex) {
                 if (this.turnBasedMode && this.currentTurnUnit) {
                     const hackCost = 3;
                     if (this.currentTurnUnit.ap < hackCost) {
-                        if (this.addNotification) {
-                            this.addNotification(`Not enough AP! Need ${hackCost} AP`);
+                        if (this.logEvent) {
+                            this.logEvent(`Not enough AP! Need ${hackCost} AP`, 'warning');
                         }
                         return;
                     }
@@ -946,8 +946,8 @@ CyberOpsGame.prototype.useAbility = function(abilityIndex) {
                 if (this.turnBasedMode && this.currentTurnUnit) {
                     const shieldCost = 2;
                     if (this.currentTurnUnit.ap < shieldCost) {
-                        if (this.addNotification) {
-                            this.addNotification(`Not enough AP! Need ${shieldCost} AP`);
+                        if (this.logEvent) {
+                            this.logEvent(`Not enough AP! Need ${shieldCost} AP`, 'warning');
                         }
                         return;
                     }

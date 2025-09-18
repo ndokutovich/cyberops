@@ -227,8 +227,8 @@ CyberOpsGame.prototype.setupKeyboardListeners = function() {
 CyberOpsGame.prototype.selectAgentByNumber = function(index) {
     // In turn-based mode, don't allow switching
     if (this.turnBasedMode && this.currentTurnUnit) {
-        if (this.addNotification) {
-            this.addNotification(`Can't switch agents - it's ${this.currentTurnUnit.unit.name}'s turn!`);
+        if (this.logEvent) {
+            this.logEvent(`Can't switch agents - it's ${this.currentTurnUnit.unit.name}'s turn!`, 'warning');
         }
         return;
     }
@@ -241,8 +241,8 @@ CyberOpsGame.prototype.selectAgentByNumber = function(index) {
 CyberOpsGame.prototype.cycleAgents = function() {
     // In turn-based mode, don't allow cycling
     if (this.turnBasedMode && this.currentTurnUnit) {
-        if (this.addNotification) {
-            this.addNotification(`Can't cycle agents - it's ${this.currentTurnUnit.unit.name}'s turn!`);
+        if (this.logEvent) {
+            this.logEvent(`Can't cycle agents - it's ${this.currentTurnUnit.unit.name}'s turn!`, 'warning');
         }
         return;
     }

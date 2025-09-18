@@ -2,8 +2,8 @@
 CyberOpsGame.prototype.selectAllSquad = function() {
         // In turn-based mode, don't allow selecting all
         if (this.turnBasedMode && this.currentTurnUnit) {
-            if (this.addNotification) {
-                this.addNotification(`Can't select all - it's ${this.currentTurnUnit.unit.name}'s turn!`);
+            if (this.logEvent) {
+                this.logEvent(`Can't select all - it's ${this.currentTurnUnit.unit.name}'s turn!`, 'warning');
             }
             return;
         }
@@ -496,8 +496,8 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
             // In turn-based mode, check if it's the right agent
             if (this.turnBasedMode && this.currentTurnUnit) {
                 if (this.currentTurnUnit.unit !== selectedAgent) {
-                    if (this.addNotification) {
-                        this.addNotification(`Can't select ${selectedAgent.name} - it's ${this.currentTurnUnit.unit.name}'s turn!`);
+                    if (this.logEvent) {
+                        this.logEvent(`Can't select ${selectedAgent.name} - it's ${this.currentTurnUnit.unit.name}'s turn!`, 'warning');
                     }
                     console.log(`❌ TB MODE: Cannot select ${selectedAgent.name} during ${this.currentTurnUnit.unit.name}'s turn`);
                     return;
@@ -676,8 +676,8 @@ CyberOpsGame.prototype.selectAgent = function(agent) {
         if (this.turnBasedMode && this.currentTurnUnit) {
             if (this.currentTurnUnit.unit !== agent) {
                 // Don't allow selection of other agents during their turn
-                if (this.addNotification) {
-                    this.addNotification(`It's ${this.currentTurnUnit.unit.name}'s turn!`);
+                if (this.logEvent) {
+                    this.logEvent(`It's ${this.currentTurnUnit.unit.name}'s turn!`, 'warning');
                 }
                 // Re-select the current turn unit
                 this.agents.forEach(a => a.selected = false);
