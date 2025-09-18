@@ -464,6 +464,11 @@ CyberOpsGame.prototype.render = function() {
 
         ctx.restore();
 
+        // Render turn-based mode overlays
+        if (this.turnBasedMode && this.renderTurnBasedOverlay) {
+            this.renderTurnBasedOverlay();
+        }
+
         // Render screen flash effect (after restoring context)
         if (this.renderScreenFlash) {
             this.renderScreenFlash(ctx);
@@ -472,8 +477,15 @@ CyberOpsGame.prototype.render = function() {
         // Render hotkey help overlay
         this.renderHotkeyHelp();
 
-        // Render speed indicator
-        this.renderSpeedIndicator();
+        // Render turn-based mode indicator
+        if (this.turnBasedMode && this.renderTurnBasedIndicator) {
+            this.renderTurnBasedIndicator();
+        }
+
+        // Render speed indicator (hide in turn-based mode)
+        if (!this.turnBasedMode) {
+            this.renderSpeedIndicator();
+        }
 
         // Render FPS counter
         this.renderFPS();

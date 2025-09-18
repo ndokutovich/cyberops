@@ -106,8 +106,39 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         'u': () => this.toggleFogOfWar(),
 
         // Game Control
-        ' ': () => this.togglePause(),
+        ' ': () => {
+            // Toggle turn-based mode in game, pause elsewhere
+            if (this.currentScreen === 'game') {
+                this.toggleTurnBasedMode();
+            } else {
+                this.togglePause();
+            }
+        },
         'Escape': () => this.showPauseMenu(),
+
+        // Turn-based controls
+        'Y': () => {
+            // Y for "Yield turn" - end current turn
+            if (this.turnBasedMode && this.currentScreen === 'game' && this.endTurn) {
+                this.endTurn();
+            }
+        },
+        'y': () => {
+            if (this.turnBasedMode && this.currentScreen === 'game' && this.endTurn) {
+                this.endTurn();
+            }
+        },
+        'B': () => {
+            // B for "Board snap" - grid snap toggle
+            if (this.toggleGridSnap) {
+                this.toggleGridSnap();
+            }
+        },
+        'b': () => {
+            if (this.toggleGridSnap) {
+                this.toggleGridSnap();
+            }
+        },
 
         // Speed Control
         'Z': () => this.cycleGameSpeed(),
@@ -310,7 +341,9 @@ CyberOpsGame.prototype.getKeyBindingsDisplay = function() {
             { key: '?', action: 'Show This Help' }
         ],
         'Game': [
-            { key: 'Space', action: 'Pause Game' },
+            { key: 'Space', action: 'Toggle Turn-Based Mode' },
+            { key: 'Y', action: 'Yield/End Turn (Turn-Based)' },
+            { key: 'B', action: 'Board/Grid Snap (Turn-Based)' },
             { key: 'Esc', action: 'Pause Menu' },
             { key: 'Z', action: 'Cycle Speed (1x/2x/4x)' }
         ]

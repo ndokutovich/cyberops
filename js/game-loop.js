@@ -6,24 +6,70 @@ CyberOpsGame.prototype.gameLoop = function() {
         this.updateFPS();
 
         if (this.currentScreen === 'game' && !this.isPaused) {
-            // Run update multiple times based on game speed
-            const updateCount = Math.floor(this.gameSpeed);
-            for (let i = 0; i < updateCount; i++) {
-                this.update();
+            // Handle turn-based mode differently
+            if (this.turnBasedMode) {
+                // In turn-based mode, still update movement animations and visual effects
+                // Update agent movements (animations only, no AI decisions)
+                if (this.agents) {
+                    this.agents.forEach(agent => {
+                        if (agent.alive && agent.targetX !== undefined && agent.targetY !== undefined) {
+                            // Smooth movement toward target
+                            const dx = agent.targetX - agent.x;
+                            const dy = agent.targetY - agent.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+
+                            if (dist > 0.5) {
+                                const moveSpeed = (agent.speed || 2) * this.gameSpeed;
+                                const moveStep = Math.min(moveSpeed * 0.1, dist); // Limit step size
+                                agent.x += (dx / dist) * moveStep;
+                                agent.y += (dy / dist) * moveStep;
+                            } else {
+                                // Reached destination, clear target
+                                agent.x = agent.targetX;
+                                agent.y = agent.targetY;
+                                agent.targetX = undefined;
+                                agent.targetY = undefined;
+                            }
+                        }
+                    });
+                }
+
+                // Update fog of war based on agent positions
+                if (this.updateFogOfWar) this.updateFogOfWar();
+
+                // Update projectiles and visual effects
+                if (this.updateProjectiles) this.updateProjectiles();
+                if (this.updateVisualEffects) this.updateVisualEffects();
+
                 // Update 3D if in 3D mode
                 if (this.is3DMode) {
                     this.update3D();
                     this.update3DCamera();
                     this.sync3DTo2D();
                 }
+            } else {
+                // Normal real-time update
+                const updateCount = Math.floor(this.gameSpeed);
+                for (let i = 0; i < updateCount; i++) {
+                    this.update();
+                    // Update 3D if in 3D mode
+                    if (this.is3DMode) {
+                        this.update3D();
+                        this.update3DCamera();
+                        this.sync3DTo2D();
+                    }
+                }
             }
 
-            // Check for nearby enemies and auto-slowdown
-            this.checkAutoSlowdown();
+            // Only update these in real-time mode
+            if (!this.turnBasedMode) {
+                // Check for nearby enemies and auto-slowdown
+                this.checkAutoSlowdown();
 
-            // Update music system based on game state
-            if (this.musicSystem && this.musicSystem.config) {
-                this.updateMusicState();
+                // Update music system based on game state
+                if (this.musicSystem && this.musicSystem.config) {
+                    this.updateMusicState();
+                }
             }
         }
 

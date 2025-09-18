@@ -309,6 +309,11 @@ CyberOpsGame.prototype.init = function() {
         this.setupEventListeners();
         this.initializeAudio();
 
+        // Initialize turn-based mode system
+        if (this.initTurnBasedMode) {
+            this.initTurnBasedMode();
+        }
+
         // Hide all game screens initially
         document.getElementById('mainMenu').style.display = 'none';
         document.querySelectorAll('.splash-screen').forEach(screen => {

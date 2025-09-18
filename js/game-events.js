@@ -351,6 +351,20 @@ CyberOpsGame.prototype.handleMouseDown = function(e) {
 }
 
 CyberOpsGame.prototype.handleMouseMove = function(e) {
+        // Update mouse position for turn-based preview
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left + this.cameraX;
+        const mouseY = e.clientY - rect.top + this.cameraY;
+
+        // Convert screen to world coordinates for isometric
+        const worldPos = this.screenToWorld(mouseX - this.cameraX, mouseY - this.cameraY);
+
+        // Update turn-based preview if in that mode
+        if (this.turnBasedMode && this.updateTurnBasedPreview) {
+            this.updateTurnBasedPreview(worldPos.x, worldPos.y);
+        }
+
+        // Handle dragging
         if (this.mouseDown) {
             const dx = e.clientX - this.mouseStartX;
             const dy = e.clientY - this.mouseStartY;
@@ -400,15 +414,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
             return;
         }
 
-        // Check for double-click/tap to select all squad
-        const now = Date.now();
-        if (this.lastTapTime && (now - this.lastTapTime) < 300) {
-            // Double tap detected - select all alive agents
-            this.selectAllSquad();
-            this.lastTapTime = 0; // Reset to prevent triple tap
-            return;
-        }
-        this.lastTapTime = now;
+        // Double-click removed - use T key to select all agents
 
         // Check if clicking on HUD elements - allow HUD agent selection
         const squadHealth = document.getElementById('squadHealth');
@@ -522,6 +528,16 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
         const selectedAgents = this.agents.filter(a => a.selected && a.alive);
 
         if (selectedAgents.length > 0) {
+            // Handle turn-based movement differently
+            if (this.turnBasedMode) {
+                // In turn-based mode, use special movement handler
+                if (this.handleTurnBasedMovement) {
+                    this.handleTurnBasedMovement(worldPos.x, worldPos.y);
+                }
+                return;
+            }
+
+            // Normal real-time movement
             // Check if target position is walkable
             if (this.isWalkable(worldPos.x, worldPos.y)) {
                 // Initialize waypoints array if needed

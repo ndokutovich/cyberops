@@ -742,3 +742,58 @@ visualEffects: {
 6. **Hot Reloading**: Potential for runtime config updates
 7. **A/B Testing**: Easy to swap configurations
 8. **Documentation**: Self-documenting structure
+
+## Coordinate Systems and Camera Transforms
+
+### Critical Insight: Turn-Based Overlay Rendering
+
+The turn-based overlay rendering requires special attention to coordinate transforms:
+
+#### The Problem
+```javascript
+// In game-rendering.js render():
+ctx.save();
+ctx.translate(this.cameraX, this.cameraY);  // Apply camera transform
+// ... render game world ...
+ctx.restore();  // Remove camera transform
+
+// Then AFTER restore:
+if (this.turnBasedMode && this.renderTurnBasedOverlay) {
+    this.renderTurnBasedOverlay();  // Called WITHOUT camera transform!
+}
+```
+
+#### The Solution
+When rendering overlays AFTER `ctx.restore()`, you must ADD camera offset, not subtract:
+
+```javascript
+// WRONG - This assumes camera transform is active:
+const iso = this.worldToIsometric(tile.x, tile.y);
+const screenX = iso.x - this.cameraX;  // ❌ Subtracting camera
+const screenY = iso.y - this.cameraY;
+
+// CORRECT - Add camera to position correctly in screen space:
+const iso = this.worldToIsometric(tile.x, tile.y);
+const screenX = iso.x + this.cameraX;  // ✅ Adding camera
+const screenY = iso.y + this.cameraY;
+```
+
+#### Key Coordinate Systems
+
+1. **World Coordinates**: Game logic coordinates (agents, enemies, tiles)
+2. **Isometric Coordinates**: World converted to isometric screen space (no camera)
+3. **Screen Coordinates**: Final pixel positions after camera transform
+
+#### Conversion Functions
+
+- `worldToIsometric(x, y)`: Converts world to isometric (no camera)
+- `screenToIsometric(x, y)`: Converts screen pixels to isometric
+- `screenToWorld(x, y)`: Full conversion from screen to world (includes camera)
+
+#### Debugging Tips
+
+If overlays appear at wrong positions:
+1. Check if rendering happens before or after `ctx.restore()`
+2. If after restore, ADD camera offset instead of subtracting
+3. Verify click detection uses same coordinate system as rendering
+4. Test with visible debug rectangles at known positions
