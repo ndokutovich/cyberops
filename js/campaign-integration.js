@@ -94,6 +94,45 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
                 console.log(`✅ Loaded ${content.milestones.length} milestones`);
             }
 
+            // Load game configuration
+            if (content.gameConfig) {
+                // Apply configuration constants
+                if (content.gameConfig.demosceneIdleTimeout !== undefined) {
+                    this.DEMOSCENE_IDLE_TIMEOUT = content.gameConfig.demosceneIdleTimeout;
+                }
+                if (content.gameConfig.musicMenuStartTime !== undefined) {
+                    this.MUSIC_MENU_START_TIME = content.gameConfig.musicMenuStartTime;
+                }
+                if (content.gameConfig.speedIndicatorFadeTime !== undefined) {
+                    this.speedIndicatorFadeTime = content.gameConfig.speedIndicatorFadeTime;
+                }
+                if (content.gameConfig.defaultHackTime !== undefined) {
+                    this.defaultHackTime = content.gameConfig.defaultHackTime;
+                }
+                if (content.gameConfig.defaultMissionRewards) {
+                    this.defaultMissionRewards = content.gameConfig.defaultMissionRewards;
+                }
+                console.log('✅ Loaded game configuration');
+            }
+
+            // Load agent generation system
+            if (content.agentGeneration) {
+                this.agentGeneration = content.agentGeneration;
+                console.log('✅ Loaded agent generation system');
+            }
+
+            // Load death system
+            if (content.deathSystem) {
+                this.deathSystem = content.deathSystem;
+                console.log('✅ Loaded death system');
+            }
+
+            // Load skill definitions
+            if (content.skillDefinitions) {
+                this.skillDefinitions = content.skillDefinitions;
+                console.log(`✅ Loaded ${Object.keys(content.skillDefinitions).length} skill definitions`);
+            }
+
             console.log('✅ Campaign content fully loaded');
         } else {
             console.log('⚠️ No campaign content found, using hardcoded defaults');

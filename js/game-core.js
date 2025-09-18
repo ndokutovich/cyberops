@@ -1,9 +1,9 @@
 // Game Engine - Core Constructor and Initialization
 class CyberOpsGame {
     constructor() {
-        // Constants
-        this.MUSIC_MENU_START_TIME = 10.6; // Exact duration when splash screens end and menu music should start
-        this.DEMOSCENE_IDLE_TIMEOUT = 15000; // 15 seconds of idle time before demoscene starts
+        // Constants - will be loaded from campaign
+        this.MUSIC_MENU_START_TIME = 10.6; // Default, overridden by campaign
+        this.DEMOSCENE_IDLE_TIMEOUT = 15000; // Default, overridden by campaign
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
 
@@ -41,10 +41,10 @@ class CyberOpsGame {
         this.totalCampaignTime = 0;
         this.totalEnemiesDefeated = 0;
 
-        // Hub Resources
-        this.credits = 5000;
-        this.researchPoints = 150;
-        this.worldControl = 15;
+        // Hub Resources - will be loaded from campaign
+        this.credits = 0;
+        this.researchPoints = 0;
+        this.worldControl = 0;
         this.availableAgents = [];
         this.activeAgents = [];
         this.fallenAgents = []; // Hall of Glory - agents who died in missions

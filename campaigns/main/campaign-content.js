@@ -434,7 +434,127 @@
                 },
                 message: 'Total domination achieved! The city is yours!'
             }
-        ]
+        ],
+
+        // Game configuration constants
+        gameConfig: {
+            demosceneIdleTimeout: 15000, // 15 seconds of idle time before demoscene
+            musicMenuStartTime: 10.6, // When splash ends and menu music starts
+            speedIndicatorFadeTime: 3000, // How long speed indicator shows
+            defaultHackTime: 3000, // Default terminal hack time in ms
+            defaultMissionRewards: {
+                credits: 5000,
+                researchPoints: 2,
+                worldControl: 1
+            }
+        },
+
+        // Agent generation system for post-mission hiring
+        agentGeneration: {
+            // New agents become available after mission completion
+            agentsPerMission: 2,
+            baseCost: 1000,
+            costIncreasePerMission: 100,
+            maxCostVariance: 500,
+
+            // Name generation pools
+            firstNames: ['Marcus', 'Elena', 'Viktor', 'Sophia', 'Dmitri', 'Aria', 'Kane', 'Nova', 'Rex', 'Luna',
+                        'Zara', 'Jax', 'Iris', 'Orion', 'Echo', 'Nyx', 'Atlas', 'Sage', 'Raven', 'Kai'],
+            lastNames: ['Stone', 'Black', 'Wolf', 'Steel', 'Cross', 'Hawk', 'Frost', 'Storm', 'Viper', 'Phoenix',
+                       'Night', 'Blade', 'Shadow', 'Iron', 'Silver', 'Ghost', 'Drake', 'Hunter', 'Reeves', 'Chen'],
+            callsigns: ['Reaper', 'Phantom', 'Striker', 'Wraith', 'Razor', 'Specter', 'Thunder', 'Shadow', 'Venom', 'Blade',
+                       'Cipher', 'Nova', 'Eclipse', 'Nexus', 'Quantum', 'Omega', 'Vector', 'Matrix', 'Binary', 'Pulse'],
+
+            // Specialization templates for generated agents
+            specializations: [
+                { type: 'stealth', skills: ['stealth', 'melee'], health: 85, speed: 5, damage: 20 },
+                { type: 'hacker', skills: ['hacker', 'electronics'], health: 75, speed: 4, damage: 15 },
+                { type: 'assault', skills: ['assault', 'heavy_weapons'], health: 130, speed: 3, damage: 28 },
+                { type: 'sniper', skills: ['sniper', 'stealth'], health: 90, speed: 4, damage: 38 },
+                { type: 'demolition', skills: ['demolition', 'assault'], health: 115, speed: 3, damage: 25 },
+                { type: 'medic', skills: ['medic', 'support'], health: 100, speed: 4, damage: 18 }
+            ]
+        },
+
+        // Death system - final words for fallen agents
+        deathSystem: {
+            finalWords: [
+                "Tell my family... I died fighting...",
+                "It was... an honor... serving with you...",
+                "Don't let them... win...",
+                "Keep fighting... for all of us...",
+                "The mission... must continue...",
+                "Remember me... when you win...",
+                "I regret... nothing...",
+                "This is... a good death...",
+                "Avenge... me...",
+                "The Syndicate... lives on...",
+                "Complete... the objective...",
+                "I can see... the code...",
+                "This isn't... the end...",
+                "Fight on... without me...",
+                "Make it... count..."
+            ]
+        },
+
+        // Skills and their effects
+        skillDefinitions: {
+            stealth: {
+                name: 'Stealth',
+                description: 'Reduced enemy detection range',
+                effect: { detectionReduction: 0.5 }
+            },
+            melee: {
+                name: 'Melee Combat',
+                description: 'Increased close-range damage',
+                effect: { meleeDamageBonus: 1.5 }
+            },
+            hacker: {
+                name: 'Hacking',
+                description: 'Faster terminal hacking',
+                effect: { hackSpeedBonus: 0.5 }
+            },
+            electronics: {
+                name: 'Electronics',
+                description: 'Disable enemy equipment',
+                effect: { disableChance: 0.3 }
+            },
+            assault: {
+                name: 'Assault Training',
+                description: 'Increased fire rate',
+                effect: { fireRateBonus: 1.3 }
+            },
+            heavy_weapons: {
+                name: 'Heavy Weapons',
+                description: 'Can use heavy weaponry',
+                effect: { canUseHeavyWeapons: true }
+            },
+            sniper: {
+                name: 'Sniper Training',
+                description: 'Increased range and accuracy',
+                effect: { rangeBonus: 2.0, accuracyBonus: 0.9 }
+            },
+            demolition: {
+                name: 'Demolition Expert',
+                description: 'Explosive damage and radius',
+                effect: { explosiveDamageBonus: 1.5, explosiveRadiusBonus: 1.3 }
+            },
+            medic: {
+                name: 'Field Medic',
+                description: 'Heal squad members',
+                effect: { healAmount: 30, healCooldown: 20 }
+            },
+            support: {
+                name: 'Support Specialist',
+                description: 'Buff nearby allies',
+                effect: { allyDamageBonus: 0.2, allyDefenseBonus: 0.2 }
+            },
+            drone_control: {
+                name: 'Drone Control',
+                description: 'Deploy and control drones',
+                effect: { maxDrones: 2, droneHealth: 50 }
+            }
+        }
     };
 
     // Register with the campaign system

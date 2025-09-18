@@ -774,50 +774,37 @@ CyberOpsGame.prototype.unlockIntelReport = function() {
 
 // Generate final words for fallen agents
 CyberOpsGame.prototype.generateFinalWords = function(agentName) {
-        const finalWords = [
-            "Tell my family... I fought for freedom...",
-            "It was... an honor... serving with you...",
-            "Don't let them... win...",
-            "Keep fighting... for all of us...",
-            "The mission... must continue...",
-            "Remember me... when you win...",
-            "I regret... nothing...",
-            "This is... a good death...",
-            "Avenge... me...",
-            "The Syndicate... lives on..."
-        ];
+        // Use final words from campaign if available
+        const finalWords = (this.deathSystem && this.deathSystem.finalWords) ||
+            ["The mission... must continue..."];
 
         return finalWords[Math.floor(Math.random() * finalWords.length)];
 }
 
 // Generate new agents available for hire after mission completion
 CyberOpsGame.prototype.generateNewAgentsForHire = function() {
-    const firstNames = ['Marcus', 'Elena', 'Viktor', 'Sophia', 'Dmitri', 'Aria', 'Kane', 'Nova', 'Rex', 'Luna'];
-    const lastNames = ['Stone', 'Black', 'Wolf', 'Steel', 'Cross', 'Hawk', 'Frost', 'Storm', 'Viper', 'Phoenix'];
-    const callsigns = ['Reaper', 'Phantom', 'Striker', 'Wraith', 'Razor', 'Specter', 'Thunder', 'Shadow', 'Venom', 'Blade'];
+    // Use agent generation from campaign if available
+    if (!this.agentGeneration) {
+        console.warn('⚠️ No agent generation config loaded from campaign');
+        return;
+    }
 
-    const specializations = [
-        { type: 'stealth', skills: ['stealth', 'melee'], health: 85, speed: 5, damage: 20 },
-        { type: 'hacker', skills: ['hacker', 'electronics'], health: 75, speed: 4, damage: 15 },
-        { type: 'assault', skills: ['assault', 'heavy_weapons'], health: 130, speed: 3, damage: 28 },
-        { type: 'sniper', skills: ['sniper', 'stealth'], health: 90, speed: 4, damage: 38 },
-        { type: 'demolition', skills: ['demolition', 'assault'], health: 115, speed: 3, damage: 25 },
-        { type: 'medic', skills: ['medic', 'support'], health: 100, speed: 4, damage: 18 }
-    ];
+    const gen = this.agentGeneration;
+    const agentsToGenerate = gen.agentsPerMission || 2;
 
-    // Generate 2 new agents
-    for (let i = 0; i < 2; i++) {
-        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-        const callsign = callsigns[Math.floor(Math.random() * callsigns.length)];
-        const spec = specializations[Math.floor(Math.random() * specializations.length)];
+    // Generate new agents
+    for (let i = 0; i < agentsToGenerate; i++) {
+        const firstName = gen.firstNames[Math.floor(Math.random() * gen.firstNames.length)];
+        const lastName = gen.lastNames[Math.floor(Math.random() * gen.lastNames.length)];
+        const callsign = gen.callsigns[Math.floor(Math.random() * gen.callsigns.length)];
+        const spec = gen.specializations[Math.floor(Math.random() * gen.specializations.length)];
 
         const newAgent = {
             id: this.availableAgents.length + 1,
             name: `${firstName} "${callsign}" ${lastName}`,
             specialization: spec.type,
             skills: spec.skills,
-            cost: 1000 + Math.floor(Math.random() * 500) + (this.completedMissions.length * 100),
+            cost: gen.baseCost + Math.floor(Math.random() * gen.maxCostVariance) + (this.completedMissions.length * gen.costIncreasePerMission),
             hired: false,
             health: spec.health + Math.floor(Math.random() * 20) - 10,
             speed: spec.speed,
@@ -830,7 +817,7 @@ CyberOpsGame.prototype.generateNewAgentsForHire = function() {
 
     // Log event
     if (this.logEvent) {
-        this.logEvent('🆕 2 new agents are available for hire at the Hub!', 'system');
+        this.logEvent(`🆕 ${agentsToGenerate} new agents are available for hire at the Hub!`, 'system');
     }
 }
 
