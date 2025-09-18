@@ -477,10 +477,8 @@ CyberOpsGame.prototype.render = function() {
         // Render hotkey help overlay
         this.renderHotkeyHelp();
 
-        // Render turn-based mode indicator
-        if (this.turnBasedMode && this.renderTurnBasedIndicator) {
-            this.renderTurnBasedIndicator();
-        }
+        // Turn-based mode indicator now shown in objective tracker
+        // REMOVED: renderTurnBasedIndicator()
 
         // Render speed indicator (hide in turn-based mode)
         if (!this.turnBasedMode) {
@@ -1170,9 +1168,10 @@ CyberOpsGame.prototype.renderHotkeyHelp = function() {
             'V - Shield',
             'T - Team Select',
             'E - 3D Mode',
+            'Space - TB Mode',
+            'Y - End Turn (TB)',
             'L - Squad Follow (3D)',
-            'P - Path Debug',
-            'O - Pathfinding On/Off',
+            'Z - Game Speed',
             '? - Toggle Help'
         ];
 

@@ -605,15 +605,33 @@ CyberOpsGame.prototype.updateObjectiveDisplay = function() {
     const tracker = document.getElementById('objectiveTracker');
     if (!tracker || !this.currentMissionDef) return;
 
+    let displayText = '';
+
+    // Add turn-based mode info if active
+    if (this.turnBasedMode) {
+        let tbInfo = `[TB Mode] `;
+        if (this.currentTurnUnit) {
+            const unitName = this.currentTurnUnit.unit.name || `Agent ${this.currentTurnUnit.unit.id}`;
+            const ap = this.currentTurnUnit.ap;
+            const maxAp = this.currentTurnUnit.maxAp;
+            tbInfo += `${unitName}'s Turn (${ap}/${maxAp} AP) | Round ${this.turnRound || 1} | `;
+        } else {
+            tbInfo += `Round ${this.turnRound || 1} | `;
+        }
+        displayText = tbInfo;
+    }
+
     // Show primary objective
     const primaryObj = this.currentMissionDef.objectives.find(o => o.required && o.active && !o.completed);
     if (primaryObj) {
-        tracker.textContent = OBJECTIVE_HANDLERS.getDisplayText(primaryObj, this);
+        displayText += OBJECTIVE_HANDLERS.getDisplayText(primaryObj, this);
     } else if (this.extractionEnabled) {
-        tracker.textContent = 'All objectives complete! Reach extraction point!';
+        displayText += 'All objectives complete! Reach extraction point!';
     } else {
-        tracker.textContent = 'All objectives complete!';
+        displayText += 'All objectives complete!';
     }
+
+    tracker.textContent = displayText;
 
     // Also update the mission list dialog if it's open
     const missionDialog = document.querySelector('.mission-list-dialog');

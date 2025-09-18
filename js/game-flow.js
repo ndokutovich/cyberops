@@ -788,9 +788,39 @@ CyberOpsGame.prototype.updateSquadHealth = function() {
             // Calculate health percentage, ensuring it's 0 for dead agents
             const healthPercent = agent.alive ? Math.max(0, (agent.health / agent.maxHealth) * 100) : 0;
 
+            // Get TB info if in turn-based mode
+            let tbInfo = '';
+            let apBar = '';
+            let turnIndicator = '';
+
+            if (this.turnBasedMode && agent.alive) {
+                // Find this unit in turn queue
+                const turnUnit = this.turnQueue?.find(tu => tu.unit === agent);
+                if (turnUnit) {
+                    const apPercent = (turnUnit.ap / turnUnit.maxAp) * 100;
+                    apBar = `<div class="ap-bar">
+                        <div class="ap-fill" style="width: ${apPercent}%"></div>
+                        <div class="ap-text">${turnUnit.ap}/${turnUnit.maxAp} AP</div>
+                    </div>`;
+
+                    // Check if this is current turn
+                    if (this.currentTurnUnit?.unit === agent) {
+                        turnIndicator = ' 🌟'; // Star for current turn
+                        bar.className += ' current-turn';
+                    }
+
+                    // Show initiative order
+                    const turnIndex = this.turnQueue.indexOf(turnUnit);
+                    if (turnIndex >= 0) {
+                        tbInfo = ` [T${turnIndex + 1}]`;
+                    }
+                }
+            }
+
             bar.innerHTML = `
                 <div class="health-fill" style="width: ${healthPercent}%"></div>
-                <div class="agent-name">${agent.name} [${index + 1}]${!agent.alive ? ' ☠️' : ''}</div>
+                <div class="agent-name">${agent.name} [${index + 1}]${!agent.alive ? ' ☠️' : ''}${tbInfo}${turnIndicator}</div>
+                ${apBar}
             `;
 
             // Add click handler to select this agent
@@ -827,25 +857,112 @@ CyberOpsGame.prototype.useAbility = function(abilityIndex) {
         const agent = this.agents.find(a => a.selected);
         if (!agent || !agent.alive || agent.cooldowns[abilityIndex] > 0) return;
 
+        // In turn-based mode, check AP and handle differently
+        if (this.turnBasedMode) {
+            if (!this.currentTurnUnit || this.currentTurnUnit.unit !== agent) {
+                if (this.addNotification) {
+                    this.addNotification("Not this agent's turn!");
+                }
+                return;
+            }
+
+            const apCost = this.actionCosts ? (this.actionCosts.shoot || 4) : 4;
+            if (this.currentTurnUnit.ap < apCost) {
+                if (this.addNotification) {
+                    this.addNotification(`Not enough AP! Need ${apCost} AP`);
+                }
+                return;
+            }
+        }
+
         switch (abilityIndex) {
             case 1: // Shoot
                 this.shootNearestEnemy(agent);
-                agent.cooldowns[1] = 60;
+
+                // Deduct AP in turn-based mode
+                if (this.turnBasedMode && this.currentTurnUnit) {
+                    this.currentTurnUnit.ap -= (this.actionCosts ? (this.actionCosts.shoot || 4) : 4);
+                    if (this.updateTurnBasedAPDisplay) {
+                        this.updateTurnBasedAPDisplay();
+                    }
+                    if (this.logEvent) {
+                        this.logEvent(`${agent.name} fired weapon (Cost: 4 AP)`, 'combat');
+                    }
+                } else {
+                    agent.cooldowns[1] = 60;
+                }
                 break;
             case 2: // Grenade
-                this.throwGrenade(agent);
-                agent.cooldowns[2] = 180;
+                if (this.turnBasedMode && this.currentTurnUnit) {
+                    const grenadeCost = 6;
+                    if (this.currentTurnUnit.ap < grenadeCost) {
+                        if (this.addNotification) {
+                            this.addNotification(`Not enough AP! Need ${grenadeCost} AP`);
+                        }
+                        return;
+                    }
+                    this.throwGrenade(agent);
+                    this.currentTurnUnit.ap -= grenadeCost;
+                    if (this.updateTurnBasedAPDisplay) {
+                        this.updateTurnBasedAPDisplay();
+                    }
+                    if (this.logEvent) {
+                        this.logEvent(`${agent.name} threw grenade (Cost: ${grenadeCost} AP)`, 'combat');
+                    }
+                } else {
+                    this.throwGrenade(agent);
+                    agent.cooldowns[2] = 180;
+                }
                 break;
             case 3: // Hack/Interact - Use generic action system
-                // The new mission system handles all interactions generically
-                if (this.useActionAbility) {
-                    this.useActionAbility(agent);
+                if (this.turnBasedMode && this.currentTurnUnit) {
+                    const hackCost = 3;
+                    if (this.currentTurnUnit.ap < hackCost) {
+                        if (this.addNotification) {
+                            this.addNotification(`Not enough AP! Need ${hackCost} AP`);
+                        }
+                        return;
+                    }
+                    // The new mission system handles all interactions generically
+                    if (this.useActionAbility) {
+                        this.useActionAbility(agent);
+                    }
+                    this.currentTurnUnit.ap -= hackCost;
+                    if (this.updateTurnBasedAPDisplay) {
+                        this.updateTurnBasedAPDisplay();
+                    }
+                    if (this.logEvent) {
+                        this.logEvent(`${agent.name} hacked/interacted (Cost: ${hackCost} AP)`, 'action');
+                    }
+                } else {
+                    // The new mission system handles all interactions generically
+                    if (this.useActionAbility) {
+                        this.useActionAbility(agent);
+                    }
+                    agent.cooldowns[3] = 120;
                 }
-                agent.cooldowns[3] = 120;
                 break;
             case 4: // Shield
-                this.activateShield(agent);
-                agent.cooldowns[4] = 300;
+                if (this.turnBasedMode && this.currentTurnUnit) {
+                    const shieldCost = 2;
+                    if (this.currentTurnUnit.ap < shieldCost) {
+                        if (this.addNotification) {
+                            this.addNotification(`Not enough AP! Need ${shieldCost} AP`);
+                        }
+                        return;
+                    }
+                    this.activateShield(agent);
+                    this.currentTurnUnit.ap -= shieldCost;
+                    if (this.updateTurnBasedAPDisplay) {
+                        this.updateTurnBasedAPDisplay();
+                    }
+                    if (this.logEvent) {
+                        this.logEvent(`${agent.name} activated shield (Cost: ${shieldCost} AP)`, 'combat');
+                    }
+                } else {
+                    this.activateShield(agent);
+                    agent.cooldowns[4] = 300;
+                }
                 break;
         }
         this.updateCooldownDisplay();
@@ -854,6 +971,12 @@ CyberOpsGame.prototype.useAbility = function(abilityIndex) {
 // Use ability for all selected agents (keyboard shortcuts)
 CyberOpsGame.prototype.useAbilityForAllSelected = function(abilityIndex) {
         if (this.isPaused) return;
+
+        // In turn-based mode, just call the single agent version
+        if (this.turnBasedMode) {
+            this.useAbility(abilityIndex);
+            return;
+        }
 
         const selectedAgents = this.agents.filter(a => a.selected && a.alive);
         if (selectedAgents.length === 0) return;
@@ -947,11 +1070,47 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
 }
 
 CyberOpsGame.prototype.throwGrenade = function(agent) {
+        // Find nearest enemy for grenade target
+        let targetX = agent.x + 5; // Default: throw forward
+        let targetY = agent.y;
+        let nearestEnemy = null;
+        let minDist = Infinity;
+
+        this.enemies.forEach(enemy => {
+            if (!enemy.alive) return;
+            const dist = Math.sqrt(
+                Math.pow(enemy.x - agent.x, 2) +
+                Math.pow(enemy.y - agent.y, 2)
+            );
+            if (dist < minDist && dist < 15) { // Grenade range
+                minDist = dist;
+                nearestEnemy = enemy;
+            }
+        });
+
+        if (nearestEnemy) {
+            targetX = nearestEnemy.x;
+            targetY = nearestEnemy.y;
+
+            if (this.logEvent) {
+                this.logEvent(`${agent.name} threw grenade at enemy!`, 'combat');
+            }
+        } else {
+            // No enemy in range, throw in facing direction
+            if (this.logEvent) {
+                this.logEvent(`${agent.name} threw grenade (no target in range)`, 'combat');
+            }
+        }
+
+        // Store final target for the explosion
+        const grenadeX = targetX;
+        const grenadeY = targetY;
+
         setTimeout(() => {
             this.effects.push({
                 type: 'explosion',
-                x: agent.targetX,
-                y: agent.targetY,
+                x: grenadeX,
+                y: grenadeY,
                 radius: 3,
                 damage: 50,
                 duration: 30,
@@ -960,8 +1119,8 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
 
             // Big shake and freeze for grenade explosion
             if (this.triggerVisualEffect) {
-                this.triggerVisualEffect('freezeEffects', 'explosion', { x: agent.targetX, y: agent.targetY });
-                this.triggerVisualEffect('screenShake', 'explosion', { x: agent.targetX, y: agent.targetY });
+                this.triggerVisualEffect('freezeEffects', 'explosion', { x: grenadeX, y: grenadeY });
+                this.triggerVisualEffect('screenShake', 'explosion', { x: grenadeX, y: grenadeY });
             }
 
             // Play explosion sound
@@ -972,13 +1131,18 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                 navigator.vibrate([50, 30, 100]); // Pattern: short, pause, long
             }
 
+            // Deal damage to enemies in blast radius
+            let enemiesHit = 0;
             this.enemies.forEach(enemy => {
+                if (!enemy.alive) return;
                 const dist = Math.sqrt(
-                    Math.pow(enemy.x - agent.targetX, 2) +
-                    Math.pow(enemy.y - agent.targetY, 2)
+                    Math.pow(enemy.x - grenadeX, 2) +
+                    Math.pow(enemy.y - grenadeY, 2)
                 );
                 if (dist < 3) {
                     enemy.health -= 50;
+                    enemiesHit++;
+
                     if (enemy.health <= 0) {
                         enemy.alive = false;
                         this.totalEnemiesDefeated++;
@@ -988,12 +1152,29 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                             this.onEnemyEliminated(enemy);
                         }
 
+                        // Update mission tracker
+                        if (this.missionTrackers) {
+                            this.missionTrackers.enemiesEliminated++;
+                        }
+
                         console.log(`💥 Grenade killed enemy at (${enemy.x}, ${enemy.y})`);
+
+                        if (this.logEvent) {
+                            this.logEvent(`Grenade eliminated enemy!`, 'combat');
+                        }
+                    } else {
+                        if (this.logEvent) {
+                            this.logEvent(`Grenade damaged enemy (50 damage)`, 'combat');
+                        }
                     }
                 }
             });
 
-            this.alertEnemies(agent.targetX, agent.targetY, 10);
+            if (enemiesHit === 0 && this.logEvent) {
+                this.logEvent(`Grenade exploded (no enemies hit)`, 'combat');
+            }
+
+            this.alertEnemies(grenadeX, grenadeY, 10);
         }, 500);
 }
 

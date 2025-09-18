@@ -48,6 +48,15 @@ CyberOpsGame.prototype.initTurnBasedMode = function() {
     this.pathConfirmMode = false;     // Waiting for path confirmation
 
     console.log('🎯 Turn-based mode initialized');
+    if (this.logEvent) {
+        this.logEvent('Turn-based mode activated', 'combat', true);
+    }
+
+    // Show AP display
+    const apDisplay = document.getElementById('tbApDisplay');
+    if (apDisplay) {
+        apDisplay.style.display = 'block';
+    }
 };
 
 // Toggle turn-based mode
@@ -132,6 +141,15 @@ CyberOpsGame.prototype.exitTurnBasedMode = function() {
     }
 
     console.log('✅ TBM: Turn-based mode deactivated');
+    if (this.logEvent) {
+        this.logEvent('Turn-based mode deactivated', 'system');
+    }
+
+    // Hide AP display
+    const apDisplay = document.getElementById('tbApDisplay');
+    if (apDisplay) {
+        apDisplay.style.display = 'none';
+    }
 };
 
 // Build turn queue based on initiative
@@ -194,6 +212,13 @@ CyberOpsGame.prototype.buildTurnQueue = function() {
     this.turnQueue = allUnits;
     this.turnRound++;
 
+    // Add notification and log for new round
+    if (this.turnRound > 1) {
+        const msg = `Round ${this.turnRound} begins!`;
+        if (this.addNotification) this.addNotification(msg);
+        if (this.logEvent) this.logEvent(msg, 'combat', true);
+    }
+
     console.log(`📋 TBM Queue: ${allUnits.length} units | Round ${this.turnRound}`);
     console.log('📋 Turn order:', allUnits.map(u =>
         `${u.unit.name || u.type} (Initiative: ${u.initiative}, AP: ${u.ap})`
@@ -221,6 +246,28 @@ CyberOpsGame.prototype.calculateInitiative = function(unit) {
     return initiative;
 };
 
+// Update the dedicated AP display
+CyberOpsGame.prototype.updateTurnBasedAPDisplay = function() {
+    const apValue = document.getElementById('tbApValue');
+    if (!apValue || !this.currentTurnUnit) return;
+
+    const unit = this.currentTurnUnit;
+    const unitName = unit.unit.name || `${unit.type} ${unit.unit.id}`;
+
+    // Update the display
+    apValue.textContent = `${unit.ap} / ${unit.maxAp}`;
+    apValue.style.color = unit.ap > 0 ? '#ffff00' : '#ff4444';
+
+    // Update the title too
+    const apDisplay = document.getElementById('tbApDisplay');
+    if (apDisplay) {
+        const titleDiv = apDisplay.querySelector('div:first-child');
+        if (titleDiv) {
+            titleDiv.textContent = `${unitName.toUpperCase()} AP`;
+        }
+    }
+};
+
 // Start a unit's turn
 CyberOpsGame.prototype.startTurn = function(index) {
     this.currentTurnIndex = index;
@@ -236,6 +283,9 @@ CyberOpsGame.prototype.startTurn = function(index) {
     }
 
     this.currentTurnUnit = turnData;
+
+    // Update AP display
+    this.updateTurnBasedAPDisplay();
 
     // Reset unit's AP if new round
     if (index === 0) {
@@ -256,10 +306,10 @@ CyberOpsGame.prototype.startTurn = function(index) {
         this._selectedAgent = turnData.unit;
         console.log(`🎯 Auto-selected: ${turnData.unit.name}`);
 
-        // Add visual notification
-        if (this.addNotification) {
-            this.addNotification(`${turnData.unit.name}'s turn (${turnData.ap} AP)`);
-        }
+        // Add visual notification and log
+        const turnMsg = `${turnData.unit.name}'s turn (${turnData.ap} AP)`;
+        if (this.addNotification) this.addNotification(turnMsg);
+        if (this.logEvent) this.logEvent(turnMsg, 'combat');
     }
 
     console.log('───────────────────────────────────────────');
@@ -566,13 +616,15 @@ CyberOpsGame.prototype.executePendingMovement = function() {
 
         // Then deduct AP
         turnData.ap -= currentSegment.cost;
+        this.updateTurnBasedAPDisplay();
 
         // Finally recalculate movement range with new AP
         this.calculateMovementRange(turnData);
 
         // Log movement
-        console.log(`🚶 TBM Movement Complete: ${unit.name || 'Unit'}`);
-        console.log(`   Cost: ${currentSegment.cost} AP | Remaining: ${turnData.ap}/${turnData.maxAp} AP`);
+        const moveMsg = `${unit.name || 'Unit'} moved (Cost: ${currentSegment.cost} AP, Remaining: ${turnData.ap}/${turnData.maxAp} AP)`;
+        console.log(`🚶 TBM Movement Complete: ${moveMsg}`);
+        if (this.logEvent) this.logEvent(moveMsg, 'movement');
 
         if (this.addNotification) {
             this.addNotification(`Moved ${currentSegment.cost} tiles (${turnData.ap} AP remaining)`);
@@ -693,6 +745,7 @@ CyberOpsGame.prototype.executeAITurn = function(turnData) {
             console.log(`🎯 Enemy would shoot at ${nearestAgent.name} (not implemented)`);
             apUsed += this.actionCosts.shoot;
             turnData.ap -= this.actionCosts.shoot;
+            this.updateTurnBasedAPDisplay();
         }
 
         // If has AP, move closer
@@ -705,6 +758,7 @@ CyberOpsGame.prototype.executeAITurn = function(turnData) {
             enemy.y += Math.sin(angle) * moveDistance;
 
             turnData.ap = 0; // Used all remaining AP for movement
+            this.updateTurnBasedAPDisplay();
         }
     }
 

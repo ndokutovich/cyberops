@@ -15,14 +15,13 @@ CyberOpsGame.prototype.renderTurnBasedOverlay = function() {
     // Render path preview
     this.renderPathPreview();
 
-    // Render turn queue UI
-    this.renderTurnQueue();
-
-    // Render current unit info
-    this.renderCurrentUnitInfo();
-
-    // Render action buttons
-    this.renderActionButtons();
+    // HUD elements now integrated into existing game HUD
+    // Turn queue -> Squad health display with AP bars
+    // Current unit info -> Objective tracker TB status
+    // Action buttons -> Use existing game controls (H key, right-click, etc.)
+    // REMOVED: this.renderTurnQueue();
+    // REMOVED: this.renderCurrentUnitInfo();
+    // REMOVED: this.renderActionButtons();
 
     // Render grid if enabled
     if (this.gridSnapMovement) {

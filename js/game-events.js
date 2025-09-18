@@ -1,5 +1,13 @@
 // Select all alive agents in the squad
 CyberOpsGame.prototype.selectAllSquad = function() {
+        // In turn-based mode, don't allow selecting all
+        if (this.turnBasedMode && this.currentTurnUnit) {
+            if (this.addNotification) {
+                this.addNotification(`Can't select all - it's ${this.currentTurnUnit.unit.name}'s turn!`);
+            }
+            return;
+        }
+
         let selectedCount = 0;
         this.agents.forEach(agent => {
             if (agent.alive) {
@@ -485,6 +493,17 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
 
         // If clicked exactly on an agent sprite, select it
         if (selectedAgent) {
+            // In turn-based mode, check if it's the right agent
+            if (this.turnBasedMode && this.currentTurnUnit) {
+                if (this.currentTurnUnit.unit !== selectedAgent) {
+                    if (this.addNotification) {
+                        this.addNotification(`Can't select ${selectedAgent.name} - it's ${this.currentTurnUnit.unit.name}'s turn!`);
+                    }
+                    console.log(`❌ TB MODE: Cannot select ${selectedAgent.name} during ${this.currentTurnUnit.unit.name}'s turn`);
+                    return;
+                }
+            }
+
             // Clear all selections first
             this.agents.forEach(a => a.selected = false);
 
@@ -653,14 +672,31 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
 }
 
 CyberOpsGame.prototype.selectAgent = function(agent) {
+        // In turn-based mode with initiative, only allow selecting the current turn unit
+        if (this.turnBasedMode && this.currentTurnUnit) {
+            if (this.currentTurnUnit.unit !== agent) {
+                // Don't allow selection of other agents during their turn
+                if (this.addNotification) {
+                    this.addNotification(`It's ${this.currentTurnUnit.unit.name}'s turn!`);
+                }
+                // Re-select the current turn unit
+                this.agents.forEach(a => a.selected = false);
+                this.currentTurnUnit.unit.selected = true;
+                this._selectedAgent = this.currentTurnUnit.unit;
+                this.updateSquadHealth();
+                return;
+            }
+        }
+
         this.agents.forEach(a => a.selected = false);
         agent.selected = true;
+        this._selectedAgent = agent;
         this.updateSquadHealth();
         this.updateCooldownDisplay();
         this.centerCameraOnAgent(agent);
 
         // Log agent selection
-        if (this.logEvent) {
+        if (this.logEvent && !this.turnBasedMode) {
             this.logEvent(`Switched to ${agent.name}`, 'info');
         }
 

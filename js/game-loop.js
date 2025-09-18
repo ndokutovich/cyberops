@@ -38,7 +38,8 @@ CyberOpsGame.prototype.gameLoop = function() {
                 if (this.updateFogOfWar) this.updateFogOfWar();
 
                 // Update projectiles and visual effects
-                if (this.updateProjectiles) this.updateProjectiles();
+                this.updateProjectilesOnly(); // Use a dedicated function for TB mode
+                this.updateEffectsOnly(); // Update effects animations
                 if (this.updateVisualEffects) this.updateVisualEffects();
 
                 // Update 3D if in 3D mode
@@ -82,6 +83,90 @@ CyberOpsGame.prototype.gameLoop = function() {
             }
         }
 }
+
+// Update projectiles only (for turn-based mode)
+CyberOpsGame.prototype.updateProjectilesOnly = function() {
+    if (!this.projectiles) return;
+
+    this.projectiles = this.projectiles.filter(proj => {
+        const dx = proj.targetX - proj.x;
+        const dy = proj.targetY - proj.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 0.5) {
+            // Hit the target
+            if (proj.hostile) {
+                // Enemy projectile hitting agent
+                if (proj.targetAgent && proj.targetAgent.alive) {
+                    const agent = proj.targetAgent;
+                    agent.shield = Math.max(0, agent.shield - proj.damage);
+                    if (agent.shield === 0) {
+                        agent.health = Math.max(0, agent.health - proj.damage);
+                    }
+                    if (agent.health <= 0) {
+                        agent.alive = false;
+                        agent.health = 0;
+                    }
+
+                    // Effects
+                    this.effects.push({
+                        type: 'hit',
+                        x: agent.x,
+                        y: agent.y,
+                        frame: 0,
+                        duration: 30
+                    });
+                    this.playSound('hit', 0.3);
+
+                    if (this.logEvent) {
+                        this.logEvent(`${agent.name} hit for ${proj.damage} damage!`, 'combat');
+                    }
+                }
+            } else {
+                // Agent projectile hitting enemy
+                if (proj.targetEnemy && proj.targetEnemy.alive) {
+                    const enemy = proj.targetEnemy;
+                    enemy.health = Math.max(0, enemy.health - proj.damage);
+                    if (enemy.health <= 0) {
+                        enemy.alive = false;
+                        if (this.missionTrackers) {
+                            this.missionTrackers.enemiesEliminated++;
+                        }
+                        if (this.logEvent) {
+                            this.logEvent(`Enemy eliminated!`, 'combat');
+                        }
+                    }
+
+                    // Effects
+                    this.effects.push({
+                        type: 'hit',
+                        x: enemy.x,
+                        y: enemy.y,
+                        frame: 0,
+                        duration: 30
+                    });
+                    this.playSound('hit', 0.3);
+                }
+            }
+            return false; // Remove projectile
+        }
+
+        // Move projectile
+        proj.x += (dx / dist) * proj.speed;
+        proj.y += (dy / dist) * proj.speed;
+        return true; // Keep projectile
+    });
+};
+
+// Update effects only (for turn-based mode)
+CyberOpsGame.prototype.updateEffectsOnly = function() {
+    if (!this.effects) return;
+
+    this.effects = this.effects.filter(effect => {
+        effect.frame++;
+        return effect.frame < effect.duration;
+    });
+};
 
 // FPS Counter
 CyberOpsGame.prototype.updateFPS = function() {
