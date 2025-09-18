@@ -526,11 +526,31 @@ const GAME_MUSIC_CONFIG = {
 
 // Helper function to get music config for a screen
 function getMusicConfigForScreen(screenName) {
+    // Use campaign music if available, fallback to hardcoded
+    if (window.game && window.game.campaignMusic && window.game.campaignMusic.screens) {
+        return window.game.campaignMusic.screens[screenName] || GAME_MUSIC_CONFIG.screens[screenName] || null;
+    }
     return GAME_MUSIC_CONFIG.screens[screenName] || null;
 }
 
 // Helper function to get mission music defaults
 function getDefaultMissionMusic() {
+    // Use campaign music if available, fallback to hardcoded
+    if (window.game && window.game.campaignMusic && window.game.campaignMusic.missions) {
+        const defaults = window.game.campaignMusic.missions.defaults;
+        const states = window.game.campaignMusic.missions.states;
+        if (defaults && states) {
+            // Build config from campaign data
+            const config = {};
+            for (const [state, filename] of Object.entries(defaults)) {
+                config[state] = {
+                    fallback: window.game.campaignMusic.missions.globalPath + filename,
+                    ...states[state]
+                };
+            }
+            return config;
+        }
+    }
     return GAME_MUSIC_CONFIG.missions.default;
 }
 

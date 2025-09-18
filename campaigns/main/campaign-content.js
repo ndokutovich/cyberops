@@ -650,45 +650,112 @@
             effectDuration: 5000 // ms
         },
 
-        // Music Configuration
+        // Music Configuration - EXACT behavior from original
         music: {
-            // Screen music
+            // Screen music - must have 'tracks' wrapper and transitions
             screens: {
                 splash: {
-                    file: 'game-music.mp3',
-                    fallback: 'music/global/menu.mp3',
-                    volume: 0.5,
-                    loop: true,
-                    fadeIn: 1000
+                    tracks: {
+                        main: {
+                            file: 'game-music.mp3',  // Same file as menu, starts from beginning
+                            fallback: 'music/global/menu.mp3',
+                            volume: 0.5,
+                            loop: true,
+                            fadeIn: 1000,
+                            startTime: 0  // Play from beginning for splash (0-10.6 seconds)
+                        }
+                    },
+                    events: [
+                        {
+                            id: 'skip',
+                            trigger: 'user_input',
+                            action: 'transitionToMenu',
+                            markSkipped: true  // Sets splashSkipped flag
+                        }
+                    ],
+                    transitions: {
+                        toMenu: {
+                            type: 'continue'  // Natural transition - same music file continues
+                        }
+                    }
                 },
                 menu: {
-                    file: 'game-music.mp3',
-                    fallback: 'music/global/menu.mp3',
-                    volume: 0.6,
-                    loop: true,
-                    fadeIn: 2000,
-                    startTime: 10.6  // Skip intro when coming from splash
+                    tracks: {
+                        main: {
+                            file: 'game-music.mp3',
+                            fallback: 'music/global/menu.mp3',
+                            volume: 0.6,
+                            loop: true,
+                            fadeIn: 2000,
+                            startTime: 10.6,  // Skip splash intro when coming from skipped splash
+                            startTimeCondition: 'splashSkipped'  // Only use startTime if splash was skipped
+                        }
+                    },
+                    transitions: {
+                        toHub: {
+                            type: 'continue',  // Continue same music, don't reload
+                            volumeAdjust: 0.8  // Optional: slightly reduce volume in hub
+                        },
+                        toMission: {
+                            type: 'fadeOut',
+                            duration: 1000
+                        },
+                        toCredits: {
+                            type: 'fadeOut',
+                            duration: 800
+                        }
+                    }
                 },
                 hub: {
-                    file: 'game-music.mp3',
-                    fallback: 'music/global/menu.mp3',
-                    volume: 0.5,
-                    loop: true,
-                    fadeIn: 1500
+                    tracks: {
+                        ambient: {
+                            file: 'game-music.mp3',
+                            fallback: 'music/global/menu.mp3',
+                            volume: 0.5,
+                            loop: true,
+                            fadeIn: 1500
+                            // No startTime - should continue from current position
+                        },
+                        alert: {
+                            file: 'music/screens/hub-alert.mp3',
+                            volume: 0.7,
+                            loop: false,
+                            priority: 2,
+                            trigger: 'low_resources'
+                        }
+                    },
+                    transitions: {
+                        toMenu: {
+                            type: 'continue',  // Continue same music when going back to menu
+                            volumeAdjust: 1.2  // Slightly increase volume back to menu level
+                        },
+                        toMission: {
+                            type: 'fadeOut',
+                            duration: 1000
+                        }
+                    }
                 },
                 credits: {
-                    file: 'game-credits.mp3',
-                    fallback: 'music/global/credits.mp3',
-                    volume: 0.7,
-                    loop: true,
-                    fadeIn: 2000
+                    tracks: {
+                        main: {
+                            file: 'game-credits.mp3',
+                            fallback: 'music/global/credits.mp3',
+                            volume: 0.7,
+                            loop: true,
+                            fadeIn: 2000
+                        }
+                    }
                 },
                 hallOfGlory: {
-                    file: 'music/screens/memorial.mp3',
-                    fallback: 'music/global/somber.mp3',
-                    volume: 0.3,
-                    loop: true,
-                    fadeIn: 3000
+                    tracks: {
+                        memorial: {
+                            file: 'music/screens/memorial.mp3',
+                            fallback: 'music/global/somber.mp3',
+                            volume: 0.3,
+                            loop: true,
+                            fadeIn: 3000
+                        }
+                    }
                 }
             },
 
