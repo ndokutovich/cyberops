@@ -266,47 +266,26 @@ CyberOpsGame.prototype.loadMissionData = function() {
 CyberOpsGame.prototype.initializeHub = function() {
         console.log('🏢 Initializing Syndicate Hub...');
 
-        // Only initialize with defaults if not loaded from campaign
+        // Agents must be loaded from campaign
         if (!this.availableAgents || this.availableAgents.length === 0) {
-            console.log('📋 No campaign agents loaded, using defaults');
-            // Initialize available agents with skills - 4 hired, 2 available for hire
-            this.availableAgents = [
-                { id: 1, name: 'Alex "Shadow" Chen', specialization: 'stealth', skills: ['stealth', 'melee'], cost: 1000, hired: true, health: 90, speed: 5, damage: 18 },
-                { id: 2, name: 'Maya "Code" Rodriguez', specialization: 'hacker', skills: ['hacker', 'electronics'], cost: 1200, hired: true, health: 70, speed: 4, damage: 12 },
-                { id: 3, name: 'Jake "Tank" Morrison', specialization: 'assault', skills: ['assault', 'heavy_weapons'], cost: 1100, hired: true, health: 140, speed: 3, damage: 25 },
-                { id: 4, name: 'Lisa "Ghost" Park', specialization: 'sniper', skills: ['sniper', 'stealth'], cost: 1300, hired: true, health: 85, speed: 4, damage: 35 },
-                { id: 5, name: 'Rico "Boom" Santos', specialization: 'demolition', skills: ['demolition', 'assault'], cost: 1250, hired: false, health: 110, speed: 3, damage: 22 },
-                { id: 6, name: 'Zoe "Wire" Kim', specialization: 'hacker', skills: ['hacker', 'drone_control'], cost: 1400, hired: false, health: 75, speed: 4, damage: 15 }
-            ];
-
-            // Set up initial active agents (first 4 hired) - restore original 4 agents
-            this.activeAgents = this.availableAgents.filter(agent => agent.hired);
+            console.warn('⚠️ No agents loaded from campaign! Campaign content required.');
+            this.availableAgents = [];
+            this.activeAgents = [];
         }
 
         console.log('✅ Active agents:', this.activeAgents.length, 'agents hired');
         console.log('🎯 Active agents:', this.activeAgents.map(a => a.name));
 
-        // Only initialize with defaults if not loaded from campaign
+        // Weapons must be loaded from campaign
         if (!this.weapons || this.weapons.length === 0) {
-            console.log('📋 No campaign weapons loaded, using defaults');
-            // Initialize weapons
-            this.weapons = [
-                { id: 1, name: 'Silenced Pistol', type: 'weapon', cost: 500, owned: 3, damage: 15 },
-                { id: 2, name: 'Assault Rifle', type: 'weapon', cost: 800, owned: 1, damage: 25 },
-                { id: 3, name: 'Sniper Rifle', type: 'weapon', cost: 1200, owned: 0, damage: 40 },
-                { id: 4, name: 'SMG', type: 'weapon', cost: 600, owned: 2, damage: 20 }
-            ];
+            console.warn('⚠️ No weapons loaded from campaign! Campaign content required.');
+            this.weapons = [];
         }
 
-        // Only initialize with defaults if not loaded from campaign
+        // Equipment must be loaded from campaign
         if (!this.equipment || this.equipment.length === 0) {
-            console.log('📋 No campaign equipment loaded, using defaults');
-            this.equipment = [
-                { id: 1, name: 'Body Armor', type: 'equipment', cost: 300, owned: 3, protection: 10 },
-                { id: 2, name: 'Hacking Kit', type: 'equipment', cost: 400, owned: 2, hackBonus: 20 },
-                { id: 3, name: 'Explosives Kit', type: 'equipment', cost: 600, owned: 1, damage: 50 },
-                { id: 4, name: 'Stealth Suit', type: 'equipment', cost: 800, owned: 1, stealthBonus: 25 }
-            ];
+            console.warn('⚠️ No equipment loaded from campaign! Campaign content required.');
+            this.equipment = [];
         }
 
         // Missions will be loaded by campaign system

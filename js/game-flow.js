@@ -562,15 +562,12 @@ CyberOpsGame.prototype.initMission = function() {
 
 // Enhanced enemy spawning system with variety and better positioning
 CyberOpsGame.prototype.spawnMissionEnemies = function() {
-    // Use enemy types from campaign if available, otherwise use defaults
-    const enemyTypes = this.campaignEnemyTypes || [
-        { type: 'guard', health: 50, speed: 2, damage: 10, visionRange: 5, color: '#ff6666' },
-        { type: 'soldier', health: 75, speed: 2.5, damage: 15, visionRange: 6, color: '#ff8888' },
-        { type: 'elite', health: 100, speed: 3, damage: 20, visionRange: 7, color: '#ffaaaa' },
-        { type: 'heavy', health: 150, speed: 1.5, damage: 25, visionRange: 4, color: '#ff4444' },
-        { type: 'sniper', health: 60, speed: 2, damage: 35, visionRange: 10, color: '#ff9999' },
-        { type: 'commander', health: 120, speed: 2.5, damage: 22, visionRange: 8, color: '#ffcccc' }
-    ];
+    // Enemy types must be loaded from campaign
+    const enemyTypes = this.campaignEnemyTypes;
+    if (!enemyTypes || enemyTypes.length === 0) {
+        console.error('⚠️ No enemy types loaded from campaign! Cannot spawn enemies.');
+        return;
+    }
 
     // Calculate total enemies based on mission difficulty
     // Base enemies + bonus based on mission index

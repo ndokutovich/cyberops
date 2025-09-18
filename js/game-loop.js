@@ -754,16 +754,12 @@ CyberOpsGame.prototype.endMission = function(victory) {
 CyberOpsGame.prototype.unlockIntelReport = function() {
     if (!this.unlockedIntelReports) this.unlockedIntelReports = [];
 
-    // Use intel reports from campaign if available, otherwise use defaults
-    const intelReports = this.campaignIntelReports || [
-        { threshold: 1, id: 'first', title: 'ENEMY PATROL ROUTES', content: 'Guards follow predictable patterns. Use this to your advantage.' },
-        { threshold: 3, id: 'basic', title: 'SECURITY PROTOCOLS', content: 'Terminal hacking detected. Increased firewall protection on main servers.' },
-        { threshold: 5, id: 'weapons', title: 'WEAPON SHIPMENTS', content: 'New military-grade weapons arriving. Expect heavier resistance.' },
-        { threshold: 8, id: 'command', title: 'COMMAND STRUCTURE', content: 'Enemy leadership identified. High-value targets marked for elimination.' },
-        { threshold: 10, id: 'fortress', title: 'FORTRESS BLUEPRINTS', content: 'Structural weaknesses found in enemy stronghold. Multiple entry points available.' },
-        { threshold: 15, id: 'master', title: 'MASTER PLAN', content: 'Enemy preparing major offensive. Strike first or face overwhelming force.' },
-        { threshold: 20, id: 'ultimate', title: 'PROJECT OMEGA', content: 'Top secret weapon system discovered. Must be destroyed at all costs.' }
-    ];
+    // Intel reports must be loaded from campaign
+    const intelReports = this.campaignIntelReports;
+    if (!intelReports || intelReports.length === 0) {
+        console.warn('⚠️ No intel reports loaded from campaign');
+        return;
+    }
 
     // Check which reports to unlock
     intelReports.forEach(report => {

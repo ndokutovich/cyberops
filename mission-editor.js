@@ -79,13 +79,8 @@ class MissionEditor {
                 this.enemyTypes = window.MAIN_CAMPAIGN_CONTENT.enemyTypes;
                 console.log(`✅ Loaded ${this.enemyTypes.length} enemy types from campaign`);
             } else {
-                // Fallback to defaults
-                this.enemyTypes = [
-                    { type: 'guard', health: 50, speed: 2, damage: 10, visionRange: 5, color: '#ff6666' },
-                    { type: 'soldier', health: 75, speed: 2.5, damage: 15, visionRange: 6, color: '#ff8888' },
-                    { type: 'elite', health: 100, speed: 3, damage: 20, visionRange: 7, color: '#ffaaaa' },
-                    { type: 'heavy', health: 150, speed: 1.5, damage: 25, visionRange: 4, color: '#ff4444' }
-                ];
+                console.warn('⚠️ No enemy types loaded from campaign! Editor may have limited functionality.');
+                this.enemyTypes = [];
             }
         } catch (e) {
             console.error('Failed to load campaign content:', e);
@@ -874,14 +869,11 @@ class MissionEditor {
         switch (entity.type) {
             case 'enemy':
                 // Build dropdown from campaign enemy types
-                const enemyOptions = this.enemyTypes ?
+                const enemyOptions = this.enemyTypes && this.enemyTypes.length > 0 ?
                     this.enemyTypes.map(enemy =>
                         `<option value="${enemy.type}" ${entity.enemyType === enemy.type ? 'selected' : ''}>${enemy.type.charAt(0).toUpperCase() + enemy.type.slice(1)}</option>`
                     ).join('') :
-                    `<option value="guard" ${entity.enemyType === 'guard' ? 'selected' : ''}>Guard</option>
-                    <option value="soldier" ${entity.enemyType === 'soldier' ? 'selected' : ''}>Soldier</option>
-                    <option value="elite" ${entity.enemyType === 'elite' ? 'selected' : ''}>Elite</option>
-                    <option value="boss" ${entity.enemyType === 'boss' ? 'selected' : ''}>Boss</option>`;
+                    '<option value="">No enemy types loaded</option>';
 
                 html += `
                     <label>Enemy Type:
