@@ -110,14 +110,14 @@ CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
 }
 
 CyberOpsGame.prototype.update = function() {
-        // Check if frozen using visual effects system
-        if (this.isFreezeActive && this.isFreezeActive()) {
-            return; // Skip update while frozen
+        // Update visual effects FIRST (including freeze timers)
+        if (this.updateVisualEffects) {
+            this.updateVisualEffects(16.67); // ~60 FPS in milliseconds
         }
 
-        // Update visual effects
-        if (this.updateVisualEffects) {
-            this.updateVisualEffects(1/60); // Assuming 60 FPS
+        // Check if frozen AFTER updating effects
+        if (this.isFreezeActive && this.isFreezeActive()) {
+            return; // Skip game update while frozen
         }
 
         this.missionTimer++;

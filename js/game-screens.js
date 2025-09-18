@@ -606,47 +606,13 @@ CyberOpsGame.prototype.backToMainMenu = function() {
         this.startDemosceneIdleTimer();
 }
     
+// Original implementation - just show loading screen with CSS animation
 CyberOpsGame.prototype.animateProgressBar = function(callback) {
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const loadingScreen = document.getElementById('loadingScreen');
-
-    if (!progressBar || !progressText) {
-        console.warn('Progress bar elements not found, skipping animation');
+    // Just wait for the CSS animation to play (2 seconds)
+    // The flash effect is handled by the fade-in-from-flash CSS class on the menu
+    setTimeout(() => {
         if (callback) callback();
-        return;
-    }
-
-    let progress = 0;
-    const duration = 2000; // 2 seconds total
-    const interval = 20; // Update every 20ms
-    const increment = 100 / (duration / interval);
-
-    const progressInterval = setInterval(() => {
-        progress += increment;
-
-        if (progress >= 100) {
-            progress = 100;
-            clearInterval(progressInterval);
-
-            progressBar.style.width = '100%';
-            progressText.textContent = '100%';
-
-            // Flash effect
-            if (loadingScreen) {
-                loadingScreen.style.backgroundColor = '#00ff41';
-                setTimeout(() => {
-                    loadingScreen.style.backgroundColor = '#0a0e1a';
-                    if (callback) callback();
-                }, 200);
-            } else {
-                if (callback) callback();
-            }
-        } else {
-            progressBar.style.width = progress + '%';
-            progressText.textContent = Math.floor(progress) + '%';
-        }
-    }, interval);
+    }, 2000); // 2 seconds for the loading animation
 };
 
 CyberOpsGame.prototype.showInitialScreen = function() {

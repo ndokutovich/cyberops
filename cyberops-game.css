@@ -1414,7 +1414,7 @@ body {
     background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(255,255,255,0.1) 20%,
+        rgba(255,255,255,0.4) 20%,
         rgba(255,255,255,0.8) 40%,
         rgba(255,255,255,0.9) 50%,
         rgba(255,255,255,0.8) 60%,
@@ -1469,6 +1469,10 @@ body {
     }
 }
 
+.loading-screen .game-title.beam-sweep::after {
+    animation: beamSweep 2s linear infinite;
+}
+
 @keyframes beamSweep {
     0% {
         left: -100%;
@@ -1478,7 +1482,7 @@ body {
         opacity: 1;
     }
     50% {
-        left: 0%;
+        left: 100%;
         opacity: 1;
     }
     90% {

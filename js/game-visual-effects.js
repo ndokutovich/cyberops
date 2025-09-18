@@ -180,6 +180,8 @@ CyberOpsGame.prototype.updateVisualEffects = function(deltaTime) {
     if (!this.visualEffects) return;
 
     const now = Date.now();
+    // Convert deltaTime to milliseconds if needed (expecting ~16.67ms for 60fps)
+    const dt = deltaTime < 1 ? deltaTime * 1000 : deltaTime;
 
     // Update screen shake
     if (this.visualEffects.screenShake.active) {
@@ -222,12 +224,12 @@ CyberOpsGame.prototype.updateVisualEffects = function(deltaTime) {
         const elapsed = now - particle.startTime;
         if (elapsed > particle.lifetime) return false;
 
-        // Update particle physics
+        // Update particle physics (velocities are in pixels per second)
         particle.vx *= 0.98; // Friction
         particle.vy *= 0.98;
-        particle.vy += particle.gravity * deltaTime;
-        particle.x += particle.vx * deltaTime;
-        particle.y += particle.vy * deltaTime;
+        particle.vy += particle.gravity * dt / 1000; // Convert to per-frame
+        particle.x += particle.vx * dt / 1000;
+        particle.y += particle.vy * dt / 1000;
 
         return true;
     });

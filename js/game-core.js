@@ -9,7 +9,6 @@ class CyberOpsGame {
 
         // Initialize HUD elements
         this.gameHUD = document.getElementById('gameHUD');
-        this.setupCanvas();
 
         // Enable audio on first user interaction
         this.setupAudioInteraction();
@@ -146,10 +145,6 @@ class CyberOpsGame {
         this.initPathCache();
 
         // NOW CALL THE INITIALIZATION FUNCTIONS IN THE CONSTRUCTOR
-        console.log('🔧 About to call setupCanvas()...');
-        this.setupCanvas();
-        console.log('✅ setupCanvas() completed');
-
         console.log('🔧 Initializing game systems...');
 
         // Initialize hub first (agents, equipment, etc.)
@@ -210,62 +205,9 @@ class CyberOpsGame {
         }
     }
 
-    setupCanvas() {
-        console.log('🎨 setupCanvas() - setting up canvas and game state');
-
-        // Isometric Settings
-        this.tileWidth = 64;
-        this.tileHeight = 32;
-        this.cameraX = 0;
-        this.cameraY = 0;
-        this.zoom = 1;
-
-        // Input State
-        this.touches = {};
-        this.lastTouchDistance = 0;
-        this.isDragging = false;
-        this.mouseDown = false;
-
-        // Game Objects
-        this.agents = [];
-        this.enemies = [];
-        this.projectiles = [];
-        this.effects = [];
-        this.animatingTiles = [];
-
-        // Audio system
-        this.splashSkipped = false;
-        this.audioEnabled = false;
-
-        // Get canvas elements
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-
-        // Set canvas size
-        this.resizeCanvas();
-
-        // Add resize listener
-        window.addEventListener('resize', () => this.resizeCanvas());
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => this.resizeCanvas(), 100);
-        });
-
-        console.log('✅ setupCanvas() internal work completed');
-    }
-
     initializeAudio() {
         // Audio initialization now handled by game-audio.js and music systems
         console.log('🎵 Audio initialization delegated to modular systems');
-    }
-
-    setupCanvas() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-
-        window.addEventListener('resize', () => {
-            this.canvas.width = window.innerWidth;
-            this.canvas.height = window.innerHeight;
-        });
     }
 } // Close the CyberOpsGame class
 
@@ -339,7 +281,11 @@ CyberOpsGame.prototype.init = function() {
         });
 
         // Show initial start screen first
-        this.showInitialScreen();
+        if (this.showInitialScreen) {
+            this.showInitialScreen();
+        } else {
+            console.warn('showInitialScreen not yet loaded, skipping initial screen');
+        }
 
         // Add debug info for game state
         setInterval(() => {
