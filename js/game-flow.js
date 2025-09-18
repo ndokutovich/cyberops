@@ -562,8 +562,8 @@ CyberOpsGame.prototype.initMission = function() {
 
 // Enhanced enemy spawning system with variety and better positioning
 CyberOpsGame.prototype.spawnMissionEnemies = function() {
-    // Define enemy types with different stats
-    const enemyTypes = [
+    // Use enemy types from campaign if available, otherwise use defaults
+    const enemyTypes = this.campaignEnemyTypes || [
         { type: 'guard', health: 50, speed: 2, damage: 10, visionRange: 5, color: '#ff6666' },
         { type: 'soldier', health: 75, speed: 2.5, damage: 15, visionRange: 6, color: '#ff8888' },
         { type: 'elite', health: 100, speed: 3, damage: 20, visionRange: 7, color: '#ffaaaa' },

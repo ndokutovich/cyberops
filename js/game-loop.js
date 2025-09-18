@@ -754,8 +754,8 @@ CyberOpsGame.prototype.endMission = function(victory) {
 CyberOpsGame.prototype.unlockIntelReport = function() {
     if (!this.unlockedIntelReports) this.unlockedIntelReports = [];
 
-    // Define intel reports that unlock at certain thresholds
-    const intelReports = [
+    // Use intel reports from campaign if available, otherwise use defaults
+    const intelReports = this.campaignIntelReports || [
         { threshold: 1, id: 'first', title: 'ENEMY PATROL ROUTES', content: 'Guards follow predictable patterns. Use this to your advantage.' },
         { threshold: 3, id: 'basic', title: 'SECURITY PROTOCOLS', content: 'Terminal hacking detected. Increased firewall protection on main servers.' },
         { threshold: 5, id: 'weapons', title: 'WEAPON SHIPMENTS', content: 'New military-grade weapons arriving. Expect heavier resistance.' },

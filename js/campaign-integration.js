@@ -13,12 +13,105 @@ CyberOpsGame.prototype.initCampaignSystem = async function() {
     await this.loadCampaignMissions();
 };
 
+// Load campaign content (agents, weapons, equipment, etc.)
+CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
+    console.log(`📦 Loading content for campaign: ${campaignId}`);
+
+    try {
+        // Load the campaign content file
+        const script = document.createElement('script');
+        script.src = `campaigns/${campaignId}/campaign-content.js`;
+        await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = () => {
+                console.warn(`No campaign content file for ${campaignId}, using defaults`);
+                resolve(); // Don't fail if no content file
+            };
+            document.head.appendChild(script);
+        });
+
+        // Check if content was loaded
+        const content = window.MAIN_CAMPAIGN_CONTENT ||
+                       (window.CampaignSystem && window.CampaignSystem.getCampaignContent && window.CampaignSystem.getCampaignContent(campaignId));
+
+        if (content) {
+            console.log('✅ Campaign content loaded, applying to game...');
+
+            // Apply starting resources if this is a new game
+            if (!this.campaignStarted) {
+                this.credits = content.startingResources.credits;
+                this.researchPoints = content.startingResources.researchPoints;
+                this.worldControl = content.startingResources.worldControl;
+                this.campaignStarted = true;
+            }
+
+            // Load agents
+            if (content.agents) {
+                this.availableAgents = content.agents;
+                this.activeAgents = content.agents.filter(agent => agent.hired);
+                console.log(`✅ Loaded ${content.agents.length} agents`);
+            }
+
+            // Load weapons
+            if (content.weapons) {
+                this.weapons = content.weapons;
+                console.log(`✅ Loaded ${content.weapons.length} weapons`);
+            }
+
+            // Load equipment
+            if (content.equipment) {
+                this.equipment = content.equipment;
+                console.log(`✅ Loaded ${content.equipment.length} equipment items`);
+            }
+
+            // Store enemy types for mission spawning
+            if (content.enemyTypes) {
+                this.campaignEnemyTypes = content.enemyTypes;
+                console.log(`✅ Loaded ${content.enemyTypes.length} enemy types`);
+            }
+
+            // Store research tree
+            if (content.researchTree) {
+                this.researchTree = content.researchTree;
+                console.log('✅ Loaded research tree');
+            }
+
+            // Store intel reports
+            if (content.intelReports) {
+                this.campaignIntelReports = content.intelReports;
+                console.log(`✅ Loaded ${content.intelReports.length} intel reports`);
+            }
+
+            // Store abilities
+            if (content.abilities) {
+                this.campaignAbilities = content.abilities;
+                console.log(`✅ Loaded ${content.abilities.length} abilities`);
+            }
+
+            // Store milestones
+            if (content.milestones) {
+                this.campaignMilestones = content.milestones;
+                console.log(`✅ Loaded ${content.milestones.length} milestones`);
+            }
+
+            console.log('✅ Campaign content fully loaded');
+        } else {
+            console.log('⚠️ No campaign content found, using hardcoded defaults');
+        }
+    } catch (e) {
+        console.error('Failed to load campaign content:', e);
+        console.log('⚠️ Using hardcoded defaults');
+    }
+};
 
 // Load missions from campaign system
 CyberOpsGame.prototype.loadCampaignMissions = async function() {
     const campaignId = this.currentCampaignId || 'main';
 
     try {
+        // Load campaign content (agents, weapons, etc.) first
+        await this.loadCampaignContent(campaignId);
+
         // Load campaign metadata
         const response = await fetch(`campaigns/${campaignId}/campaign.json`);
         const campaign = await response.json();

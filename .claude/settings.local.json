@@ -24,7 +24,9 @@
       "Bash(git restore:*)",
       "Bash(del game-maps-data.js)",
       "Read(//w/_proj/_own/_ideator/three.js-master/build/**)",
-      "Read(//w/_proj/_own/_ideator/three.js-master/**)"
+      "Read(//w/_proj/_own/_ideator/three.js-master/**)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
