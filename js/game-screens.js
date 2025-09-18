@@ -2,10 +2,11 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         // Hide game HUD
         document.getElementById('gameHUD').style.display = 'none';
 
-        // Update dialog title and message
-        const title = victory ? 'MISSION COMPLETE' : 'MISSION FAILED';
+        // Update dialog title and message (use campaign text if available)
+        const uiText = this.uiText || {};
+        const title = victory ? (uiText.missionComplete || 'MISSION COMPLETE') : (uiText.missionFailed || 'MISSION FAILED');
         const statusIcon = victory ? '✅' : '❌';
-        const statusText = victory ? 'MISSION ACCOMPLISHED' : 'MISSION FAILED';
+        const statusText = victory ? (uiText.missionAccomplished || 'MISSION ACCOMPLISHED') : (uiText.missionFailed || 'MISSION FAILED');
         const statusColor = victory ? '#00ff00' : '#ff0000';
 
         document.getElementById('intermissionTitle').textContent = title;

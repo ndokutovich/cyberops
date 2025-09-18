@@ -133,6 +133,33 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
                 console.log(`✅ Loaded ${Object.keys(content.skillDefinitions).length} skill definitions`);
             }
 
+            // Load UI text
+            if (content.uiText) {
+                this.uiText = content.uiText;
+                console.log('✅ Loaded UI text and labels');
+            }
+
+            // Load gameplay constants
+            if (content.gameplayConstants) {
+                // Apply tile dimensions
+                if (content.gameplayConstants.tileWidth !== undefined) {
+                    this.tileWidth = content.gameplayConstants.tileWidth;
+                }
+                if (content.gameplayConstants.tileHeight !== undefined) {
+                    this.tileHeight = content.gameplayConstants.tileHeight;
+                }
+
+                // Store all constants for reference
+                this.gameplayConstants = content.gameplayConstants;
+                console.log('✅ Loaded gameplay constants');
+            }
+
+            // Load map type configurations
+            if (content.mapTypes) {
+                this.mapTypes = content.mapTypes;
+                console.log(`✅ Loaded ${Object.keys(content.mapTypes).length} map type configurations`);
+            }
+
             console.log('✅ Campaign content fully loaded');
         } else {
             console.log('⚠️ No campaign content found, using hardcoded defaults');

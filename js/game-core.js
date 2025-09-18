@@ -63,9 +63,9 @@ class CyberOpsGame {
         this.missions = [];
         console.log('🏗️ Early missions array initialized');
 
-        // Isometric Settings - CRITICAL: Initialize camera here to prevent NaN
-        this.tileWidth = 64;
-        this.tileHeight = 32;
+        // Isometric Settings - will be overridden by campaign
+        this.tileWidth = 64; // Default, overridden by campaign
+        this.tileHeight = 32; // Default, overridden by campaign
         this.cameraX = 0;
         this.cameraY = 0;
         this.zoom = 1;
@@ -211,9 +211,8 @@ class CyberOpsGame {
     initializeCanvasAndState() {
         console.log('🎨 Initializing canvas and game state');
 
-        // Isometric Settings
-        this.tileWidth = 64;
-        this.tileHeight = 32;
+        // Isometric Settings - already set above
+        // this.tileWidth and this.tileHeight already initialized
         this.cameraX = 0;
         this.cameraY = 0;
         this.zoom = 1;

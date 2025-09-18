@@ -554,6 +554,139 @@
                 description: 'Deploy and control drones',
                 effect: { maxDrones: 2, droneHealth: 50 }
             }
+        },
+
+        // UI Text and Labels
+        uiText: {
+            // Game title and branding
+            gameTitle: 'CyberOps: Syndicate',
+            campaignName: 'Corporate Domination',
+            organizationName: 'The Syndicate',
+
+            // Screen titles
+            hallOfGloryTitle: '⚰️ HALL OF GLORY',
+            mainMenuTitle: 'MAIN MENU',
+            syndicateHubTitle: 'SYNDICATE HUB',
+
+            // Mission status
+            missionComplete: 'MISSION COMPLETE',
+            missionFailed: 'MISSION FAILED',
+            missionAccomplished: 'MISSION ACCOMPLISHED',
+            extractionEnabled: 'EXTRACTION ENABLED',
+
+            // Combat messages
+            enemyEliminated: 'Enemy eliminated',
+            agentDown: 'Agent down!',
+            objectiveComplete: 'Objective complete',
+            terminalHacked: 'Terminal hacked',
+            doorUnlocked: 'Door unlocked',
+            itemCollected: 'Item collected',
+
+            // Hub messages
+            agentHired: 'Agent hired',
+            weaponPurchased: 'Weapon purchased',
+            equipmentPurchased: 'Equipment purchased',
+            researchComplete: 'Research complete',
+
+            // Button labels
+            continueButton: 'Continue',
+            retryButton: 'Try Again',
+            backButton: 'Back',
+            deployButton: 'Deploy',
+            hireButton: 'Hire',
+            purchaseButton: 'Purchase',
+            researchButton: 'Research',
+            saveButton: 'Save',
+            loadButton: 'Load',
+            quitButton: 'Quit'
+        },
+
+        // Gameplay Constants
+        gameplayConstants: {
+            // Tile dimensions
+            tileWidth: 64,
+            tileHeight: 32,
+
+            // Vision and detection
+            defaultVisionCone: 45, // degrees
+            defaultAlertRadius: 10,
+            defaultPatrolSpeed: 2,
+            stealthDetectionMultiplier: 0.5,
+
+            // Combat
+            defaultProjectileSpeed: 15,
+            defaultReloadTime: 1000, // ms
+            criticalHitChance: 0.1,
+            criticalHitDamage: 2.0,
+
+            // Hacking
+            defaultHackTime: 3000, // ms
+            hackingSkillBonus: 0.5, // 50% faster
+
+            // Movement
+            defaultMoveSpeed: 4,
+            runSpeedMultiplier: 1.5,
+            crouchSpeedMultiplier: 0.5,
+
+            // Health and damage
+            healthPackHeal: 25,
+            armorDamageReduction: 0.3,
+            coverDamageReduction: 0.5,
+
+            // Economy
+            missionBaseReward: 5000,
+            killReward: 100,
+            objectiveBonus: 1000,
+            stealthBonus: 500,
+
+            // Limits
+            maxSquadSize: 6,
+            maxInventorySize: 20,
+            maxPathfindingIterations: 2000,
+
+            // Timers
+            alertDecayTime: 10000, // ms
+            corpseCleanupTime: 30000, // ms
+            effectDuration: 5000 // ms
+        },
+
+        // Map type configurations
+        mapTypes: {
+            corporate: {
+                name: 'Corporate',
+                tileSet: 'corporate',
+                ambientLight: '#001133',
+                fogColor: '#000022',
+                musicTrack: 'corporate_ambient'
+            },
+            industrial: {
+                name: 'Industrial',
+                tileSet: 'industrial',
+                ambientLight: '#110011',
+                fogColor: '#220011',
+                musicTrack: 'industrial_ambient'
+            },
+            government: {
+                name: 'Government',
+                tileSet: 'government',
+                ambientLight: '#003311',
+                fogColor: '#002211',
+                musicTrack: 'government_ambient'
+            },
+            underground: {
+                name: 'Underground',
+                tileSet: 'underground',
+                ambientLight: '#110000',
+                fogColor: '#220000',
+                musicTrack: 'underground_ambient'
+            },
+            fortress: {
+                name: 'Fortress',
+                tileSet: 'fortress',
+                ambientLight: '#000033',
+                fogColor: '#000044',
+                musicTrack: 'fortress_ambient'
+            }
         }
     };
 

@@ -291,7 +291,7 @@ CyberOpsGame.prototype.showHallOfGlory = function() {
 
         // Show as HUD dialog with cyberpunk styling
         this.showHudDialog(
-            '⚰️ HALL OF GLORY',
+            this.uiText?.hallOfGloryTitle || '⚰️ HALL OF GLORY',
             content,
             [
                 { text: '← BACK TO HUB', action: () => {
