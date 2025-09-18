@@ -440,8 +440,8 @@
     // Register with the campaign system
     if (typeof CampaignSystem !== 'undefined' && CampaignSystem.registerCampaignContent) {
         CampaignSystem.registerCampaignContent('main', mainCampaignContent);
-    } else {
-        // Fallback for direct loading
-        window.MAIN_CAMPAIGN_CONTENT = mainCampaignContent;
     }
+
+    // Also set as global for fallback access
+    window.MAIN_CAMPAIGN_CONTENT = mainCampaignContent;
 })();

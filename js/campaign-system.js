@@ -3,6 +3,7 @@
 
 const CampaignSystem = {
     campaigns: {},
+    campaignContent: {}, // Store content for each campaign
     currentCampaign: null,
     currentAct: null,
     currentMission: null,
@@ -394,6 +395,17 @@ const CampaignSystem = {
             completedMissions,
             percentComplete: totalMissions > 0 ? Math.floor((completedMissions / totalMissions) * 100) : 0
         };
+    },
+
+    // Register campaign content (agents, weapons, enemies, etc.)
+    registerCampaignContent(campaignId, content) {
+        this.campaignContent[campaignId] = content;
+        console.log(`✅ Registered content for campaign: ${campaignId}`);
+    },
+
+    // Get campaign content
+    getCampaignContent(campaignId) {
+        return this.campaignContent[campaignId] || null;
     }
 };
 
