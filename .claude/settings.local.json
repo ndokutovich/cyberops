@@ -26,7 +26,8 @@
       "Read(//w/_proj/_own/_ideator/three.js-master/build/**)",
       "Read(//w/_proj/_own/_ideator/three.js-master/**)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(del cleanup-missions.js)"
     ],
     "deny": [],
     "ask": []

@@ -29,26 +29,7 @@
             spawn: { x: 2, y: 68 },
             extraction: { x: 88, y: 2 },
 
-            generation: {
-                baseType: 'walls',
-                securityLevel: 'high',
-
-                mainCorridor: { y1: 30, y2: 40, x1: 5, x2: 85 },
-
-                securityRooms: [
-                    { x: 10, y: 10, width: 20, height: 15 },
-                    { x: 60, y: 10, width: 20, height: 15 },
-                    { x: 10, y: 45, width: 20, height: 15 },
-                    { x: 60, y: 45, width: 20, height: 15 },
-                    { x: 35, y: 25, width: 20, height: 20 }
-                ],
-
-                clearAreas: [
-                    { x1: 0, y1: 65, x2: 10, y2: 69 },
-                    { x1: 85, y1: 0, x2: 89, y2: 5 }
-                ]
-            },
-
+            // Embedded map data - no procedural generation needed
             embedded: {
                 tiles: [
                     "#################################################################################.........",

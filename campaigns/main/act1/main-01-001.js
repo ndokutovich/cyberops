@@ -32,36 +32,7 @@
             spawn: { x: 2, y: 78 },
             extraction: { x: 78, y: 2 },
 
-            // Map generation rules - the game will generate this procedurally
-            generation: {
-                baseType: 'walls',
-
-                // Create corridors
-                corridors: [
-                    { type: 'horizontal', startY: 10, endY: 70, stepY: 15, width: 2 },
-                    { type: 'vertical', startX: 10, endX: 70, stepX: 10, width: 2 }
-                ],
-
-                // Clear specific areas
-                clearAreas: [
-                    { x1: 0, y1: 75, x2: 10, y2: 79 },  // Spawn area
-                    { x1: 75, y1: 0, x2: 79, y2: 5 },   // Extraction area
-                    { x1: 2, y1: 70, x2: 10, y2: 74 },  // Spawn connector
-                    { x1: 70, y1: 2, x2: 79, y2: 10 },  // Extraction connector
-                ],
-
-                // Generate office rooms
-                rooms: {
-                    type: 'grid',
-                    startX: 5,
-                    startY: 5,
-                    stepX: 20,
-                    stepY: 20,
-                    roomWidth: 18,
-                    roomHeight: 18
-                }
-            },
-
+            // Embedded map data - no procedural generation needed
             embedded: {
                 tiles: [
                     "##########..########..########..########..########..########..########..###.....",

@@ -250,11 +250,20 @@ All interactions use the H key with context-sensitive behavior:
 
 ## Critical Architecture Principles
 
+### Boy Scout Rule - Leave Code Cleaner Than You Found It
+- **ALWAYS** clean up unused code when you encounter it
+- **ALWAYS** remove commented-out code unless it has a TODO explanation
+- **ALWAYS** fix inconsistencies in formatting when editing a file
+- **ALWAYS** remove unused imports, variables, and functions
+- **ALWAYS** update related documentation when changing code
+- **NEVER** leave behind test code, console.logs (unless for errors), or temporary hacks
+
 ### NEVER Use Old Approaches
 - **NEVER** create procedural map generation - all maps are embedded
 - **NEVER** hardcode mission data in engine files
 - **NEVER** put NPCs, quests, or content in engine code
 - **NEVER** use browser-based tools for data conversion - use Node.js
+- **NEVER** leave unused generation code in mission files
 - **ALWAYS** keep complete separation between engine and content
 - **ALWAYS** use campaign files for all mission-specific content
 

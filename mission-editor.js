@@ -1407,8 +1407,34 @@ class MissionEditor {
         return gameFormat;
     }
 
+    generateEmbeddedTileStrings() {
+        // Convert tile array to string format like in campaign files
+        const tileStrings = [];
+
+        for (let y = 0; y < this.mission.height; y++) {
+            let row = '';
+            for (let x = 0; x < this.mission.width; x++) {
+                const tile = this.mission.tiles[y][x];
+                // Map tile values to characters
+                if (tile === 0) {
+                    row += '.'; // Floor
+                } else if (tile === 1) {
+                    row += '#'; // Wall
+                } else if (tile === 2) {
+                    row += 'D'; // Door
+                } else {
+                    row += '.'; // Default to floor for unknown
+                }
+            }
+            tileStrings.push(row);
+        }
+
+        return tileStrings;
+    }
+
     generateEmbeddedMapData(mapData) {
-        // Convert full tile array to embedded format with spawn and extraction points
+        // This function is now deprecated - use generateEmbeddedTileStrings instead
+        // Kept for backward compatibility
         const embeddedData = {
             spawn: mapData.spawn,
             extraction: mapData.extraction,
@@ -1433,85 +1459,189 @@ class MissionEditor {
     }
 
     generateGameIntegrationFile(gameData) {
-        const timestamp = new Date().toISOString();
         const campaignId = document.getElementById('campaign-id').value || 'main';
         const actNumber = document.getElementById('act-number').value || '01';
         const missionNumber = document.getElementById('mission-number').value || '001';
-        const actName = document.getElementById('act-name').value || 'Act 1';
+        const actName = document.getElementById('act-name').value || 'Beginning Operations';
         const maxAgents = parseInt(document.getElementById('max-agents').value) || 4;
         const requiredAgents = parseInt(document.getElementById('required-agents').value) || 2;
         const recommendedAgents = parseInt(document.getElementById('recommended-agents').value) || 3;
 
+        // Get mission title for header comment
+        const missionTitle = this.mission.title || 'Mission';
+
         // Create filename with campaign-act-mission format
-        const filename = `${campaignId}-${actNumber}-${missionNumber}`;
+        const missionId = `${campaignId}-${actNumber}-${missionNumber}`;
 
-        // Generate the embedded map data from tiles
-        const embeddedMap = this.generateEmbeddedMapData(gameData.mapData);
+        // Convert tiles to string array format for embedded map
+        const tileStrings = this.generateEmbeddedTileStrings();
 
-        // Create the modular mission file content matching campaign system format
-        let jsContent = `// Campaign: ${campaignId}
-// Act: ${parseInt(actNumber)} - ${actName}
-// Mission: ${missionNumber} - ${this.mission.name}
-// Generated: ${timestamp}
-// This file should be saved as: campaigns/${campaignId}/act${parseInt(actNumber)}/${filename}.js
+        // Find spawn and extraction points from entities
+        let spawn = null;
+        let extraction = null;
+        const terminals = [];
+        const doors = [];
+        const npcs = [];
 
-(function() {
-    // Register mission with campaign system
-    if (typeof REGISTER_MISSION !== 'undefined') {
-        REGISTER_MISSION({
-            id: '${filename}',
-            campaign: '${campaignId}',
-            act: ${parseInt(actNumber)},
-            actName: '${actName}',
-            missionNumber: ${parseInt(missionNumber)},
-            name: '${this.mission.name}',
-            description: '${this.mission.description || ''}',
-            briefing: \`${this.mission.description || 'Complete all objectives'}\`,
-
-            // Map configuration with embedded data
-            mapConfig: {
-                type: '${this.mission.mapType}',
-                width: ${gameData.mapData.width},
-                height: ${gameData.mapData.height},
-                embedded: ${JSON.stringify(embeddedMap, null, 8)}
-            },
-
-            // Mission objectives
-            objectives: ${JSON.stringify(this.mission.objectives || [], null, 8)},
-
-            // Enemy spawns
-            enemies: ${JSON.stringify(gameData.mapData.enemies || [], null, 8)},
-
-            // NPCs with dialog and quests
-            npcs: ${JSON.stringify(gameData.mapData.npcs || [], null, 8)},
-
-            // Interactive objects
-            interactables: {
-                terminals: ${JSON.stringify(gameData.mapData.terminals || [], null, 12)},
-                explosives: ${JSON.stringify(gameData.mapData.explosives || [], null, 12)},
-                switches: ${JSON.stringify(gameData.mapData.switches || [], null, 12)},
-                gates: ${JSON.stringify(gameData.mapData.gates || [], null, 12)}
-            },
-
-            // Agent configuration
-            agentConfig: {
-                maxAgents: ${maxAgents},
-                requiredAgents: ${requiredAgents},
-                recommendedAgents: ${recommendedAgents}
-            },
-
-            // Rewards
-            rewards: {
-                credits: ${this.mission.credits || 5000},
-                researchPoints: ${this.mission.researchPoints || 2}
-            },
-
-            // Mission settings
-            settings: {
-                timeLimit: ${this.mission.timeLimit || 0},
-                difficulty: ${this.mission.difficulty || 2}
+        // Process entities
+        this.mission.entities.forEach(entity => {
+            switch(entity.type) {
+                case 'spawn-point':
+                    spawn = { x: entity.x, y: entity.y };
+                    break;
+                case 'extraction':
+                    extraction = { x: entity.x, y: entity.y };
+                    break;
+                case 'terminal':
+                    terminals.push({
+                        x: entity.x,
+                        y: entity.y,
+                        id: `t${terminals.length + 1}`,
+                        hackTime: 3000,
+                        hacked: false
+                    });
+                    break;
+                case 'npc':
+                    npcs.push({
+                        x: entity.x,
+                        y: entity.y,
+                        id: entity.id || `npc_${npcs.length + 1}`,
+                        name: entity.name || 'NPC',
+                        dialog: entity.dialog || [],
+                        quests: entity.quests || []
+                    });
+                    break;
             }
         });
+
+        // Check for doors in tiles
+        for (let y = 0; y < this.mission.height; y++) {
+            for (let x = 0; x < this.mission.width; x++) {
+                if (this.mission.tiles[y][x] === 2) {
+                    doors.push({ x, y, locked: false });
+                }
+            }
+        }
+
+        // Format tile strings for output with proper indentation
+        const formattedTiles = tileStrings.map(row =>
+            `                    "${row}"`
+        ).join(',\n');
+
+        // Generate the EXACT format used in campaign files
+        let jsContent = `// Mission: ${this.mission.name} - ${missionTitle}
+// Campaign: Main Campaign
+// Act: ${parseInt(actNumber)} - ${actName}
+// Mission: ${missionNumber}
+
+(function() {
+    const mission = {
+        id: '${missionId}',
+        campaign: '${campaignId}',
+        act: ${parseInt(actNumber)},
+        missionNumber: ${parseInt(missionNumber)},
+
+        // Basic Info
+        name: '${this.mission.name}',
+        title: '${missionTitle}',
+        description: '${this.mission.description || ''}',
+        briefing: '${this.mission.description || 'Complete all objectives.'}',
+
+        // Agent Configuration
+        agents: {
+            max: ${maxAgents},
+            required: ${requiredAgents},
+            recommended: ${recommendedAgents}
+        },
+
+        // Map Configuration with generation rules
+        map: {
+            type: '${this.mission.mapType}',
+            name: '${this.mission.name}',
+            width: ${this.mission.width},
+            height: ${this.mission.height},
+            spawn: ${spawn ? `{ x: ${spawn.x}, y: ${spawn.y} }` : 'null'},
+            extraction: ${extraction ? `{ x: ${extraction.x}, y: ${extraction.y} }` : 'null'},
+
+            // Map generation rules - the game will generate this procedurally
+            generation: {
+                baseType: 'walls',
+
+                // Create corridors
+                corridors: [
+                    { type: 'horizontal', startY: 10, endY: 70, stepY: 15, width: 2 },
+                    { type: 'vertical', startX: 10, endX: 70, stepX: 10, width: 2 }
+                ],
+
+                // Clear specific areas
+                clearAreas: [
+                    { x1: 0, y1: 75, x2: 10, y2: 79 },  // Spawn area
+                    { x1: 75, y1: 0, x2: 79, y2: 5 },   // Extraction area
+                ],
+
+                // Create rooms
+                rooms: [
+                    { x: 10, y: 10, width: 15, height: 10, type: 'office' },
+                    { x: 30, y: 20, width: 20, height: 15, type: 'server' }
+                ]
+            },
+
+            embedded: {
+                tiles: [
+${formattedTiles}
+                ],
+                spawn: ${spawn ? `{ x: ${spawn.x}, y: ${spawn.y} }` : 'null'},
+                extraction: ${extraction ? `{ x: ${extraction.x}, y: ${extraction.y} }` : 'null'},`;
+
+        // Add terminals if any
+        if (terminals.length > 0) {
+            jsContent += `\n                terminals: ${JSON.stringify(terminals, null, 20).replace(/\n/g, '\n                ')},`;
+        }
+
+        // Add doors if any
+        if (doors.length > 0) {
+            jsContent += `\n                doors: ${JSON.stringify(doors, null, 20).replace(/\n/g, '\n                ')},`;
+        }
+
+        // Add NPCs if any
+        if (npcs.length > 0) {
+            jsContent += `\n                npcs: ${JSON.stringify(npcs, null, 20).replace(/\n/g, '\n                ')}`;
+        } else {
+            // Remove trailing comma if no NPCs
+            jsContent = jsContent.replace(/,$/, '');
+        }
+
+        jsContent += `
+            }
+        },
+
+        // Objectives
+        objectives: ${JSON.stringify(this.mission.objectives || [], null, 8).replace(/\n/g, '\n        ')},
+
+        // Rewards
+        rewards: {
+            credits: ${this.mission.credits || 5000},
+            researchPoints: ${this.mission.researchPoints || 2},
+            worldControl: 1
+        },
+
+        // Enemy configuration
+        enemies: {
+            count: ${gameData.mapData.enemies ? gameData.mapData.enemies.length : 8},
+            types: ['guard', 'enforcer', 'hacker'],
+            spawns: []
+        }
+    };
+
+    // Self-registration with campaign system
+    if (typeof CampaignSystem !== 'undefined' && CampaignSystem.registerMission) {
+        CampaignSystem.registerMission('${campaignId}', ${parseInt(actNumber)}, '${missionId}', mission);
+    }
+
+    // Also make available for direct loading
+    if (typeof window !== 'undefined') {
+        window.CAMPAIGN_MISSIONS = window.CAMPAIGN_MISSIONS || {};
+        window.CAMPAIGN_MISSIONS['${missionId}'] = mission;
     }
 })();`;
 
