@@ -932,8 +932,10 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
             });
 
             // Trigger recoil effect for shooting
-            this.triggerFreezeEffect(50); // 50ms freeze for gun recoil
-            this.triggerScreenShake(3, 5); // Light shake for shooting
+            if (this.triggerVisualEffect) {
+                this.triggerVisualEffect('freezeEffects', 'shoot', agent);
+                this.triggerVisualEffect('screenShake', 'shoot', agent);
+            }
 
             // Play shooting sound
             this.playSound('shoot', 0.4);
@@ -960,8 +962,10 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
             });
 
             // Big shake and freeze for grenade explosion
-            this.triggerScreenShake(15, 30); // Strong shake for 0.5 seconds
-            this.triggerFreezeEffect(150); // 150ms freeze for explosion impact
+            if (this.triggerVisualEffect) {
+                this.triggerVisualEffect('freezeEffects', 'explosion', { x: agent.targetX, y: agent.targetY });
+                this.triggerVisualEffect('screenShake', 'explosion', { x: agent.targetX, y: agent.targetY });
+            }
 
             // Play explosion sound
             this.playSound('explosion', 0.6);
@@ -996,20 +1000,8 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
         }, 500);
 }
 
-// Screen effect helpers
-CyberOpsGame.prototype.triggerScreenShake = function(intensity, duration) {
-        if (!this.screenShake) return;
-        this.screenShake.active = true;
-        this.screenShake.intensity = intensity;
-        this.screenShake.duration = duration;
-}
-
-CyberOpsGame.prototype.triggerFreezeEffect = function(duration) {
-        if (!this.freezeEffect) return;
-        this.freezeEffect.active = true;
-        this.freezeEffect.duration = duration;
-        this.freezeEffect.startTime = Date.now();
-}
+// Screen effect helpers - now handled by visual effects system
+// Legacy functions moved to game-visual-effects.js for compatibility
 
 // Initialize fog of war for the current map
 CyberOpsGame.prototype.initializeFogOfWar = function() {

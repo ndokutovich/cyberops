@@ -240,80 +240,240 @@ const GAME_MUSIC_CONFIG = {
     },
 
     // Sound effect configurations
+    // Fully declarative SFX system with context awareness
     soundEffects: {
+        // Global SFX settings
+        global: {
+            masterVolume: 1.0,
+            sfxVolume: 0.8,
+            maxSimultaneous: 10,  // Max simultaneous sounds
+            cooldowns: {          // Minimum time between same sound
+                shoot: 100,
+                hit: 50,
+                footstep: 200
+            }
+        },
         // UI sounds
         ui: {
             click: {
-                file: 'sfx-click.mp3',
-                volume: 0.3
+                file: 'sfx-click.wav',
+                fallback: 'sfx-click.mp3',
+                volume: 0.3,
+                procedural: true
             },
             hover: {
-                file: 'sfx-hover.mp3',
-                volume: 0.2
+                file: 'sfx-hover.wav',
+                fallback: 'sfx-hover.mp3',
+                volume: 0.2,
+                procedural: true
             },
             error: {
-                file: 'sfx-error.mp3',
-                volume: 0.4
+                file: 'sfx-error.wav',
+                fallback: 'sfx-error.mp3',
+                volume: 0.4,
+                procedural: true
             },
             success: {
-                file: 'sfx-success.mp3',
-                volume: 0.4
+                file: 'sfx-success.wav',
+                fallback: 'sfx-success.mp3',
+                volume: 0.4,
+                procedural: true
             }
         },
 
         // Combat sounds
         combat: {
             shoot: {
-                file: 'sfx-shoot.mp3',
+                file: 'sfx-shoot.wav',
+                fallback: 'sfx-shoot.mp3',
                 volume: 0.5,
-                variations: ['sfx-shoot-1.mp3', 'sfx-shoot-2.mp3']
+                procedural: true,  // Always fallback to procedural if files missing
+                variations: ['sfx-shoot-1.wav', 'sfx-shoot-2.wav']
             },
             explosion: {
-                file: 'sfx-explosion.mp3',
-                volume: 0.6
+                file: 'sfx-explosion.wav',
+                fallback: 'sfx-explosion.mp3',
+                volume: 0.6,
+                procedural: true  // Always fallback to procedural if files missing
             },
             hit: {
-                file: 'sfx-hit.mp3',
+                file: 'sfx-hit.wav',
+                fallback: 'sfx-hit.mp3',
                 volume: 0.4,
                 procedural: true  // Generate if missing
             },
             shield: {
-                file: 'sfx-shield.mp3',
-                volume: 0.5
+                file: 'sfx-shield.wav',
+                fallback: 'sfx-shield.mp3',
+                volume: 0.5,
+                procedural: true  // Always fallback to procedural if files missing
             }
         },
 
         // Interaction sounds
         interaction: {
             hack: {
-                file: 'sfx-hack.mp3',
-                volume: 0.4
+                file: 'sfx-hack.wav',
+                fallback: 'sfx-hack.mp3',
+                volume: 0.4,
+                procedural: true,
+                duration: 1000,  // Sound duration for timing
+                vibration: [20, 10, 20]  // Haptic feedback pattern
+            },
+            plant: {
+                file: 'sfx-plant.wav',
+                fallback: 'sfx-plant.mp3',
+                volume: 0.5,
+                procedural: true,
+                description: 'Planting explosives'
             },
             door: {
-                file: 'sfx-door.mp3',
-                volume: 0.5
+                file: 'sfx-door.wav',
+                fallback: 'sfx-door.mp3',
+                volume: 0.5,
+                procedural: true
             },
             terminal: {
-                file: 'sfx-terminal.mp3',
-                volume: 0.3
+                file: 'sfx-terminal.wav',
+                fallback: 'sfx-terminal.mp3',
+                volume: 0.3,
+                procedural: true
             },
             pickup: {
-                file: 'sfx-pickup.mp3',
-                volume: 0.4
+                file: 'sfx-pickup.wav',
+                fallback: 'sfx-pickup.mp3',
+                volume: 0.4,
+                procedural: true
+            },
+            type: {
+                file: 'sfx-type.wav',
+                fallback: 'sfx-type.mp3',
+                volume: 0.1,
+                procedural: true,
+                description: 'NPC dialog typing'
             }
         },
 
         // Movement sounds
         movement: {
             footstep: {
-                file: 'sfx-footstep.mp3',
+                file: 'sfx-footstep.wav',
+                fallback: 'sfx-footstep.mp3',
                 volume: 0.2,
-                variations: ['sfx-footstep-1.mp3', 'sfx-footstep-2.mp3']
+                procedural: true,
+                variations: ['sfx-footstep-1.wav', 'sfx-footstep-2.wav']
             },
             move: {
-                file: 'sfx-move.mp3',
+                file: 'sfx-move.wav',
+                fallback: 'sfx-move.mp3',
                 volume: 0.1,
                 procedural: true
+            }
+        }
+    },
+
+    // Contextual SFX configurations
+    // These override default sounds based on game state
+    contextualSounds: {
+        // Environment-based overrides
+        environments: {
+            industrial: {
+                footstep: { volume: 0.3, reverb: 0.7 },
+                shoot: { volume: 0.6, echo: true }
+            },
+            slums: {
+                footstep: { volume: 0.15, muffled: true },
+                explosion: { volume: 0.8, distanceScale: 1.5 }
+            },
+            corporate: {
+                footstep: { volume: 0.1, crisp: true },
+                hack: { volume: 0.3, highTech: true }
+            }
+        },
+
+        // State-based overrides
+        states: {
+            stealth: {
+                volumeMultiplier: 0.5,
+                disableSounds: ['footstep']
+            },
+            combat: {
+                volumeMultiplier: 1.2,
+                prioritySounds: ['shoot', 'explosion', 'hit']
+            },
+            critical: {
+                // When agent health < 30%
+                hit: { volume: 0.8, vibration: [100] },
+                shield: { volume: 0.6 }
+            }
+        },
+
+        // Distance-based attenuation
+        distance: {
+            enabled: true,
+            maxDistance: 20,  // Tiles
+            minVolume: 0.1,   // Minimum volume at max distance
+            falloffCurve: 'linear'  // linear, exponential, logarithmic
+        }
+    },
+
+    // Procedural sound generation settings
+    proceduralSettings: {
+        // Define how each sound type should be generated
+        templates: {
+            shoot: {
+                waveform: 'sawtooth',
+                frequency: 300,
+                duration: 100,
+                envelope: { attack: 0, decay: 100, sustain: 0, release: 0 }
+            },
+            explosion: {
+                waveform: 'noise',
+                frequency: 50,
+                duration: 500,
+                envelope: { attack: 0, decay: 100, sustain: 200, release: 200 }
+            },
+            hit: {
+                waveform: 'square',
+                frequency: 150,
+                duration: 50,
+                envelope: { attack: 0, decay: 50, sustain: 0, release: 0 }
+            },
+            shield: {
+                waveform: 'sine',
+                frequency: 800,
+                duration: 200,
+                envelope: { attack: 10, decay: 50, sustain: 100, release: 40 }
+            },
+            hack: {
+                waveform: 'triangle',
+                frequency: 400,
+                duration: 300,
+                modulation: { type: 'fm', rate: 10, depth: 100 }
+            },
+            plant: {
+                waveform: 'square',
+                frequency: 200,
+                duration: 400,
+                envelope: { attack: 50, decay: 100, sustain: 200, release: 50 }
+            },
+            type: {
+                waveform: 'sine',
+                frequency: 1000,
+                duration: 30,
+                randomPitch: 0.2  // ±20% pitch variation
+            },
+            click: {
+                waveform: 'sine',
+                frequency: 600,
+                duration: 50,
+                envelope: { attack: 0, decay: 50, sustain: 0, release: 0 }
+            },
+            footstep: {
+                waveform: 'noise',
+                frequency: 100,
+                duration: 100,
+                filter: { type: 'lowpass', frequency: 200 }
             }
         }
     },

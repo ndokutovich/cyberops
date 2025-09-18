@@ -2,7 +2,6 @@
 // Music is handled by:
 // - game-screen-music.js for menu screens
 // - game-music-system.js for missions
-// - game-audio-redirects.js for backward compatibility
 
 CyberOpsGame.prototype.initializeAudio = function() {
     // Initialize audio variables - DON'T create AudioContext yet!
@@ -10,6 +9,29 @@ CyberOpsGame.prototype.initializeAudio = function() {
     this.audioEnabled = false; // Start with audio disabled
 
     console.log('Audio system initialized, waiting for user interaction...');
+}
+
+// Setup audio on first user interaction
+CyberOpsGame.prototype.setupAudioInteraction = function() {
+    const enableAudioOnClick = () => {
+        if (!this.audioEnabled) {
+            this.enableAudio();
+        }
+        // Remove listeners after first interaction
+        document.removeEventListener('click', enableAudioOnClick);
+        document.removeEventListener('touchstart', enableAudioOnClick);
+        document.removeEventListener('keydown', enableAudioOnClick);
+    };
+
+    // Add listeners for first user interaction
+    document.addEventListener('click', enableAudioOnClick);
+    document.addEventListener('touchstart', enableAudioOnClick);
+    document.addEventListener('keydown', enableAudioOnClick);
+
+    // Check if audio was previously enabled
+    if (sessionStorage.getItem('audioEnabled') === 'true') {
+        this.enableAudioImmediately();
+    }
 }
 
 CyberOpsGame.prototype.enableAudioImmediately = function() {
@@ -142,7 +164,7 @@ CyberOpsGame.prototype.playSound = function(soundType, volume = 0.5) {
         const category = this.getSoundCategory(soundType);
         const config = getSoundEffectConfig(category, soundType);
         if (config) {
-            this.playConfiguredSound(config, volume);
+            this.playConfiguredSound(config, volume, soundType);
             return;
         }
     }
@@ -172,86 +194,201 @@ CyberOpsGame.prototype.getSoundCategory = function(soundType) {
     return soundCategories[soundType] || 'ui';
 }
 
-CyberOpsGame.prototype.playConfiguredSound = function(config, volume) {
+CyberOpsGame.prototype.playConfiguredSound = function(config, volume, soundType) {
     if (!config.file && !config.procedural) {
         return;
     }
 
-    if (config.file) {
-        // Try to play HTML audio file
-        const audio = new Audio(config.file);
+    const tryPlayFile = (filename) => {
+        const audio = new Audio(filename);
         audio.volume = (config.volume || 0.5) * volume;
-        audio.play().catch(() => {
-            // Fall back to procedural if file fails
-            if (config.procedural) {
-                this.playProceduralSound(config.type, volume);
+        return audio.play();
+    };
+
+    if (config.file) {
+        // Try to play primary file (WAV)
+        tryPlayFile(config.file).catch(() => {
+            // Try fallback file (MP3) if specified
+            if (config.fallback) {
+                console.log(`Primary SFX not found: ${config.file}, trying fallback: ${config.fallback}`);
+                tryPlayFile(config.fallback).catch(() => {
+                    // Fall back to procedural if both files fail
+                    console.log(`Fallback SFX also not found: ${config.fallback}, using procedural for: ${soundType}`);
+                    this.playProceduralSound(soundType, volume);
+                });
+            } else {
+                // Fall back to procedural if no fallback file specified
+                console.log(`SFX file not found: ${config.file}, using procedural for: ${soundType}`);
+                this.playProceduralSound(soundType, volume);
             }
         });
     } else if (config.procedural) {
-        this.playProceduralSound(config.type, volume);
+        this.playProceduralSound(soundType, volume);
     }
 }
 
 CyberOpsGame.prototype.playProceduralSound = function(soundType, volume) {
     if (!this.audioContext) return;
 
+    // Get template from config if available
+    let template = null;
+    if (typeof GAME_MUSIC_CONFIG !== 'undefined' &&
+        GAME_MUSIC_CONFIG.proceduralSettings &&
+        GAME_MUSIC_CONFIG.proceduralSettings.templates) {
+        template = GAME_MUSIC_CONFIG.proceduralSettings.templates[soundType];
+    }
+
+    // Special handling for noise-based sounds
+    if (template && template.waveform === 'noise') {
+        this.playNoiseSound(soundType, volume, template);
+        return;
+    }
+
     const oscillator = this.audioContext.createOscillator();
     const gainNode = this.audioContext.createGain();
 
-    // Configure sound based on type
-    switch(soundType) {
-        case 'shoot':
-            oscillator.type = 'sawtooth';
-            oscillator.frequency.value = 300;
-            gainNode.gain.setValueAtTime(volume * 0.3, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
-            break;
+    // Use template if available, otherwise fallback to hardcoded
+    if (template) {
+        // Apply waveform
+        oscillator.type = template.waveform === 'noise' ? 'sawtooth' : template.waveform;
 
-        case 'explosion':
-            oscillator.type = 'sawtooth';
-            oscillator.frequency.value = 50;
-            gainNode.gain.setValueAtTime(volume * 0.5, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
-            break;
+        // Apply frequency with random variation if specified
+        let freq = template.frequency || 440;
+        if (template.randomPitch) {
+            freq *= (1 + (Math.random() - 0.5) * 2 * template.randomPitch);
+        }
+        oscillator.frequency.value = freq;
 
-        case 'hit':
-            oscillator.type = 'square';
-            oscillator.frequency.value = 150;
-            gainNode.gain.setValueAtTime(volume * 0.2, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.05);
-            break;
+        // Apply modulation if specified
+        if (template.modulation) {
+            const lfo = this.audioContext.createOscillator();
+            const lfoGain = this.audioContext.createGain();
+            lfo.frequency.value = template.modulation.rate || 10;
+            lfoGain.gain.value = template.modulation.depth || 100;
+            lfo.connect(lfoGain);
+            lfoGain.connect(oscillator.frequency);
+            lfo.start();
+            lfo.stop(this.audioContext.currentTime + (template.duration / 1000 || 1));
+        }
 
-        case 'shield':
-            oscillator.type = 'sine';
-            oscillator.frequency.value = 800;
-            gainNode.gain.setValueAtTime(volume * 0.2, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
-            break;
+        // Apply envelope
+        const now = this.audioContext.currentTime;
+        const env = template.envelope;
+        if (env) {
+            const attack = (env.attack || 0) / 1000;
+            const decay = (env.decay || 100) / 1000;
+            const sustain = (env.sustain || 0) / 1000;
+            const release = (env.release || 0) / 1000;
 
-        case 'click':
-            oscillator.type = 'sine';
-            oscillator.frequency.value = 600;
-            gainNode.gain.setValueAtTime(volume * 0.1, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.05);
-            break;
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume, now + attack);
+            gainNode.gain.linearRampToValueAtTime(volume * 0.7, now + attack + decay);
+            if (sustain > 0) {
+                gainNode.gain.setValueAtTime(volume * 0.7, now + attack + decay + sustain);
+            }
+            gainNode.gain.linearRampToValueAtTime(0.01, now + attack + decay + sustain + release);
+        } else {
+            // Simple fade out
+            gainNode.gain.setValueAtTime(volume, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + (template.duration / 1000 || 0.1));
+        }
 
-        case 'hack':
-            oscillator.type = 'triangle';
-            oscillator.frequency.value = 400;
-            gainNode.gain.setValueAtTime(volume * 0.15, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
-            break;
+        // Apply filter if specified
+        if (template.filter) {
+            const filter = this.audioContext.createBiquadFilter();
+            filter.type = template.filter.type || 'lowpass';
+            filter.frequency.value = template.filter.frequency || 1000;
+            oscillator.connect(filter);
+            filter.connect(gainNode);
+        } else {
+            oscillator.connect(gainNode);
+        }
 
-        default:
-            oscillator.type = 'sine';
-            oscillator.frequency.value = 440;
-            gainNode.gain.setValueAtTime(volume * 0.1, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+    } else {
+        // Fallback to original hardcoded sounds
+        switch(soundType) {
+            case 'shoot':
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.value = 300;
+                gainNode.gain.setValueAtTime(volume * 0.3, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                break;
+            case 'explosion':
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.value = 50;
+                gainNode.gain.setValueAtTime(volume * 0.5, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+                break;
+            case 'hit':
+                oscillator.type = 'square';
+                oscillator.frequency.value = 150;
+                gainNode.gain.setValueAtTime(volume * 0.2, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.05);
+                break;
+            case 'plant':
+                oscillator.type = 'square';
+                oscillator.frequency.value = 200;
+                gainNode.gain.setValueAtTime(volume * 0.3, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.4);
+                break;
+            case 'type':
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 1000 + Math.random() * 200;
+                gainNode.gain.setValueAtTime(volume * 0.05, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.03);
+                break;
+            default:
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 440;
+                gainNode.gain.setValueAtTime(volume * 0.1, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+        }
+        oscillator.connect(gainNode);
     }
 
-    oscillator.connect(gainNode);
     gainNode.connect(this.audioContext.destination);
-
     oscillator.start();
-    oscillator.stop(this.audioContext.currentTime + 1); // Stop after 1 second max
+
+    // Stop after duration or 1 second
+    const duration = template ? (template.duration / 1000 || 1) : 1;
+    oscillator.stop(this.audioContext.currentTime + duration);
+}
+
+// Helper function for noise-based sounds
+CyberOpsGame.prototype.playNoiseSound = function(soundType, volume, template) {
+    if (!this.audioContext) return;
+
+    const bufferSize = 4096;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const output = buffer.getChannelData(0);
+
+    // Generate white noise
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.audioContext.createBufferSource();
+    noise.buffer = buffer;
+
+    const gainNode = this.audioContext.createGain();
+
+    // Apply filter for colored noise
+    if (template.filter) {
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = template.filter.type || 'lowpass';
+        filter.frequency.value = template.filter.frequency || 200;
+        noise.connect(filter);
+        filter.connect(gainNode);
+    } else {
+        noise.connect(gainNode);
+    }
+
+    // Apply envelope
+    const now = this.audioContext.currentTime;
+    gainNode.gain.setValueAtTime(volume, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + (template.duration / 1000 || 0.1));
+
+    gainNode.connect(this.audioContext.destination);
+    noise.start();
+    noise.stop(now + (template.duration / 1000 || 0.1));
 }

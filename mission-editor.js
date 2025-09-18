@@ -47,11 +47,72 @@ class MissionEditor {
         this.init();
     }
 
-    init() {
+    async init() {
         this.initMap();
         this.setupEventListeners();
         this.render();
         this.updatePropertiesPanel();
+
+        // Load campaigns and populate dropdown
+        await this.loadCampaigns();
+    }
+
+    async loadCampaigns() {
+        try {
+            // Wait for campaign system to initialize
+            if (typeof loadCampaignIndex === 'function') {
+                await loadCampaignIndex();
+            }
+
+            // Populate mission dropdown
+            const dropdown = document.getElementById('load-game-mission');
+            dropdown.innerHTML = '<option value="">Load Campaign Mission...</option>';
+
+            if (typeof CAMPAIGN_MISSIONS !== 'undefined' && Object.keys(CAMPAIGN_MISSIONS).length > 0) {
+                // Group by campaign and act
+                const campaigns = {};
+
+                for (const [key, mission] of Object.entries(CAMPAIGN_MISSIONS)) {
+                    const parts = key.split('-');
+                    const campaign = parts[0];
+                    const act = parts[1];
+                    const missionNum = parts[2];
+
+                    if (!campaigns[campaign]) campaigns[campaign] = {};
+                    if (!campaigns[campaign][act]) campaigns[campaign][act] = [];
+
+                    campaigns[campaign][act].push({
+                        key: key,
+                        num: missionNum,
+                        mission: mission
+                    });
+                }
+
+                // Add missions to dropdown organized by act
+                for (const [campaignName, acts] of Object.entries(campaigns)) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = `Campaign: ${campaignName.toUpperCase()}`;
+
+                    for (const [actNum, missions] of Object.entries(acts)) {
+                        // Sort missions by number
+                        missions.sort((a, b) => a.num.localeCompare(b.num));
+
+                        for (const missionData of missions) {
+                            const option = document.createElement('option');
+                            option.value = missionData.key;
+                            option.textContent = `Act ${actNum}, Mission ${missionData.num}: ${missionData.mission.title || 'Untitled'}`;
+                            optgroup.appendChild(option);
+                        }
+                    }
+
+                    dropdown.appendChild(optgroup);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load campaigns:', error);
+            const dropdown = document.getElementById('load-game-mission');
+            dropdown.innerHTML = '<option value="">Failed to load campaigns</option>';
+        }
     }
 
     initMap() {
@@ -80,6 +141,7 @@ class MissionEditor {
         document.getElementById('import-mission').addEventListener('click', () => this.importMission());
         document.getElementById('test-mission').addEventListener('click', () => this.testMission());
         document.getElementById('validate-mission').addEventListener('click', () => this.validateMission());
+        document.getElementById('campaign-config').addEventListener('click', () => this.showCampaignConfig());
 
         // Tool buttons
         document.querySelectorAll('.tool-btn').forEach(btn => {
@@ -179,7 +241,7 @@ class MissionEditor {
         // Load game mission dropdown
         document.getElementById('load-game-mission').addEventListener('change', (e) => {
             if (e.target.value) {
-                this.loadGameMission(parseInt(e.target.value));
+                this.loadGameMission(e.target.value);
                 e.target.value = ''; // Reset dropdown
             }
         });
@@ -2380,6 +2442,223 @@ ADVANTAGES:
         }
 
         console.log('Generated map from embedded definition:', mapDef.width + 'x' + mapDef.height);
+    }
+
+    showCampaignConfig() {
+        const dialog = document.getElementById('campaign-dialog');
+        dialog.style.display = 'block';
+
+        // Populate campaign overview
+        const overview = document.getElementById('campaign-overview');
+        const structure = document.getElementById('campaign-structure');
+
+        if (!CAMPAIGN_MISSIONS || Object.keys(CAMPAIGN_MISSIONS).length === 0) {
+            overview.innerHTML = '<p style="color: #ff073a;">No campaigns loaded</p>';
+            structure.innerHTML = '<p style="color: #ff073a;">No missions found</p>';
+            return;
+        }
+
+        // Group missions by campaign and act
+        const campaigns = {};
+        let totalMissions = 0;
+        let totalCredits = 0;
+        let totalResearch = 0;
+
+        for (const [key, mission] of Object.entries(CAMPAIGN_MISSIONS)) {
+            const parts = key.split('-');
+            const campaign = parts[0];
+            const act = parts[1];
+            const missionNum = parts[2];
+
+            if (!campaigns[campaign]) campaigns[campaign] = {};
+            if (!campaigns[campaign][act]) campaigns[campaign][act] = [];
+
+            campaigns[campaign][act].push({
+                key: key,
+                num: missionNum,
+                mission: mission
+            });
+
+            totalMissions++;
+            totalCredits += (mission.rewards?.credits || 0);
+            totalResearch += (mission.rewards?.researchPoints || 0);
+        }
+
+        // Display overview
+        overview.innerHTML = `
+            <p>Total Missions: ${totalMissions}</p>
+            <p>Total Credits Available: ${totalCredits}</p>
+            <p>Total Research Points: ${totalResearch}</p>
+            <p>Campaigns: ${Object.keys(campaigns).join(', ')}</p>
+        `;
+
+        // Display structure
+        let structureHTML = '';
+        for (const [campaignName, acts] of Object.entries(campaigns)) {
+            structureHTML += `<h4 style="color: #00ff41;">Campaign: ${campaignName.toUpperCase()}</h4>`;
+
+            for (const [actNum, missions] of Object.entries(acts)) {
+                structureHTML += `<h5 style="color: #0099ff; margin-left: 20px;">Act ${actNum}</h5>`;
+
+                // Sort missions by number
+                missions.sort((a, b) => a.num.localeCompare(b.num));
+
+                for (const missionData of missions) {
+                    const m = missionData.mission;
+                    structureHTML += `
+                        <div style="margin-left: 40px; margin-bottom: 10px; padding: 5px; background: #16213e; border-left: 3px solid #00ff41;">
+                            <strong>${missionData.key}</strong>: ${m.title || 'Untitled'}<br>
+                            <span style="color: #888;">Difficulty: ${m.difficulty || 'Unknown'} |
+                            Credits: ${m.rewards?.credits || 0} |
+                            Research: ${m.rewards?.researchPoints || 0}</span>
+                        </div>
+                    `;
+                }
+            }
+        }
+        structure.innerHTML = structureHTML;
+
+        // Setup dialog buttons
+        document.getElementById('campaign-close').onclick = () => {
+            dialog.style.display = 'none';
+        };
+
+        document.getElementById('campaign-export').onclick = () => {
+            this.exportCampaign();
+        };
+    }
+
+    async exportCampaign() {
+        if (!CAMPAIGN_MISSIONS || Object.keys(CAMPAIGN_MISSIONS).length === 0) {
+            alert('No campaign data to export');
+            return;
+        }
+
+        if (typeof JSZip === 'undefined') {
+            alert('JSZip library not loaded. Falling back to JSON export.');
+            this.exportCampaignJSON();
+            return;
+        }
+
+        const campaignName = document.getElementById('campaign-name').value || 'main';
+
+        try {
+            const zip = new JSZip();
+
+            // Create folder structure: campaigns/[campaign-name]/
+            const campaignFolder = zip.folder(`campaigns/${campaignName}`);
+
+            // Group missions by act
+            const missionsByAct = {};
+
+            for (const [key, mission] of Object.entries(CAMPAIGN_MISSIONS)) {
+                const parts = key.split('-');
+                const act = `act${parts[1]}`;
+
+                if (!missionsByAct[act]) {
+                    missionsByAct[act] = {};
+                }
+
+                missionsByAct[act][key] = mission;
+            }
+
+            // Create act folders and mission files
+            for (const [actName, missions] of Object.entries(missionsByAct)) {
+                const actFolder = campaignFolder.folder(actName);
+
+                for (const [missionKey, missionData] of Object.entries(missions)) {
+                    // Create mission file content
+                    const missionContent = `// Mission: ${missionData.title || missionKey}
+// Generated by CyberOps Mission Editor
+// ${new Date().toISOString()}
+
+(function() {
+    window.CAMPAIGN_MISSIONS = window.CAMPAIGN_MISSIONS || {};
+
+    window.CAMPAIGN_MISSIONS['${missionKey}'] = ${JSON.stringify(missionData, null, 4)};
+
+    console.log('Loaded mission: ${missionKey}');
+})();
+`;
+
+                    actFolder.file(`${missionKey}.js`, missionContent);
+                }
+            }
+
+            // Create campaign info file
+            const campaignInfo = {
+                name: campaignName,
+                totalMissions: Object.keys(CAMPAIGN_MISSIONS).length,
+                acts: Object.keys(missionsByAct).length,
+                totalResearchPoints: parseInt(document.getElementById('campaign-research').value),
+                totalCreditsGoal: parseInt(document.getElementById('campaign-credits').value),
+                exportDate: new Date().toISOString()
+            };
+
+            campaignFolder.file('campaign-info.json', JSON.stringify(campaignInfo, null, 2));
+
+            // Create README
+            const readme = `# Campaign: ${campaignName.toUpperCase()}
+
+## Installation
+1. Extract this ZIP to your game's root directory
+2. The folder structure will be: campaigns/${campaignName}/
+3. Restart the game to load the new campaign
+
+## Contents
+- ${Object.keys(missionsByAct).length} Acts
+- ${Object.keys(CAMPAIGN_MISSIONS).length} Total Missions
+- Total Research Points: ${campaignInfo.totalResearchPoints}
+- Credits Goal: ${campaignInfo.totalCreditsGoal}
+
+## Mission List
+${Object.entries(CAMPAIGN_MISSIONS).map(([key, m]) => `- ${key}: ${m.title || 'Untitled'}`).join('\\n')}
+
+Generated: ${new Date().toLocaleString()}
+`;
+
+            campaignFolder.file('README.md', readme);
+
+            // Generate ZIP file
+            const blob = await zip.generateAsync({ type: 'blob' });
+
+            // Download ZIP
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `campaign_${campaignName}_${Date.now()}.zip`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            console.log('Campaign exported as ZIP:', campaignName);
+            alert(`Campaign exported successfully!\\n\\nExtract to game folder to install.`);
+
+        } catch (error) {
+            console.error('Failed to export campaign:', error);
+            alert('Failed to create ZIP. Falling back to JSON export.');
+            this.exportCampaignJSON();
+        }
+    }
+
+    // Fallback JSON export
+    exportCampaignJSON() {
+        const campaignData = {
+            name: document.getElementById('campaign-name').value,
+            totalResearchPoints: parseInt(document.getElementById('campaign-research').value),
+            totalCreditsGoal: parseInt(document.getElementById('campaign-credits').value),
+            missions: CAMPAIGN_MISSIONS,
+            timestamp: new Date().toISOString()
+        };
+
+        const blob = new Blob([JSON.stringify(campaignData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `campaign_${campaignData.name}_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        console.log('Campaign exported as JSON:', campaignData.name);
     }
 }
 

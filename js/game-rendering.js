@@ -123,11 +123,12 @@ CyberOpsGame.prototype.render = function() {
 
         ctx.save();
 
-        // Apply screen shake effect if active
+        // Apply screen shake effect from visual effects system
         let shakeX = 0, shakeY = 0;
-        if (this.screenShake && this.screenShake.active) {
-            shakeX = (Math.random() - 0.5) * this.screenShake.intensity;
-            shakeY = (Math.random() - 0.5) * this.screenShake.intensity;
+        if (this.getScreenShakeOffset) {
+            const shakeOffset = this.getScreenShakeOffset();
+            shakeX = shakeOffset.x;
+            shakeY = shakeOffset.y;
         }
 
         ctx.translate(this.cameraX + shakeX, this.cameraY + shakeY);
@@ -451,12 +452,22 @@ CyberOpsGame.prototype.render = function() {
             this.renderEffect(effect);
         });
 
+        // Render particles from visual effects system
+        if (this.renderParticles) {
+            this.renderParticles(ctx);
+        }
+
         // Draw team mode indicators
         if (this.drawTeamModeIndicators) {
             this.drawTeamModeIndicators(ctx);
         }
 
         ctx.restore();
+
+        // Render screen flash effect (after restoring context)
+        if (this.renderScreenFlash) {
+            this.renderScreenFlash(ctx);
+        }
 
         // Render hotkey help overlay
         this.renderHotkeyHelp();

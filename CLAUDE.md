@@ -19,8 +19,10 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-dialogs.js**: Dialog and HUD systems
 - **game-screens.js**: Screen management and transitions
 - **game-demoscene.js**: Demoscene attract mode
-- **game-audio.js**: Complete audio system
-- **game-music-system.js**: Dynamic multi-track mission music system with event triggers
+- **game-audio.js**: Core audio system (AudioContext and sound effects)
+- **game-music-config.js**: Declarative configuration for all audio (music, SFX, effects)
+- **game-music-system.js**: Mission music system with dynamic state-based switching
+- **game-screen-music.js**: Screen music system (menu, hub, credits, etc.)
 - **game-loop.js**: Main game loop and update logic (includes game speed system)
 - **game-rendering.js**: All rendering functions
 - **game-3d.js**: Three.js 3D system with NPC support
@@ -71,11 +73,13 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **Mission System**: Declarative JSON-based missions with dynamic objectives and extraction
 - **Combat System**: Isometric tactical combat with agents, enemies, projectiles, line-of-sight
 - **3D Mode**: Optional Three.js-based 3D view with multiple camera modes, includes NPC rendering
-- **Audio System**: Dynamic music system with mission-specific multi-track support
-  - Ambient, combat, stealth, alert, and victory tracks per mission
-  - Event-triggered music changes (objectives, health, timer)
-  - Smooth crossfading between tracks with priority system
-  - Fallback to global tracks if mission tracks unavailable
+- **Audio System**: Fully declarative audio configuration
+  - **Screen Music**: Handles all menus with smart transitions (splash skip seeks to 10.6s)
+  - **Mission Music**: Dynamic multi-track system (ambient, combat, stealth, alert, victory)
+  - **Sound Effects**: WAV → MP3 → Procedural fallback chain
+  - **Contextual SFX**: Environment and state-based sound modifications
+  - Event-triggered changes based on game state
+  - Fully configurable via JSON without code changes
 - **Resource Management**: Credits, research points, world control percentage
 - **Agent System**: Agent selection, abilities, equipment, movement, and combat
 - **NPC System**: Interactive NPCs with dialog trees, quest system, context-sensitive actions
@@ -346,3 +350,211 @@ All interactions use the H key with context-sensitive behavior:
 - **To add NPCs**: Add to the `npcs` array with spawn location and quests
 - **To change map**: Edit the `tiles` string array (keep width consistent!)
 - **Map characters**: '#' = wall, '.' = floor, other chars for special tiles
+
+## Declarative Configuration Systems
+
+The game uses comprehensive declarative configurations for all dynamic content, allowing modification without code changes.
+
+### Audio Configuration (game-music-config.js)
+
+#### Global Audio Settings
+```javascript
+global: {
+    masterVolume: 1.0,
+    musicVolume: 0.7,
+    sfxVolume: 0.8,
+    fadeInTime: 2000,
+    fadeOutTime: 1000,
+    crossfadeTime: 1500
+}
+```
+
+#### Screen Music Configuration
+Each screen can have multiple tracks with transitions:
+```javascript
+screens: {
+    splash: {
+        tracks: {
+            main: {
+                file: 'game-music.mp3',
+                fallback: 'music/global/menu.mp3',
+                volume: 0.5,
+                loop: true,
+                fadeIn: 1000,
+                startTime: 0  // Conditional start times for splash skip
+            }
+        },
+        transitions: {
+            toMenu: { type: 'continue' }  // Seamless continuation
+        }
+    }
+}
+```
+
+#### Mission Music Configuration
+Dynamic multi-track system with state-based switching:
+```javascript
+missions: {
+    default: {
+        ambient: { file: 'ambient.mp3', volume: 0.6, loop: true },
+        combat: { file: 'combat.mp3', volume: 0.8, priority: 2 },
+        stealth: { file: 'stealth.mp3', volume: 0.4, priority: 1 },
+        alert: { file: 'alert.mp3', volume: 0.7, priority: 3 },
+        victory: { file: 'victory.mp3', volume: 0.8, priority: 10 }
+    }
+}
+```
+
+#### Sound Effects Configuration
+Comprehensive SFX with fallback chain:
+```javascript
+soundEffects: {
+    combat: {
+        shoot: {
+            file: 'sfx-shoot.wav',      // Primary file
+            fallback: 'sfx-shoot.mp3',  // Secondary fallback
+            procedural: true,            // Generate if files missing
+            volume: 0.5,
+            variations: ['sfx-shoot-1.wav', 'sfx-shoot-2.wav']
+        }
+    }
+}
+```
+
+#### Contextual Sound System
+Environment and state-based modifications:
+```javascript
+contextualSounds: {
+    environments: {
+        industrial: {
+            footstep: { volume: 0.3, reverb: 0.7 },
+            shoot: { volume: 0.6, echo: true }
+        }
+    },
+    states: {
+        stealth: { volumeMultiplier: 0.5 },
+        combat: { volumeMultiplier: 1.2 },
+        critical: { hit: { volume: 0.8, vibration: [100] } }
+    }
+}
+```
+
+#### Procedural Sound Templates
+ADSR synthesis for missing files:
+```javascript
+proceduralSettings: {
+    templates: {
+        explosion: {
+            waveform: 'noise',
+            frequency: 50,
+            duration: 500,
+            envelope: {
+                attack: 0,
+                decay: 100,
+                sustain: 200,
+                release: 200
+            },
+            filter: { type: 'lowpass', frequency: 200 }
+        }
+    }
+}
+```
+
+### Campaign Configuration (campaigns/*/)
+
+#### Campaign Structure
+```
+campaigns/
+├── main/           # Main campaign
+│   ├── act1/       # Act 1 missions
+│   │   ├── main-01-001.js
+│   │   ├── main-01-002.js
+│   │   └── main-01-003.js
+│   ├── act2/       # Act 2 missions
+│   │   ├── main-02-001.js
+│   │   └── main-02-002.js
+│   └── campaign.json  # Campaign metadata
+```
+
+#### Mission Configuration
+Each mission is self-contained with embedded map:
+```javascript
+{
+    id: 'main-01-001',
+    name: 'Initiation',
+    briefing: 'Infiltrate the corporate facility...',
+    map: {
+        embedded: {
+            tiles: [  // String array, one row per string
+                "########...",
+                "#......#..."
+            ],
+            spawn: { x: 2, y: 78 },
+            extraction: { x: 78, y: 2 },
+            terminals: [
+                { x: 10, y: 20, id: 't1', hackTime: 3000 }
+            ],
+            doors: [
+                { x: 15, y: 25, locked: true, linkedTerminal: 't1' }
+            ],
+            npcs: [
+                {
+                    id: 'informant',
+                    x: 20, y: 30,
+                    name: 'Ghost',
+                    quests: [...]
+                }
+            ]
+        }
+    },
+    objectives: [
+        {
+            id: 'eliminate_targets',
+            type: 'eliminate',
+            description: 'Eliminate all enemies',
+            target: { type: 'enemy', count: 8 },
+            required: true
+        }
+    ],
+    rewards: {
+        credits: 2000,
+        researchPoints: 50,
+        worldControl: 1
+    }
+}
+```
+
+### Visual Effects Configuration (Planned)
+
+#### Screen Shake Effects
+```javascript
+visualEffects: {
+    screenShake: {
+        explosion: {
+            intensity: 10,
+            duration: 500,
+            falloff: 'exponential'
+        },
+        hit: {
+            intensity: 3,
+            duration: 200,
+            falloff: 'linear'
+        }
+    },
+    freeze: {
+        victory: { duration: 1000 },
+        defeat: { duration: 2000 }
+    }
+}
+```
+
+### Benefits of Declarative Configuration
+
+1. **No Code Changes Required**: Modify game behavior through JSON
+2. **Centralized Management**: All configs in dedicated files
+3. **Version Control Friendly**: Track config changes separately
+4. **Modding Support**: Easy for users to customize
+5. **Validation**: Configs can be validated against schemas
+6. **Hot Reloading**: Potential for runtime config updates
+7. **A/B Testing**: Easy to swap configurations
+8. **Documentation**: Self-documenting structure

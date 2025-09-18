@@ -110,23 +110,14 @@ CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
 }
 
 CyberOpsGame.prototype.update = function() {
-        // Check if frozen
-        if (this.freezeEffect && this.freezeEffect.active) {
-            const now = Date.now();
-            if (now - this.freezeEffect.startTime < this.freezeEffect.duration) {
-                return; // Skip update while frozen
-            } else {
-                this.freezeEffect.active = false;
-            }
+        // Check if frozen using visual effects system
+        if (this.isFreezeActive && this.isFreezeActive()) {
+            return; // Skip update while frozen
         }
 
-        // Update screen shake
-        if (this.screenShake && this.screenShake.active) {
-            this.screenShake.duration--;
-            if (this.screenShake.duration <= 0) {
-                this.screenShake.active = false;
-                this.screenShake.intensity = 0;
-            }
+        // Update visual effects
+        if (this.updateVisualEffects) {
+            this.updateVisualEffects(1/60); // Assuming 60 FPS
         }
 
         this.missionTimer++;

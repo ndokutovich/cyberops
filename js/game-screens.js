@@ -501,9 +501,9 @@ CyberOpsGame.prototype.showGameCompleteScreen = function() {
         if (this.loadScreenMusic) {
             console.log('🎵 Loading victory music');
             this.loadScreenMusic('victory');
-        } else if (this.playCreditsMusic) {
-            // Fallback to old system
-            this.playCreditsMusic();
+        } else {
+            // Fallback - shouldn't happen
+            console.warn('Screen music system not available for victory screen');
         }
         
         // Hide other screens
@@ -534,9 +534,9 @@ CyberOpsGame.prototype.showCredits = function() {
             if (this.loadScreenMusic) {
                 console.log('🎵 Loading credits music');
                 this.loadScreenMusic('credits');
-            } else if (this.playCreditsMusic) {
-                // Fallback to old system
-                this.playCreditsMusic();
+            } else {
+                // Fallback - shouldn't happen
+                console.warn('Screen music system not available for credits');
             }
         }
 
@@ -547,7 +547,9 @@ CyberOpsGame.prototype.showCredits = function() {
 
 CyberOpsGame.prototype.restartCampaign = function() {
         // Stop credits music when restarting
-        this.stopCreditsMusic();
+        if (this.stopScreenMusic) {
+            this.stopScreenMusic();
+        }
         
         // Reset all progress
         this.currentMissionIndex = 0;
@@ -568,8 +570,10 @@ CyberOpsGame.prototype.backToMainMenu = function() {
         }
 
         // Stop all music including credits (returning to main menu)
-        this.stopLevelMusic();
-        this.stopCreditsMusic();
+        // Level music handled by mission music system
+        if (this.stopScreenMusic) {
+            this.stopScreenMusic();
+        }
 
         // Also cleanup music system if active
         if (this.musicSystem && this.cleanupMusicSystem) {
@@ -602,6 +606,49 @@ CyberOpsGame.prototype.backToMainMenu = function() {
         this.startDemosceneIdleTimer();
 }
     
+CyberOpsGame.prototype.animateProgressBar = function(callback) {
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const loadingScreen = document.getElementById('loadingScreen');
+
+    if (!progressBar || !progressText) {
+        console.warn('Progress bar elements not found, skipping animation');
+        if (callback) callback();
+        return;
+    }
+
+    let progress = 0;
+    const duration = 2000; // 2 seconds total
+    const interval = 20; // Update every 20ms
+    const increment = 100 / (duration / interval);
+
+    const progressInterval = setInterval(() => {
+        progress += increment;
+
+        if (progress >= 100) {
+            progress = 100;
+            clearInterval(progressInterval);
+
+            progressBar.style.width = '100%';
+            progressText.textContent = '100%';
+
+            // Flash effect
+            if (loadingScreen) {
+                loadingScreen.style.backgroundColor = '#00ff41';
+                setTimeout(() => {
+                    loadingScreen.style.backgroundColor = '#0a0e1a';
+                    if (callback) callback();
+                }, 200);
+            } else {
+                if (callback) callback();
+            }
+        } else {
+            progressBar.style.width = progress + '%';
+            progressText.textContent = Math.floor(progress) + '%';
+        }
+    }, interval);
+};
+
 CyberOpsGame.prototype.showInitialScreen = function() {
         console.log('Showing initial start screen');
         this.currentScreen = 'initial';
@@ -645,34 +692,11 @@ CyberOpsGame.prototype.enableAudioOnInteraction = function() {
             if (!this.audioContext) {
                 console.log('Creating AudioContext after user interaction...');
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
-                // Generate music data
-                this.generateSplashMusic();
-                this.generateMainMenuMusic();
-                
                 console.log('AudioContext created successfully!');
             }
             console.log('Audio context state:', this.audioContext.state);
             
-            // Initialize audio elements if not done yet
-            if (!this.audioElementsInitialized) {
-                console.log('🎵 Initializing audio elements...');
-                this.gameAudio = document.getElementById('gameMusic');
-                this.creditsAudio = document.getElementById('creditsMusic');
-                
-                // Initialize level music elements
-                this.levelMusicElements = {};
-                for (let i = 1; i <= 5; i++) {
-                    this.levelMusicElements[i] = document.getElementById(`levelMusic${i}`);
-                }
-                this.audioElementsInitialized = true;
-            }
-            
-            // Debug audio elements
-            console.log('Checking audio elements:');
-            console.log('gameAudio:', !!this.gameAudio);
-            console.log('creditsAudio:', !!this.creditsAudio);
-            console.log('levelMusicElements count:', Object.keys(this.levelMusicElements).length);
+            // Audio elements now managed by music systems
             
             // Store permission for this session
             sessionStorage.setItem('cyberops_audio_enabled', 'true');
@@ -693,8 +717,10 @@ CyberOpsGame.prototype.showSplashScreens = function() {
         // Start splash music immediately (audio is enabled from user interaction)
         console.log('Attempting to start splash music. audioEnabled:', this.audioEnabled);
         if (this.audioEnabled) {
-            console.log('Audio is enabled, calling playSplashMusic()');
-            this.playSplashMusic();
+            console.log('Audio is enabled, loading splash music');
+            if (this.loadScreenMusic) {
+                this.loadScreenMusic('splash');
+            }
         } else {
             console.log('Audio not enabled yet - will start when user interacts');
         }
@@ -754,11 +780,8 @@ CyberOpsGame.prototype.showSplashScreens = function() {
                         this.currentScreen = 'menu';
                         this.updateMenuState();
                         
-                        // Let music continue naturally - no seeking needed for smooth progression
-                        if (this.audioEnabled && this.gameAudio) {
-                            console.log('Natural splash progression - music continues seamlessly without seeking');
-                            // No currentTime change - let music flow naturally
-                        }
+                        // Music transitions now handled by screen music system
+                        console.log('Natural splash progression - handled by screen music system');
                         
                         console.log('🎬 Natural splash progression - starting demoscene timer');
                         this.startDemosceneIdleTimer();
@@ -858,7 +881,9 @@ CyberOpsGame.prototype.finalizeSplashToMenu = function() {
             // Fallback to old system if needed
             if (this.splashSkipped) {
                 console.log('Splash skipped - seeking to menu music section');
-                this.playMainMenuMusic();
+                if (this.loadScreenMusic) {
+                    this.loadScreenMusic('menu');
+                }
             } else {
                 console.log('Natural splash transition - music continues without artifacts');
             }

@@ -512,23 +512,12 @@ CyberOpsGame.prototype.showSettingsFromPause = function() {
 CyberOpsGame.prototype.setMasterVolume = function(value) {
     this.masterVolume = value / 100; // Convert to 0-1 range
 
-    // Apply to all game audio elements
-    if (this.gameAudio) {
-        this.gameAudio.volume = this.masterVolume * 0.25;
+    // Volume now applied through music systems
+    if (this.screenMusic && this.screenMusic.updateVolume) {
+        this.screenMusic.updateVolume();
     }
-
-    // Apply to level music
-    const levelMusics = ['level1Music', 'level2Music', 'level3Music', 'level4Music', 'level5Music'];
-    levelMusics.forEach(musicId => {
-        const audio = document.getElementById(musicId);
-        if (audio) {
-            audio.volume = this.masterVolume * 0.3;
-        }
-    });
-
-    // Apply to credits music
-    if (this.creditsAudio) {
-        this.creditsAudio.volume = this.masterVolume * 0.2;
+    if (this.musicSystem && this.musicSystem.updateVolume) {
+        this.musicSystem.updateVolume();
     }
 
     // Store preference
@@ -542,11 +531,15 @@ CyberOpsGame.prototype.setSFXVolume = function(value) {
 };
 
 CyberOpsGame.prototype.setMusicVolume = function(value) {
-    this.musicVolume = value / 100;
+    // Music volume now managed by declarative config
+    const normalizedVolume = value / 100;
 
-    // Apply to current music if playing
-    if (this.currentMusicElement) {
-        this.currentMusicElement.volume = this.musicVolume;
+    // Update both music systems
+    if (this.screenMusic && this.screenMusic.setVolume) {
+        this.screenMusic.setVolume(normalizedVolume);
+    }
+    if (this.musicSystem && this.musicSystem.setVolume) {
+        this.musicSystem.setVolume(normalizedVolume);
     }
 
     localStorage.setItem('cyberops_volume_music', value);

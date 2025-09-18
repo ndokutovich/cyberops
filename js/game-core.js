@@ -17,7 +17,7 @@ class CyberOpsGame {
         // Initialize audio volumes (0-1 range)
         this.masterVolume = 0.5;
         this.sfxVolume = 0.5;
-        this.musicVolume = 0.3;
+        // Music volume now managed by declarative config
 
         // Game State
         this.currentScreen = 'splash';
@@ -111,19 +111,7 @@ class CyberOpsGame {
         this.selectionProtection = true;
         console.log('🔧 selectionProtection set to:', this.selectionProtection);
 
-        // Screen effects (shake, freeze, etc.)
-        this.screenShake = {
-            active: false,
-            intensity: 0,
-            duration: 0,
-            offsetX: 0,
-            offsetY: 0
-        };
-        this.freezeEffect = {
-            active: false,
-            duration: 0,
-            startTime: 0
-        };
+        // Visual effects will be initialized by visual effects system
 
         // Game speed acceleration system
         this.gameSpeed = 1; // 1x, 2x, or 4x
@@ -178,6 +166,12 @@ class CyberOpsGame {
         console.log('🎵 Initializing screen music system...');
         if (this.initScreenMusicSystem) {
             this.initScreenMusicSystem();
+        }
+
+        // Initialize visual effects system
+        console.log('🎨 Initializing visual effects system...');
+        if (this.initVisualEffects) {
+            this.initVisualEffects();
         }
 
         console.log('✅ All systems initialized');
@@ -240,18 +234,8 @@ class CyberOpsGame {
         this.animatingTiles = [];
 
         // Audio system
-        this.gameAudio = null;
-        this.levelMusicElements = {};
-        this.currentLevelMusic = null;
-        this.currentLevelMusicElement = null;
-        this.creditsAudio = null;
-        this.creditsPlaying = false;
-        this.levelMusicNode = null;
-        this.creditsMusicNode = null;
-        this.levelMusicInterval = null;
         this.splashSkipped = false;
         this.audioEnabled = false;
-        this.audioElementsInitialized = false;
 
         // Get canvas elements
         this.canvas = document.getElementById('gameCanvas');
@@ -270,38 +254,8 @@ class CyberOpsGame {
     }
 
     initializeAudio() {
-        console.log('🎵 Initializing audio system...');
-
-        // Initialize HTML5 audio elements
-        this.gameAudio = document.getElementById('gameMusic');
-        this.creditsAudio = document.getElementById('creditsMusic');
-
-        // Initialize level music elements
-        this.levelMusicElements = {};
-        for (let i = 1; i <= 5; i++) {
-            this.levelMusicElements[i] = document.getElementById(`levelMusic${i}`);
-        }
-
-        // Initialize sound effects
-        this.soundEffects.shoot = document.getElementById('shootSound');
-        this.soundEffects.explosion = document.getElementById('explosionSound');
-        this.soundEffects.hack = document.getElementById('hackSound');
-        this.soundEffects.shield = document.getElementById('shieldSound');
-        this.soundEffects.hit = document.getElementById('hitSound');
-
-        console.log('🔍 Audio elements initialized:');
-        console.log('- gameAudio:', !!this.gameAudio);
-        console.log('- creditsAudio:', !!this.creditsAudio);
-        console.log('- levelMusicElements count:', Object.keys(this.levelMusicElements).length);
-        console.log('- soundEffects loaded:', Object.keys(this.soundEffects).filter(k => this.soundEffects[k]).length);
-
-        // Check for saved audio permission
-        const savedPermission = sessionStorage.getItem('cyberops_audio_enabled');
-        if (savedPermission === 'true') {
-            console.log('Audio permission found in session, enabling immediately...');
-            this.audioEnabled = true;
-            this.enableAudioOnInteraction();
-        }
+        // Audio initialization now handled by game-audio.js and music systems
+        console.log('🎵 Audio initialization delegated to modular systems');
     }
 
     setupCanvas() {
