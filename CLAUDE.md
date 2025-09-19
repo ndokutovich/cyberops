@@ -38,6 +38,8 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-rpg-system.js**: Core RPG mechanics (character progression, stats calculation)
 - **game-rpg-integration.js**: Integrates RPG system with existing game mechanics
 - **game-rpg-ui.js**: RPG user interface (character sheets, inventory, shop)
+- **game-turnbased.js**: Turn-based mode logic (AP system, initiative, turn management)
+- **game-turnbased-render.js**: Rendering for turn-based overlays and UI elements
 
 ### Campaign Files (campaigns/ directory)
 - **campaigns/main/**: Main campaign with 5 acts
@@ -49,6 +51,12 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-maps.js**: DELETED - no procedural generation, all maps embedded
 - **game-maps-data.js**: DELETED - maps now embedded in mission files
 - **game-missions-data.js**: DELETED - missions now in campaign files
+- **game-rpg-config.js**: DELETED - RPG config moved to campaign definitions
+
+### Engine Layer (js/engine/ directory)
+- **campaign-interface.js**: Validates campaign content structure and contracts
+- **content-loader.js**: Dynamically loads campaign content into game systems
+- **engine-integration.js**: Bridge between content system and existing engine
 
 ### Service Layer (js/services/ directory)
 - **game-services.js**: Service locator pattern for dependency injection
@@ -104,6 +112,250 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **Keyboard System**: Centralized keyboard handling with customizable bindings
 - **Interaction System**: Universal H key for terminals, explosives, switches, gates, NPCs
 - **Objective Tracking**: Real-time mission progress with extraction point activation
+
+## Major Recent Architectural Changes
+
+### 1. Complete Engine/Content Separation (3rd Normal Form)
+
+The game has undergone a fundamental restructuring to achieve complete separation between engine mechanics and game content, similar to database normalization principles.
+
+#### What Changed
+- **Before**: RPG configuration, agent definitions, weapons, and game content were hardcoded in engine files
+- **After**: ALL content now lives in campaign definitions, engine knows HOW things work but not WHAT exists
+
+#### Key Components
+- **Engine Layer**: Generic systems that understand mechanics (combat, movement, inventory)
+- **Content Layer**: Campaign-specific data (agents, weapons, missions, RPG config)
+- **Integration Layer**: ContentLoader and CampaignInterface bridge the two layers
+
+#### Benefits
+- **Theme Flexibility**: Can create fantasy, sci-fi, or any theme without changing engine code
+- **Modding Support**: Easy to create custom campaigns
+- **Clean Architecture**: Clear separation of concerns
+- **Maintainability**: Engine bugs vs content bugs are clearly separated
+
+### 2. Service Architecture Pattern
+
+Introduced a comprehensive service layer using the Service Locator pattern for dependency management.
+
+#### GameServices System
+```javascript
+class GameServices {
+    formulaService    // Centralized combat calculations
+    equipmentService  // Equipment management
+    rpgService       // RPG mechanics integration
+    researchService  // Tech tree progression
+}
+```
+
+#### Key Principles
+- **Dependency Injection**: Services receive dependencies via constructor
+- **Single Responsibility**: Each service handles one domain
+- **Centralized Access**: `window.GameServices` provides global access
+- **Formula Consistency**: ALL calculations go through FormulaService
+
+### 3. Dynamic Content Loading System
+
+Complete overhaul of how game content is loaded and managed.
+
+#### ContentLoader Features
+- **Dynamic Loading**: Campaigns loaded at runtime, not compile time
+- **Validation**: CampaignInterface validates content structure
+- **Hot Swapping**: Can switch campaigns without code changes
+- **Fallback System**: Graceful degradation if content missing
+
+#### Campaign Configuration Structure
+```javascript
+{
+    meta: { name, version, author },
+    agents: [...],
+    weapons: [...],
+    equipment: [...],
+    rpgConfig: {
+        classes: {...},
+        skills: {...},
+        stats: {...}
+    },
+    missions: [...],
+    ui: { strings: {...}, theme: {...} }
+}
+```
+
+### 4. Turn-Based Mode System
+
+Complete tactical turn-based combat system with action points and initiative management.
+
+#### Core Features
+- **Action Points (AP)**: Units have limited actions per turn
+- **Initiative System**: Turn order based on unit speed/type
+- **Movement Preview**: Visual range and path preview before committing
+- **Two-Click System**: First click previews, second confirms action
+- **Grid Snapping**: Movement snaps to tile centers for precision
+
+#### Turn-Based Components
+- `game-turnbased.js`: Core turn-based logic and state management
+- `game-turnbased-render.js`: Specialized rendering for overlays and UI
+
+#### Action Point System
+```javascript
+apConfig: {
+    agent: 12,
+    guard: 8,
+    soldier: 10,
+    heavy: 6,
+    boss: 14
+}
+
+actionCosts: {
+    move: 1,        // Per tile
+    shoot: 4,       // Basic attack
+    ability: 6,     // Special ability
+    hack: 4,        // Hack terminal
+    overwatch: 3    // Set overwatch
+}
+```
+
+#### Visual Feedback
+- **Movement Range**: Green tiles show reachable areas
+- **Path Preview**: Yellow line shows planned movement
+- **Turn Queue**: UI shows upcoming turn order
+- **AP Display**: Current/max AP shown for active unit
+
+### 5. RPG System Integration
+
+Comprehensive character progression system seamlessly integrated with existing mechanics.
+
+#### RPG Features
+- **Character Classes**: Soldier, Infiltrator, Tech Specialist, Medic, Heavy, Recon
+- **Primary Stats**: Strength, Agility, Intelligence, Endurance, Tech, Charisma
+- **Skill System**: Combat, stealth, hacking, medical, social skills
+- **Inventory Management**: Weight-based system with equipment slots
+- **Experience & Leveling**: XP from combat and mission completion
+
+#### Integration Points
+- **Combat Enhancement**: RPG stats affect damage, crits, dodge
+- **Equipment Synergy**: Items provide stat bonuses
+- **Backward Compatibility**: Works with non-RPG campaigns
+- **Service Architecture**: Clean integration via RPGService
+
+### 6. Mission Editor Enhancements
+
+Professional-grade campaign and mission editing capabilities.
+
+#### Editor Features
+- **Full CRUD Operations**: Create, read, update, delete all content
+- **IndexedDB Persistence**: Campaigns saved in browser storage
+- **Import/Export**: ZIP archive support for sharing
+- **Visual Map Editor**: Paint tiles, place objects, set spawns
+- **Mission Reordering**: Drag-drop or arrow-based ordering
+- **Live Testing**: Test missions directly from editor
+
+#### Campaign Management
+- **Act Organization**: Group missions into narrative acts
+- **Metadata Editing**: Author, version, description
+- **Asset Management**: NPCs, terminals, doors, items
+- **Objective Builder**: Visual objective creation
+
+### 7. Progressive Web App (PWA) Support
+
+Full PWA implementation for installable, offline-capable gameplay.
+
+#### PWA Components
+- **Service Worker**: Caches assets for offline play
+- **Web Manifest**: Enables installation on devices
+- **Icon Set**: Multiple resolutions for all platforms
+- **Offline Mode**: Play without internet connection
+
+#### Caching Strategy
+```javascript
+CORE_ASSETS = [
+    '/index.html',
+    '/js/game-*.js',
+    '/campaigns/main/*.js',
+    '/assets/logo-*.png'
+]
+```
+
+#### Benefits
+- **Installable**: Add to home screen like native app
+- **Offline Play**: Full game available without internet
+- **Auto Updates**: Service worker manages updates
+- **Performance**: Cached assets load instantly
+
+### 8. Flexible Campaign System
+
+Campaigns can completely transform the game experience.
+
+#### Campaign Capabilities
+- **Total Conversion**: Change from cyberpunk to fantasy or any theme
+- **Custom Formulas**: Define combat calculations per campaign
+- **UI Theming**: Colors, fonts, terminology all configurable
+- **Gameplay Constants**: Movement speed, vision range, etc.
+- **Audio Configuration**: Music and SFX per campaign
+
+#### Example: Fantasy Campaign
+```javascript
+{
+    meta: { name: "Realm of Shadows" },
+    agents: [
+        { name: "Warrior", health: 150, damage: 25 },
+        { name: "Mage", health: 80, mana: 200 }
+    ],
+    rpgConfig: {
+        classes: {
+            warrior: { baseStats: { strength: 16 } },
+            mage: { baseStats: { intelligence: 18 } }
+        }
+    }
+}
+```
+
+### 9. Event Logging System
+
+Replaced notification system with comprehensive event logging for better debugging and player feedback.
+
+#### Event Categories
+- **Combat**: Attack, damage, death events
+- **System**: Turn changes, mode switches
+- **Mission**: Objective updates, extraction
+- **RPG**: Level ups, skill usage
+
+#### Benefits
+- **Performance**: No UI blocking from notifications
+- **History**: Complete event log for debugging
+- **Filtering**: View events by category
+- **Persistence**: Can save logs for bug reports
+
+### 10. Enhanced Coordinate System
+
+Improved handling of coordinate transformations, especially for turn-based overlays.
+
+#### Critical Fix
+When rendering overlays AFTER `ctx.restore()`, must ADD camera offset instead of subtracting:
+```javascript
+// CORRECT for post-restore rendering
+const screenX = iso.x + this.cameraX;  // Adding camera
+const screenY = iso.y + this.cameraY;
+```
+
+#### Coordinate Layers
+1. **World Space**: Game logic coordinates
+2. **Isometric Space**: World-to-screen without camera
+3. **Screen Space**: Final rendered position with camera
+
+### Summary of Architectural Impact
+
+These changes represent a complete architectural overhaul that transforms CyberOps from a hardcoded game into a flexible game engine:
+
+1. **Engine is now content-agnostic** - Can run ANY theme or setting
+2. **Service layer provides clean APIs** - All systems accessible via services
+3. **Turn-based mode adds tactical depth** - Optional strategic gameplay
+4. **RPG systems enhance progression** - Character development and customization
+5. **Mission editor enables creativity** - Users can create custom content
+6. **PWA support enables portability** - Play anywhere, even offline
+7. **Campaign system enables modding** - Total conversion support
+
+The game now follows enterprise software patterns while remaining a simple HTML file that runs in any browser. This architecture provides the foundation for infinite expandability while maintaining backward compatibility and performance.
 
 ## Running the Game
 
@@ -174,6 +426,8 @@ python -m http.server 8000
   - E: Toggle 3D modes (tactical/third/first person)
   - Tab: Cycle through agents
   - T: Select all squad members
+  - Space: Toggle turn-based mode
+  - Enter: End turn (in turn-based mode)
   - 1-6: Direct agent selection
   - F/G/Q: Combat abilities (shoot/grenade/shield)
 
