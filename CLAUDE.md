@@ -35,6 +35,10 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-mission-executor.js**: Generic mission execution engine
 - **game-mission-integration.js**: Bridges new system with existing code
 - **game-init.js**: Game instantiation and initialization
+- **game-rpg-config.js**: RPG system configuration (classes, stats, skills, items)
+- **game-rpg-system.js**: Core RPG mechanics (character progression, stats calculation)
+- **game-rpg-integration.js**: Integrates RPG system with existing game mechanics
+- **game-rpg-ui.js**: RPG user interface (character sheets, inventory, shop)
 
 ### Campaign Files (campaigns/ directory)
 - **campaigns/main/**: Main campaign with 5 acts
@@ -47,9 +51,16 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-maps-data.js**: DELETED - maps now embedded in mission files
 - **game-missions-data.js**: DELETED - missions now in campaign files
 
+### Service Layer (js/services/ directory)
+- **game-services.js**: Service locator pattern for dependency injection
+- **formula-service.js**: Centralized damage and combat formulas
+- **equipment-service.js**: Equipment management and optimization
+- **research-service.js**: Research tree progression
+- **rpg-service.js**: RPG system integration service
+
 ### Other Files
 - **cyberops-game.html**: HTML structure with module loading
-- **cyberops-game.css** (2579 lines): All styling including animations, HUD, and screen transitions
+- **cyberops-game.css** (3000+ lines): All styling including animations, HUD, screen transitions, and RPG UI
 
 ### Library Files (lib/ directory)
 - **lib/three.module.min.js**: Three.js r180 ES6 module
@@ -83,6 +94,13 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **Resource Management**: Credits, research points, world control percentage
 - **Agent System**: Agent selection, abilities, equipment, movement, and combat
 - **NPC System**: Interactive NPCs with dialog trees, quest system, context-sensitive actions
+- **RPG System**: Comprehensive character progression with:
+  - **Character Classes**: Soldier, Infiltrator, Tech Specialist, Medic, Heavy Weapons, Recon
+  - **Primary Stats**: Strength, Agility, Intelligence, Endurance, Tech, Charisma
+  - **Skills System**: Combat, stealth, hacking, medical, and social skills
+  - **Inventory Management**: Weight-based inventory with equipment slots
+  - **Experience & Leveling**: XP gain from missions and combat
+  - **Equipment Bonuses**: Stats affected by equipped weapons and armor
 - **Game Speed**: Adjustable game speed (1x/2x/4x) with auto-slowdown near enemies
 - **Keyboard System**: Centralized keyboard handling with customizable bindings
 - **Interaction System**: Universal H key for terminals, explosives, switches, gates, NPCs
@@ -147,13 +165,18 @@ python -m http.server 8000
 
 ### Keyboard Handling (game-keyboard.js)
 - **Centralized Bindings**: All keyboard shortcuts in one place for easy modification
+- **Robust Handler System**: Case-insensitive key handling with proper scope management
 - **Key Features**:
   - H: Interact with NPCs or hack
+  - C: Open character sheet (RPG stats and skills)
+  - I: Open inventory management
   - Z: Cycle game speed (1x/2x/4x)
   - J: Show comprehensive mission list
   - E: Toggle 3D modes (tactical/third/first person)
   - Tab: Cycle through agents
+  - T: Select all squad members
   - 1-6: Direct agent selection
+  - F/G/Q: Combat abilities (shoot/grenade/shield)
 
 ### Mission List System
 - **Comprehensive Overview**: Shows primary objectives and all side quests
@@ -167,6 +190,17 @@ python -m http.server 8000
 - **Speed Indicator**: Visual feedback for current game speed
 - **Quest HUD**: Active quests displayed on-screen during gameplay
 - **Health Bars**: Fixed display for dead agents and text wrapping
+- **Unified Equipment UI**: Hub equipment interface used across all game screens
+- **RPG UI Integration**: Character sheets and inventory seamlessly integrated
+
+### RPG System Integration
+- **Service Architecture**: RPG system integrated via GameServices pattern
+- **Equipment Synchronization**: Hub loadouts automatically sync to RPG inventories
+- **ID Management**: Preserves `originalId` for agent-loadout mapping across contexts
+- **Combat Enhancement**: RPG stats affect damage, critical hits, dodge, and armor
+- **Stat Bonuses**: Equipment provides visible bonuses displayed with "+" notation
+- **Experience System**: Agents gain XP from combat and mission completion
+- **Backward Compatibility**: RPG features enhance but don't break existing systems
 
 ## Campaign and Mission Architecture
 
@@ -327,6 +361,146 @@ New missions created via editor include:
 - **Complete map object**: tiles, spawn, extraction, terminals, etc.
 - **Default objectives**: At least one objective for valid mission
 
+## GameServices Architecture and Formula System
+
+### Service Locator Pattern
+The game uses a **Service Locator** pattern via `GameServices` class to manage dependencies and provide centralized access to game systems:
+
+```javascript
+class GameServices {
+    constructor() {
+        this.formulaService = new FormulaService();
+        this.researchService = new ResearchService(this.formulaService);
+        this.equipmentService = new EquipmentService(this.formulaService);
+        this.rpgService = new RPGService(this.formulaService);
+    }
+}
+```
+
+### Key Architectural Principles
+
+1. **Dependency Injection**: Services receive dependencies through constructor
+2. **Single Responsibility**: Each service handles one aspect of the game
+3. **Centralized Formulas**: All damage/combat calculations in FormulaService
+4. **Service Integration**: Services can depend on other services
+
+### Service Responsibilities
+
+#### FormulaService
+- **Core Calculations**: Damage, protection, critical hits
+- **Combat Mechanics**: Hit chance, dodge, armor penetration
+- **Stat Modifiers**: Equipment bonuses, skill effects
+- **Shared Logic**: Used by all other services for consistent calculations
+
+#### EquipmentService
+- **Loadout Management**: Agent equipment assignments
+- **Auto-Optimization**: Intelligent equipment distribution
+- **Equipment Effects**: Apply bonuses to agent stats
+- **Inventory Tracking**: Available vs equipped items
+
+#### RPGService
+- **Character Progression**: XP, leveling, skill points
+- **Stat Management**: Primary and derived stats
+- **Class System**: Character classes and specializations
+- **Integration Bridge**: Connects RPG mechanics with core game
+
+#### ResearchService
+- **Tech Tree**: Research progression and unlocks
+- **Upgrades**: Apply research bonuses to agents/equipment
+- **Resource Management**: Research point allocation
+
+### Integration Flow
+
+```javascript
+// 1. Game initializes services
+this.gameServices = new GameServices();
+
+// 2. Services available globally
+window.GameServices = this.gameServices;
+
+// 3. RPG service syncs with existing systems
+this.gameServices.rpgService.syncEquipment(this);
+
+// 4. Combat uses formula service
+const damage = this.gameServices.formulaService.calculateDamage(
+    attacker.damage,
+    weapon.damage,
+    attacker.damageBonus,
+    target.protection
+);
+```
+
+### Key Integration Points
+
+1. **Mission Start**:
+   - EquipmentService applies loadouts
+   - RPGService syncs inventories
+   - FormulaService ready for combat
+
+2. **Combat Calculation**:
+   - RPGService provides stat bonuses
+   - FormulaService calculates final damage
+   - EquipmentService applies item effects
+
+3. **Hub Management**:
+   - EquipmentService manages arsenal
+   - RPGService handles character sheets
+   - ResearchService tracks upgrades
+
+### Important Notes
+
+- **Never bypass GameServices**: Always use service methods, not direct manipulation
+- **Formula consistency**: All damage/stat calculations MUST go through FormulaService
+- **Service initialization order**: FormulaService first, then dependent services
+- **Backward compatibility**: Services enhance but don't break existing systems
+
+### Formula and RPG Integration Example
+
+```javascript
+// Equipment affects formulas through GameServices
+CyberOpsGame.prototype.applyLoadoutsToAgents = function() {
+    this.agents.forEach(agent => {
+        // Find loadout by multiple ID formats
+        const loadoutId = agent.originalId || agent.name || agent.id;
+        const loadout = this.agentLoadouts[loadoutId];
+
+        if (loadout) {
+            // Apply weapon damage bonus
+            if (loadout.weapon) {
+                const weapon = this.getItemById('weapon', loadout.weapon);
+                agent.weaponDamage = weapon?.damage || 0;
+            }
+
+            // Apply armor protection
+            if (loadout.armor) {
+                const armor = this.getItemById('armor', loadout.armor);
+                agent.protection = armor?.protection || 0;
+            }
+        }
+    });
+};
+
+// RPG stats enhance formula calculations
+calculateRPGDamage(attacker, target, weaponType) {
+    // Base damage from weapon
+    let baseDamage = weapon.damage || 20;
+
+    // Add RPG stat bonuses
+    const strength = attacker.rpgEntity?.stats?.strength?.value || 10;
+    baseDamage += Math.floor((strength - 10) / 2);
+
+    // Check for critical hits
+    const critChance = attacker.rpgEntity?.derivedStats?.critChance || 5;
+    if (Math.random() * 100 < critChance) {
+        baseDamage *= 2;
+    }
+
+    // Apply target's RPG defenses
+    const armor = target.rpgEntity?.derivedStats?.damageResistance || 0;
+    return Math.max(1, baseDamage - armor);
+}
+```
+
 ## Lessons Learned from Development
 
 ### 1. Async/Await Consistency
@@ -458,11 +632,33 @@ if (campaignManager && campaignManager.isInitialized) {
   - Pixel ratio limited to 2 for high-DPI displays
   - Consider reducing shadow map size if needed
 
+### Keyboard Handler Issues
+- **Keys Not Working**: If keyboard shortcuts aren't responding:
+  - Check console for "✅ initKeyboardHandler COMPLETED successfully"
+  - Verify "✅ keyBindings has 49 keys registered" message
+  - Handler lookup uses case-insensitive matching: `e.key`, `e.key.toUpperCase()`, `e.key.toLowerCase()`
+  - Common cause: JavaScript scope/closure issues with `this.keyBindings`
+  - Solution: Adding debugging can force proper scope evaluation
+
 ### Mission System Issues
 - **Extraction Not Working**: Check if `extractionEnabled = true` when objectives complete
 - **Objectives Not Tracking**: Verify `missionTrackers.enemiesEliminated` increments
 - **H Key Not Working**: Ensure `useActionAbility()` exists and checks all interaction types
 - **Mission Not Loading**: Check console for "Setting currentMissionDef" message
+
+### RPG System Issues
+- **Equipment Not Showing in Mission**:
+  - Check `originalId` is preserved when agents transition from hub to mission
+  - Verify loadout lookup uses: `agent.originalId || agent.name || agent.id`
+  - Ensure `syncEquipment()` is called after mission start
+- **Stats Not Updating**:
+  - Equipment bonuses should show with "+" notation
+  - Base stats come from RPG entity, bonuses from equipment
+  - Check `updateStatsPreview()` is using current loadout
+- **Inventory Empty**:
+  - Hub uses agent names, missions use `agent_0` format
+  - RPG service must sync loadouts using correct ID mapping
+  - Check console for "📦 Syncing loadout for" messages
 
 ### Integration Checks
 - **Script Order**: Campaign integration → Mission executor → Mission integration
