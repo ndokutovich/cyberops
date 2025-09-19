@@ -325,6 +325,203 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
+    // Character Sheet - RPG system
+    engine.registerGenerator('generateCharacterSheet', function() {
+        // Find agent to display
+        let agent = this._selectedAgent ||
+                    (this.agents && this.agents[0]) ||
+                    (this.activeAgents && this.activeAgents[0]);
+
+        if (!agent) {
+            return '<div style="color: #888; text-align: center; padding: 40px;">No agent selected</div>';
+        }
+
+        // Initialize RPG entity if not present
+        if (!agent.rpgEntity && this.rpgManager) {
+            agent.rpgEntity = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
+        }
+
+        if (!agent.rpgEntity) {
+            return '<div style="color: #888; text-align: center; padding: 40px;">RPG system not initialized</div>';
+        }
+
+        const rpg = agent.rpgEntity;
+        const derived = this.rpgManager.calculateDerivedStats(rpg);
+
+        let html = '<div class="character-sheet-content">';
+
+        // Header with agent name and level
+        html += `
+            <h2 style="color: #00ffff; margin-bottom: 20px;">
+                ${agent.name} - Level ${rpg.level || 1} ${rpg.class || 'Soldier'}
+            </h2>
+        `;
+
+        html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+
+        // Primary Stats Panel
+        html += `
+            <div class="stats-panel" style="background: rgba(0,255,255,0.05); padding: 15px; border-radius: 5px;">
+                <h3 style="color: #00ffff; margin-bottom: 10px;">Primary Stats</h3>
+                <div class="stat-list">
+        `;
+
+        if (rpg.stats) {
+            Object.entries(rpg.stats).forEach(([stat, value]) => {
+                let statValue = typeof value === 'object' ?
+                    (value.value || value.base || value.baseValue || 10) : value;
+
+                html += `
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span style="color: #ccc;">${stat.charAt(0).toUpperCase() + stat.slice(1)}:</span>
+                        <span style="color: #fff; font-weight: bold;">${statValue}</span>
+                    </div>
+                `;
+            });
+        }
+
+        if (rpg.unspentStatPoints > 0) {
+            html += `
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);">
+                    <div style="color: #00ff00; margin-bottom: 10px;">${rpg.unspentStatPoints} stat points available</div>
+                    <button class="dialog-button" onclick="game.showStatAllocation('${agent.id || agent.name}')">
+                        Allocate Points
+                    </button>
+                </div>
+            `;
+        }
+
+        html += '</div></div>';
+
+        // Derived Stats Panel
+        html += `
+            <div class="derived-panel" style="background: rgba(255,0,255,0.05); padding: 15px; border-radius: 5px;">
+                <h3 style="color: #ff00ff; margin-bottom: 10px;">Derived Stats</h3>
+                <div class="derived-list">
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span style="color: #ccc;">Max Health:</span>
+                        <span style="color: #00ff00;">${derived.maxHealth}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span style="color: #ccc;">Max AP:</span>
+                        <span style="color: #00ffff;">${derived.maxAP}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span style="color: #ccc;">Crit Chance:</span>
+                        <span style="color: #ff6666;">${derived.critChance.toFixed(1)}%</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span style="color: #ccc;">Dodge:</span>
+                        <span style="color: #ffff00;">${derived.dodge.toFixed(1)}%</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                        <span style="color: #ccc;">Carry Weight:</span>
+                        <span style="color: #fff;">${derived.carryWeight} kg</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        html += '</div>'; // Close grid
+
+        // Experience Bar
+        const xpPercent = this.calculateXPPercent ? this.calculateXPPercent(rpg) : 0;
+        const currentXP = rpg.experience || 0;
+        const nextLevelXP = this.rpgManager?.experienceTable?.[rpg.level + 1] || 1000;
+
+        html += `
+            <div class="xp-panel" style="margin-top: 20px;">
+                <h3 style="color: #00ff00; margin-bottom: 10px;">Experience</h3>
+                <div style="background: rgba(0,0,0,0.3); height: 30px; border-radius: 15px; overflow: hidden; position: relative;">
+                    <div style="background: linear-gradient(90deg, #00ff00, #00ffff); width: ${xpPercent}%; height: 100%;"></div>
+                    <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff;">
+                        ${currentXP} / ${nextLevelXP} XP
+                    </span>
+                </div>
+            </div>
+        `;
+
+        // Skills Panel
+        html += `
+            <div class="skills-panel" style="margin-top: 20px; background: rgba(0,100,200,0.05); padding: 15px; border-radius: 5px;">
+                <h3 style="color: #00aaff; margin-bottom: 10px;">Skills</h3>
+        `;
+
+        if (rpg.skills && rpg.skills.length > 0) {
+            html += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
+            rpg.skills.forEach(skillId => {
+                const skill = window.RPG_CONFIG?.skills?.[skillId];
+                if (skill) {
+                    html += `
+                        <div style="background: rgba(0,255,255,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(0,255,255,0.3);"
+                             title="${skill.description || ''}">
+                            <span style="margin-right: 5px;">${skill.icon || '⚡'}</span>
+                            <span>${skill.name}</span>
+                            <span style="color: #888; margin-left: 5px;">Lvl ${skill.level || 1}</span>
+                        </div>
+                    `;
+                }
+            });
+            html += '</div>';
+        } else {
+            html += '<div style="color: #888;">No skills learned</div>';
+        }
+
+        if (rpg.unspentSkillPoints > 0) {
+            html += `
+                <div style="margin-top: 15px;">
+                    <div style="color: #00ff00; margin-bottom: 10px;">${rpg.unspentSkillPoints} skill points available</div>
+                    <button class="dialog-button" onclick="game.showSkillTree('${agent.id || agent.name}')">
+                        Learn Skills
+                    </button>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+
+        // Perks Panel
+        html += `
+            <div class="perks-panel" style="margin-top: 20px; background: rgba(200,100,0,0.05); padding: 15px; border-radius: 5px;">
+                <h3 style="color: #ffaa00; margin-bottom: 10px;">Perks</h3>
+        `;
+
+        if (rpg.perks && rpg.perks.length > 0) {
+            html += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
+            rpg.perks.forEach(perkId => {
+                const perk = window.RPG_CONFIG?.perks?.[perkId];
+                if (perk) {
+                    html += `
+                        <div style="background: rgba(255,170,0,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(255,170,0,0.3);"
+                             title="${perk.description || ''}">
+                            <span style="margin-right: 5px;">${perk.icon || '🌟'}</span>
+                            <span>${perk.name}</span>
+                        </div>
+                    `;
+                }
+            });
+            html += '</div>';
+        } else {
+            html += '<div style="color: #888;">No perks acquired</div>';
+        }
+
+        if (rpg.unspentPerkPoints > 0) {
+            html += `
+                <div style="margin-top: 15px;">
+                    <div style="color: #00ff00; margin-bottom: 10px;">${rpg.unspentPerkPoints} perk points available</div>
+                    <button class="dialog-button" onclick="game.showPerkSelection('${agent.id || agent.name}')">
+                        Choose Perks
+                    </button>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        html += '</div>'; // Close character-sheet-content
+
+        return html;
+    });
+
     // Research Projects list
     engine.registerGenerator('researchProjects', function() {
         const researchProjects = [

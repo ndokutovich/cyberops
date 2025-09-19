@@ -108,6 +108,26 @@ const DIALOG_CONFIG = {
             ]
         },
 
+        // ========== CHARACTER/RPG (Level 1) ==========
+        'character-sheet': {
+            type: 'dialog',
+            level: 1,
+            parent: 'hub',
+            title: '📊 CHARACTER SHEET',
+            layout: 'large-layout',
+            content: {
+                type: 'dynamic',
+                generator: 'generateCharacterSheet'
+            },
+            buttons: [
+                { text: '← BACK TO HUB', action: 'execute:returnToHub' }
+            ],
+            transitions: {
+                enter: { animation: 'fade-in', sound: 'dialog-open' },
+                exit: { animation: 'fade-out', sound: 'dialog-close' }
+            }
+        },
+
         // ========== HALL OF GLORY (Level 1) ==========
         'hall-of-glory': {
             type: 'dialog',
@@ -344,6 +364,26 @@ const DIALOG_CONFIG = {
             styles: {
                 maxWidth: '800px',
                 maxHeight: '600px'
+            }
+        },
+
+        'large-layout': {
+            structure: `
+                <div class="dialog-header">
+                    <span class="dialog-title">{{title}}</span>
+                    <button class="dialog-close-button">×</button>
+                </div>
+                <div class="dialog-content">
+                    {{content}}
+                </div>
+                <div class="dialog-actions">
+                    {{buttons}}
+                </div>
+            `,
+            styles: {
+                maxWidth: '900px',
+                maxHeight: '80vh',
+                minWidth: '700px'
             }
         },
 

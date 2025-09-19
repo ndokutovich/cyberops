@@ -4,9 +4,30 @@
  * Includes character sheet, inventory, leveling, and shops
  */
 
-// Character Sheet UI
+// Character Sheet UI - Now uses declarative dialog system when available
 CyberOpsGame.prototype.showCharacterSheet = function(agentIdOrName) {
     console.log('showCharacterSheet called with:', agentIdOrName);
+
+    // Use declarative dialog system if available
+    if (this.dialogEngine && this.dialogEngine.navigateTo) {
+        console.log('📊 Using declarative dialog system for character sheet');
+
+        // Store the selected agent for the dialog generator
+        if (agentIdOrName) {
+            if (typeof agentIdOrName === 'string') {
+                this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentIdOrName || a.name === agentIdOrName)) ||
+                                     (this.activeAgents && this.activeAgents.find(a => a.id === agentIdOrName || a.name === agentIdOrName));
+            } else if (agentIdOrName && typeof agentIdOrName === 'object') {
+                this._selectedAgent = agentIdOrName;
+            }
+        }
+
+        this.dialogEngine.navigateTo('character-sheet');
+        return;
+    }
+
+    // Fallback to original implementation
+    console.log('📊 Fallback to original character sheet implementation');
 
     // Find agent by ID or name
     let agent;

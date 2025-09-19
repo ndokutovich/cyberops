@@ -381,7 +381,7 @@
                         <div class="card-status" id="intelStatus">3 Reports</div>
                     </div>
 
-                    <div class="hub-card" onclick="game.showCharacterSheet()">
+                    <div class="hub-card" onclick="game.dialogEngine ? game.dialogEngine.navigateTo('character-sheet') : game.showCharacterSheet()">
                         <div class="card-icon">📊</div>
                         <div class="card-title">CHARACTER</div>
                         <div class="card-desc">View RPG stats</div>
