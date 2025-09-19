@@ -872,6 +872,15 @@ if (campaignManager && campaignManager.isInitialized) {
 
 ## Common Issues and Solutions
 
+### Keyboard Input Issues
+- **Keys Not Working (Language/Layout Issue)**:
+  - Check keyboard layout is set to English (US/UK)
+  - Non-English keyboard layouts can cause keys to not be recognized
+  - Browser cache issues can prevent updated code from loading
+  - Use Ctrl+Shift+R (Chrome/Edge/Firefox) for hard refresh
+  - Event listeners are set up inline in `initKeyboardHandler`
+  - Legacy `setupKeyboardListeners` function kept as no-op for compatibility
+
 ### 3D Mode Issues
 - **3D Mode Not Working (E key)**:
   - Check console for "✅ Three.js r180 loaded!"
@@ -890,6 +899,16 @@ if (campaignManager && campaignManager.isInitialized) {
 ### Keyboard Handler Issues
 - **Keys Not Working**: If keyboard shortcuts aren't responding:
   - Check console for "✅ initKeyboardHandler COMPLETED successfully"
+- **Some Keys Working, Others Not (C/I, action buttons broken)**:
+  - **CRITICAL ISSUE**: Duplicate/conflicting event listeners in game-events.js
+  - **Root Cause**: Old keyboard handlers not properly commented out
+  - **Fix Required**:
+    1. Comment out line 98: `// window.addEventListener('keydown', (e) => this.handleKeyPress(e));`
+    2. Ensure lines 118-239 (old keydown) are in complete `/* */` comment block
+    3. Ensure lines 243-252 (old keyup) are in complete `/* */` comment block
+    4. Check that comment blocks have proper closing `*/`
+  - **Why This Happens**: Improperly closed comment blocks leave event listeners active
+  - **Prevention**: All keyboard handling must be centralized in game-keyboard.js only
   - Verify "✅ keyBindings has 49 keys registered" message
   - Handler lookup uses case-insensitive matching: `e.key`, `e.key.toUpperCase()`, `e.key.toLowerCase()`
   - Common cause: JavaScript scope/closure issues with `this.keyBindings`

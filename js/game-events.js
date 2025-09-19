@@ -94,8 +94,8 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
 
-        // Keyboard Events
-        window.addEventListener('keydown', (e) => this.handleKeyPress(e));
+        // Keyboard Events - REMOVED to prevent conflicts with game-keyboard.js
+        // window.addEventListener('keydown', (e) => this.handleKeyPress(e));
 
         // Prevent context menu
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -114,7 +114,8 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         }
 
         /* OLD KEYBOARD HANDLERS - DISABLED - Moved to game-keyboard.js */
-        /* COMMENTED OUT TO PREVENT CONFLICTS
+        /* COMMENTED OUT TO PREVENT CONFLICTS */
+        /*
         document.addEventListener('keydown', (e) => {
             // Select All Squad - 'T' key for Team
             if (e.code === 'KeyT' && this.currentScreen === 'game') {
@@ -236,8 +237,9 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 this.togglePause();
             }
         });
-        // });  // End of old keydown handler - EXTRA BRACKET REMOVED
+        */  // End of old keydown handler - PROPERLY COMMENTED OUT
 
+        /* OLD KEYUP HANDLER - Also needs to be disabled
         document.addEventListener('keyup', (e) => {
             if (this.is3DMode) {
                 switch(e.code) {
@@ -248,7 +250,7 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                 }
             }
         });
-        END OF OLD KEYBOARD HANDLERS - Use game-keyboard.js instead */
+        */ // END OF OLD KEYBOARD HANDLERS - Use game-keyboard.js instead
 
         // Mouse handling for 3D shooting (keep this for mouse interaction)
         this.mouseClicked = false;

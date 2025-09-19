@@ -81,7 +81,11 @@ class ContentLoader {
 
         console.log('🎮 Loading RPG configuration...');
 
-        // Instead of using global RPG_CONFIG, inject into services
+        // Set RPG_CONFIG globally for backward compatibility with game-rpg-system.js
+        window.RPG_CONFIG = this.currentCampaign.rpgConfig;
+        console.log('✅ RPG_CONFIG set globally');
+
+        // Also inject into services for proper architecture
         if (game.gameServices?.rpgService) {
             game.gameServices.rpgService.setConfig(this.currentCampaign.rpgConfig);
         }

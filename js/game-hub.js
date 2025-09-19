@@ -356,15 +356,28 @@ CyberOpsGame.prototype.showArsenal = function() {
         this.initializeEquipmentSystem();
     }
 
+    // Auto-select first agent if none selected (for hub context)
+    if (!this.selectedEquipmentAgent && this.activeAgents && this.activeAgents.length > 0) {
+        this.selectedEquipmentAgent = this.activeAgents[0].id;
+        console.log('🎯 Arsenal: Auto-selected agent:', this.activeAgents[0].name);
+    }
+
     // Show equipment management directly
     this.showEquipmentManagement();
 }
     
 CyberOpsGame.prototype.generateArsenalContent = function() {
+        console.log('🔫 Generating Arsenal content...');
+        console.log('   Weapons array:', this.weapons);
+        console.log('   Equipment array:', this.equipment);
+
         let content = '<div style="max-height: 300px; overflow-y: auto;">';
         content += '<h3 style="color: #00ffff; margin-bottom: 15px;">WEAPONS</h3>';
-        
-        this.weapons.forEach(weapon => {
+
+        if (!this.weapons || this.weapons.length === 0) {
+            content += '<div style="color: #888; padding: 10px;">No weapons available</div>';
+        } else {
+            this.weapons.forEach(weapon => {
             content += `
                 <div style="background: rgba(0,255,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
                     <div style="font-weight: bold; color: #fff;">${weapon.name}</div>
@@ -373,9 +386,14 @@ CyberOpsGame.prototype.generateArsenalContent = function() {
                     </div>
                 </div>`;
         });
-        
+        }
+
         content += '<h3 style="color: #ff00ff; margin-top: 20px; margin-bottom: 15px;">EQUIPMENT</h3>';
-        this.equipment.forEach(item => {
+
+        if (!this.equipment || this.equipment.length === 0) {
+            content += '<div style="color: #888; padding: 10px;">No equipment available</div>';
+        } else {
+            this.equipment.forEach(item => {
             let stats = '';
             if (item.protection) stats += `Protection: ${item.protection}`;
             if (item.hackBonus) stats += `Hack Bonus: ${item.hackBonus}%`;
@@ -390,7 +408,8 @@ CyberOpsGame.prototype.generateArsenalContent = function() {
                     </div>
                 </div>`;
         });
-        
+        }
+
         content += '</div>';
         return content;
 }

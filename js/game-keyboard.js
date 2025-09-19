@@ -209,60 +209,44 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
     this.keysPressed = {};
     this.keys3D = { W: false, A: false, S: false, D: false };
 
-    // Setup event listeners
-        this.setupKeyboardListeners();
+    // Setup event listeners inline (setupKeyboardListeners might not be available yet)
+    console.log('🎮 Setting up keyboard listeners...');
 
-        console.log('✅ initKeyboardHandler COMPLETED successfully');
-        console.log('✅ keyBindings has', Object.keys(this.keyBindings).length, 'keys registered');
+    // Note: Keyboard layout language can affect key detection
+    // If keys aren't working, check your keyboard layout is set to English
 
-    } catch (error) {
-        console.error('❌ CRITICAL ERROR in initKeyboardHandler:', error);
-        console.error('Stack trace:', error.stack);
-    }
-};
-
-// Setup keyboard event listeners
-CyberOpsGame.prototype.setupKeyboardListeners = function() {
-    // Prevent duplicate listeners
-    if (this.keyboardListenersSetup) {
-        console.log('⚠️ Keyboard listeners already setup, skipping...');
-        return;
-    }
-    this.keyboardListenersSetup = true;
+    // Store reference to game instance
+    const game = this;
 
     // Main keyboard handler
     document.addEventListener('keydown', (e) => {
         // Don't process if typing in an input field
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
 
         // Track key state
-        this.keysPressed[e.key] = true;
+        game.keysPressed[e.key] = true;
 
         // Handle 3D movement keys
-        if (this.is3DMode && this.currentScreen === 'game') {
+        if (game.is3DMode && game.currentScreen === 'game') {
             switch(e.code) {
-                case 'KeyW': this.keys3D.W = true; break;
-                case 'KeyA': this.keys3D.A = true; break;
-                case 'KeyS': this.keys3D.S = true; break;
-                case 'KeyD': this.keys3D.D = true; break;
-                case 'KeyR':
-                    // Cycle through 3D actions
-                    if (!this.action3DMode) this.action3DMode = 'move';
-                    const modes = ['move', 'attack', 'hack'];
-                    const currentIndex = modes.indexOf(this.action3DMode);
-                    this.action3DMode = modes[(currentIndex + 1) % modes.length];
-                    console.log('3D Action mode:', this.action3DMode);
-                    break;
+                case 'KeyW': game.keys3D.W = true; break;
+                case 'KeyA': game.keys3D.A = true; break;
+                case 'KeyS': game.keys3D.S = true; break;
+                case 'KeyD': game.keys3D.D = true; break;
             }
         }
 
         // Only process game keys when in game screen
-        if (this.currentScreen !== 'game' && e.key !== 'Escape') return;
+        if (game.currentScreen !== 'game' && e.key !== 'Escape') return;
 
-        // Get the handler for this key - try both cases
-        const handler = this.keyBindings[e.key] ||
-                       this.keyBindings[e.key.toUpperCase()] ||
-                       this.keyBindings[e.key.toLowerCase()];
+        // Get the handler for this key
+        const handler = game.keyBindings && (
+            game.keyBindings[e.key] ||
+            game.keyBindings[e.key.toUpperCase()] ||
+            game.keyBindings[e.key.toLowerCase()]
+        );
 
         if (handler) {
             e.preventDefault();
@@ -273,18 +257,32 @@ CyberOpsGame.prototype.setupKeyboardListeners = function() {
     // Key up handler for movement
     document.addEventListener('keyup', (e) => {
         // Clear key state
-        this.keysPressed[e.key] = false;
+        game.keysPressed[e.key] = false;
 
         // Handle 3D movement key release
-        if (this.is3DMode && this.currentScreen === 'game') {
+        if (game.is3DMode && game.currentScreen === 'game') {
             switch(e.code) {
-                case 'KeyW': this.keys3D.W = false; break;
-                case 'KeyA': this.keys3D.A = false; break;
-                case 'KeyS': this.keys3D.S = false; break;
-                case 'KeyD': this.keys3D.D = false; break;
+                case 'KeyW': game.keys3D.W = false; break;
+                case 'KeyA': game.keys3D.A = false; break;
+                case 'KeyS': game.keys3D.S = false; break;
+                case 'KeyD': game.keys3D.D = false; break;
             }
         }
     });
+
+    console.log('✅ Keyboard handler initialized with', Object.keys(this.keyBindings).length, 'key bindings');
+
+    } catch (error) {
+        console.error('❌ CRITICAL ERROR in initKeyboardHandler:', error);
+        console.error('Stack trace:', error.stack);
+        console.error('Error details:', error.message);
+    }
+};
+
+// Legacy function - kept for compatibility
+// Event listeners are now set up inline in initKeyboardHandler
+CyberOpsGame.prototype.setupKeyboardListeners = function() {
+    // No-op - listeners already setup in initKeyboardHandler
 };
 
 // Individual action handlers

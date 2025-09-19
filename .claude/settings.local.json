@@ -31,7 +31,8 @@
       "Bash(start test-turnbased.html)",
       "Bash(git show:*)",
       "Bash(git diff:*)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(start index.html)"
     ],
     "deny": [],
     "ask": []

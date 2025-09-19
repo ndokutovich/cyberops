@@ -655,6 +655,11 @@ CyberOpsGame.prototype.upgradeExistingEntities = function() {
 // Sync existing hub equipment with RPG inventory system
 CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
     console.log('🔄 Syncing hub equipment with RPG inventory...');
+    console.log('   Weapons in game:', this.weapons?.length || 0, 'items');
+    console.log('   Equipment in game:', this.equipment?.length || 0, 'items');
+    if (this.weapons && this.weapons.length > 0) {
+        console.log('   First weapon:', this.weapons[0].name, 'owned:', this.weapons[0].owned);
+    }
 
     // Use GameServices if available
     if (window.GameServices && window.GameServices.rpgService) {
@@ -940,6 +945,30 @@ CyberOpsGame.prototype.onEntityDeath = function(entity, killer) {
     if (killer && killer.rpgEntity && entity.rpgEntity) {
         const xpReward = this.calculateXPReward(entity);
         this.rpgManager.grantExperience(killer.rpgEntity, xpReward);
+
+        // Show XP gain notification
+        if (this.logEvent) {
+            this.logEvent(`💀 ${killer.name} killed ${entity.type || 'enemy'} (+${xpReward} XP)`, 'combat', true);
+        }
+
+        // Create floating XP text effect
+        if (entity.x && entity.y) {
+            this.effects = this.effects || [];
+            this.effects.push({
+                type: 'text',
+                text: `+${xpReward} XP`,
+                x: entity.x,
+                y: entity.y,
+                color: '#FFD700',
+                duration: 60,
+                dy: -0.5
+            });
+        }
+    } else {
+        // Debug why XP wasn't granted
+        if (!killer) console.warn('No killer for entity death');
+        if (!killer?.rpgEntity) console.warn('Killer has no rpgEntity:', killer);
+        if (!entity?.rpgEntity) console.warn('Dead entity has no rpgEntity:', entity);
     }
 
     // Drop loot

@@ -191,6 +191,19 @@
                     <label>Max Agents: <input type="number" id="max-agents" value="4" min="1" max="6"></label>
                     <label>Required Agents: <input type="number" id="required-agents" value="2" min="1" max="6"></label>
                     <label>Recommended: <input type="number" id="recommended-agents" value="3" min="1" max="6"></label>
+
+                    <h3>Turn-Based Mode Settings</h3>
+                    <label>Enable Turn-Based: <input type="checkbox" id="tb-enabled"></label>
+                    <label>Force Turn-Based: <input type="checkbox" id="tb-forced"></label>
+                    <label>Default Agent AP: <input type="number" id="tb-default-ap" value="12" min="1" max="20"></label>
+                    <label>Initiative Mode:
+                        <select id="tb-initiative">
+                            <option value="speed">Speed-based</option>
+                            <option value="random">Random</option>
+                            <option value="player-first">Player First</option>
+                            <option value="enemy-first">Enemy First</option>
+                        </select>
+                    </label>
                 </div>
 
                 <!-- Selected Entity Properties -->
@@ -272,6 +285,27 @@
             </label>
             <label>Position: X: <input type="number" id="npc-x" min="0"> Y: <input type="number" id="npc-y" min="0"></label>
 
+            <h3>RPG Stats</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <label>Level: <input type="number" id="npc-level" value="1" min="1" max="20"></label>
+                <label>Class:
+                    <select id="npc-class">
+                        <option value="">None</option>
+                        <option value="civilian">Civilian</option>
+                        <option value="soldier">Soldier</option>
+                        <option value="infiltrator">Infiltrator</option>
+                        <option value="tech">Tech Specialist</option>
+                        <option value="medic">Medic</option>
+                    </select>
+                </label>
+                <label>Health: <input type="number" id="npc-health" value="100" min="1" max="500"></label>
+                <label>AP (Turn-based): <input type="number" id="npc-ap" value="8" min="1" max="20"></label>
+                <label>Strength: <input type="number" id="npc-strength" value="10" min="1" max="20"></label>
+                <label>Agility: <input type="number" id="npc-agility" value="10" min="1" max="20"></label>
+                <label>Intelligence: <input type="number" id="npc-intelligence" value="10" min="1" max="20"></label>
+                <label>Charisma: <input type="number" id="npc-charisma" value="10" min="1" max="20"></label>
+            </div>
+
             <h3>Dialog Tree</h3>
             <div id="dialog-tree-editor">
                 <textarea id="npc-dialog" rows="10" placeholder="Enter dialog in JSON format"></textarea>
@@ -285,6 +319,53 @@
             <div class="dialog-buttons">
                 <button id="save-npc">Save</button>
                 <button id="cancel-npc">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enemy Dialog -->
+    <div id="enemy-dialog" class="dialog" style="display:none;">
+        <div class="dialog-content">
+            <h2>Edit Enemy</h2>
+            <label>Enemy Type:
+                <select id="enemy-type">
+                    <option value="guard">Guard</option>
+                    <option value="soldier">Soldier</option>
+                    <option value="heavy">Heavy</option>
+                    <option value="sniper">Sniper</option>
+                    <option value="elite">Elite</option>
+                    <option value="boss">Boss</option>
+                </select>
+            </label>
+            <label>Position: X: <input type="number" id="enemy-x" min="0"> Y: <input type="number" id="enemy-y" min="0"></label>
+
+            <h3>RPG Stats</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <label>Level: <input type="number" id="enemy-level" value="1" min="1" max="20"></label>
+                <label>Health: <input type="number" id="enemy-health" value="100" min="1" max="1000"></label>
+                <label>AP (Turn-based): <input type="number" id="enemy-ap" value="8" min="1" max="20"></label>
+                <label>Damage: <input type="number" id="enemy-damage" value="10" min="1" max="100"></label>
+                <label>Armor: <input type="number" id="enemy-armor" value="0" min="0" max="50"></label>
+                <label>Vision Range: <input type="number" id="enemy-vision" value="10" min="1" max="20"></label>
+                <label>Movement Speed: <input type="number" id="enemy-speed" step="0.1" value="2.0" min="0.5" max="5"></label>
+                <label>Alert Range: <input type="number" id="enemy-alert-range" value="15" min="5" max="30"></label>
+            </div>
+
+            <h3>Behavior</h3>
+            <label>AI Type:
+                <select id="enemy-ai">
+                    <option value="patrol">Patrol</option>
+                    <option value="stationary">Stationary</option>
+                    <option value="aggressive">Aggressive</option>
+                    <option value="defensive">Defensive</option>
+                    <option value="sniper">Sniper</option>
+                </select>
+            </label>
+            <label>Patrol Route (JSON): <textarea id="enemy-patrol" rows="3" placeholder="[[x1,y1], [x2,y2], ...]">[]</textarea></label>
+
+            <div class="dialog-buttons">
+                <button id="save-enemy">Save</button>
+                <button id="cancel-enemy">Cancel</button>
             </div>
         </div>
     </div>
@@ -310,6 +391,10 @@
                 <button class="campaign-tab" data-tab="research" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Research Tree</button>
                 <button class="campaign-tab" data-tab="intel" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Intel & Story</button>
                 <button class="campaign-tab" data-tab="music" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Music & Audio</button>
+                <button class="campaign-tab" data-tab="rpg" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">RPG Config</button>
+                <button class="campaign-tab" data-tab="formulas" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Formulas</button>
+                <button class="campaign-tab" data-tab="theme" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Theme & UI</button>
+                <button class="campaign-tab" data-tab="inventory" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Inventory</button>
             </div>
 
             <!-- Tab Content Areas -->
@@ -445,6 +530,289 @@
                         <!-- Will be populated with music configuration -->
                     </div>
                 </div>
+
+                <!-- RPG Configuration Tab -->
+                <div id="tab-rpg" class="campaign-tab-content" style="display: none;">
+                    <h3>RPG System Configuration</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                        <!-- Classes Section -->
+                        <div>
+                            <h4 style="color: #00ff41;">Character Classes</h4>
+                            <button id="add-class" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer; width: 100%;">➕ Add Class</button>
+                            <div id="classes-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 400px; overflow-y: auto;">
+                                <!-- Will be populated with classes -->
+                            </div>
+                        </div>
+
+                        <!-- Skills Section -->
+                        <div>
+                            <h4 style="color: #00ff41;">Skills</h4>
+                            <button id="add-skill" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer; width: 100%;">➕ Add Skill</button>
+                            <div id="skills-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 400px; overflow-y: auto;">
+                                <!-- Will be populated with skills -->
+                            </div>
+                        </div>
+
+                        <!-- Stats Section -->
+                        <div>
+                            <h4 style="color: #00ff41;">Primary Stats</h4>
+                            <button id="add-stat" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer; width: 100%;">➕ Add Stat</button>
+                            <div id="stats-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 400px; overflow-y: auto;">
+                                <!-- Will be populated with stats -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Section -->
+                    <div style="margin-top: 20px;">
+                        <h4 style="color: #00ff41;">RPG Items & Equipment</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h5>Armor Types</h5>
+                                <button id="add-armor" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer; width: 100%;">➕ Add Armor</button>
+                                <div id="armor-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                                    <!-- Will be populated with armor -->
+                                </div>
+                            </div>
+                            <div>
+                                <h5>Consumables</h5>
+                                <button id="add-consumable" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer; width: 100%;">➕ Add Consumable</button>
+                                <div id="consumables-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                                    <!-- Will be populated with consumables -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulas Tab -->
+                <div id="tab-formulas" class="campaign-tab-content" style="display: none;">
+                    <h3>Combat & Game Formulas</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4 style="color: #00ff41;">Damage Calculations</h4>
+                            <div style="background: #0a0e27; padding: 15px; border-radius: 4px;">
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Base Damage Formula:
+                                    <input type="text" id="formula-damage" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;"
+                                           value="baseDamage + weaponDamage + (strength / 2)" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Critical Hit Multiplier:
+                                    <input type="number" id="formula-crit" step="0.1" min="1" max="5" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="2.0" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Armor Reduction Formula:
+                                    <input type="text" id="formula-armor" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;"
+                                           value="damage * (100 / (100 + armor))" />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style="color: #00ff41;">Experience & Leveling</h4>
+                            <div style="background: #0a0e27; padding: 15px; border-radius: 4px;">
+                                <label style="display: block; margin-bottom: 10px;">
+                                    XP Per Level Formula:
+                                    <input type="text" id="formula-xp" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;"
+                                           value="level * 100 + (level * level * 50)" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Skill Points Per Level:
+                                    <input type="number" id="formula-skillpoints" min="1" max="10" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="3" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Max Level:
+                                    <input type="number" id="formula-maxlevel" min="1" max="100" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="20" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h4 style="color: #00ff41;">Turn-Based Mode Settings</h4>
+                        <div style="background: #0a0e27; padding: 15px; border-radius: 4px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                                <label>
+                                    Default Agent AP:
+                                    <input type="number" id="tb-agent-ap" min="1" max="20" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="12" />
+                                </label>
+                                <label>
+                                    Default Enemy AP:
+                                    <input type="number" id="tb-enemy-ap" min="1" max="20" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="8" />
+                                </label>
+                                <label>
+                                    Move Cost (per tile):
+                                    <input type="number" id="tb-move-cost" min="1" max="5" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="1" />
+                                </label>
+                                <label>
+                                    Shoot Cost:
+                                    <input type="number" id="tb-shoot-cost" min="1" max="10" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="4" />
+                                </label>
+                                <label>
+                                    Ability Cost:
+                                    <input type="number" id="tb-ability-cost" min="1" max="10" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="6" />
+                                </label>
+                                <label>
+                                    Hack Cost:
+                                    <input type="number" id="tb-hack-cost" min="1" max="10" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="4" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Theme & UI Tab -->
+                <div id="tab-theme" class="campaign-tab-content" style="display: none;">
+                    <h3>Campaign Theme & UI Configuration</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4 style="color: #00ff41;">Color Scheme</h4>
+                            <div style="background: #0a0e27; padding: 15px; border-radius: 4px;">
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Primary Color:
+                                    <input type="color" id="theme-primary" style="width: 100%; height: 40px; background: #1a1a2e; border: 1px solid #00ff41;" value="#00ff41" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Secondary Color:
+                                    <input type="color" id="theme-secondary" style="width: 100%; height: 40px; background: #1a1a2e; border: 1px solid #00ff41;" value="#00ffff" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Danger Color:
+                                    <input type="color" id="theme-danger" style="width: 100%; height: 40px; background: #1a1a2e; border: 1px solid #00ff41;" value="#ff073a" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Background Color:
+                                    <input type="color" id="theme-background" style="width: 100%; height: 40px; background: #1a1a2e; border: 1px solid #00ff41;" value="#0a0e27" />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style="color: #00ff41;">UI Strings</h4>
+                            <div style="background: #0a0e27; padding: 15px; border-radius: 4px;">
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Currency Name:
+                                    <input type="text" id="ui-currency" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="Credits" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Research Points Name:
+                                    <input type="text" id="ui-research" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="Research Points" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Agent/Unit Name:
+                                    <input type="text" id="ui-agent" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="Agent" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Enemy Name:
+                                    <input type="text" id="ui-enemy" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="Enemy" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h4 style="color: #00ff41;">Gameplay Constants</h4>
+                        <div style="background: #0a0e27; padding: 15px; border-radius: 4px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                                <label>
+                                    Movement Speed:
+                                    <input type="number" id="const-movespeed" step="0.1" min="0.1" max="10" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="2.0" />
+                                </label>
+                                <label>
+                                    Vision Range:
+                                    <input type="number" id="const-vision" min="1" max="20" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="10" />
+                                </label>
+                                <label>
+                                    Hack Range:
+                                    <input type="number" id="const-hackrange" min="1" max="10" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="3" />
+                                </label>
+                                <label>
+                                    Max Squad Size:
+                                    <input type="number" id="const-squadsize" min="1" max="10" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="6" />
+                                </label>
+                                <label>
+                                    Base Health:
+                                    <input type="number" id="const-health" min="10" max="500" step="10" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="100" />
+                                </label>
+                                <label>
+                                    Respawn Timer (sec):
+                                    <input type="number" id="const-respawn" min="0" max="60" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="0" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory Management Tab -->
+                <div id="tab-inventory" class="campaign-tab-content" style="display: none;">
+                    <h3>Agent Inventory & Loadout Management</h3>
+
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #00ff41;">Default Agent Loadouts</h4>
+                        <button id="add-loadout" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer; width: 200px;">➕ Add Agent Loadout</button>
+                        <div id="loadouts-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 400px; overflow-y: auto;">
+                            <!-- Will be populated with agent loadouts -->
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4 style="color: #00ff41;">Inventory Settings</h4>
+                            <div style="background: #0a0e27; padding: 15px; border-radius: 4px;">
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Default Carry Weight:
+                                    <input type="number" id="inv-carry-weight" min="10" max="500" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="100" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Weight Penalty Speed Reduction %:
+                                    <input type="number" id="inv-weight-penalty" min="0" max="100" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="50" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Max Inventory Slots:
+                                    <input type="number" id="inv-max-slots" min="10" max="100" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="30" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Stack Size (consumables):
+                                    <input type="number" id="inv-stack-size" min="1" max="999" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="99" />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style="color: #00ff41;">Starting Inventory</h4>
+                            <div style="background: #0a0e27; padding: 15px; border-radius: 4px;">
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Starting Credits:
+                                    <input type="number" id="inv-start-credits" min="0" max="99999" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="1000" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Starting Ammo (Primary):
+                                    <input type="number" id="inv-start-ammo-primary" min="0" max="999" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="120" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Starting Ammo (Secondary):
+                                    <input type="number" id="inv-start-ammo-secondary" min="0" max="999" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="60" />
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    Starting Medkits:
+                                    <input type="number" id="inv-start-medkits" min="0" max="99" style="width: 100%; padding: 5px; background: #1a1a2e; color: #00ff41; border: 1px solid #00ff41;" value="3" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h4 style="color: #00ff41;">Quick Item Sets</h4>
+                        <div style="background: #0a0e27; padding: 15px; border-radius: 4px;">
+                            <button id="create-item-set" style="padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer; margin-right: 10px;">Create Item Set</button>
+                            <button id="save-inventory-config" style="padding: 10px; background: #00ffff; color: #1a1a2e; border: none; cursor: pointer;">Save Inventory Config</button>
+                            <div id="item-sets-list" style="margin-top: 10px;">
+                                <!-- Will be populated with item sets -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Save Changes Button -->
@@ -465,6 +833,21 @@
 
     <!-- Load JSZip library for ZIP export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- Services (needed for RPG and equipment systems) -->
+    <script src="js/services/formula-service.js"></script>
+    <script src="js/services/research-service.js"></script>
+    <script src="js/services/equipment-service.js"></script>
+    <script src="js/services/keybinding-service.js"></script>
+    <script src="js/services/rpg-service.js"></script>
+    <script src="js/services/game-services.js"></script>
+
+    <!-- Engine -->
+    <script src="js/engine/content-loader.js"></script>
+
+    <!-- Core game modules -->
+    <script src="js/game-mission-constants.js"></script>
+    <script src="js/campaign-system.js"></script>
 
     <!-- Load campaign system for editor -->
     <script src="js/campaign-loader-editor.js"></script>

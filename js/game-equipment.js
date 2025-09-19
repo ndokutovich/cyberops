@@ -31,6 +31,20 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
         this.initializeEquipmentSystem();
     }
 
+    // Auto-select first available agent if none selected
+    let needsRefresh = false;
+    if (!this.selectedEquipmentAgent && this.activeAgents && this.activeAgents.length > 0) {
+        // In game mode, try to use the currently selected agent
+        if (this.currentScreen === 'game' && this._selectedAgent) {
+            this.selectedEquipmentAgent = this._selectedAgent.originalId || this._selectedAgent.id || this._selectedAgent.name;
+        } else {
+            // Otherwise select the first active agent
+            this.selectedEquipmentAgent = this.activeAgents[0].id;
+        }
+        console.log('Auto-selected agent for equipment:', this.selectedEquipmentAgent);
+        needsRefresh = true; // Mark that we need to refresh UI
+    }
+
     const dialog = document.getElementById('equipmentDialog');
     dialog.classList.add('show');
 
@@ -96,14 +110,24 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
         if (noteEl) noteEl.remove();
     }
 
-    // Auto-select first agent if none selected
-    if (!this.selectedEquipmentAgent && this.activeAgents.length > 0) {
-        const firstAgentId = this.activeAgents[0].id || this.activeAgents[0].name;
-        this.selectedEquipmentAgent = firstAgentId;
-        console.log('🎯 Auto-selecting first agent:', firstAgentId);
-    }
-
+    // Refresh UI - this will update all displays
+    // If we auto-selected an agent, this will show their inventory
     this.refreshEquipmentUI();
+
+    // Force show weapon inventory immediately if agent is selected
+    // This ensures the inventory tab is populated on open
+    if (this.selectedEquipmentAgent) {
+        // Call immediately to populate
+        this.showWeaponInventory();
+
+        // Also call with delay in case DOM needs time
+        setTimeout(() => {
+            if (!document.getElementById('inventoryList').innerHTML.includes('WEAPONS')) {
+                console.log('📦 Inventory was empty, populating now...');
+                this.showWeaponInventory();
+            }
+        }, 50);
+    }
 };
 
 // Close equipment dialog
@@ -292,7 +316,15 @@ CyberOpsGame.prototype.updateStatsPreview = function(agentId) {
 
 // Show weapon inventory
 CyberOpsGame.prototype.showWeaponInventory = function() {
+    console.log('🔫 showWeaponInventory called');
     const inventoryEl = document.getElementById('inventoryList');
+    if (!inventoryEl) {
+        console.error('inventoryList element not found!');
+        return;
+    }
+    console.log('   Weapons available:', this.weapons?.length || 0);
+    console.log('   Selected agent:', this.selectedEquipmentAgent);
+
     inventoryEl.innerHTML = '<h4 style="color: #ffa500; margin-bottom: 10px;">🔫 WEAPONS</h4>';
 
     // Get available weapons (not equipped by other agents)

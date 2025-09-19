@@ -1,4 +1,72 @@
 // CyberOps Mission Editor
+
+// Event Logging System
+class EventLogger {
+    constructor() {
+        this.events = [];
+        this.maxEvents = 1000;
+    }
+
+    log(message, category = 'info', important = false) {
+        const event = {
+            timestamp: Date.now(),
+            message,
+            category,
+            important
+        };
+
+        this.events.push(event);
+        if (this.events.length > this.maxEvents) {
+            this.events.shift();
+        }
+
+        // Show important events in UI
+        if (important) {
+            this.showNotification(message, category);
+        }
+
+        // Console output only for critical errors in development
+        if (window.DEBUG_MODE && category === 'error') {
+            console.error(`[ERROR] ${message}`);
+        }
+    }
+
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: ${type === 'error' ? '#ff073a' : type === 'success' ? '#00ff41' : '#00ffff'};
+            color: #0a0e27;
+            border-radius: 4px;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        `;
+
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    getEvents(category = null) {
+        if (category) {
+            return this.events.filter(e => e.category === category);
+        }
+        return this.events;
+    }
+
+    clear() {
+        this.events = [];
+    }
+}
+
+// Global event logger instance
+const eventLogger = new EventLogger();
+
 class MissionEditor {
     constructor() {
         this.canvas = document.getElementById('map-canvas');
@@ -44,6 +112,69 @@ class MissionEditor {
         this.historyIndex = -1;
         this.maxHistory = 50;
 
+        // Initialize systems
+        this.eventLogger = eventLogger;
+        this.contentLoader = null;
+        this.gameServices = null;
+
+        // RPG configuration
+        this.rpgConfig = {
+            classes: {},
+            skills: {},
+            stats: {
+                primary: ['strength', 'agility', 'intelligence', 'endurance', 'tech', 'charisma']
+            },
+            items: {
+                weapons: {},
+                armor: {},
+                consumables: {}
+            }
+        };
+
+        // Formula configuration
+        this.formulas = {
+            damage: 'baseDamage + weaponDamage + (strength / 2)',
+            critMultiplier: 2.0,
+            armorReduction: 'damage * (100 / (100 + armor))',
+            xpPerLevel: 'level * 100 + (level * level * 50)',
+            skillPointsPerLevel: 3,
+            maxLevel: 20
+        };
+
+        // Turn-based configuration
+        this.turnBasedConfig = {
+            defaultAgentAP: 12,
+            defaultEnemyAP: 8,
+            moveCost: 1,
+            shootCost: 4,
+            abilityCost: 6,
+            hackCost: 4
+        };
+
+        // Theme configuration
+        this.themeConfig = {
+            colors: {
+                primary: '#00ff41',
+                secondary: '#00ffff',
+                danger: '#ff073a',
+                background: '#0a0e27'
+            },
+            strings: {
+                currency: 'Credits',
+                research: 'Research Points',
+                agent: 'Agent',
+                enemy: 'Enemy'
+            },
+            constants: {
+                movementSpeed: 2.0,
+                visionRange: 10,
+                hackRange: 3,
+                maxSquadSize: 6,
+                baseHealth: 100,
+                respawnTimer: 0
+            }
+        };
+
         this.init();
     }
 
@@ -53,11 +184,78 @@ class MissionEditor {
         this.render();
         this.updatePropertiesPanel();
 
+        // Initialize game systems
+        await this.initializeGameSystems();
+
         // Load campaigns and populate dropdown
         await this.loadCampaigns();
 
         // Load campaign content (enemy types, etc.)
         await this.loadCampaignContent();
+
+        this.eventLogger.log('Mission Editor initialized', 'system', true);
+    }
+
+    async initializeGameSystems() {
+        try {
+            // Load ContentLoader if available
+            if (window.ContentLoader) {
+                this.contentLoader = window.ContentLoader;
+                this.eventLogger.log('ContentLoader connected', 'system');
+            } else {
+                // Try to load it
+                const script = document.createElement('script');
+                script.src = 'js/engine/content-loader.js';
+                await new Promise((resolve) => {
+                    script.onload = () => {
+                        if (window.ContentLoader) {
+                            this.contentLoader = new window.ContentLoader();
+                            this.eventLogger.log('ContentLoader loaded', 'system');
+                        }
+                        resolve();
+                    };
+                    script.onerror = () => {
+                        this.eventLogger.log('ContentLoader not available', 'warning');
+                        resolve();
+                    };
+                    document.head.appendChild(script);
+                });
+            }
+
+            // Load GameServices if available
+            if (window.GameServices) {
+                this.gameServices = window.GameServices;
+                this.eventLogger.log('GameServices connected', 'system');
+            } else {
+                // Try to load services
+                const scripts = [
+                    'js/services/game-services.js',
+                    'js/services/formula-service.js',
+                    'js/services/equipment-service.js',
+                    'js/services/rpg-service.js'
+                ];
+
+                for (const src of scripts) {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    await new Promise((resolve) => {
+                        script.onload = resolve;
+                        script.onerror = () => {
+                            this.eventLogger.log(`Failed to load ${src}`, 'warning');
+                            resolve();
+                        };
+                        document.head.appendChild(script);
+                    });
+                }
+
+                if (window.GameServices) {
+                    this.gameServices = new window.GameServices();
+                    this.eventLogger.log('GameServices initialized', 'system');
+                }
+            }
+        } catch (error) {
+            this.eventLogger.log(`Failed to initialize game systems: ${error.message}`, 'error');
+        }
     }
 
     async loadCampaignContent() {
@@ -68,7 +266,7 @@ class MissionEditor {
             await new Promise((resolve) => {
                 script.onload = resolve;
                 script.onerror = () => {
-                    console.warn('Could not load campaign content, using defaults');
+                    eventLogger.log('Could not load campaign content, using defaults', 'warning');
                     resolve();
                 };
                 document.head.appendChild(script);
@@ -77,13 +275,19 @@ class MissionEditor {
             // Store enemy types if loaded
             if (window.MAIN_CAMPAIGN_CONTENT && window.MAIN_CAMPAIGN_CONTENT.enemyTypes) {
                 this.enemyTypes = window.MAIN_CAMPAIGN_CONTENT.enemyTypes;
-                console.log(`✅ Loaded ${this.enemyTypes.length} enemy types from campaign`);
+                this.eventLogger.log(`Loaded ${this.enemyTypes.length} enemy types from campaign`, 'success', true);
             } else {
-                console.warn('⚠️ No enemy types loaded from campaign! Editor may have limited functionality.');
+                this.eventLogger.log('No enemy types loaded from campaign', 'warning', true);
                 this.enemyTypes = [];
             }
+
+            // Load RPG config if available
+            if (window.MAIN_CAMPAIGN_CONFIG && window.MAIN_CAMPAIGN_CONFIG.rpgConfig) {
+                this.rpgConfig = window.MAIN_CAMPAIGN_CONFIG.rpgConfig;
+                this.eventLogger.log('Loaded RPG configuration from campaign', 'success');
+            }
         } catch (e) {
-            console.error('Failed to load campaign content:', e);
+            this.eventLogger.log(`Failed to load campaign content: ${e.message}`, 'error', true);
         }
     }
 
@@ -146,7 +350,7 @@ class MissionEditor {
                 }
             }
         } catch (error) {
-            console.error('Failed to load campaigns:', error);
+            this.eventLogger.log(`Failed to load campaigns: ${error.message}`, 'error', true);
             const dropdown = document.getElementById('load-game-mission');
             dropdown.innerHTML = '<option value="">Failed to load campaigns</option>';
         }
@@ -533,6 +737,17 @@ class MissionEditor {
                 entity.enemyType = 'guard';
                 entity.patrolRoute = [];
                 entity.alertLevel = 0;
+                entity.health = 100;
+                entity.level = 1;
+                entity.ap = 8;
+                entity.damage = 10;
+                entity.armor = 0;
+                entity.visionRange = 10;
+                entity.speed = 2.0;
+                entity.alertRange = 15;
+                entity.aiType = 'patrol';
+                // Show dialog for detailed configuration
+                this.showEnemyDialog(this.mission.entities.length);
                 break;
             case 'npc':
                 entity.name = 'NPC';
@@ -1132,6 +1347,83 @@ class MissionEditor {
         this.saveToHistory();
     }
 
+    showEnemyDialog(index = -1) {
+        const dialog = document.getElementById('enemy-dialog');
+        if (!dialog) return;
+
+        dialog.style.display = 'flex';
+
+        if (index >= 0 && index < this.mission.entities.length) {
+            const enemy = this.mission.entities[index];
+            if (enemy.type === 'enemy') {
+                document.getElementById('enemy-type').value = enemy.enemyType || 'guard';
+                document.getElementById('enemy-x').value = enemy.x;
+                document.getElementById('enemy-y').value = enemy.y;
+                document.getElementById('enemy-level').value = enemy.level || 1;
+                document.getElementById('enemy-health').value = enemy.health || 100;
+                document.getElementById('enemy-ap').value = enemy.ap || 8;
+                document.getElementById('enemy-damage').value = enemy.damage || 10;
+                document.getElementById('enemy-armor').value = enemy.armor || 0;
+                document.getElementById('enemy-vision').value = enemy.visionRange || 10;
+                document.getElementById('enemy-speed').value = enemy.speed || 2.0;
+                document.getElementById('enemy-alert-range').value = enemy.alertRange || 15;
+                document.getElementById('enemy-ai').value = enemy.aiType || 'patrol';
+                document.getElementById('enemy-patrol').value = JSON.stringify(enemy.patrolRoute || []);
+            }
+        }
+
+        // Setup save/cancel handlers
+        const saveBtn = document.getElementById('save-enemy');
+        const cancelBtn = document.getElementById('cancel-enemy');
+
+        const saveHandler = () => {
+            this.saveEnemyDialog(index);
+            saveBtn.removeEventListener('click', saveHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+        };
+
+        const cancelHandler = () => {
+            dialog.style.display = 'none';
+            saveBtn.removeEventListener('click', saveHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+        };
+
+        saveBtn.addEventListener('click', saveHandler);
+        cancelBtn.addEventListener('click', cancelHandler);
+    }
+
+    saveEnemyDialog(index) {
+        const dialog = document.getElementById('enemy-dialog');
+        if (index >= 0 && index < this.mission.entities.length) {
+            const enemy = this.mission.entities[index];
+            if (enemy.type === 'enemy') {
+                enemy.enemyType = document.getElementById('enemy-type').value;
+                enemy.x = parseInt(document.getElementById('enemy-x').value);
+                enemy.y = parseInt(document.getElementById('enemy-y').value);
+                enemy.level = parseInt(document.getElementById('enemy-level').value);
+                enemy.health = parseInt(document.getElementById('enemy-health').value);
+                enemy.ap = parseInt(document.getElementById('enemy-ap').value);
+                enemy.damage = parseInt(document.getElementById('enemy-damage').value);
+                enemy.armor = parseInt(document.getElementById('enemy-armor').value);
+                enemy.visionRange = parseInt(document.getElementById('enemy-vision').value);
+                enemy.speed = parseFloat(document.getElementById('enemy-speed').value);
+                enemy.alertRange = parseInt(document.getElementById('enemy-alert-range').value);
+                enemy.aiType = document.getElementById('enemy-ai').value;
+
+                try {
+                    enemy.patrolRoute = JSON.parse(document.getElementById('enemy-patrol').value);
+                } catch (e) {
+                    enemy.patrolRoute = [];
+                }
+
+                this.renderEntities();
+                this.saveToHistory();
+                this.eventLogger.log('Enemy updated', 'success');
+            }
+        }
+        dialog.style.display = 'none';
+    }
+
     addEvent() {
         const eventType = prompt('Event type (timer/trigger/condition):', 'trigger');
         const event = {
@@ -1211,9 +1503,24 @@ class MissionEditor {
     }
 
     saveMission() {
+        // Update mission with turn-based settings
+        const tbEnabled = document.getElementById('tb-enabled');
+        const tbForced = document.getElementById('tb-forced');
+        const tbDefaultAP = document.getElementById('tb-default-ap');
+        const tbInitiative = document.getElementById('tb-initiative');
+
+        if (tbEnabled && tbEnabled.checked) {
+            this.mission.turnBased = {
+                enabled: true,
+                forced: tbForced?.checked || false,
+                defaultAgentAP: parseInt(tbDefaultAP?.value) || 12,
+                initiativeMode: tbInitiative?.value || 'speed'
+            };
+        }
+
         const name = this.mission.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         localStorage.setItem(`mission_${name}`, JSON.stringify(this.mission));
-        alert(`Mission "${this.mission.name}" saved to browser storage!`);
+        this.eventLogger.log(`Mission "${this.mission.name}" saved`, 'success', true);
     }
 
     loadMission() {
@@ -1253,7 +1560,7 @@ class MissionEditor {
             this.render();
             this.updatePropertiesPanel();
             this.saveToHistory();
-            console.log('Loaded mission from localStorage:', name);
+            this.eventLogger.log(`Loaded mission from localStorage: ${name}`, 'info', true);
         } else if (window.CAMPAIGN_MISSIONS && window.CAMPAIGN_MISSIONS[name]) {
             // Try loading from campaign missions
             this.loadMissionFromCampaign(name);
@@ -1765,7 +2072,7 @@ ADVANTAGES:
         `;
 
         alert(instructions.trim());
-        console.log(instructions);
+        this.eventLogger.log(instructions, 'info');
     }
 
     importMission() {
@@ -1903,7 +2210,7 @@ ADVANTAGES:
             }
         }
 
-        console.log('Loading campaign mission:', missionDef.name);
+        this.eventLogger.log(`Loading campaign mission: ${missionDef.name}`, 'info');
 
         // Update the dropdown selection to reflect the loaded mission
         const dropdown = document.getElementById('load-game-mission');
@@ -2119,7 +2426,7 @@ ADVANTAGES:
         this.updatePropertiesPanel();
         this.saveToHistory();
 
-        console.log(`✅ Loaded mission: ${missionDef.name}`);
+        this.eventLogger.log(`Loaded mission: ${missionDef.name}`, 'success', true);
 
         // Show a temporary notification that the mission was loaded
         const notification = document.createElement('div');
@@ -2490,7 +2797,7 @@ ADVANTAGES:
 
         // Check if we have embedded tiles (new format)
         if (mapDef.embedded && mapDef.embedded.tiles) {
-            console.log('Loading embedded tiles...');
+            this.eventLogger.log('Loading embedded tiles...', 'info');
 
             // Check if tiles are in string array format (new efficient format)
             if (typeof mapDef.embedded.tiles[0] === 'string') {
@@ -2513,7 +2820,7 @@ ADVANTAGES:
                         this.mission.tiles[y][x] = tileMap[char] !== undefined ? tileMap[char] : 0;
                     }
                 }
-                console.log('Loaded string-based embedded tiles');
+                this.eventLogger.log('Loaded string-based embedded tiles', 'success');
             } else if (mapDef.embedded.customTiles) {
                 // Old object-based format
                 mapDef.embedded.customTiles.forEach(tile => {
@@ -2542,7 +2849,7 @@ ADVANTAGES:
         // Otherwise use generation rules (old format)
         const gen = mapDef.generation;
         if (!gen) {
-            console.error('No generation rules or embedded tiles in map definition');
+            this.eventLogger.log('No generation rules or embedded tiles in map definition', 'error', true);
             return;
         }
 
@@ -2674,7 +2981,7 @@ ADVANTAGES:
             }
         }
 
-        console.log('Generated map from embedded definition:', mapDef.width + 'x' + mapDef.height);
+        this.eventLogger.log(`Generated map from embedded definition: ${mapDef.width}x${mapDef.height}`, 'success');
     }
 
     async showCampaignConfig() {
@@ -2704,7 +3011,7 @@ ADVANTAGES:
         if (window.campaignManager && window.campaignManager.currentCampaign) {
             window.campaignManager.switchTab('overview');
         } else {
-            console.error('Campaign manager not ready');
+            this.eventLogger.log('Campaign manager not ready', 'error', true);
         }
 
         // Old code for backward compatibility - skip if elements don't exist
@@ -2712,7 +3019,7 @@ ADVANTAGES:
         const structure = document.getElementById('campaign-structure');
 
         if (!overview || !structure) {
-            console.log('Using new campaign management UI');
+            this.eventLogger.log('Using new campaign management UI', 'info');
             return;
         }
 
@@ -2844,7 +3151,7 @@ ADVANTAGES:
 
     window.CAMPAIGN_MISSIONS['${missionKey}'] = ${JSON.stringify(missionData, null, 4)};
 
-    console.log('Loaded mission: ${missionKey}');
+    console.log('✅ Loaded mission: ' + '${missionKey}');
 })();
 `;
 
@@ -2897,11 +3204,11 @@ Generated: ${new Date().toLocaleString()}
             a.click();
             URL.revokeObjectURL(url);
 
-            console.log('Campaign exported as ZIP:', campaignName);
+            this.eventLogger.log(`Campaign exported as ZIP: ${campaignName}`, 'success', true);
             alert(`Campaign exported successfully!\\n\\nExtract to game folder to install.`);
 
         } catch (error) {
-            console.error('Failed to export campaign:', error);
+            this.eventLogger.log(`Failed to export campaign: ${error.message}`, 'error', true);
             alert('Failed to create ZIP. Falling back to JSON export.');
             this.exportCampaignJSON();
         }
@@ -2925,7 +3232,7 @@ Generated: ${new Date().toLocaleString()}
         a.click();
         URL.revokeObjectURL(url);
 
-        console.log('Campaign exported as JSON:', campaignData.name);
+        this.eventLogger.log(`Campaign exported as JSON: ${campaignData.name}`, 'success', true);
     }
 }
 
@@ -2948,9 +3255,9 @@ class CampaignManager {
             await this.loadCampaignContent();
             this.setupEventListeners();
             this.isInitialized = true;
-            console.log('✅ CampaignManager fully initialized');
+            this.editor.eventLogger.log('CampaignManager fully initialized', 'success');
         } catch (error) {
-            console.error('Failed to initialize CampaignManager:', error);
+            this.editor.eventLogger.log(`Failed to initialize CampaignManager: ${error.message}`, 'error', true);
             // Create a default campaign even if IndexedDB fails
             this.createDefaultCampaign();
             this.setupEventListeners();
@@ -2994,13 +3301,13 @@ class CampaignManager {
             const request = indexedDB.open('CampaignDatabase', 2);
 
             request.onerror = () => {
-                console.error('Failed to open IndexedDB');
+                this.editor.eventLogger.log('Failed to open IndexedDB', 'error', true);
                 reject(request.error);
             };
 
             request.onsuccess = () => {
                 this.db = request.result;
-                console.log('✅ IndexedDB initialized');
+                this.editor.eventLogger.log('IndexedDB initialized', 'success');
                 resolve();
             };
 
@@ -3021,7 +3328,7 @@ class CampaignManager {
                     missionsStore.createIndex('missionId', 'missionId', { unique: false });
                 }
 
-                console.log('📦 IndexedDB schema created/updated');
+                this.editor.eventLogger.log('IndexedDB schema created/updated', 'success');
             };
         });
     }
@@ -3036,12 +3343,12 @@ class CampaignManager {
             const request = store.put(campaign);
 
             request.onsuccess = () => {
-                console.log(`✅ Campaign "${campaign.name}" saved to IndexedDB`);
+                this.editor.eventLogger.log(`Campaign "${campaign.name}" saved to IndexedDB`, 'success');
                 resolve();
             };
 
             request.onerror = () => {
-                console.error('Failed to save campaign:', request.error);
+                this.editor.eventLogger.log(`Failed to save campaign: ${request.error}`, 'error', true);
                 reject(request.error);
             };
         });
@@ -3105,7 +3412,7 @@ class CampaignManager {
             };
 
             transaction.oncomplete = () => {
-                console.log(`✅ Campaign "${campaignId}" deleted from IndexedDB`);
+                this.editor.eventLogger.log(`Campaign "${campaignId}" deleted from IndexedDB`, 'success', true);
                 resolve();
             };
 
@@ -3128,7 +3435,7 @@ class CampaignManager {
                 // Sync missions to global CAMPAIGN_MISSIONS
                 this.syncMissionsToGlobal();
 
-                console.log(`✅ Loaded campaign "${campaign.name}" from IndexedDB`);
+                this.editor.eventLogger.log(`Loaded campaign "${campaign.name}" from IndexedDB`, 'success');
                 return;
             }
         }
@@ -3141,13 +3448,13 @@ class CampaignManager {
             // If the campaign doesn't have missions but CAMPAIGN_MISSIONS exists, add them
             if (!this.currentCampaign.missions && window.CAMPAIGN_MISSIONS) {
                 this.currentCampaign.missions = Object.values(window.CAMPAIGN_MISSIONS);
-                console.log(`✅ Added ${this.currentCampaign.missions.length} missions from CAMPAIGN_MISSIONS to campaign`);
+                this.editor.eventLogger.log(`Added ${this.currentCampaign.missions.length} missions from CAMPAIGN_MISSIONS to campaign`, 'success');
             }
 
             // Sync missions to global CAMPAIGN_MISSIONS (in case we loaded from IndexedDB)
             this.syncMissionsToGlobal();
 
-            console.log('✅ Loaded existing campaign content from window');
+            this.editor.eventLogger.log('Loaded existing campaign content from window', 'success');
             // Save it to IndexedDB for future use (now with missions)
             if (this.db) {
                 await this.saveCampaignToDB(this.currentCampaign);
@@ -3155,18 +3462,18 @@ class CampaignManager {
         } else {
             // Create default campaign structure
             this.createDefaultCampaign();
-            console.log('📝 Created new campaign structure');
+            this.editor.eventLogger.log('Created new campaign structure', 'info');
 
             // Add missions from CAMPAIGN_MISSIONS if available
             if (window.CAMPAIGN_MISSIONS) {
                 this.currentCampaign.missions = Object.values(window.CAMPAIGN_MISSIONS);
-                console.log(`✅ Added ${this.currentCampaign.missions.length} missions to default campaign`);
+                this.editor.eventLogger.log(`Added ${this.currentCampaign.missions.length} missions to default campaign`, 'success');
             }
 
             // Save the default campaign to IndexedDB
             if (this.db) {
                 await this.saveCampaignToDB(this.currentCampaign);
-                console.log('💾 Default campaign saved to storage');
+                this.editor.eventLogger.log('Default campaign saved to storage', 'success');
             }
         }
     }
@@ -3216,6 +3523,60 @@ class CampaignManager {
         document.getElementById('add-act')?.addEventListener('click', async () => await this.addAct());
         document.getElementById('reorder-missions')?.addEventListener('click', () => this.reorderMissions());
         document.getElementById('import-mission-file')?.addEventListener('click', () => this.importMissionFile());
+
+        // RPG Configuration buttons
+        document.getElementById('add-class')?.addEventListener('click', () => this.addRPGClass());
+        document.getElementById('add-skill')?.addEventListener('click', () => this.addRPGSkill());
+        document.getElementById('add-stat')?.addEventListener('click', () => this.addRPGStat());
+        document.getElementById('add-armor')?.addEventListener('click', () => this.addRPGArmor());
+        document.getElementById('add-consumable')?.addEventListener('click', () => this.addRPGConsumable());
+
+        // Formula configuration inputs
+        document.getElementById('formula-damage')?.addEventListener('change', (e) => this.updateFormula('damage', e.target.value));
+        document.getElementById('formula-crit')?.addEventListener('change', (e) => this.updateFormula('critMultiplier', parseFloat(e.target.value)));
+        document.getElementById('formula-armor')?.addEventListener('change', (e) => this.updateFormula('armorReduction', e.target.value));
+        document.getElementById('formula-xp')?.addEventListener('change', (e) => this.updateFormula('xpPerLevel', e.target.value));
+        document.getElementById('formula-skillpoints')?.addEventListener('change', (e) => this.updateFormula('skillPointsPerLevel', parseInt(e.target.value)));
+        document.getElementById('formula-maxlevel')?.addEventListener('change', (e) => this.updateFormula('maxLevel', parseInt(e.target.value)));
+
+        // Turn-based configuration inputs
+        document.getElementById('tb-agent-ap')?.addEventListener('change', (e) => this.updateTurnBased('defaultAgentAP', parseInt(e.target.value)));
+        document.getElementById('tb-enemy-ap')?.addEventListener('change', (e) => this.updateTurnBased('defaultEnemyAP', parseInt(e.target.value)));
+        document.getElementById('tb-move-cost')?.addEventListener('change', (e) => this.updateTurnBased('moveCost', parseInt(e.target.value)));
+        document.getElementById('tb-shoot-cost')?.addEventListener('change', (e) => this.updateTurnBased('shootCost', parseInt(e.target.value)));
+        document.getElementById('tb-ability-cost')?.addEventListener('change', (e) => this.updateTurnBased('abilityCost', parseInt(e.target.value)));
+        document.getElementById('tb-hack-cost')?.addEventListener('change', (e) => this.updateTurnBased('hackCost', parseInt(e.target.value)));
+
+        // Theme configuration inputs
+        document.getElementById('theme-primary')?.addEventListener('change', (e) => this.updateTheme('colors', 'primary', e.target.value));
+        document.getElementById('theme-secondary')?.addEventListener('change', (e) => this.updateTheme('colors', 'secondary', e.target.value));
+        document.getElementById('theme-danger')?.addEventListener('change', (e) => this.updateTheme('colors', 'danger', e.target.value));
+        document.getElementById('theme-background')?.addEventListener('change', (e) => this.updateTheme('colors', 'background', e.target.value));
+
+        // UI strings
+        document.getElementById('ui-currency')?.addEventListener('change', (e) => this.updateTheme('strings', 'currency', e.target.value));
+        document.getElementById('ui-research')?.addEventListener('change', (e) => this.updateTheme('strings', 'research', e.target.value));
+        document.getElementById('ui-agent')?.addEventListener('change', (e) => this.updateTheme('strings', 'agent', e.target.value));
+        document.getElementById('ui-enemy')?.addEventListener('change', (e) => this.updateTheme('strings', 'enemy', e.target.value));
+
+        // Gameplay constants
+        document.getElementById('const-movespeed')?.addEventListener('change', (e) => this.updateTheme('constants', 'movementSpeed', parseFloat(e.target.value)));
+        document.getElementById('const-vision')?.addEventListener('change', (e) => this.updateTheme('constants', 'visionRange', parseInt(e.target.value)));
+        document.getElementById('const-hackrange')?.addEventListener('change', (e) => this.updateTheme('constants', 'hackRange', parseInt(e.target.value)));
+        document.getElementById('const-squadsize')?.addEventListener('change', (e) => this.updateTheme('constants', 'maxSquadSize', parseInt(e.target.value)));
+        document.getElementById('const-health')?.addEventListener('change', (e) => this.updateTheme('constants', 'baseHealth', parseInt(e.target.value)));
+        document.getElementById('const-respawn')?.addEventListener('change', (e) => this.updateTheme('constants', 'respawnTimer', parseInt(e.target.value)));
+
+        // Inventory configuration
+        document.getElementById('inv-carry-weight')?.addEventListener('change', (e) => this.updateInventoryConfig('carryWeight', parseInt(e.target.value)));
+        document.getElementById('inv-weight-penalty')?.addEventListener('change', (e) => this.updateInventoryConfig('weightPenalty', parseInt(e.target.value)));
+        document.getElementById('inv-max-slots')?.addEventListener('change', (e) => this.updateInventoryConfig('maxSlots', parseInt(e.target.value)));
+        document.getElementById('inv-stack-size')?.addEventListener('change', (e) => this.updateInventoryConfig('stackSize', parseInt(e.target.value)));
+        document.getElementById('inv-start-credits')?.addEventListener('change', (e) => this.updateInventoryConfig('startingInventory.credits', parseInt(e.target.value)));
+        document.getElementById('inv-start-ammo-primary')?.addEventListener('change', (e) => this.updateInventoryConfig('startingInventory.ammoPrimary', parseInt(e.target.value)));
+        document.getElementById('inv-start-ammo-secondary')?.addEventListener('change', (e) => this.updateInventoryConfig('startingInventory.ammoSecondary', parseInt(e.target.value)));
+        document.getElementById('inv-start-medkits')?.addEventListener('change', (e) => this.updateInventoryConfig('startingInventory.medkits', parseInt(e.target.value)));
+        document.getElementById('save-inventory-config')?.addEventListener('click', () => this.saveInventoryConfig());
 
         // File input handlers
         document.getElementById('import-zip-input')?.addEventListener('change', (e) => this.handleZipImport(e));
@@ -3274,13 +3635,218 @@ class CampaignManager {
             case 'music':
                 this.loadMusicConfig();
                 break;
+            case 'rpg':
+                this.loadRPGTab();
+                break;
+            case 'formulas':
+                this.loadFormulasTab();
+                break;
+            case 'theme':
+                this.loadThemeTab();
+                break;
+            case 'inventory':
+                this.loadInventoryTab();
+                break;
+        }
+    }
+
+    loadInventoryTab() {
+        if (!this.currentCampaign.inventoryConfig) {
+            this.currentCampaign.inventoryConfig = {
+                carryWeight: 100,
+                weightPenalty: 50,
+                maxSlots: 30,
+                stackSize: 99,
+                startingInventory: {
+                    credits: 1000,
+                    ammoPrimary: 120,
+                    ammoSecondary: 60,
+                    medkits: 3
+                }
+            };
+        }
+
+        if (!this.currentCampaign.agentLoadouts) {
+            this.currentCampaign.agentLoadouts = {};
+        }
+
+        // Load inventory settings
+        const config = this.currentCampaign.inventoryConfig;
+        if (document.getElementById('inv-carry-weight')) {
+            document.getElementById('inv-carry-weight').value = config.carryWeight || 100;
+            document.getElementById('inv-weight-penalty').value = config.weightPenalty || 50;
+            document.getElementById('inv-max-slots').value = config.maxSlots || 30;
+            document.getElementById('inv-stack-size').value = config.stackSize || 99;
+            document.getElementById('inv-start-credits').value = config.startingInventory?.credits || 1000;
+            document.getElementById('inv-start-ammo-primary').value = config.startingInventory?.ammoPrimary || 120;
+            document.getElementById('inv-start-ammo-secondary').value = config.startingInventory?.ammoSecondary || 60;
+            document.getElementById('inv-start-medkits').value = config.startingInventory?.medkits || 3;
+        }
+
+        // Load agent loadouts
+        this.loadAgentLoadouts();
+    }
+
+    loadAgentLoadouts() {
+        const loadoutsList = document.getElementById('loadouts-list');
+        if (!loadoutsList) return;
+
+        loadoutsList.innerHTML = '';
+
+        if (!this.currentCampaign.agents) {
+            loadoutsList.innerHTML = '<p style="color: #888;">No agents defined. Add agents in the Agents tab first.</p>';
+            return;
+        }
+
+        this.currentCampaign.agents.forEach((agent, index) => {
+            const loadout = this.currentCampaign.agentLoadouts[agent.id] || {
+                weapon: null,
+                armor: null,
+                utility: null,
+                items: []
+            };
+
+            const loadoutDiv = document.createElement('div');
+            loadoutDiv.style.cssText = 'border: 1px solid #00ff41; padding: 15px; margin-bottom: 10px; background: rgba(0,255,65,0.05);';
+            loadoutDiv.innerHTML = `
+                <h5 style="color: #00ff41; margin-top: 0;">${agent.name}</h5>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="color: #00ffff; font-size: 12px;">Primary Weapon</label>
+                        <select onchange="campaignManager.updateLoadout('${agent.id}', 'weapon', this.value)"
+                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                            <option value="">None</option>
+                            ${this.getWeaponOptions(loadout.weapon)}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="color: #00ffff; font-size: 12px;">Armor</label>
+                        <select onchange="campaignManager.updateLoadout('${agent.id}', 'armor', this.value)"
+                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                            <option value="">None</option>
+                            ${this.getArmorOptions(loadout.armor)}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="color: #00ffff; font-size: 12px;">Utility</label>
+                        <select onchange="campaignManager.updateLoadout('${agent.id}', 'utility', this.value)"
+                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                            <option value="">None</option>
+                            ${this.getUtilityOptions(loadout.utility)}
+                        </select>
+                    </div>
+                </div>
+            `;
+            loadoutsList.appendChild(loadoutDiv);
+        });
+    }
+
+    getWeaponOptions(selected) {
+        if (!this.currentCampaign.weapons) return '';
+        return this.currentCampaign.weapons.map(w =>
+            `<option value="${w.id}" ${selected == w.id ? 'selected' : ''}>${w.name}</option>`
+        ).join('');
+    }
+
+    getArmorOptions(selected) {
+        if (!this.currentCampaign.equipment) return '';
+        return this.currentCampaign.equipment
+            .filter(e => e.protection > 0)
+            .map(e => `<option value="${e.id}" ${selected == e.id ? 'selected' : ''}>${e.name}</option>`)
+            .join('');
+    }
+
+    getUtilityOptions(selected) {
+        if (!this.currentCampaign.equipment) return '';
+        return this.currentCampaign.equipment
+            .filter(e => !e.protection || e.protection === 0)
+            .map(e => `<option value="${e.id}" ${selected == e.id ? 'selected' : ''}>${e.name}</option>`)
+            .join('');
+    }
+
+    updateLoadout(agentId, slot, value) {
+        if (!this.currentCampaign.agentLoadouts) {
+            this.currentCampaign.agentLoadouts = {};
+        }
+        if (!this.currentCampaign.agentLoadouts[agentId]) {
+            this.currentCampaign.agentLoadouts[agentId] = {
+                weapon: null,
+                armor: null,
+                utility: null,
+                items: []
+            };
+        }
+        this.currentCampaign.agentLoadouts[agentId][slot] = value || null;
+        this.saveCampaignToDB(this.currentCampaign);
+        this.editor.eventLogger.log(`Updated loadout for agent ${agentId}`, 'info');
+    }
+
+    loadFormulasTab() {
+        if (!this.currentCampaign.formulas) {
+            this.currentCampaign.formulas = this.editor.formulas; // Use defaults
+        }
+
+        // Load formula values into inputs
+        if (document.getElementById('formula-damage')) {
+            document.getElementById('formula-damage').value = this.currentCampaign.formulas.damage || 'baseDamage + weaponDamage + (strength / 2)';
+            document.getElementById('formula-crit').value = this.currentCampaign.formulas.critMultiplier || 2.0;
+            document.getElementById('formula-armor').value = this.currentCampaign.formulas.armorReduction || 'damage * (100 / (100 + armor))';
+            document.getElementById('formula-xp').value = this.currentCampaign.formulas.xpPerLevel || 'level * 100 + (level * level * 50)';
+            document.getElementById('formula-skillpoints').value = this.currentCampaign.formulas.skillPointsPerLevel || 3;
+            document.getElementById('formula-maxlevel').value = this.currentCampaign.formulas.maxLevel || 20;
+        }
+
+        if (!this.currentCampaign.turnBasedConfig) {
+            this.currentCampaign.turnBasedConfig = this.editor.turnBasedConfig; // Use defaults
+        }
+
+        // Load turn-based values
+        if (document.getElementById('tb-agent-ap')) {
+            document.getElementById('tb-agent-ap').value = this.currentCampaign.turnBasedConfig.defaultAgentAP || 12;
+            document.getElementById('tb-enemy-ap').value = this.currentCampaign.turnBasedConfig.defaultEnemyAP || 8;
+            document.getElementById('tb-move-cost').value = this.currentCampaign.turnBasedConfig.moveCost || 1;
+            document.getElementById('tb-shoot-cost').value = this.currentCampaign.turnBasedConfig.shootCost || 4;
+            document.getElementById('tb-ability-cost').value = this.currentCampaign.turnBasedConfig.abilityCost || 6;
+            document.getElementById('tb-hack-cost').value = this.currentCampaign.turnBasedConfig.hackCost || 4;
+        }
+    }
+
+    loadThemeTab() {
+        if (!this.currentCampaign.themeConfig) {
+            this.currentCampaign.themeConfig = this.editor.themeConfig; // Use defaults
+        }
+
+        // Load colors
+        if (document.getElementById('theme-primary')) {
+            document.getElementById('theme-primary').value = this.currentCampaign.themeConfig.colors?.primary || '#00ff41';
+            document.getElementById('theme-secondary').value = this.currentCampaign.themeConfig.colors?.secondary || '#00ffff';
+            document.getElementById('theme-danger').value = this.currentCampaign.themeConfig.colors?.danger || '#ff073a';
+            document.getElementById('theme-background').value = this.currentCampaign.themeConfig.colors?.background || '#0a0e27';
+        }
+
+        // Load UI strings
+        if (document.getElementById('ui-currency')) {
+            document.getElementById('ui-currency').value = this.currentCampaign.themeConfig.strings?.currency || 'Credits';
+            document.getElementById('ui-research').value = this.currentCampaign.themeConfig.strings?.research || 'Research Points';
+            document.getElementById('ui-agent').value = this.currentCampaign.themeConfig.strings?.agent || 'Agent';
+            document.getElementById('ui-enemy').value = this.currentCampaign.themeConfig.strings?.enemy || 'Enemy';
+        }
+
+        // Load gameplay constants
+        if (document.getElementById('const-movespeed')) {
+            document.getElementById('const-movespeed').value = this.currentCampaign.themeConfig.constants?.movementSpeed || 2.0;
+            document.getElementById('const-vision').value = this.currentCampaign.themeConfig.constants?.visionRange || 10;
+            document.getElementById('const-hackrange').value = this.currentCampaign.themeConfig.constants?.hackRange || 3;
+            document.getElementById('const-squadsize').value = this.currentCampaign.themeConfig.constants?.maxSquadSize || 6;
+            document.getElementById('const-health').value = this.currentCampaign.themeConfig.constants?.baseHealth || 100;
+            document.getElementById('const-respawn').value = this.currentCampaign.themeConfig.constants?.respawnTimer || 0;
         }
     }
 
     loadOverview() {
         // Check if campaign is loaded
         if (!this.currentCampaign) {
-            console.warn('Campaign not yet loaded');
+            this.editor.eventLogger.log('Campaign not yet loaded', 'warning');
             return;
         }
 
@@ -3486,7 +4052,19 @@ class CampaignManager {
             cost: 500,
             owned: 0,
             damage: 20,
-            description: 'Weapon description'
+            description: 'Weapon description',
+            // RPG properties
+            weight: 5,
+            range: 10,
+            accuracy: 80,
+            critChance: 5,
+            ammoCapacity: 30,
+            fireRate: 'auto',
+            slot: 'primary',
+            requirements: {
+                level: 1,
+                strength: 10
+            }
         };
 
         this.currentCampaign.weapons.push(newWeapon);
@@ -3518,7 +4096,18 @@ class CampaignManager {
             type: 'equipment',
             cost: 300,
             owned: 0,
-            description: 'Equipment description'
+            description: 'Equipment description',
+            // RPG properties
+            weight: 2,
+            slot: 'utility',
+            protection: 0,
+            hackBonus: 0,
+            stealthBonus: 0,
+            carryCapacity: 0,
+            uses: -1,  // -1 = unlimited
+            requirements: {
+                level: 1
+            }
         };
 
         this.currentCampaign.equipment.push(newEquipment);
@@ -4269,6 +4858,60 @@ class CampaignManager {
                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
                     </div>
                     <div>
+                        <label style="color: #00ff41; font-size: 11px;">Weight</label>
+                        <input type="number" value="${weapon.weight || 5}"
+                               onchange="campaignManager.updateWeapon(${index}, 'weight', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Range</label>
+                        <input type="number" value="${weapon.range || 10}"
+                               onchange="campaignManager.updateWeapon(${index}, 'range', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Accuracy %</label>
+                        <input type="number" value="${weapon.accuracy || 80}" min="0" max="100"
+                               onchange="campaignManager.updateWeapon(${index}, 'accuracy', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Crit Chance %</label>
+                        <input type="number" value="${weapon.critChance || 5}" min="0" max="100"
+                               onchange="campaignManager.updateWeapon(${index}, 'critChance', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Ammo Capacity</label>
+                        <input type="number" value="${weapon.ammoCapacity || 30}"
+                               onchange="campaignManager.updateWeapon(${index}, 'ammoCapacity', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Fire Rate</label>
+                        <select onchange="campaignManager.updateWeapon(${index}, 'fireRate', this.value)"
+                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                            <option value="single" ${weapon.fireRate === 'single' ? 'selected' : ''}>Single</option>
+                            <option value="burst" ${weapon.fireRate === 'burst' ? 'selected' : ''}>Burst</option>
+                            <option value="auto" ${weapon.fireRate === 'auto' ? 'selected' : ''}>Auto</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Slot</label>
+                        <select onchange="campaignManager.updateWeapon(${index}, 'slot', this.value)"
+                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                            <option value="primary" ${weapon.slot === 'primary' ? 'selected' : ''}>Primary</option>
+                            <option value="secondary" ${weapon.slot === 'secondary' ? 'selected' : ''}>Secondary</option>
+                            <option value="melee" ${weapon.slot === 'melee' ? 'selected' : ''}>Melee</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Req. Level</label>
+                        <input type="number" value="${weapon.requirements?.level || 1}" min="1" max="20"
+                               onchange="campaignManager.updateWeapon(${index}, 'requirements', {level: parseInt(this.value), strength: campaignManager.currentCampaign.weapons[${index}].requirements?.strength || 10})"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
                         <label style="color: #00ff41; font-size: 11px;">Owned</label>
                         <input type="number" value="${weapon.owned || 0}"
                                onchange="campaignManager.updateWeapon(${index}, 'owned', parseInt(this.value))"
@@ -4313,6 +4956,51 @@ class CampaignManager {
                         <label style="color: #00ff41; font-size: 11px;">Cost</label>
                         <input type="number" value="${item.cost || 0}"
                                onchange="campaignManager.updateEquipment(${index}, 'cost', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Weight</label>
+                        <input type="number" value="${item.weight || 2}"
+                               onchange="campaignManager.updateEquipment(${index}, 'weight', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Protection</label>
+                        <input type="number" value="${item.protection || 0}"
+                               onchange="campaignManager.updateEquipment(${index}, 'protection', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Hack Bonus</label>
+                        <input type="number" value="${item.hackBonus || 0}"
+                               onchange="campaignManager.updateEquipment(${index}, 'hackBonus', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Stealth Bonus</label>
+                        <input type="number" value="${item.stealthBonus || 0}"
+                               onchange="campaignManager.updateEquipment(${index}, 'stealthBonus', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Carry Capacity</label>
+                        <input type="number" value="${item.carryCapacity || 0}"
+                               onchange="campaignManager.updateEquipment(${index}, 'carryCapacity', parseInt(this.value))"
+                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Slot</label>
+                        <select onchange="campaignManager.updateEquipment(${index}, 'slot', this.value)"
+                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
+                            <option value="armor" ${item.slot === 'armor' ? 'selected' : ''}>Armor</option>
+                            <option value="utility" ${item.slot === 'utility' ? 'selected' : ''}>Utility</option>
+                            <option value="consumable" ${item.slot === 'consumable' ? 'selected' : ''}>Consumable</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="color: #00ff41; font-size: 11px;">Uses (-1 = ∞)</label>
+                        <input type="number" value="${item.uses || -1}" min="-1"
+                               onchange="campaignManager.updateEquipment(${index}, 'uses', parseInt(this.value))"
                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
                     </div>
                     <div>
@@ -4779,7 +5467,7 @@ class CampaignManager {
                 }
             }
 
-            console.log(`✅ Campaign imported from ZIP with ${missionCount} missions`);
+            this.editor.eventLogger.log(`Campaign imported from ZIP with ${missionCount} missions`, 'success', true);
 
             // Refresh the mission list in the editor
             this.refreshMissionList();
@@ -4800,7 +5488,7 @@ class CampaignManager {
 
             alert(`Campaign imported successfully!\nLoaded ${missionCount} missions.\nCampaign saved to browser storage.`);
         } catch (error) {
-            console.error('Failed to import ZIP:', error);
+            this.editor.eventLogger.log(`Failed to import ZIP: ${error.message}`, 'error', true);
             alert('Failed to import campaign from ZIP file');
         }
     }
@@ -4852,10 +5540,10 @@ class CampaignManager {
             // Reload campaign selector
             await this.loadCampaignSelector();
 
-            console.log(`✅ Campaign imported from directory with ${missionCount} missions`);
+            this.editor.eventLogger.log(`Campaign imported from directory with ${missionCount} missions`, 'success', true);
             alert(`Campaign imported successfully from directory!\nLoaded ${missionCount} missions.\nCampaign saved to browser storage.`);
         } catch (error) {
-            console.error('Failed to import directory:', error);
+            this.editor.eventLogger.log(`Failed to import directory: ${error.message}`, 'error', true);
             alert('Failed to import campaign from directory');
         }
     }
@@ -4923,7 +5611,7 @@ class CampaignManager {
                 }
             }
 
-            console.log(`✅ Refreshed mission list with ${Object.keys(window.CAMPAIGN_MISSIONS).length} missions`);
+            this.editor.eventLogger.log(`Refreshed mission list with ${Object.keys(window.CAMPAIGN_MISSIONS).length} missions`, 'success');
         }
 
         // Also update the missions tab if it's currently shown
@@ -4983,10 +5671,10 @@ class CampaignManager {
             a.click();
             URL.revokeObjectURL(url);
 
-            console.log('✅ Campaign exported to ZIP');
+            this.editor.eventLogger.log('Campaign exported to ZIP', 'success', true);
             alert('Campaign exported successfully!');
         } catch (error) {
-            console.error('Failed to export campaign:', error);
+            this.eventLogger.log(`Failed to export campaign: ${error.message}`, 'error', true);
             alert('Failed to export campaign to ZIP');
         }
     }
@@ -5061,14 +5749,14 @@ class CampaignManager {
             // Save current campaign ID
             localStorage.setItem('lastCampaignId', this.currentCampaign.id);
 
-            console.log('✅ Campaign saved:', this.currentCampaign);
+            this.editor.eventLogger.log('Campaign saved', 'success', true);
 
             // Show alert only if no status element
             if (!statusEl) {
                 alert('Campaign saved to browser storage!');
             }
         } catch (error) {
-            console.error('Failed to save campaign:', error);
+            this.editor.eventLogger.log(`Failed to save campaign: ${error.message}`, 'error', true);
 
             if (statusEl) {
                 statusEl.textContent = `❌ Failed to save: ${error.message}`;
@@ -5165,7 +5853,7 @@ class CampaignManager {
             this.currentCampaign.missions.forEach(mission => {
                 window.CAMPAIGN_MISSIONS[mission.id] = mission;
             });
-            console.log(`✅ Synced ${this.currentCampaign.missions.length} missions to CAMPAIGN_MISSIONS`);
+            this.editor.eventLogger.log(`Synced ${this.currentCampaign.missions.length} missions to CAMPAIGN_MISSIONS`, 'success');
         }
     }
 
@@ -5236,6 +5924,299 @@ class CampaignManager {
             alert('Campaign duplicated!');
         }
     }
+
+    // RPG Configuration Methods
+    addRPGClass() {
+        const name = prompt('Enter class name:');
+        if (name) {
+            if (!this.currentCampaign.rpgConfig) {
+                this.currentCampaign.rpgConfig = { classes: {}, skills: {}, stats: {}, items: {} };
+            }
+            if (!this.currentCampaign.rpgConfig.classes) {
+                this.currentCampaign.rpgConfig.classes = {};
+            }
+
+            const classId = name.toLowerCase().replace(/\s+/g, '_');
+            this.currentCampaign.rpgConfig.classes[classId] = {
+                name: name,
+                description: '',
+                baseStats: {
+                    strength: 10,
+                    agility: 10,
+                    intelligence: 10,
+                    endurance: 10,
+                    tech: 10,
+                    charisma: 10
+                },
+                startingSkills: [],
+                healthPerLevel: 10,
+                apBonus: 0
+            };
+
+            this.loadRPGTab();
+            this.saveCampaignToDB(this.currentCampaign);
+            this.editor.eventLogger.log(`Added RPG class: ${name}`, 'success', true);
+        }
+    }
+
+    addRPGSkill() {
+        const name = prompt('Enter skill name:');
+        if (name) {
+            if (!this.currentCampaign.rpgConfig) {
+                this.currentCampaign.rpgConfig = { classes: {}, skills: {}, stats: {}, items: {} };
+            }
+            if (!this.currentCampaign.rpgConfig.skills) {
+                this.currentCampaign.rpgConfig.skills = {};
+            }
+
+            const skillId = name.toLowerCase().replace(/\s+/g, '_');
+            this.currentCampaign.rpgConfig.skills[skillId] = {
+                name: name,
+                description: '',
+                maxRank: 5,
+                requirements: [],
+                effects: []
+            };
+
+            this.loadRPGTab();
+            this.saveCampaignToDB(this.currentCampaign);
+            this.editor.eventLogger.log(`Added RPG skill: ${name}`, 'success', true);
+        }
+    }
+
+    addRPGStat() {
+        const name = prompt('Enter stat name:');
+        if (name) {
+            if (!this.currentCampaign.rpgConfig) {
+                this.currentCampaign.rpgConfig = { classes: {}, skills: {}, stats: {}, items: {} };
+            }
+            if (!this.currentCampaign.rpgConfig.stats) {
+                this.currentCampaign.rpgConfig.stats = { primary: [], secondary: [] };
+            }
+            if (!this.currentCampaign.rpgConfig.stats.primary) {
+                this.currentCampaign.rpgConfig.stats.primary = [];
+            }
+
+            this.currentCampaign.rpgConfig.stats.primary.push(name.toLowerCase());
+
+            this.loadRPGTab();
+            this.saveCampaignToDB(this.currentCampaign);
+            this.editor.eventLogger.log(`Added RPG stat: ${name}`, 'success', true);
+        }
+    }
+
+    addRPGArmor() {
+        const name = prompt('Enter armor name:');
+        if (name) {
+            if (!this.currentCampaign.rpgConfig) {
+                this.currentCampaign.rpgConfig = { classes: {}, skills: {}, stats: {}, items: {} };
+            }
+            if (!this.currentCampaign.rpgConfig.items) {
+                this.currentCampaign.rpgConfig.items = { weapons: {}, armor: {}, consumables: {} };
+            }
+            if (!this.currentCampaign.rpgConfig.items.armor) {
+                this.currentCampaign.rpgConfig.items.armor = {};
+            }
+
+            const armorId = name.toLowerCase().replace(/\s+/g, '_');
+            this.currentCampaign.rpgConfig.items.armor[armorId] = {
+                name: name,
+                description: '',
+                slot: 'armor',
+                defense: 5,
+                weight: 10,
+                value: 1000,
+                requirements: {}
+            };
+
+            this.loadRPGTab();
+            this.saveCampaignToDB(this.currentCampaign);
+            this.editor.eventLogger.log(`Added armor: ${name}`, 'success', true);
+        }
+    }
+
+    addRPGConsumable() {
+        const name = prompt('Enter consumable name:');
+        if (name) {
+            if (!this.currentCampaign.rpgConfig) {
+                this.currentCampaign.rpgConfig = { classes: {}, skills: {}, stats: {}, items: {} };
+            }
+            if (!this.currentCampaign.rpgConfig.items) {
+                this.currentCampaign.rpgConfig.items = { weapons: {}, armor: {}, consumables: {} };
+            }
+            if (!this.currentCampaign.rpgConfig.items.consumables) {
+                this.currentCampaign.rpgConfig.items.consumables = {};
+            }
+
+            const itemId = name.toLowerCase().replace(/\s+/g, '_');
+            this.currentCampaign.rpgConfig.items.consumables[itemId] = {
+                name: name,
+                description: '',
+                uses: 1,
+                effect: 'heal',
+                value: 50,
+                weight: 1
+            };
+
+            this.loadRPGTab();
+            this.saveCampaignToDB(this.currentCampaign);
+            this.editor.eventLogger.log(`Added consumable: ${name}`, 'success', true);
+        }
+    }
+
+    loadRPGTab() {
+        if (!this.currentCampaign.rpgConfig) {
+            this.currentCampaign.rpgConfig = { classes: {}, skills: {}, stats: {}, items: {} };
+        }
+
+        // Load classes
+        const classesList = document.getElementById('classes-list');
+        if (classesList) {
+            classesList.innerHTML = '';
+            if (this.currentCampaign.rpgConfig.classes) {
+                for (const [id, cls] of Object.entries(this.currentCampaign.rpgConfig.classes)) {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding: 10px; margin: 5px 0; background: #1a1a2e; border: 1px solid #00ff41; border-radius: 4px;';
+                    div.innerHTML = `
+                        <strong>${cls.name}</strong>
+                        <button onclick="campaignManager.deleteRPGClass('${id}')" style="float: right; background: #ff073a; color: white; border: none; padding: 2px 8px; cursor: pointer;">Delete</button>
+                        <div style="font-size: 0.9em; color: #00ffff; margin-top: 5px;">
+                            HP/Level: ${cls.healthPerLevel || 10}, AP Bonus: ${cls.apBonus || 0}
+                        </div>
+                    `;
+                    classesList.appendChild(div);
+                }
+            }
+        }
+
+        // Load skills
+        const skillsList = document.getElementById('skills-list');
+        if (skillsList) {
+            skillsList.innerHTML = '';
+            if (this.currentCampaign.rpgConfig.skills) {
+                for (const [id, skill] of Object.entries(this.currentCampaign.rpgConfig.skills)) {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding: 10px; margin: 5px 0; background: #1a1a2e; border: 1px solid #00ff41; border-radius: 4px;';
+                    div.innerHTML = `
+                        <strong>${skill.name}</strong>
+                        <button onclick="campaignManager.deleteRPGSkill('${id}')" style="float: right; background: #ff073a; color: white; border: none; padding: 2px 8px; cursor: pointer;">Delete</button>
+                        <div style="font-size: 0.9em; color: #00ffff; margin-top: 5px;">
+                            Max Rank: ${skill.maxRank || 5}
+                        </div>
+                    `;
+                    skillsList.appendChild(div);
+                }
+            }
+        }
+
+        // Load stats
+        const statsList = document.getElementById('stats-list');
+        if (statsList) {
+            statsList.innerHTML = '';
+            if (this.currentCampaign.rpgConfig.stats && this.currentCampaign.rpgConfig.stats.primary) {
+                this.currentCampaign.rpgConfig.stats.primary.forEach((stat, index) => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding: 10px; margin: 5px 0; background: #1a1a2e; border: 1px solid #00ff41; border-radius: 4px;';
+                    div.innerHTML = `
+                        <strong>${stat}</strong>
+                        <button onclick="campaignManager.deleteRPGStat(${index})" style="float: right; background: #ff073a; color: white; border: none; padding: 2px 8px; cursor: pointer;">Delete</button>
+                    `;
+                    statsList.appendChild(div);
+                });
+            }
+        }
+    }
+
+    deleteRPGClass(id) {
+        if (confirm(`Delete class ${id}?`)) {
+            delete this.currentCampaign.rpgConfig.classes[id];
+            this.loadRPGTab();
+            this.saveCampaignToDB(this.currentCampaign);
+        }
+    }
+
+    deleteRPGSkill(id) {
+        if (confirm(`Delete skill ${id}?`)) {
+            delete this.currentCampaign.rpgConfig.skills[id];
+            this.loadRPGTab();
+            this.saveCampaignToDB(this.currentCampaign);
+        }
+    }
+
+    deleteRPGStat(index) {
+        if (confirm(`Delete stat?`)) {
+            this.currentCampaign.rpgConfig.stats.primary.splice(index, 1);
+            this.loadRPGTab();
+            this.saveCampaignToDB(this.currentCampaign);
+        }
+    }
+
+    // Formula Methods
+    updateFormula(key, value) {
+        if (!this.currentCampaign.formulas) {
+            this.currentCampaign.formulas = {};
+        }
+        this.currentCampaign.formulas[key] = value;
+        this.saveCampaignToDB(this.currentCampaign);
+        this.editor.eventLogger.log(`Updated formula: ${key}`, 'info');
+    }
+
+    updateTurnBased(key, value) {
+        if (!this.currentCampaign.turnBasedConfig) {
+            this.currentCampaign.turnBasedConfig = {};
+        }
+        this.currentCampaign.turnBasedConfig[key] = value;
+        this.saveCampaignToDB(this.currentCampaign);
+        this.editor.eventLogger.log(`Updated turn-based setting: ${key}`, 'info');
+    }
+
+    updateTheme(category, key, value) {
+        if (!this.currentCampaign.themeConfig) {
+            this.currentCampaign.themeConfig = { colors: {}, strings: {}, constants: {} };
+        }
+        if (!this.currentCampaign.themeConfig[category]) {
+            this.currentCampaign.themeConfig[category] = {};
+        }
+        this.currentCampaign.themeConfig[category][key] = value;
+        this.saveCampaignToDB(this.currentCampaign);
+        this.editor.eventLogger.log(`Updated theme ${category}: ${key}`, 'info');
+    }
+
+    updateInventoryConfig(path, value) {
+        if (!this.currentCampaign.inventoryConfig) {
+            this.currentCampaign.inventoryConfig = {
+                carryWeight: 100,
+                weightPenalty: 50,
+                maxSlots: 30,
+                stackSize: 99,
+                startingInventory: {
+                    credits: 1000,
+                    ammoPrimary: 120,
+                    ammoSecondary: 60,
+                    medkits: 3
+                }
+            };
+        }
+
+        // Handle nested path (e.g., 'startingInventory.credits')
+        const keys = path.split('.');
+        let obj = this.currentCampaign.inventoryConfig;
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (!obj[keys[i]]) {
+                obj[keys[i]] = {};
+            }
+            obj = obj[keys[i]];
+        }
+        obj[keys[keys.length - 1]] = value;
+
+        this.saveCampaignToDB(this.currentCampaign);
+        this.editor.eventLogger.log(`Updated inventory config: ${path}`, 'info');
+    }
+
+    saveInventoryConfig() {
+        this.saveCampaignToDB(this.currentCampaign);
+        this.editor.eventLogger.log('Inventory configuration saved', 'success', true);
+    }
 }
 
 // Initialize editor and campaign manager when page loads
@@ -5246,17 +6227,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.CAMPAIGN_MISSIONS = window.CAMPAIGN_MISSIONS || {};
 
     // Wait for campaign missions to load from files first
+    // Initialize the editor FIRST
+    editor = new MissionEditor();
+
+    // Then load campaign index
     if (typeof loadCampaignIndex === 'function') {
         try {
             await loadCampaignIndex();
-            console.log('✅ Campaign missions loaded from files');
+            editor.eventLogger.log('Campaign missions loaded from files', 'success');
         } catch (e) {
-            console.log('⚠️ Could not load campaign missions from files');
+            editor.eventLogger.log('Could not load campaign missions from files', 'warning');
         }
     }
-
-    // Initialize the editor
-    editor = new MissionEditor();
 
     // Initialize campaign manager (which will load from IndexedDB if available)
     campaignManager = new CampaignManager(editor);
@@ -5266,14 +6248,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         // If campaign manager loaded missions from IndexedDB, they should override file missions
         if (campaignManager && campaignManager.isInitialized) {
             campaignManager.refreshMissionList();
-            console.log('✅ Mission list refreshed after campaign manager initialization');
+            editor.eventLogger.log('Mission list refreshed after campaign manager initialization', 'success');
 
             // Also reload the campaigns dropdown in the editor
             await editor.loadCampaigns();
-            console.log('✅ Editor mission dropdown refreshed');
+            editor.eventLogger.log('Editor mission dropdown refreshed', 'success');
         }
 
         // Check if missions loaded
-        console.log('Campaign missions loaded:', Object.keys(window.CAMPAIGN_MISSIONS || {}));
+        editor.eventLogger.log(`Campaign missions loaded: ${Object.keys(window.CAMPAIGN_MISSIONS || {}).length} missions`, 'info');
     }, 500); // Increased timeout to ensure everything is loaded
 });

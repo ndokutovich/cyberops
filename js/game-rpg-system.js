@@ -47,6 +47,11 @@ class RPGPawn {
         this.combatStats = this.calculateCombatStats();
     }
 
+    getRPGConfig() {
+        // Try multiple sources for RPG config
+        return window.RPG_CONFIG || window.ContentLoader?.getContent?.('rpgConfig') || null;
+    }
+
     initializeStats(customStats = {}) {
         this.stats = {};
 
@@ -71,9 +76,10 @@ class RPGPawn {
         }
 
         // Add any missing stats from config with default values
-        for (let statName in RPG_CONFIG?.stats?.primary || {}) {
+        const rpgConfig = this.getRPGConfig();
+        for (let statName in rpgConfig?.stats?.primary || {}) {
             if (!this.stats[statName]) {
-                const statConfig = RPG_CONFIG.stats.primary[statName];
+                const statConfig = rpgConfig.stats.primary[statName];
                 this.stats[statName] = {
                     base: statConfig?.baseValue || 10,
                     bonus: 0,
@@ -86,8 +92,9 @@ class RPGPawn {
         }
 
         // Apply class bonuses if applicable
-        if (this.class && RPG_CONFIG.classes[this.class]) {
-            const classData = RPG_CONFIG.classes[this.class];
+        const rpgConfig2 = this.getRPGConfig();
+        if (this.class && rpgConfig2?.classes?.[this.class]) {
+            const classData = rpgConfig2.classes[this.class];
             for (let stat in classData.statBonuses) {
                 if (this.stats[stat]) {
                     this.stats[stat].bonus += classData.statBonuses[stat];
@@ -99,8 +106,9 @@ class RPGPawn {
     initializeDerivedStats() {
         this.derivedStats = {};
 
-        for (let statName in RPG_CONFIG.stats.derived) {
-            const derivedConfig = RPG_CONFIG.stats.derived[statName];
+        const rpgConfig3 = this.getRPGConfig();
+        for (let statName in rpgConfig3?.stats?.derived || {}) {
+            const derivedConfig = rpgConfig3.stats.derived[statName];
             Object.defineProperty(this.derivedStats, statName, {
                 get: () => derivedConfig.formula(this.stats)
             });
@@ -171,33 +179,36 @@ class RPGPawn {
     }
 
     getRequiredXPForLevel(level) {
-        return RPG_CONFIG.progression.xpFormula(level);
+        const rpgConfig = this.getRPGConfig();
+        return rpgConfig?.progression?.xpFormula?.(level) || (level * 100);
     }
 
     levelUp() {
         this.level++;
 
+        const rpgConfig = this.getRPGConfig();
+
         // Award stat points
-        this.availableStatPoints += RPG_CONFIG.progression.statPointsPerLevel;
+        this.availableStatPoints += rpgConfig?.progression?.statPointsPerLevel || 3;
 
         // Award skill points (modified by intelligence)
         const intBonus = Math.floor(this.stats.intelligence.value / 20);
-        this.availableSkillPoints += RPG_CONFIG.progression.skillPointsPerLevel + intBonus;
+        this.availableSkillPoints += (rpgConfig?.progression?.skillPointsPerLevel || 5) + intBonus;
 
         // Award perk points
-        if (this.level % RPG_CONFIG.progression.perkPointsEvery === 0) {
+        if (this.level % (rpgConfig?.progression?.perkPointsEvery || 3) === 0) {
             this.availablePerkPoints++;
         }
 
         // Check for level-specific rewards
-        const levelReward = RPG_CONFIG.progression.levelRewards[this.level];
+        const levelReward = rpgConfig?.progression?.levelRewards?.[this.level];
         if (levelReward) {
             this.applyLevelReward(levelReward);
         }
 
         // Class-specific bonuses
-        if (this.class && RPG_CONFIG.classes[this.class].levelBonuses[this.level]) {
-            this.applyClassLevelBonus(RPG_CONFIG.classes[this.class].levelBonuses[this.level]);
+        if (this.class && rpgConfig?.classes?.[this.class]?.levelBonuses?.[this.level]) {
+            this.applyClassLevelBonus(rpgConfig.classes[this.class].levelBonuses[this.level]);
         }
 
         // Full heal on level up
@@ -257,7 +268,9 @@ class RPGPawn {
         if (this.availableStatPoints <= 0) return false;
         if (!this.stats[statName]) return false;
 
-        const statConfig = RPG_CONFIG.stats.primary[statName];
+        const rpgConfig = this.getRPGConfig();
+        const statConfig = rpgConfig?.stats?.primary?.[statName];
+        if (!statConfig) return false;
         if (this.stats[statName].value >= statConfig.maxValue) return false;
 
         this.stats[statName].base++;
@@ -271,7 +284,8 @@ class RPGPawn {
     learnSkill(skillName) {
         if (this.availableSkillPoints <= 0) return false;
 
-        const skillConfig = RPG_CONFIG.skills[skillName];
+        const rpgConfig = this.getRPGConfig();
+        const skillConfig = rpgConfig?.skills?.[skillName];
         if (!skillConfig) return false;
 
         // Check requirements
@@ -313,7 +327,8 @@ class RPGPawn {
     unlockPerk(perkName) {
         if (this.hasPerk(perkName)) return false;
 
-        const perkConfig = RPG_CONFIG.perks[perkName];
+        const rpgConfig = this.getRPGConfig();
+        const perkConfig = rpgConfig?.perks?.[perkName];
         if (!perkConfig) return false;
 
         // Check requirements
@@ -750,7 +765,8 @@ class RPGEnemy extends RPGPawn {
 
         // Award XP to killer
         if (source && source.gainXP) {
-            const xp = RPG_CONFIG.progression.xpSources.enemyKill(
+            const rpgConfig = this.getRPGConfig();
+            const xp = rpgConfig?.progression?.xpSources?.enemyKill?.(
                 this.level,
                 source.level
             );
@@ -784,7 +800,8 @@ class RPGEnemy extends RPGPawn {
 
         // Chance for equipment based on level
         if (this.level >= 5 && Math.random() < 0.1) {
-            const weapons = Object.keys(RPG_CONFIG.items.weapons);
+            const rpgConfig = this.getRPGConfig();
+            const weapons = Object.keys(rpgConfig?.items?.weapons || {});
             items.push({
                 type: 'item',
                 id: weapons[Math.floor(Math.random() * weapons.length)]

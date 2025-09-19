@@ -661,6 +661,15 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
         };
         enemy.targetX = enemy.x;
         enemy.targetY = enemy.y;
+
+        // Add RPG entity for XP and leveling
+        if (this.rpgManager && window.RPGEnemy) {
+            const rpgEnemy = this.rpgManager.createRPGEnemy(enemy, enemyTypeName);
+            enemy.rpgEntity = rpgEnemy;
+            enemy.level = rpgEnemy.level || 1;
+            console.log(`   📊 Added RPG entity to enemy - Level ${enemy.level}`);
+        }
+
         this.enemies.push(enemy);
         console.log(`✅ Enemy ${i} created: ${enemyTypeName} at exact position (${enemy.x}, ${enemy.y}) with health ${enemy.health}`);
     });
