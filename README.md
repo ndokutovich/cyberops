@@ -24,11 +24,11 @@ No installation or build process required!
 
 ```bash
 # Option 1: Open directly in browser
-# Simply open cyberops-game.html in any modern browser
+# Simply open index.html in any modern browser
 
 # Option 2: Use local server for better performance
 python -m http.server 8000
-# Navigate to http://localhost:8000/cyberops-game.html
+# Navigate to http://localhost:8000/
 ```
 
 ## Controls

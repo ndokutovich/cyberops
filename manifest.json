@@ -1,0 +1,124 @@
+{
+  "name": "CyberOps: Syndicate",
+  "short_name": "CyberOps",
+  "description": "Lead your syndicate in tactical cyberpunk missions. Hack, fight, and dominate the corporate world.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "theme_color": "#00ffff",
+  "background_color": "#000033",
+  "categories": ["games", "strategy", "tactical"],
+  "icons": [
+    {
+      "src": "assets/logo-16.png",
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/logo-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/logo-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/screenshot1.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "label": "Tactical Combat"
+    },
+    {
+      "src": "assets/screenshot2.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "label": "3D Mode"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Campaign",
+      "short_name": "New",
+      "description": "Start a new campaign",
+      "url": "/?action=new",
+      "icons": [{ "src": "assets/logo-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Continue",
+      "short_name": "Continue",
+      "description": "Continue saved game",
+      "url": "/?action=continue",
+      "icons": [{ "src": "assets/logo-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Mission Editor",
+      "short_name": "Editor",
+      "description": "Create custom missions",
+      "url": "/mission-editor.html",
+      "icons": [{ "src": "assets/logo-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": []
+}

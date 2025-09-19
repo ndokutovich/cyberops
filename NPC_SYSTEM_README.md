@@ -66,7 +66,7 @@ A comprehensive NPC (Non-Player Character) and dialog system has been implemente
 3. `js/game-keyboard.js` - E key interaction handling
 4. `js/game-loop.js` - NPC update logic
 5. `js/game-rendering.js` - NPC rendering
-6. `cyberops-game.html` - Script inclusion
+6. `index.html` - Script inclusion
 
 ### Key Functions
 - `initNPCSystem()` - Initialize the NPC system

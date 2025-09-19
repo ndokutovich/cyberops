@@ -3,9 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#0a0e1a">
+    <meta name="theme-color" content="#00ffff">
+    <meta name="description" content="Lead your syndicate in tactical cyberpunk missions. Hack, fight, and dominate the corporate world.">
+
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/logo-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/logo-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/logo-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/logo-180.png">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
     <title>CyberOps: Syndicate</title>
     <link rel="stylesheet" href="cyberops-game.css">
     
@@ -951,5 +965,72 @@
     <script src="campaigns/main/campaign-config.js"></script>
 
     <script src="js/game-init.js"></script>
+
+    <!-- Service Worker Registration for PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration);
+
+                        // Check for updates periodically
+                        setInterval(() => {
+                            registration.update();
+                        }, 60000); // Check every minute
+
+                        // Handle updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New service worker available
+                                    console.log('🔄 New version available! Refresh to update.');
+
+                                    // Show update notification to user
+                                    if (window.game && window.game.showNotification) {
+                                        window.game.showNotification('New version available! Refresh to update.', 'info');
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // PWA Install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+
+            // Show install button if game has UI for it
+            if (window.game && window.game.showInstallButton) {
+                window.game.showInstallButton();
+            }
+        });
+
+        // Handle install button click
+        window.installPWA = async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to install prompt: ${outcome}`);
+                deferredPrompt = null;
+            }
+        };
+
+        // Detect if app was installed
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA was installed');
+            deferredPrompt = null;
+        });
+    </script>
 </body>
 </html>

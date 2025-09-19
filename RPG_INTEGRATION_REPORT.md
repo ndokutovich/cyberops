@@ -85,7 +85,7 @@ The RPG system has been successfully integrated into the CyberOps game, adding c
 
 ## 6. Initialization Flow
 
-### Load Order (cyberops-game.html)
+### Load Order (index.html)
 ```html
 Line 922: <script src="js/game-rpg-config.js"></script>
 Line 923: <script src="js/game-rpg-system.js"></script>

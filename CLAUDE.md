@@ -35,7 +35,6 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **game-mission-executor.js**: Generic mission execution engine
 - **game-mission-integration.js**: Bridges new system with existing code
 - **game-init.js**: Game instantiation and initialization
-- **game-rpg-config.js**: RPG system configuration (classes, stats, skills, items)
 - **game-rpg-system.js**: Core RPG mechanics (character progression, stats calculation)
 - **game-rpg-integration.js**: Integrates RPG system with existing game mechanics
 - **game-rpg-ui.js**: RPG user interface (character sheets, inventory, shop)
@@ -59,7 +58,7 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **rpg-service.js**: RPG system integration service
 
 ### Other Files
-- **cyberops-game.html**: HTML structure with module loading
+- **index.html**: HTML structure with module loading
 - **cyberops-game.css** (3000+ lines): All styling including animations, HUD, screen transitions, and RPG UI
 
 ### Library Files (lib/ directory)
@@ -114,7 +113,7 @@ The game is a standalone HTML file that can be opened directly in a browser. No 
 # Simply open the HTML file in a browser
 # Or use a local server for better performance:
 python -m http.server 8000
-# Then navigate to http://localhost:8000/cyberops-game.html
+# Then navigate to http://localhost:8000/
 ```
 
 ## Important Implementation Details
@@ -214,7 +213,7 @@ The game achieves "3rd normal form" - the engine knows NOTHING about specific ca
 - **No Hardcoded Content**: Engine contains zero mission-specific code
 
 ### Campaign Loading Process
-1. **HTML loads**: cyberops-game.html includes game-campaign-integration.js
+1. **HTML loads**: index.html includes game-campaign-integration.js
 2. **Campaign auto-registers**: Each mission file self-registers with CampaignSystem
 3. **Mission selection**: Player selects from available missions in hub
 4. **Dynamic loading**: Mission data loaded at runtime, including embedded map

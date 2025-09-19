@@ -1877,7 +1877,7 @@ ADVANTAGES:
         sessionStorage.setItem('test_mission', missionData);
 
         // Open game in new window with test parameter
-        const gameWindow = window.open('cyberops-game.html?test_mission=true', '_blank');
+        const gameWindow = window.open('index.html?test_mission=true', '_blank');
 
         if (!gameWindow) {
             alert('Please allow popups to test the mission.');
