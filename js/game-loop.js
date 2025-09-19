@@ -99,13 +99,25 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
                 // Enemy projectile hitting agent
                 if (proj.targetAgent && proj.targetAgent.alive) {
                     const agent = proj.targetAgent;
-                    agent.shield = Math.max(0, agent.shield - proj.damage);
+
+                    // Use RPG damage calculation if available
+                    let damage = proj.damage;
+                    if (this.calculateDamage && proj.shooter) {
+                        damage = this.calculateDamage(proj.shooter, agent, proj.weaponType || 'rifle');
+                    }
+
+                    agent.shield = Math.max(0, agent.shield - damage);
                     if (agent.shield === 0) {
-                        agent.health = Math.max(0, agent.health - proj.damage);
+                        agent.health = Math.max(0, agent.health - damage);
                     }
                     if (agent.health <= 0) {
                         agent.alive = false;
                         agent.health = 0;
+
+                        // Handle agent death (could trigger respawn or game over)
+                        if (this.onEntityDeath) {
+                            this.onEntityDeath(agent, proj.shooter);
+                        }
                     }
 
                     // Effects
@@ -126,7 +138,14 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
                 // Agent projectile hitting enemy
                 if (proj.targetEnemy && proj.targetEnemy.alive) {
                     const enemy = proj.targetEnemy;
-                    enemy.health = Math.max(0, enemy.health - proj.damage);
+
+                    // Use RPG damage calculation if available
+                    let damage = proj.damage;
+                    if (this.calculateDamage && proj.shooter) {
+                        damage = this.calculateDamage(proj.shooter, enemy, proj.weaponType || 'rifle');
+                    }
+
+                    enemy.health = Math.max(0, enemy.health - damage);
                     if (enemy.health <= 0) {
                         enemy.alive = false;
                         if (this.missionTrackers) {
@@ -134,6 +153,11 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
                         }
                         if (this.logEvent) {
                             this.logEvent(`Enemy eliminated!`, 'combat');
+                        }
+
+                        // Grant XP if RPG system is active
+                        if (this.onEntityDeath) {
+                            this.onEntityDeath(enemy, proj.shooter);
                         }
                     }
 
@@ -557,7 +581,9 @@ CyberOpsGame.prototype.update = function() {
                             damage: damage,
                             speed: 0.3,
                             owner: enemy.id,
-                            hostile: true
+                            hostile: true,
+                            shooter: enemy, // Store shooter for RPG calculations
+                            weaponType: enemy.weaponType || 'rifle'
                         });
                     }
                 }

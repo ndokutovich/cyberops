@@ -101,10 +101,16 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
         // Initialize new centralized keyboard handler
-        if (this.initKeyboardHandler && !this.keyboardInitialized) {
-            this.initKeyboardHandler();
-            this.keyboardInitialized = true;
-            console.log('⌨️ Keyboard handler initialized in setupEventListeners');
+        if (!this.keyboardInitialized) {
+            if (this.initKeyboardHandler) {
+                console.log('🎮 Found initKeyboardHandler, calling it...');
+                this.initKeyboardHandler();
+                this.keyboardInitialized = true;
+                console.log('⌨️ Keyboard handler initialized in setupEventListeners');
+            } else {
+                console.error('❌ CRITICAL: initKeyboardHandler function NOT FOUND!');
+                console.error('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this)).filter(m => m.includes('Keyboard')));
+            }
         }
 
         /* OLD KEYBOARD HANDLERS - DISABLED - Moved to game-keyboard.js */

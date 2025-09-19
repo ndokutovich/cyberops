@@ -8,10 +8,12 @@ class GameServices {
         this.formulaService = new FormulaService();
         this.researchService = new ResearchService(this.formulaService);
         this.equipmentService = new EquipmentService(this.formulaService);
+        this.rpgService = new RPGService(this.formulaService);
 
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
         this.applyAllModifiers = this.applyAllModifiers.bind(this);
+        this.calculateAttackDamage = this.calculateAttackDamage.bind(this);
     }
 
     /**
@@ -39,10 +41,20 @@ class GameServices {
      * Calculate damage for an attack
      * @param {Object} attacker - Attacking agent
      * @param {Object} target - Target agent/enemy
-     * @param {Object} context - Attack context {distance, cover, critical}
+     * @param {Object} context - Attack context {distance, cover, critical, weaponType}
      * @returns {number} Final damage
      */
     calculateAttackDamage(attacker, target, context = {}) {
+        // Use RPG service if entities have RPG data
+        if (this.rpgService && (attacker.rpgEntity || target.rpgEntity)) {
+            return this.rpgService.calculateRPGDamage(
+                attacker,
+                target,
+                context.weaponType || 'rifle'
+            );
+        }
+
+        // Fallback to traditional calculation
         const baseDamage = attacker.damage || 0;
         const weaponBonus = attacker.weaponDamage || 0;
         const researchBonus = attacker.damageBonus || 0;
@@ -112,27 +124,22 @@ class GameServices {
      * @returns {Array} Modified roster
      */
     applyAllModifiers(roster, gameState) {
-        // First distribute weapons optimally
-        const weaponAssignments = this.equipmentService.distributeWeapons(
-            roster,
-            gameState.weapons || []
-        );
+        // NOTE: Weapon distribution is now handled by agentLoadouts system
+        // Each agent's equipment is manually configured in the Arsenal
 
         return roster.map((agent, index) => {
-            const assignment = weaponAssignments[index];
-
             // Apply research bonuses first
             let modifiedAgent = this.researchService.applyResearchToAgent(
                 { ...agent },
                 gameState.completedResearch || []
             );
 
-            // Then apply equipment with the assigned weapon
+            // Apply equipment bonuses (weapon assignment now handled by loadouts)
             modifiedAgent = this.equipmentService.applyEquipmentToAgent(
                 modifiedAgent,
-                [], // Empty weapon inventory since we're using assigned weapon
+                gameState.weapons || [],
                 gameState.equipment || [],
-                assignment ? assignment.weapon : null
+                null // No auto-assigned weapon
             );
 
             return modifiedAgent;

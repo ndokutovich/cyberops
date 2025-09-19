@@ -138,28 +138,41 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
             console.log(`⚠️ Only ${availableAgentsForMission.length} agents available, but mission allows ${maxAgentsForMission}`);
         }
 
-        // Calculate weapon distribution for preview
-        let weaponAssignments = [];
-        if (window.GameServices && window.GameServices.equipmentService) {
-            weaponAssignments = window.GameServices.equipmentService.distributeWeapons(
-                availableAgentsForMission,
-                this.weapons || []
-            );
-        }
-
         availableAgentsForMission.forEach((agent, idx) => {
             const card = document.createElement('div');
             card.className = 'agent-card';
             const agentName = agent.name || `Agent ${idx + 1}`;
+            const agentId = agent.id || agentName;
             const agentHealth = agent.health;
             const agentDamage = agent.damage;
             const agentSpeed = agent.speed;
 
-            // Get weapon assignment for this agent
-            const assignment = weaponAssignments[idx];
-            const weaponInfo = assignment && assignment.weapon ?
-                `<div style="color: #ffa500; font-size: 0.9em;">🔫 ${assignment.weapon.name}</div>` :
-                '<div style="color: #888; font-size: 0.9em;">🔫 No weapon</div>';
+            // Get actual equipped items from agentLoadouts
+            let weaponInfo = '<div style="color: #888; font-size: 0.9em;">🔫 No weapon</div>';
+            if (this.agentLoadouts && this.agentLoadouts[agentId]) {
+                const loadout = this.agentLoadouts[agentId];
+
+                // Show equipped weapon
+                if (loadout.weapon) {
+                    const weapon = this.getItemById ? this.getItemById('weapon', loadout.weapon) : null;
+                    if (weapon) {
+                        weaponInfo = `<div style="color: #ffa500; font-size: 0.9em;">🔫 ${weapon.name}</div>`;
+                    }
+                }
+
+                // Show equipped armor
+                if (loadout.armor) {
+                    const armor = this.getItemById ? this.getItemById('armor', loadout.armor) : null;
+                    if (armor) {
+                        weaponInfo += `<div style="color: #00aaff; font-size: 0.9em;">🛡️ ${armor.name}</div>`;
+                    }
+                }
+
+                // If nothing equipped, show unequipped message
+                if (!loadout.weapon && !loadout.armor) {
+                    weaponInfo = '<div style="color: #888; font-size: 0.9em;">🔫 No equipment</div>';
+                }
+            }
 
             card.innerHTML = `
                 <div style="font-weight: bold; color: #00ffff;">${agentName}</div>
@@ -458,6 +471,12 @@ CyberOpsGame.prototype.initMission = function() {
             agentsWithLoadouts = this.applyLoadoutsToAgents(baseAgents);
         }
 
+        // Sync equipment with RPG system for mission
+        if (this.syncEquipmentWithRPG) {
+            console.log('🔄 Syncing equipment for mission start');
+            this.syncEquipmentWithRPG();
+        }
+
         // Apply research modifiers
         let modifiedAgents;
         if (window.GameServices) {
@@ -473,8 +492,12 @@ CyberOpsGame.prototype.initMission = function() {
         // Add mission-specific properties to each agent
         modifiedAgents.forEach((agent, idx) => {
 
+            // Store original ID for loadout lookup
+            const originalId = agent.id || agent.name;
+
             // Add mission-specific properties
             agent.id = 'agent_' + idx;
+            agent.originalId = originalId; // Preserve for loadout lookup
             agent.x = spawn.x + idx % 2;
             agent.y = spawn.y + Math.floor(idx / 2);
             agent.targetX = spawn.x + idx % 2;
@@ -1048,7 +1071,9 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
                 targetEnemy: nearest, // Store the actual target
                 damage: agent.damage,
                 speed: 0.5,
-                owner: agent.id
+                owner: agent.id,
+                shooter: agent, // Store shooter for RPG calculations
+                weaponType: 'rifle' // Default weapon type
             });
 
             // Trigger recoil effect for shooting
@@ -1140,7 +1165,13 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                     Math.pow(enemy.y - grenadeY, 2)
                 );
                 if (dist < 3) {
-                    enemy.health -= 50;
+                    // Use RPG damage calculation if available
+                    let damage = 50;
+                    if (this.calculateDamage) {
+                        damage = this.calculateDamage(agent, enemy, 'grenade');
+                    }
+
+                    enemy.health -= damage;
                     enemiesHit++;
 
                     if (enemy.health <= 0) {

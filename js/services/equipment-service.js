@@ -146,45 +146,9 @@ class EquipmentService {
         return bestWeapon;
     }
 
-    /**
-     * Distribute weapons optimally among agents
-     * @param {Array} agents - Array of agents needing weapons
-     * @param {Array} weaponInventory - Array of {id, owned} objects
-     * @returns {Array} Array of {agentIndex, weapon} assignments
-     */
-    distributeWeapons(agents, weaponInventory = []) {
-        const assignments = [];
-        const availableWeapons = [];
-
-        // Create a pool of available weapons
-        weaponInventory.forEach(item => {
-            if (item.owned > 0) {
-                const weapon = this.getWeapon(item.id);
-                if (weapon) {
-                    // Add each owned copy to the pool
-                    for (let i = 0; i < item.owned; i++) {
-                        availableWeapons.push({ ...weapon });
-                    }
-                }
-            }
-        });
-
-        // Sort weapons by damage (best first)
-        availableWeapons.sort((a, b) => b.damage - a.damage);
-
-        // Assign weapons to agents (best weapons to first agents)
-        agents.forEach((agent, index) => {
-            if (availableWeapons.length > 0) {
-                const weapon = availableWeapons.shift();
-                assignments.push({ agentIndex: index, weapon });
-            } else {
-                // No weapon available for this agent
-                assignments.push({ agentIndex: index, weapon: null });
-            }
-        });
-
-        return assignments;
-    }
+    // REMOVED: distributeWeapons method
+    // Weapon distribution is now handled by the agentLoadouts system
+    // Each agent's equipment is manually configured in the Arsenal/Equipment screen
 
     /**
      * Calculate total equipment bonuses from inventory

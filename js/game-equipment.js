@@ -31,7 +31,78 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
         this.initializeEquipmentSystem();
     }
 
-    document.getElementById('equipmentDialog').classList.add('show');
+    const dialog = document.getElementById('equipmentDialog');
+    dialog.classList.add('show');
+
+    // Update button visibility based on screen
+    if (this.currentScreen === 'game') {
+        // Hide shop/sell buttons in game, but keep optimize
+        const shopBtn = dialog.querySelector('button[onclick*="showShopInterface"]');
+        const sellBtn = dialog.querySelector('button[onclick*="showSellInterface"]');
+        const optimizeBtn = dialog.querySelector('button[onclick*="optimizeLoadouts"]');
+
+        if (shopBtn) {
+            shopBtn.style.display = 'none';
+            shopBtn.disabled = true;
+        }
+        if (sellBtn) {
+            sellBtn.style.display = 'none';
+            sellBtn.disabled = true;
+        }
+        // Keep optimize button visible and enabled in-game
+        if (optimizeBtn) {
+            optimizeBtn.style.display = '';
+            optimizeBtn.disabled = false;
+        }
+
+        // Change title to indicate in-game mode
+        const titleEl = dialog.querySelector('.dialog-title');
+        if (titleEl) titleEl.textContent = '🎯 INVENTORY & EQUIPMENT';
+
+        // Add a note that shop is not available during missions
+        const buttonsDiv = dialog.querySelector('.equipment-buttons');
+        if (buttonsDiv && !buttonsDiv.querySelector('.in-game-note')) {
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'in-game-note';
+            noteDiv.style.cssText = 'color: #888; font-size: 0.9em; margin-top: 10px; text-align: center;';
+            noteDiv.textContent = 'Shop unavailable during missions';
+            buttonsDiv.appendChild(noteDiv);
+        }
+    } else {
+        // Show all buttons in hub
+        const shopBtn = dialog.querySelector('button[onclick*="showShopInterface"]');
+        const sellBtn = dialog.querySelector('button[onclick*="showSellInterface"]');
+        const optimizeBtn = dialog.querySelector('button[onclick*="optimizeLoadouts"]');
+
+        if (shopBtn) {
+            shopBtn.style.display = '';
+            shopBtn.disabled = false;
+        }
+        if (sellBtn) {
+            sellBtn.style.display = '';
+            sellBtn.disabled = false;
+        }
+        if (optimizeBtn) {
+            optimizeBtn.style.display = '';
+            optimizeBtn.disabled = false;
+        }
+
+        // Restore original title
+        const titleEl = dialog.querySelector('.dialog-title');
+        if (titleEl) titleEl.textContent = '🎯 EQUIPMENT MANAGEMENT';
+
+        // Remove in-game note if present
+        const noteEl = dialog.querySelector('.in-game-note');
+        if (noteEl) noteEl.remove();
+    }
+
+    // Auto-select first agent if none selected
+    if (!this.selectedEquipmentAgent && this.activeAgents.length > 0) {
+        const firstAgentId = this.activeAgents[0].id || this.activeAgents[0].name;
+        this.selectedEquipmentAgent = firstAgentId;
+        console.log('🎯 Auto-selecting first agent:', firstAgentId);
+    }
+
     this.refreshEquipmentUI();
 };
 
@@ -48,6 +119,7 @@ CyberOpsGame.prototype.refreshEquipmentUI = function() {
 
     if (this.selectedEquipmentAgent) {
         this.updateLoadoutDisplay(this.selectedEquipmentAgent);
+        this.updateStatsPreview(this.selectedEquipmentAgent);
     }
 };
 
@@ -608,8 +680,18 @@ CyberOpsGame.prototype.getItemById = function(type, itemId) {
 // Apply loadouts to agents for mission
 CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
     return agents.map(agent => {
-        const loadout = this.agentLoadouts[agent.id];
-        if (!loadout) return agent;
+        // Try multiple ID formats to find the loadout
+        const loadoutId = agent.id || agent.name;
+        const loadout = this.agentLoadouts[loadoutId] ||
+                       this.agentLoadouts[agent.name] ||
+                       this.agentLoadouts[agent.originalId];
+
+        if (!loadout) {
+            console.log(`⚠️ No loadout found for agent: ${agent.name} (tried IDs: ${loadoutId}, ${agent.name}, ${agent.originalId})`);
+            return agent;
+        }
+
+        console.log(`✅ Applying loadout to ${agent.name}:`, loadout);
 
         let modifiedAgent = { ...agent };
 

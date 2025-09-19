@@ -50,8 +50,11 @@ CyberOpsGame.prototype.handleInteractionKey = function() {
 
 // Initialize keyboard system
 CyberOpsGame.prototype.initKeyboardHandler = function() {
-    // Actual keyboard mappings - declarative config
-    this.keyBindings = {
+    console.log('🎮 initKeyboardHandler STARTING...');
+
+    try {
+        // Actual keyboard mappings - declarative config
+        this.keyBindings = {
         // Agent Selection (1-6 keys for up to 6 agents)
         '1': () => this.selectAgentByNumber(0),
         '2': () => this.selectAgentByNumber(1),
@@ -62,8 +65,22 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
 
         // Agent Control
         'Tab': () => this.cycleAgents(),
-        'T': () => this.selectAllSquad(),
-        't': () => this.selectAllSquad(),
+        'T': () => {
+            console.log('T key handler called - selectAllSquad');
+            if (this.selectAllSquad) {
+                this.selectAllSquad();
+            } else {
+                console.warn('selectAllSquad function not found!');
+            }
+        },
+        't': () => {
+            console.log('t key handler called - selectAllSquad');
+            if (this.selectAllSquad) {
+                this.selectAllSquad();
+            } else {
+                console.warn('selectAllSquad function not found!');
+            }
+        },
 
         // Combat Actions - apply to all selected agents for keyboard shortcuts
         'F': () => this.useAbilityForAllSelected(1),  // Shoot
@@ -75,11 +92,51 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         'Q': () => this.useAbilityForAllSelected(4),  // Shield
         'q': () => this.useAbilityForAllSelected(4),  // Shield
 
-        // Team Commands (avoid conflicts)
+        // RPG System
+        'C': () => {
+            if (this.currentScreen === 'game' && this._selectedAgent) {
+                console.log('📊 Opening character sheet for:', this._selectedAgent.name);
+                if (this.showCharacterSheet) {
+                    this.showCharacterSheet(this._selectedAgent.id || this._selectedAgent.name);
+                } else {
+                    console.warn('showCharacterSheet function not found');
+                }
+            }
+        },
+        'c': () => {
+            if (this.currentScreen === 'game' && this._selectedAgent) {
+                console.log('📊 Opening character sheet for:', this._selectedAgent.name);
+                if (this.showCharacterSheet) {
+                    this.showCharacterSheet(this._selectedAgent.id || this._selectedAgent.name);
+                } else {
+                    console.warn('showCharacterSheet function not found');
+                }
+            }
+        },
+        'I': () => {
+            if (this.currentScreen === 'game' && this._selectedAgent) {
+                console.log('🎒 Opening inventory for:', this._selectedAgent.name);
+                if (this.showInventory) {
+                    this.showInventory(this._selectedAgent.id || this._selectedAgent.name);
+                } else {
+                    console.warn('showInventory function not found');
+                }
+            }
+        },
+        'i': () => {
+            if (this.currentScreen === 'game' && this._selectedAgent) {
+                console.log('🎒 Opening inventory for:', this._selectedAgent.name);
+                if (this.showInventory) {
+                    this.showInventory(this._selectedAgent.id || this._selectedAgent.name);
+                } else {
+                    console.warn('showInventory function not found');
+                }
+            }
+        },
+
+        // Team Commands (moved to avoid conflicts)
         'X': () => this.setTeamMode('hold'),
         'x': () => this.setTeamMode('hold'),
-        'C': () => this.setTeamMode('patrol'),
-        'c': () => this.setTeamMode('patrol'),
         'V': () => this.setTeamMode('follow'),
         'v': () => this.setTeamMode('follow'),
 
@@ -153,7 +210,15 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
     this.keys3D = { W: false, A: false, S: false, D: false };
 
     // Setup event listeners
-    this.setupKeyboardListeners();
+        this.setupKeyboardListeners();
+
+        console.log('✅ initKeyboardHandler COMPLETED successfully');
+        console.log('✅ keyBindings has', Object.keys(this.keyBindings).length, 'keys registered');
+
+    } catch (error) {
+        console.error('❌ CRITICAL ERROR in initKeyboardHandler:', error);
+        console.error('Stack trace:', error.stack);
+    }
 };
 
 // Setup keyboard event listeners

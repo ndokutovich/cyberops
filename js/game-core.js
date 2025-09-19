@@ -309,6 +309,14 @@ CyberOpsGame.prototype.init = function() {
         this.setupEventListeners();
         this.initializeAudio();
 
+        // Initialize RPG system
+        if (this.initRPGSystem) {
+            this.initRPGSystem();
+            console.log('✅ RPG system initialized in core');
+        } else {
+            console.warn('⚠️ RPG system not found during initialization');
+        }
+
         // Initialize turn-based mode system
         if (this.initTurnBasedMode) {
             this.initTurnBasedMode();
