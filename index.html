@@ -367,7 +367,7 @@
             <div class="hub-panel resources-panel">
                 <div class="panel-header">🛡️ RESOURCES</div>
                 <div class="panel-content">
-                    <div class="hub-card" onclick="game.showEquipmentManagement()">
+                    <div class="hub-card" onclick="game.dialogEngine ? game.dialogEngine.navigateTo('arsenal') : game.showEquipmentManagement()">
                         <div class="card-icon">🔫</div>
                         <div class="card-title">ARSENAL</div>
                         <div class="card-desc">Manage equipment</div>

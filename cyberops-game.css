@@ -1997,12 +1997,11 @@ body {
 .hud-dialog {
     position: fixed;
     inset: 0;
-    z-index: 10001;
+    z-index: 20000;
     background: rgba(0, 0, 0, 0.8);
     display: none;
     justify-content: center;
     align-items: center;
-    z-index: 2500;
     animation: dialogFadeIn 0.3s ease-out;
 }
 
@@ -2037,7 +2036,8 @@ body {
     to { opacity: 1; transform: scale(1); }
 }
 
-.dialog-content {
+/* Dialog content for old equipment dialog */
+#equipmentDialog .dialog-content {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     border: 2px solid #00ffff;
     border-radius: 10px;
@@ -2656,6 +2656,27 @@ body {
     margin-right: 5px;
 }
 
+/* === Equipment Management in Declarative Dialog === */
+.equipment-management-content {
+    width: 100%;
+    min-width: 1100px;
+    display: flex;
+    gap: 20px;
+}
+
+/* Force Arsenal dialog to be wide */
+#dialog-arsenal {
+    width: 1200px !important;
+    max-width: 1200px !important;
+    min-width: 1100px !important;
+}
+
+#dialog-arsenal .dialog-content {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 1100px !important;
+}
+
 /* === Declarative Dialog System === */
 .declarative-dialog-container {
     position: fixed;
@@ -2664,7 +2685,7 @@ body {
     right: 0;
     bottom: 0;
     pointer-events: none;
-    z-index: 10000;
+    z-index: 9000;
 }
 
 .declarative-dialog {
@@ -2687,8 +2708,14 @@ body {
 
 .declarative-dialog.level-1 {
     min-width: 600px;
-    max-width: 900px;
+    max-width: 1200px;
     max-height: 80vh;
+}
+
+/* Specific override for arsenal */
+.declarative-dialog.level-1#dialog-arsenal {
+    width: 1200px !important;
+    min-width: 1100px !important;
 }
 
 .declarative-dialog.level-2 {
@@ -2739,11 +2766,14 @@ body {
     box-shadow: 0 0 10px #ff0000;
 }
 
-.dialog-content {
+/* Dialog content for declarative dialogs */
+.declarative-dialog .dialog-content {
     padding: 20px;
     overflow-y: auto;
     flex: 1;
     min-height: 100px;
+    width: 100%;
+    max-width: none;
 }
 
 .dialog-actions {

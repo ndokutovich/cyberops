@@ -128,6 +128,26 @@ const DIALOG_CONFIG = {
             }
         },
 
+        // ========== ARSENAL/EQUIPMENT (Level 1) ==========
+        'arsenal': {
+            type: 'dialog',
+            level: 1,
+            parent: 'hub',
+            title: '🔫 EQUIPMENT MANAGEMENT',
+            layout: 'large-layout',
+            content: {
+                type: 'dynamic',
+                generator: 'generateEquipmentManagement'
+            },
+            buttons: [
+                { text: '← BACK TO HUB', action: 'execute:returnToHub' }
+            ],
+            transitions: {
+                enter: { animation: 'fade-in', sound: 'dialog-open' },
+                exit: { animation: 'fade-out', sound: 'dialog-close' }
+            }
+        },
+
         // ========== HALL OF GLORY (Level 1) ==========
         'hall-of-glory': {
             type: 'dialog',
@@ -381,9 +401,10 @@ const DIALOG_CONFIG = {
                 </div>
             `,
             styles: {
-                maxWidth: '900px',
+                width: '1200px',
+                maxWidth: '1200px',
                 maxHeight: '80vh',
-                minWidth: '700px'
+                minWidth: '1000px'
             }
         },
 

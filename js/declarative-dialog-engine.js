@@ -200,11 +200,34 @@ class DeclarativeDialogEngine {
 
         // Apply styles
         if (layout.styles) {
+            console.log('🎨 Applying styles to dialog:', stateId, layout.styles);
             Object.assign(dialogEl.style, layout.styles);
+            console.log('🎨 Dialog element actual width after styles:', dialogEl.style.width);
+        } else {
+            console.log('⚠️ No styles found for layout:', state.layout);
         }
 
-        // Calculate z-index for stacking
-        const zIndex = 10000 + (this.stateStack.length * 10);
+        // Force Arsenal dialog to be wide
+        if (stateId === 'arsenal') {
+            console.log('🔫 Forcing Arsenal dialog to 1200px width');
+            dialogEl.style.width = '1200px';
+            dialogEl.style.maxWidth = '1200px';
+            dialogEl.style.minWidth = '1100px';
+
+            // Also force the dialog-content to be full width
+            setTimeout(() => {
+                const contentEl = dialogEl.querySelector('.dialog-content');
+                if (contentEl) {
+                    console.log('🔫 Forcing dialog-content to full width');
+                    contentEl.style.width = '100%';
+                    contentEl.style.maxWidth = '100%';
+                    contentEl.style.minWidth = '1100px';
+                }
+            }, 10);
+        }
+
+        // Calculate z-index for stacking - lower than HUD dialogs (20000)
+        const zIndex = 9000 + (this.stateStack.length * 10);
         dialogEl.style.zIndex = zIndex;
 
         // Add to container

@@ -36,6 +36,13 @@ CyberOpsGame.prototype.initializeEquipmentSystem = function() {
 
 // Open equipment management dialog
 CyberOpsGame.prototype.showEquipmentManagement = function() {
+    // If declarative dialog system is available, use it
+    if (this.dialogEngine) {
+        console.log('🔫 Redirecting to declarative Arsenal dialog');
+        this.dialogEngine.navigateTo('arsenal');
+        return;
+    }
+
     // Initialize if needed
     if (!this.agentLoadouts) {
         this.initializeEquipmentSystem();
@@ -208,13 +215,26 @@ CyberOpsGame.prototype.closeEquipmentDialog = function() {
 
 // Refresh entire equipment UI
 CyberOpsGame.prototype.refreshEquipmentUI = function() {
-    this.updateAgentList();
-    this.updateInventoryDisplay();
-    this.updateCreditsDisplay();
+    // If using declarative dialog, update content without re-navigating
+    if (this.dialogEngine && this.dialogEngine.currentState && this.dialogEngine.currentState.id === 'arsenal') {
+        // Update content without re-navigating to avoid fade effect
+        const dialogEl = document.getElementById('dialog-arsenal');
+        if (dialogEl && this.generateEquipmentManagement) {
+            const contentEl = dialogEl.querySelector('.dialog-body');
+            if (contentEl) {
+                contentEl.innerHTML = this.generateEquipmentManagement();
+            }
+        }
+    } else {
+        // Otherwise use traditional update methods
+        this.updateAgentList();
+        this.updateInventoryDisplay();
+        this.updateCreditsDisplay();
 
-    if (this.selectedEquipmentAgent) {
-        this.updateLoadoutDisplay(this.selectedEquipmentAgent);
-        this.updateStatsPreview(this.selectedEquipmentAgent);
+        if (this.selectedEquipmentAgent) {
+            this.updateLoadoutDisplay(this.selectedEquipmentAgent);
+            this.updateStatsPreview(this.selectedEquipmentAgent);
+        }
     }
 };
 
@@ -271,9 +291,16 @@ CyberOpsGame.prototype.updateAgentList = function() {
 // Select agent for equipment management
 CyberOpsGame.prototype.selectAgentForEquipment = function(agentId) {
     this.selectedEquipmentAgent = agentId;
-    this.updateAgentList();
-    this.updateLoadoutDisplay(agentId);
-    this.showWeaponInventory(); // Default to weapons tab
+
+    // If using declarative dialog, refresh it
+    if (this.dialogEngine && this.dialogEngine.currentState && this.dialogEngine.currentState.id === 'arsenal') {
+        this.dialogEngine.navigateTo('arsenal');
+    } else {
+        // Otherwise use traditional update methods
+        this.updateAgentList();
+        this.updateLoadoutDisplay(agentId);
+        this.showWeaponInventory(); // Default to weapons tab
+    }
 };
 
 // Update loadout display for selected agent
@@ -572,17 +599,245 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
         `Sell ${item.name} for ${sellPrice} credits?<br>
         <span style="color: #888;">You currently have ${available} available to sell.</span>`,
         [
-            { text: 'SELL', action: () => {
-                item.owned--;
-                this.credits += sellPrice;
-                this.refreshEquipmentUI();
-                this.showHudDialog(
-                    '✅ SOLD',
-                    `${item.name} sold for ${sellPrice} credits!`,
-                    [{ text: 'OK', action: 'close' }]
-                );
-            }},
+            {
+                text: 'SELL',
+                closeAfter: false,
+                action: () => {
+                    item.owned--;
+                    this.credits += sellPrice;
+                    this.refreshEquipmentUI();
+                    // Close current modal
+                    if (this.activeModal && this.activeModal.close) {
+                        this.activeModal.close();
+                    }
+                    // Show success message after a short delay
+                    setTimeout(() => {
+                        this.showHudDialog(
+                            '✅ SOLD',
+                            `${item.name} sold for ${sellPrice} credits!`,
+                            [{ text: 'OK', action: 'close' }]
+                        );
+                    }, 100);
+                }
+            },
             { text: 'CANCEL', action: 'close' }
+        ]
+    );
+};
+
+// Buy item (alias for consistency)
+CyberOpsGame.prototype.buyItem = function(type, itemId) {
+    // Find item to get details for confirmation
+    let itemData = null;
+    if (window.GameServices && window.GameServices.equipmentService) {
+        if (type === 'weapon') {
+            itemData = window.GameServices.equipmentService.getWeapon(itemId);
+        } else {
+            itemData = window.GameServices.equipmentService.getEquipment(itemId);
+        }
+    }
+
+    if (!itemData) {
+        console.error('Item not found');
+        return;
+    }
+
+    // Check affordability
+    if (this.credits < itemData.cost) {
+        this.showHudDialog(
+            '❌ INSUFFICIENT FUNDS',
+            `You need ${itemData.cost} credits to buy ${itemData.name}.<br>
+            You currently have ${this.credits} credits.`,
+            [{ text: 'OK', action: 'close' }]
+        );
+        return;
+    }
+
+    // Show confirmation
+    this.showHudDialog(
+        '🛒 CONFIRM PURCHASE',
+        `Buy ${itemData.name} for ${itemData.cost} credits?<br>
+        <span style="color: #888;">You will have ${this.credits - itemData.cost} credits remaining.</span>`,
+        [
+            {
+                text: 'BUY',
+                closeAfter: false,
+                action: () => {
+                    // Perform purchase
+                    this.buyItemFromShop(type, itemId);
+                    // Close current modal
+                    if (this.activeModal && this.activeModal.close) {
+                        this.activeModal.close();
+                    }
+                    // Show success message after a short delay
+                    setTimeout(() => {
+                        this.showHudDialog(
+                            '✅ PURCHASED',
+                            `${itemData.name} purchased for ${itemData.cost} credits!`,
+                            [{ text: 'OK', action: 'close' }]
+                        );
+                    }, 100);
+                }
+            },
+            { text: 'CANCEL', action: 'close' }
+        ]
+    );
+};
+
+// Show sell dialog (for declarative dialog system)
+CyberOpsGame.prototype.showSellDialog = function() {
+    let html = '<div style="max-height: 400px; overflow-y: auto;">';
+    html += '<h3 style="color: #ff6600; margin-bottom: 15px;">💰 SELL ITEMS</h3>';
+    html += `<div style="color: #ffa500; margin-bottom: 20px;">Credits: ${this.credits}</div>`;
+
+    // Get all sellable items
+    const allItems = [];
+
+    // Add weapons
+    this.weapons.forEach(w => {
+        const available = this.getAvailableCount('weapon', w.id);
+        if (available > 0) {
+            allItems.push({
+                ...w,
+                type: 'weapon',
+                available: available,
+                category: 'Weapons'
+            });
+        }
+    });
+
+    // Add equipment
+    this.equipment.forEach(e => {
+        const available = this.getAvailableCount('equipment', e.id);
+        if (available > 0) {
+            allItems.push({
+                ...e,
+                type: 'equipment',
+                available: available,
+                category: 'Equipment'
+            });
+        }
+    });
+
+    if (allItems.length === 0) {
+        html += '<div style="color: #888; text-align: center; padding: 20px;">No items available to sell</div>';
+    } else {
+        // Group by category
+        const categories = {};
+        allItems.forEach(item => {
+            if (!categories[item.category]) categories[item.category] = [];
+            categories[item.category].push(item);
+        });
+
+        // Display each category
+        Object.keys(categories).forEach(category => {
+            html += `<h4 style="color: #00ffff; margin: 15px 0 10px;">${category}</h4>`;
+
+            categories[category].forEach(item => {
+                const sellPrice = Math.floor(item.cost * 0.6);
+
+                html += `
+                    <div style="background: rgba(255,102,0,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="color: #fff; font-weight: bold;">${item.name}</div>
+                                <div style="color: #888; font-size: 0.9em;">Available: ${item.available} | Sell Price: ${sellPrice}</div>
+                            </div>
+                            <div>
+                                <button class="menu-button" style="padding: 5px 10px; background: #8b4513;"
+                                        onclick="game.sellItem('${item.type}', ${item.id})">
+                                    SELL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    html += '</div>';
+
+    this.showHudDialog(
+        '💰 SELL ITEMS',
+        html,
+        [
+            { text: 'CLOSE', action: 'close' }
+        ]
+    );
+};
+
+// Show shop dialog (for declarative dialog system)
+CyberOpsGame.prototype.showShopDialog = function() {
+    let html = '<div style="max-height: 400px; overflow-y: auto;">';
+    html += '<h3 style="color: #00ff00; margin-bottom: 15px;">🛒 WEAPON & EQUIPMENT SHOP</h3>';
+    html += `<div style="color: #ffa500; margin-bottom: 20px;">Credits: ${this.credits}</div>`;
+
+    // Get all available items
+    const allItems = [];
+
+    // Add weapons
+    this.weapons.forEach(w => {
+        allItems.push({
+            ...w,
+            type: 'weapon',
+            category: 'Weapons'
+        });
+    });
+
+    // Add equipment
+    this.equipment.forEach(e => {
+        allItems.push({
+            ...e,
+            type: 'equipment',
+            category: 'Equipment'
+        });
+    });
+
+    // Group by category
+    const categories = {};
+    allItems.forEach(item => {
+        if (!categories[item.category]) categories[item.category] = [];
+        categories[item.category].push(item);
+    });
+
+    // Display each category
+    Object.keys(categories).forEach(category => {
+        html += `<h4 style="color: #00ffff; margin: 15px 0 10px;">${category}</h4>`;
+
+        categories[category].forEach(item => {
+            const canAfford = this.credits >= item.cost;
+            const owned = item.owned || 0;
+
+            html += `
+                <div style="background: rgba(0,255,255,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="color: ${canAfford ? '#fff' : '#666'}; font-weight: bold;">${item.name}</div>
+                            <div style="color: #888; font-size: 0.9em;">${item.description || ''}</div>
+                            <div style="color: #ffa500; font-size: 0.9em;">Cost: ${item.cost} | Owned: ${owned}</div>
+                        </div>
+                        <div>
+                            ${canAfford ? `
+                                <button class="menu-button" style="padding: 5px 10px;"
+                                        onclick="game.buyItem('${item.type}', ${item.id})">
+                                    BUY
+                                </button>
+                            ` : '<span style="color: #ff0000;">Not enough credits</span>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    });
+
+    html += '</div>';
+
+    this.showHudDialog(
+        '🛒 SHOP',
+        html,
+        [
+            { text: 'CLOSE', action: 'close' }
         ]
     );
 };
@@ -835,7 +1090,20 @@ CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
 
 // Show shop interface to buy items
 CyberOpsGame.prototype.showShopInterface = function() {
+    // Check if we're in declarative dialog mode
+    if (this.dialogEngine && this.dialogEngine.currentState) {
+        // Open shop as a separate HUD dialog
+        console.log('🛒 Opening Shop interface as HUD dialog');
+        this.showShopDialog();
+        return;
+    }
+
+    // Original implementation for old equipment dialog
     const inventoryEl = document.getElementById('inventoryList');
+    if (!inventoryEl) {
+        console.error('inventoryList element not found');
+        return;
+    }
     inventoryEl.innerHTML = '<h4 style="color: #2e7d32; margin-bottom: 10px;">🛒 SHOP - BUY ITEMS</h4>';
 
     // Show all available items from services
@@ -964,7 +1232,20 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
 
 // Show sell interface
 CyberOpsGame.prototype.showSellInterface = function() {
+    // Check if we're in declarative dialog mode
+    if (this.dialogEngine && this.dialogEngine.currentState) {
+        // Open sell interface as a separate HUD dialog
+        console.log('💰 Opening Sell interface as HUD dialog');
+        this.showSellDialog();
+        return;
+    }
+
+    // Original implementation for old equipment dialog
     const inventoryEl = document.getElementById('inventoryList');
+    if (!inventoryEl) {
+        console.error('inventoryList element not found');
+        return;
+    }
     inventoryEl.innerHTML = '<h4 style="color: #8b4513; margin-bottom: 10px;">💰 SELL ITEMS</h4>';
 
     // Show all sellable items

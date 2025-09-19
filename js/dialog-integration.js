@@ -522,6 +522,591 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
+    // Arsenal/Equipment Management
+    engine.registerGenerator('generateEquipmentManagement', function() {
+        // Initialize equipment system if needed
+        if (!this.agentLoadouts) {
+            if (this.initializeEquipmentSystem) {
+                this.initializeEquipmentSystem();
+            } else {
+                // Fallback initialization
+                this.agentLoadouts = {};
+                this.selectedEquipmentAgent = null;
+                this.currentInventoryTab = 'weapons';
+            }
+        }
+
+        // Ensure we have arrays for weapons and equipment
+        if (!this.weapons) this.weapons = [];
+        if (!this.equipment) this.equipment = [];
+        if (!this.activeAgents) this.activeAgents = [];
+
+        // Auto-select first agent if none selected
+        if (!this.selectedEquipmentAgent && this.activeAgents && this.activeAgents.length > 0) {
+            // In game mode, try to use the currently selected agent
+            if (this.currentScreen === 'game' && this._selectedAgent) {
+                this.selectedEquipmentAgent = this._selectedAgent.originalId || this._selectedAgent.id || this._selectedAgent.name;
+            } else {
+                this.selectedEquipmentAgent = this.activeAgents[0].id;
+            }
+        }
+
+        // Initialize inventory tab if not set
+        if (!this.currentInventoryTab) {
+            this.currentInventoryTab = 'weapons';
+        }
+
+        let html = `
+            <div class="equipment-management-content" style="display: flex; gap: 20px; height: 60vh; width: 100%; padding: 10px; box-sizing: border-box;">
+        `;
+
+        // Left Panel: Agents
+        html += `
+            <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column; padding: 5px;">
+                <h3 style="color: #00ffff; margin-bottom: 15px;">👥 SQUAD</h3>
+                <div style="flex: 1; overflow-y: auto;">
+        `;
+
+        this.activeAgents.forEach(agent => {
+            // Ensure consistent comparison - convert both to string
+            const isSelected = String(this.selectedEquipmentAgent) === String(agent.id);
+            const loadout = this.agentLoadouts[agent.id] || {};
+            const weaponName = loadout.weapon && this.getItemById ? this.getItemById('weapon', loadout.weapon)?.name : 'None';
+
+            html += `
+                <div style="background: ${isSelected ? 'rgba(0,255,255,0.2)' : 'rgba(0,255,255,0.05)'};
+                           border: 2px solid ${isSelected ? '#00ffff' : 'transparent'};
+                           padding: 10px; margin: 5px 0; border-radius: 5px;
+                           cursor: pointer; transition: all 0.3s;"
+                     onclick="(function() {
+                         console.log('Agent clicked:', '${agent.id}');
+                         game.selectedEquipmentAgent = '${agent.id}';
+                         // Don't call selectAgentForEquipment as it's for the old dialog
+                         // Just refresh the current dialog
+                         game.dialogEngine.navigateTo('arsenal');
+                     })()">
+                    <div style="font-weight: bold; color: #fff;">${agent.name}</div>
+                    <div style="color: #888; font-size: 0.9em;">${agent.specialization}</div>
+                    <div style="color: #ffa500; font-size: 0.85em; margin-top: 5px;">
+                        🔫 ${weaponName}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div></div>';
+
+        // Center Panel: Current Loadout
+        html += `
+            <div style="flex: 1.2; min-width: 300px; display: flex; flex-direction: column; border: 2px solid magenta; padding: 5px;">
+                <h3 style="color: #00ffff; margin-bottom: 15px;">🎯 CURRENT LOADOUT</h3>
+        `;
+
+        if (this.selectedEquipmentAgent) {
+            console.log('Looking for agent with ID:', this.selectedEquipmentAgent);
+            console.log('Available agents:', this.activeAgents.map(a => ({ id: a.id, name: a.name })));
+            const agent = this.activeAgents.find(a => String(a.id) === String(this.selectedEquipmentAgent));
+            const loadout = this.agentLoadouts[this.selectedEquipmentAgent] || {};
+
+            if (agent) {
+                console.log('Found agent:', agent.name);
+                html += `
+                    <div style="background: rgba(0,255,255,0.05); padding: 15px; border-radius: 8px; flex: 1; overflow-y: auto;">
+                        <h4 style="color: #fff; margin-bottom: 15px;">${agent.name}'s Loadout</h4>
+
+                        <div style="margin-bottom: 15px;">
+                            <div style="color: #888; font-size: 0.9em; margin-bottom: 5px;">PRIMARY WEAPON</div>
+                            <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                `;
+
+                if (loadout.weapon && this.getItemById) {
+                    const weapon = this.getItemById('weapon', loadout.weapon);
+                    html += `
+                        <div>
+                            <span style="color: #00ffff; font-weight: bold;">${weapon?.name || 'Unknown'}</span>
+                            <span style="color: #888; font-size: 0.85em; margin-left: 10px;">DMG: ${weapon?.damage || 0}</span>
+                        </div>
+                        <button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
+                                onclick="(function() {
+                                    if (game.unequipItem) {
+                                        game.unequipItem('${this.selectedEquipmentAgent}', 'weapon');
+                                        game.dialogEngine.navigateTo('arsenal');
+                                    }
+                                })()">
+                            UNEQUIP
+                        </button>
+                    `;
+                } else {
+                    html += '<span style="color: #666;">Empty Slot</span>';
+                }
+
+                html += '</div></div>';
+
+                // Armor slot
+                html += `
+                    <div style="margin-bottom: 15px;">
+                        <div style="color: #888; font-size: 0.9em; margin-bottom: 5px;">ARMOR</div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                `;
+
+                if (loadout.armor && this.getItemById) {
+                    const armor = this.getItemById('equipment', loadout.armor);
+                    html += `
+                        <div>
+                            <span style="color: #00ffff; font-weight: bold;">${armor?.name || 'Unknown'}</span>
+                            <span style="color: #888; font-size: 0.85em; margin-left: 10px;">DEF: ${armor?.protection || 0}</span>
+                        </div>
+                        <button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
+                                onclick="(function() {
+                                    if (game.unequipItem) {
+                                        game.unequipItem('${this.selectedEquipmentAgent}', 'armor');
+                                        game.dialogEngine.navigateTo('arsenal');
+                                    }
+                                })()">
+                            UNEQUIP
+                        </button>
+                    `;
+                } else {
+                    html += '<span style="color: #666;">Empty Slot</span>';
+                }
+
+                html += '</div></div>';
+
+                // Utility slot
+                html += `
+                    <div style="margin-bottom: 15px;">
+                        <div style="color: #888; font-size: 0.9em; margin-bottom: 5px;">UTILITY</div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                `;
+
+                if (loadout.utility && this.getItemById) {
+                    const utility = this.getItemById('equipment', loadout.utility);
+                    let stats = '';
+                    if (utility?.hackBonus) stats += `HACK: +${utility.hackBonus} `;
+                    if (utility?.stealthBonus) stats += `STEALTH: +${utility.stealthBonus}`;
+
+                    html += `
+                        <div>
+                            <span style="color: #00ffff; font-weight: bold;">${utility?.name || 'Unknown'}</span>
+                            <span style="color: #888; font-size: 0.85em; margin-left: 10px;">${stats}</span>
+                        </div>
+                        <button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
+                                onclick="(function() {
+                                    if (game.unequipItem) {
+                                        game.unequipItem('${this.selectedEquipmentAgent}', 'utility');
+                                        game.dialogEngine.navigateTo('arsenal');
+                                    }
+                                })()">
+                            UNEQUIP
+                        </button>
+                    `;
+                } else {
+                    html += '<span style="color: #666;">Empty Slot</span>';
+                }
+
+                html += '</div></div>';
+
+                // Stats Preview
+                html += `
+                    <div style="margin-top: 20px;">
+                        <h4 style="color: #ffa500; margin-bottom: 10px;">📊 STATS PREVIEW</h4>
+                        <div style="background: rgba(255,165,0,0.1); padding: 10px; border-radius: 5px;">
+                `;
+
+                // Calculate stats with loadout
+                let totalDamage = agent.damage || 25;
+                let totalProtection = 0;
+                let hackBonus = 0;
+                let stealthBonus = 0;
+
+                if (loadout.weapon && this.getItemById) {
+                    const weapon = this.getItemById('weapon', loadout.weapon);
+                    if (weapon) totalDamage += weapon.damage || 0;
+                }
+
+                if (loadout.armor && this.getItemById) {
+                    const armor = this.getItemById('equipment', loadout.armor);
+                    if (armor) totalProtection += armor.protection || 0;
+                }
+
+                if (loadout.utility && this.getItemById) {
+                    const utility = this.getItemById('equipment', loadout.utility);
+                    if (utility) {
+                        hackBonus += utility.hackBonus || 0;
+                        stealthBonus += utility.stealthBonus || 0;
+                    }
+                }
+
+                html += `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>Damage: <span style="color: #ff6666;">${totalDamage}</span></div>
+                        <div>Protection: <span style="color: #00ffff;">${totalProtection}</span></div>
+                        <div>Hack Bonus: <span style="color: #00ff00;">+${hackBonus}</span></div>
+                        <div>Stealth Bonus: <span style="color: #ff00ff;">+${stealthBonus}</span></div>
+                    </div>
+                `;
+
+                html += '</div></div></div>';
+            } else {
+                console.log('Agent not found with ID:', this.selectedEquipmentAgent);
+                html += '<div style="color: #ff0000; text-align: center; padding: 20px;">Error: Agent not found!</div>';
+            }
+        } else {
+            html += '<div style="color: #888; text-align: center; padding: 20px;">Select an agent to view loadout</div>';
+        }
+
+        html += '</div>';
+
+        // Right Panel: Inventory/Shop/Sell
+        html += `
+            <div style="flex: 1.5; min-width: 350px; display: flex; flex-direction: column; border: 2px solid yellow; padding: 5px;">
+                <h3 style="color: #00ffff; margin-bottom: 15px;">📦 INVENTORY & SHOP</h3>
+
+                <!-- Main Tab Selection -->
+                <div style="margin-bottom: 10px; display: flex; gap: 5px;">
+                    <button class="dialog-button" onclick="(function() {
+                        game.currentInventoryMode = 'inventory';
+                        game.currentInventoryTab = 'weapons';
+                        game.dialogEngine.navigateTo('arsenal');
+                    })()"
+                            style="${this.currentInventoryMode === 'inventory' || !this.currentInventoryMode ? 'background: #00ffff; color: #000;' : ''}">
+                        📦 Inventory
+                    </button>
+                    <button class="dialog-button" onclick="(function() {
+                        game.currentInventoryMode = 'buy';
+                        game.currentInventoryTab = 'weapons';
+                        game.dialogEngine.navigateTo('arsenal');
+                    })()"
+                            style="${this.currentInventoryMode === 'buy' ? 'background: #00ff00; color: #000;' : ''}">
+                        🛒 Buy
+                    </button>
+                    <button class="dialog-button" onclick="(function() {
+                        game.currentInventoryMode = 'sell';
+                        game.currentInventoryTab = 'weapons';
+                        game.dialogEngine.navigateTo('arsenal');
+                    })()"
+                            style="${this.currentInventoryMode === 'sell' ? 'background: #ff6600; color: #000;' : ''}">
+                        💰 Sell
+                    </button>
+                </div>
+
+                <!-- Sub-tabs for Weapons/Equipment -->
+                <div style="margin-bottom: 10px;">
+                    <button class="dialog-button" onclick="(function() {
+                        game.currentInventoryTab = 'weapons';
+                        game.dialogEngine.navigateTo('arsenal');
+                    })()"
+                            style="margin-right: 5px; font-size: 0.9em; ${this.currentInventoryTab === 'weapons' ? 'background: #666; color: #fff;' : ''}">
+                        🔫 Weapons
+                    </button>
+                    <button class="dialog-button" onclick="(function() {
+                        game.currentInventoryTab = 'equipment';
+                        game.dialogEngine.navigateTo('arsenal');
+                    })()"
+                            style="font-size: 0.9em; ${this.currentInventoryTab === 'equipment' ? 'background: #666; color: #fff;' : ''}">
+                        🛡️ Equipment
+                    </button>
+                </div>
+
+                <!-- Credits Display -->
+                ${this.currentInventoryMode === 'buy' || this.currentInventoryMode === 'sell' ?
+                    `<div style="color: #ffa500; margin-bottom: 10px; font-weight: bold;">
+                        💳 Credits: ${this.credits}
+                    </div>` : ''}
+
+                <div style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px;">
+        `;
+
+        // Initialize inventory mode if not set
+        if (!this.currentInventoryMode) {
+            this.currentInventoryMode = 'inventory';
+        }
+
+        // Show weapons or equipment based on tab and mode
+        if (!this.currentInventoryTab || this.currentInventoryTab === 'weapons') {
+            const weapons = this.weapons || [];
+
+            if (this.currentInventoryMode === 'inventory') {
+                // INVENTORY MODE - Show owned weapons
+                html += '<h4 style="color: #ffa500; margin-bottom: 10px;">🔫 OWNED WEAPONS</h4>';
+
+                const ownedWeapons = weapons.filter(w => w.owned > 0);
+                if (ownedWeapons.length === 0) {
+                    html += '<div style="color: #888; text-align: center; padding: 20px;">No weapons owned</div>';
+                } else {
+                    ownedWeapons.forEach(weapon => {
+                        const availableCount = this.getAvailableCount ? this.getAvailableCount('weapon', weapon.id) : weapon.owned || 0;
+
+                        html += `
+                            <div style="background: rgba(255,255,255,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="color: #fff; font-weight: bold;">${weapon.name}</div>
+                                        <div style="color: #888; font-size: 0.85em;">
+                                            DMG: ${weapon.damage} | Owned: ${weapon.owned} | Available: ${availableCount}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        ${availableCount > 0 && this.selectedEquipmentAgent ?
+                                            `<button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
+                                                     onclick="(function() {
+                                                         if (game.equipItem) {
+                                                             game.equipItem('${game.selectedEquipmentAgent}', 'weapon', ${weapon.id});
+                                                             game.dialogEngine.navigateTo('arsenal');
+                                                         }
+                                                     })()">
+                                                EQUIP
+                                            </button>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+            } else if (this.currentInventoryMode === 'buy') {
+                // BUY MODE - Show all weapons available for purchase
+                html += '<h4 style="color: #00ff00; margin-bottom: 10px;">🛒 BUY WEAPONS</h4>';
+
+                if (weapons.length === 0) {
+                    html += '<div style="color: #888; text-align: center; padding: 20px;">No weapons available</div>';
+                } else {
+                    weapons.forEach(weapon => {
+                        const canAfford = this.credits >= weapon.cost;
+
+                        html += `
+                            <div style="background: rgba(0,255,0,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="color: ${canAfford ? '#fff' : '#666'}; font-weight: bold;">${weapon.name}</div>
+                                        <div style="color: #888; font-size: 0.85em;">
+                                            DMG: ${weapon.damage} | Cost: ${weapon.cost} | Owned: ${weapon.owned}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        ${canAfford ?
+                                            `<button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em; background: #00ff00; color: #000;"
+                                                     onclick="(function() {
+                                                         if (game.buyItemFromShop) {
+                                                             game.buyItemFromShop('weapon', ${weapon.id});
+                                                             game.dialogEngine.navigateTo('arsenal');
+                                                         }
+                                                     })()">
+                                                BUY
+                                            </button>` :
+                                            '<span style="color: #ff0000; font-size: 0.85em;">Not enough credits</span>'}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+            } else if (this.currentInventoryMode === 'sell') {
+                // SELL MODE - Show sellable weapons
+                html += '<h4 style="color: #ff6600; margin-bottom: 10px;">💰 SELL WEAPONS</h4>';
+
+                const sellableWeapons = weapons.filter(w => {
+                    const available = this.getAvailableCount ? this.getAvailableCount('weapon', w.id) : w.owned || 0;
+                    return available > 0;
+                });
+
+                if (sellableWeapons.length === 0) {
+                    html += '<div style="color: #888; text-align: center; padding: 20px;">No weapons available to sell</div>';
+                } else {
+                    sellableWeapons.forEach(weapon => {
+                        const availableCount = this.getAvailableCount ? this.getAvailableCount('weapon', weapon.id) : weapon.owned || 0;
+                        const sellPrice = Math.floor(weapon.cost * 0.6);
+
+                        html += `
+                            <div style="background: rgba(255,102,0,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="color: #fff; font-weight: bold;">${weapon.name}</div>
+                                        <div style="color: #888; font-size: 0.85em;">
+                                            Available to sell: ${availableCount} | Sell price: ${sellPrice}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em; background: #ff6600; color: #000;"
+                                                onclick="(function() {
+                                                    if (game.sellItem) {
+                                                        game.sellItem('weapon', ${weapon.id});
+                                                        game.dialogEngine.navigateTo('arsenal');
+                                                    }
+                                                })()">
+                                            SELL
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            }
+        } else {
+            // Equipment tab
+            const equipment = this.equipment || [];
+
+            if (this.currentInventoryMode === 'inventory') {
+                // INVENTORY MODE - Show owned equipment
+                html += '<h4 style="color: #ffa500; margin-bottom: 10px;">🛡️ OWNED EQUIPMENT</h4>';
+
+                const ownedEquipment = equipment.filter(e => e.owned > 0);
+                if (ownedEquipment.length === 0) {
+                    html += '<div style="color: #888; text-align: center; padding: 20px;">No equipment owned</div>';
+                } else {
+                    ownedEquipment.forEach(item => {
+                        const availableCount = this.getAvailableCount ? this.getAvailableCount('equipment', item.id) : item.owned || 0;
+                        const slot = this.getEquipmentSlot ? this.getEquipmentSlot(item) : 'equipment';
+
+                        let stats = '';
+                        if (item.protection) stats += `DEF: ${item.protection} `;
+                        if (item.hackBonus) stats += `HACK: +${item.hackBonus} `;
+                        if (item.stealthBonus) stats += `STEALTH: +${item.stealthBonus} `;
+
+                        html += `
+                            <div style="background: rgba(255,255,255,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="color: #fff; font-weight: bold;">${item.name}</div>
+                                        <div style="color: #888; font-size: 0.85em;">
+                                            ${stats}| Owned: ${item.owned} | Available: ${availableCount}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        ${availableCount > 0 && this.selectedEquipmentAgent ?
+                                            `<button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
+                                                     onclick="(function() {
+                                                         if (game.equipItem) {
+                                                             game.equipItem('${game.selectedEquipmentAgent}', '${slot}', ${item.id});
+                                                             game.dialogEngine.navigateTo('arsenal');
+                                                         }
+                                                     })()">
+                                                EQUIP
+                                            </button>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+            } else if (this.currentInventoryMode === 'buy') {
+                // BUY MODE - Show all equipment available for purchase
+                html += '<h4 style="color: #00ff00; margin-bottom: 10px;">🛒 BUY EQUIPMENT</h4>';
+
+                if (equipment.length === 0) {
+                    html += '<div style="color: #888; text-align: center; padding: 20px;">No equipment available</div>';
+                } else {
+                    equipment.forEach(item => {
+                        const canAfford = this.credits >= item.cost;
+
+                        let stats = '';
+                        if (item.protection) stats += `DEF: ${item.protection} `;
+                        if (item.hackBonus) stats += `HACK: +${item.hackBonus} `;
+                        if (item.stealthBonus) stats += `STEALTH: +${item.stealthBonus} `;
+
+                        html += `
+                            <div style="background: rgba(0,255,0,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="color: ${canAfford ? '#fff' : '#666'}; font-weight: bold;">${item.name}</div>
+                                        <div style="color: #888; font-size: 0.85em;">
+                                            ${stats}| Cost: ${item.cost} | Owned: ${item.owned}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        ${canAfford ?
+                                            `<button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em; background: #00ff00; color: #000;"
+                                                     onclick="(function() {
+                                                         if (game.buyItemFromShop) {
+                                                             game.buyItemFromShop('equipment', ${item.id});
+                                                             game.dialogEngine.navigateTo('arsenal');
+                                                         }
+                                                     })()">
+                                                BUY
+                                            </button>` :
+                                            '<span style="color: #ff0000; font-size: 0.85em;">Not enough credits</span>'}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+            } else if (this.currentInventoryMode === 'sell') {
+                // SELL MODE - Show sellable equipment
+                html += '<h4 style="color: #ff6600; margin-bottom: 10px;">💰 SELL EQUIPMENT</h4>';
+
+                const sellableEquipment = equipment.filter(e => {
+                    const available = this.getAvailableCount ? this.getAvailableCount('equipment', e.id) : e.owned || 0;
+                    return available > 0;
+                });
+
+                if (sellableEquipment.length === 0) {
+                    html += '<div style="color: #888; text-align: center; padding: 20px;">No equipment available to sell</div>';
+                } else {
+                    sellableEquipment.forEach(item => {
+                        const availableCount = this.getAvailableCount ? this.getAvailableCount('equipment', item.id) : item.owned || 0;
+                        const sellPrice = Math.floor(item.cost * 0.6);
+
+                        let stats = '';
+                        if (item.protection) stats += `DEF: ${item.protection} `;
+                        if (item.hackBonus) stats += `HACK: +${item.hackBonus} `;
+                        if (item.stealthBonus) stats += `STEALTH: +${item.stealthBonus} `;
+
+                        html += `
+                            <div style="background: rgba(255,102,0,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="color: #fff; font-weight: bold;">${item.name}</div>
+                                        <div style="color: #888; font-size: 0.85em;">
+                                            ${stats}| Available: ${availableCount} | Sell price: ${sellPrice}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em; background: #ff6600; color: #000;"
+                                                onclick="(function() {
+                                                    if (game.sellItem) {
+                                                        game.sellItem('equipment', ${item.id});
+                                                        game.dialogEngine.navigateTo('arsenal');
+                                                    }
+                                                })()">
+                                            SELL
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            }
+        }
+
+        html += '</div></div>';
+        html += '</div>'; // Close equipment-management-content
+
+        // Action buttons at the bottom - only Optimize All now
+        html += `
+            <div style="margin-top: 20px; display: flex; justify-content: center;">
+                <button class="dialog-button" onclick="(function() {
+                    if (game.optimizeLoadouts) {
+                        game.optimizeLoadouts();
+                        // Small delay to let the optimization complete
+                        setTimeout(() => game.dialogEngine.navigateTo('arsenal'), 100);
+                    } else {
+                        alert('Optimize function not available');
+                    }
+                })()">
+                    🚀 OPTIMIZE ALL LOADOUTS
+                </button>
+            </div>
+        `;
+
+        return html;
+    });
+
     // Research Projects list
     engine.registerGenerator('researchProjects', function() {
         const researchProjects = [

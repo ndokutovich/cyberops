@@ -36,7 +36,7 @@ class ModalEngine {
                 width: 100%;
                 height: 100%;
                 pointer-events: none;
-                z-index: 10000;
+                z-index: 20000;
             `;
             document.body.appendChild(container);
         }
@@ -73,9 +73,10 @@ class ModalEngine {
         // Create modal element
         modal.element = this.createModalElement(modal);
 
-        // Calculate z-index for stacking (base 10000 + stack position * 10)
+        // Calculate z-index for stacking
+        // Use higher base (20000) to ensure modals appear above declarative dialogs (9000)
         const stackPosition = this.modalStack.length;
-        modal.element.style.zIndex = 10000 + (stackPosition * 10);
+        modal.element.style.zIndex = 20000 + (stackPosition * 10);
 
         // Add to container
         const container = document.getElementById('modalEngineContainer');

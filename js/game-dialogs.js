@@ -2,11 +2,13 @@
 CyberOpsGame.prototype.showHudDialog = function(title, message, buttons) {
     // Use new modal engine if available
     if (window.modalEngine) {
-        // Close ALL existing modals first to prevent stacking issues
-        if (window.modalEngine.closeAll) {
+        // Don't close all modals for confirmation dialogs - allow stacking
+        // Only close if this is a primary dialog (not a confirmation)
+        const isConfirmation = title.includes('CONFIRM') || title.includes('⚠️') || title.includes('💰');
+        if (!isConfirmation && window.modalEngine.closeAll) {
             window.modalEngine.closeAll();
+            this.activeModal = null;
         }
-        this.activeModal = null;
 
         // Store modal reference for closeDialog compatibility
         this.activeModal = window.modalEngine.show({
@@ -16,7 +18,8 @@ CyberOpsGame.prototype.showHudDialog = function(title, message, buttons) {
             buttons: buttons.map(btn => ({
                 text: btn.text,
                 action: btn.action === 'close' ? 'close' : btn.action,
-                primary: btn.primary || false
+                primary: btn.primary || false,
+                closeAfter: btn.closeAfter !== undefined ? btn.closeAfter : true
             })),
             closeButton: true,
             backdrop: true,

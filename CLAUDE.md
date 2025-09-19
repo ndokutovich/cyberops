@@ -1358,6 +1358,93 @@ If overlays appear at wrong positions:
 
 ## Recent Fixes and Common Issues
 
+### Modal and Dialog System Architecture
+
+#### Modal Engine vs Declarative Dialog System
+The game uses two complementary dialog systems:
+1. **Modal Engine** (`modal-engine.js`): Handles confirmation dialogs, alerts, and stacked modals
+   - Base z-index: 20000 (ensures it appears above everything)
+   - Used for: Confirmations, alerts, pause menu
+2. **Declarative Dialog Engine** (`declarative-dialog-engine.js`): Handles complex game dialogs
+   - Base z-index: 9000
+   - Used for: Arsenal, Character Sheet, complex UI panels
+
+#### Z-Index Layering Strategy
+```css
+/* Game canvas and UI: 1-1000 */
+/* HUD elements: 1000-5000 */
+/* Declarative dialogs: 9000-9999 */
+/* Modal engine dialogs: 20000+ */
+```
+
+#### Common Modal Issues and Fixes
+
+**Problem**: Confirmation dialogs appearing behind Arsenal/Equipment dialog
+**Cause**: Z-index conflict between modal systems
+**Solution**: Increased modal engine base z-index from 10000 to 20000
+
+**Problem**: Modal blocking after buy/sell confirmation
+**Cause**: Double-close conflict when modal auto-closes and code also tries to close
+**Solution**: Added `closeAfter: false` property to button config:
+```javascript
+{
+    text: 'BUY',
+    closeAfter: false,  // Prevent auto-close
+    action: () => {
+        // Perform action
+        this.activeModal.close();  // Manual close
+    }
+}
+```
+
+**Problem**: Dialog fade in/out on every refresh
+**Cause**: `refreshEquipmentUI()` was re-navigating to dialog instead of updating content
+**Solution**: Update content directly without re-navigation:
+```javascript
+const dialogEl = document.getElementById('dialog-arsenal');
+if (dialogEl && this.generateEquipmentManagement) {
+    const contentEl = dialogEl.querySelector('.dialog-body');
+    if (contentEl) {
+        contentEl.innerHTML = this.generateEquipmentManagement();
+    }
+}
+```
+
+### Declarative Dialog System Integration
+
+#### Converting Legacy Dialogs to Declarative System
+When converting old dialogs to the declarative system:
+
+1. **Create generator function** in `dialog-integration.js`:
+```javascript
+CyberOpsGame.prototype.generateDialogContent = function*() {
+    // Build HTML content
+    yield { html: content };
+}
+```
+
+2. **Register dialog config** in `dialog-config.js`:
+```javascript
+{
+    id: 'dialog-id',
+    title: 'Dialog Title',
+    generator: 'generateDialogContent',
+    template: 'large-layout',  // For wide dialogs
+    width: '1200px'  // Override default width if needed
+}
+```
+
+3. **Add fallback pattern** in HTML buttons:
+```javascript
+onclick="game.dialogEngine ? game.dialogEngine.navigateTo('dialog-id') : game.oldMethod()"
+```
+
+#### Dialog Width Management
+For wide dialogs like Arsenal:
+- Set `template: 'large-layout'` in config
+- Override width in dialog config: `width: '1200px'`
+- Add CSS override if needed: `#dialog-arsenal { width: 1200px !important; }`
+
 ### Equipment System Initialization
 **Problem**: Agent loadouts showing empty in dialog
 **Cause**: Equipment system initialized before agents loaded from campaign
