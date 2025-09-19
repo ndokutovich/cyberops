@@ -125,8 +125,16 @@ CyberOpsGame.prototype.updateHubStats = function() {
 }
     
 CyberOpsGame.prototype.showMissionsFromHub = function() {
-        document.getElementById('syndicateHub').style.display = 'none';
+    // Hide the hub first
+    document.getElementById('syndicateHub').style.display = 'none';
+
+    // Use the declarative dialog system
+    if (this.dialogEngine && this.dialogEngine.navigateTo) {
+        this.dialogEngine.navigateTo('mission-select-hub');
+    } else {
+        // Fallback to old system
         this.showMissionSelectDialog();
+    }
 }
 
 // Start next uncompleted mission
@@ -169,146 +177,46 @@ CyberOpsGame.prototype.startNextMission = function() {
     
     // Fix mission briefing for hub flow
 CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
+        // Close any open dialogs first
+        if (this.dialogEngine && this.dialogEngine.closeAll) {
+            this.dialogEngine.closeAll();
+        }
+
+        // Hide the hub
+        document.getElementById('syndicateHub').style.display = 'none';
+
         const mission = this.missions[missionIndex];
         this.currentMissionIndex = missionIndex;
         this.showMissionBriefing(mission);
 }
     
 CyberOpsGame.prototype.showHallOfGlory = function() {
-        let content = '';
+    // Hide the hub first
+    document.getElementById('syndicateHub').style.display = 'none';
 
-        if (this.fallenAgents.length === 0) {
-            // No fallen agents - show empty state
-            content = `
-                <div style="text-align: center; padding: 40px;">
-                    <div style="font-size: 60px; margin-bottom: 20px;">🎖️</div>
-                    <div style="color: #00ffff; font-size: 24px; margin-bottom: 10px;">
-                        NO FALLEN HEROES YET
-                    </div>
-                    <div style="color: #888; font-size: 14px;">
-                        May your agents always return home safely
-                    </div>
-                </div>
-            `;
-        } else {
-            // Display fallen agents
-            content = `
-                <div style="max-height: 400px; overflow-y: auto;">
-                    <div style="display: grid; gap: 15px;">
-            `;
+    // Use the declarative dialog system
+    if (this.dialogEngine && this.dialogEngine.navigateTo) {
+        this.dialogEngine.navigateTo('hall-of-glory');
+    } else {
+        console.error('Dialog engine not available for Hall of Glory');
+    }
+}
 
-            this.fallenAgents.forEach(agent => {
-                content += `
-                    <div style="
-                        background: linear-gradient(135deg, rgba(255,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%);
-                        border: 2px solid rgba(255,0,0,0.5);
-                        border-radius: 10px;
-                        padding: 20px;
-                        position: relative;
-                        overflow: hidden;
-                    ">
-                        <!-- Glitch effect overlay -->
-                        <div style="
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            right: 0;
-                            height: 2px;
-                            background: rgba(255,0,0,0.3);
-                            animation: scan 3s linear infinite;
-                        "></div>
+// Return to hub from declarative dialog
+CyberOpsGame.prototype.returnToHub = function() {
+    // Close any open dialogs
+    if (this.dialogEngine && this.dialogEngine.closeAll) {
+        this.dialogEngine.closeAll();
+    }
 
-                        <!-- Agent Header -->
-                        <div style="
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            margin-bottom: 15px;
-                            border-bottom: 1px solid rgba(255,0,0,0.3);
-                            padding-bottom: 10px;
-                        ">
-                            <div>
-                                <div style="color: #ff4444; font-size: 20px; font-weight: bold;">
-                                    ${agent.name}
-                                </div>
-                                <div style="color: #ff8888; font-size: 12px; text-transform: uppercase;">
-                                    ${agent.specialization}
-                                </div>
-                            </div>
-                            <div style="color: #ff0000; font-size: 30px;">☠️</div>
-                        </div>
+    // Don't restart music when returning from dialogs - let it continue playing
+    // Music will only restart when coming from missions (handled in showSyndicateHub)
+    console.log('🎵 Returning to hub from dialog - music continues playing');
 
-                        <!-- Agent Details -->
-                        <div style="display: grid; gap: 10px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: #888;">Fallen in:</span>
-                                <span style="color: #ff6666;">${agent.fallenInMission}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: #888;">Final words:</span>
-                                <span style="color: #ccc; font-style: italic;">
-                                    "${agent.finalWords}"
-                                </span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: #888;">Skills:</span>
-                                <span style="color: #00ffff;">
-                                    ${agent.skills.join(' • ')}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Memorial Footer -->
-                        <div style="
-                            text-align: center;
-                            margin-top: 15px;
-                            padding-top: 10px;
-                            border-top: 1px solid rgba(255,0,0,0.2);
-                            color: #ff8888;
-                            font-size: 12px;
-                            text-transform: uppercase;
-                            letter-spacing: 2px;
-                        ">
-                            Rest in peace, soldier
-                        </div>
-                    </div>
-                `;
-            });
-
-            content += `
-                    </div>
-                </div>
-
-                <!-- Memorial Quote -->
-                <div style="
-                    margin-top: 30px;
-                    padding: 20px;
-                    background: rgba(0,0,0,0.5);
-                    border-left: 3px solid #ff0000;
-                    text-align: center;
-                    font-style: italic;
-                    color: #aaa;
-                    font-size: 14px;
-                ">
-                    "They shall grow not old, as we that are left grow old;<br>
-                    Age shall not weary them, nor the years condemn.<br>
-                    At the going down of the sun and in the morning<br>
-                    We will remember them."
-                </div>
-            `;
-        }
-
-        // Show as HUD dialog with cyberpunk styling
-        this.showHudDialog(
-            this.uiText?.hallOfGloryTitle || '⚰️ HALL OF GLORY',
-            content,
-            [
-                { text: '← BACK TO HUB', action: () => {
-                    this.closeDialog();
-                    this.showSyndicateHub();
-                }}
-            ]
-        );
+    // Just show the hub again
+    document.getElementById('syndicateHub').style.display = 'flex';
+    this.currentScreen = 'hub';
+    this.updateHubStats();
 }
 
 // Agent Management - Now uses declarative dialog

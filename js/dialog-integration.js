@@ -101,6 +101,230 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
+    // Hall of Glory - memorial for fallen agents
+    engine.registerGenerator('generateHallOfGlory', function() {
+        let html = '<div class="hall-of-glory">';
+
+        const fallenAgents = this.fallenAgents || [];
+
+        if (fallenAgents.length === 0) {
+            html += `
+                <div style="text-align: center; padding: 40px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🎖️</div>
+                    <h3 style="color: #888;">No fallen heroes yet</h3>
+                    <p style="color: #666;">May your agents always return home</p>
+                </div>
+            `;
+        } else {
+            html += '<h3 style="color: #ff6666; margin-bottom: 15px;">FALLEN OPERATIVES</h3>';
+            html += '<div style="max-height: 400px; overflow-y: auto;">';
+
+            fallenAgents.forEach(agent => {
+                html += `
+                    <div style="background: rgba(255,0,0,0.1); padding: 15px; margin: 10px 0; border-radius: 5px; border: 1px solid rgba(255,0,0,0.3);">
+                        <div style="font-weight: bold; color: #ff6666; font-size: 18px;">${agent.name}</div>
+                        <div style="color: #ccc; margin: 5px 0;">
+                            ${agent.specialization || 'Operative'} |
+                            Missions Completed: ${agent.missionsCompleted || 0}
+                        </div>
+                        <div style="color: #888; font-style: italic;">
+                            ${agent.causeOfDeath || 'Fell in combat'}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    });
+
+    // Mission Selection - for hub mission selector
+    engine.registerGenerator('generateMissionSelection', function() {
+        let html = '<div class="mission-select-hub">';
+
+        const missions = this.missions || [];
+        const completedMissions = this.completedMissions || [];
+
+        if (missions.length === 0) {
+            html += '<p style="color: #888; text-align: center; padding: 40px;">No missions available.</p>';
+        } else {
+            html += '<div style="max-height: 500px; overflow-y: auto;">';
+
+            missions.forEach((mission, index) => {
+                const isCompleted = completedMissions.includes(mission.id);
+                const isLocked = mission.locked || index > this.currentMissionIndex;
+
+                html += `
+                    <div style="background: ${isCompleted ? 'rgba(0,255,0,0.1)' : isLocked ? 'rgba(128,128,128,0.1)' : 'rgba(0,255,255,0.1)'};
+                               padding: 15px; margin: 10px 0; border-radius: 8px;
+                               border: 1px solid ${isCompleted ? '#00ff00' : isLocked ? '#666' : '#00ffff'};">
+                        <div style="display: flex; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight: bold; color: ${isCompleted ? '#00ff00' : '#fff'};">
+                                    Mission ${mission.id}: ${mission.name || mission.title}
+                                </div>
+                                <div style="color: #ccc; margin: 10px 0;">
+                                    ${mission.briefing || mission.description || 'No briefing available.'}
+                                </div>
+                                <div style="color: #888;">
+                                    Reward: ${mission.rewards?.credits || 0} credits |
+                                    RP: ${mission.rewards?.researchPoints || 0}
+                                </div>
+                            </div>
+                            <div>
+                                ${isCompleted ?
+                                    '<button class="dialog-button" disabled>COMPLETED</button>' :
+                                    isLocked ?
+                                    '<button class="dialog-button" disabled>LOCKED</button>' :
+                                    `<button class="dialog-button" onclick="game.startMissionFromHub(${index}); game.dialogEngine.closeAll();">SELECT</button>`}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    });
+
+    // Agent Management - merged view for agents
+    engine.registerGenerator('generateAgentManagement', function() {
+        let html = '<div class="agent-management">';
+
+        if (!this.activeAgents || this.activeAgents.length === 0) {
+            html += '<p style="color: #888; text-align: center; padding: 20px;">No active agents. Hire agents to build your team.</p>';
+        } else {
+            html += '<h3 style="color: #00ffff; margin-bottom: 15px;">ACTIVE SQUAD</h3>';
+            html += '<div style="max-height: 400px; overflow-y: auto;">';
+
+            this.activeAgents.forEach(agent => {
+                html += `
+                    <div style="background: rgba(0,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 5px;">
+                        <div style="font-weight: bold; color: #fff; font-size: 18px;">${agent.name}</div>
+                        <div style="color: #ccc; margin: 5px 0;">
+                            ${agent.specialization || 'Operative'} |
+                            Health: ${agent.health}/${agent.maxHealth || 100} |
+                            Damage: ${agent.damage || 25}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+        }
+
+        const availableCount = this.availableAgents ?
+            this.availableAgents.filter(a => !a.hired).length : 0;
+
+        if (availableCount > 0) {
+            html += `
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #00ffff;">
+                    <p style="color: #00ff00;">${availableCount} agents available for hire</p>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        return html;
+    });
+
+    // Intel Data - merged intel and missions view
+    engine.registerGenerator('generateIntelData', function() {
+        let html = '<div class="intel-data">';
+
+        const totalIntel = this.totalIntelCollected || 0;
+        const missionsAvailable = this.missions ?
+            this.missions.filter(m => !this.completedMissions.includes(m.id)).length : 0;
+        const completedCount = this.completedMissions ? this.completedMissions.length : 0;
+
+        html += `
+            <h3 style="color: #00ffff; margin-bottom: 15px;">INTELLIGENCE & MISSIONS</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div style="background: rgba(0,255,255,0.1); padding: 15px; border-radius: 5px; text-align: center;">
+                    <h4 style="color: #00ffff;">Intel Collected</h4>
+                    <p style="font-size: 24px; color: #fff;">${totalIntel}</p>
+                </div>
+                <div style="background: rgba(0,255,0,0.1); padding: 15px; border-radius: 5px; text-align: center;">
+                    <h4 style="color: #00ff00;">Missions Complete</h4>
+                    <p style="font-size: 24px; color: #fff;">${completedCount}</p>
+                </div>
+                <div style="background: rgba(255,165,0,0.1); padding: 15px; border-radius: 5px; text-align: center;">
+                    <h4 style="color: #ffa500;">Available</h4>
+                    <p style="font-size: 24px; color: #fff;">${missionsAvailable}</p>
+                </div>
+            </div>
+        `;
+
+        // Show world control
+        html += `
+            <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 5px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #ff00ff;">World Control</span>
+                    <span style="font-size: 24px; color: #ffff00;">${this.worldControl || 0}%</span>
+                </div>
+            </div>
+        `;
+
+        html += '</div>';
+        return html;
+    });
+
+    // Research Lab - full research view
+    engine.registerGenerator('generateResearchLab', function() {
+        let html = '<div class="research-lab">';
+
+        html += `<h3 style="color: #00ffff; margin-bottom: 15px;">RESEARCH POINTS: ${this.researchPoints || 0}</h3>`;
+
+        const researchProjects = [
+            { id: 1, name: 'Weapon Upgrades', cost: 150, description: '+5 damage to all weapons' },
+            { id: 2, name: 'Stealth Technology', cost: 200, description: '+20% stealth success rate' },
+            { id: 3, name: 'Combat Systems', cost: 175, description: '+15 health to all agents' },
+            { id: 4, name: 'Hacking Protocols', cost: 225, description: '+25% hacking speed' },
+            { id: 5, name: 'Medical Systems', cost: 300, description: 'Auto-heal 20% health between missions' },
+            { id: 6, name: 'Advanced Tactics', cost: 250, description: '+1 movement speed to all agents' }
+        ];
+
+        html += '<div style="max-height: 400px; overflow-y: auto;">';
+
+        researchProjects.forEach(project => {
+            const canAfford = this.researchPoints >= project.cost;
+            const completed = this.completedResearch && this.completedResearch.includes(project.id);
+
+            html += `
+                <div style="background: ${completed ? 'rgba(0,255,0,0.1)' : 'rgba(255,0,255,0.1)'};
+                           padding: 15px; margin: 10px 0; border-radius: 8px;
+                           border: 1px solid ${completed ? '#00ff00' : '#ff00ff'};">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div>
+                            <div style="font-weight: bold; color: ${completed ? '#00ff00' : '#fff'};">
+                                ${project.name} ${completed ? '✅' : ''}
+                            </div>
+                            <div style="color: #ccc;">${project.description}</div>
+                            <div style="color: #ff00ff;">Cost: ${project.cost} RP</div>
+                        </div>
+                        <div>
+                            ${completed ?
+                                '<span style="color: #00ff00;">COMPLETED</span>' :
+                                canAfford ?
+                                `<button class="dialog-button" onclick="game.startResearch(${project.id})">RESEARCH</button>` :
+                                '<span style="color: #666;">INSUFFICIENT</span>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        html += '</div>';
+        return html;
+    });
+
     // Research Projects list
     engine.registerGenerator('researchProjects', function() {
         const researchProjects = [

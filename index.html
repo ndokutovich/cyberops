@@ -288,28 +288,28 @@
             <div class="hub-panel operations-panel">
                 <div class="panel-header">🎯 OPERATIONS</div>
                 <div class="panel-content">
-                    <div class="hub-card" onclick="game.showMissionsFromHub()">
+                    <div class="hub-card" onclick="game.dialogEngine ? game.dialogEngine.navigateTo('mission-select-hub') : game.showMissionsFromHub()">
                         <div class="card-icon">🎭</div>
                         <div class="card-title">MISSIONS</div>
                         <div class="card-desc">Launch new operations</div>
                         <div class="card-status" id="missionStatus">2 Available</div>
                     </div>
                     
-                    <div class="hub-card" onclick="game.dialogEngine.navigateTo('agent-management')">
+                    <div class="hub-card" onclick="game.dialogEngine ? game.dialogEngine.navigateTo('agent-management') : alert('Dialog system not loaded')">
                         <div class="card-icon">👥</div>
                         <div class="card-title">AGENTS</div>
                         <div class="card-desc">Hire & manage operatives</div>
                         <div class="card-status" id="agentStatus">4 Active</div>
                     </div>
                     
-                    <div class="hub-card" onclick="game.dialogEngine.navigateTo('research-lab')">
+                    <div class="hub-card" onclick="game.dialogEngine ? game.dialogEngine.navigateTo('research-lab') : alert('Dialog system not loaded')">
                         <div class="card-icon">🔬</div>
                         <div class="card-title">RESEARCH</div>
                         <div class="card-desc">Upgrade capabilities</div>
                         <div class="card-status" id="researchStatus">2 Active</div>
                     </div>
 
-                    <div class="hub-card" onclick="game.showHallOfGlory()">
+                    <div class="hub-card" onclick="game.dialogEngine ? game.dialogEngine.navigateTo('hall-of-glory') : game.showHallOfGlory()">
                         <div class="card-icon">⚰️</div>
                         <div class="card-title">HALL OF GLORY</div>
                         <div class="card-desc">Remember the fallen</div>
@@ -367,14 +367,14 @@
             <div class="hub-panel resources-panel">
                 <div class="panel-header">🛡️ RESOURCES</div>
                 <div class="panel-content">
-                    <div class="hub-card" onclick="game.dialogEngine.navigateTo('equipment-arsenal')">
+                    <div class="hub-card" onclick="game.showEquipmentManagement()">
                         <div class="card-icon">🔫</div>
                         <div class="card-title">ARSENAL</div>
-                        <div class="card-desc">Weapons & equipment</div>
+                        <div class="card-desc">Manage equipment</div>
                         <div class="card-status" id="arsenalStatus">8 Items</div>
                     </div>
                     
-                    <div class="hub-card" onclick="game.dialogEngine.navigateTo('intel-missions')">
+                    <div class="hub-card" onclick="game.dialogEngine ? game.dialogEngine.navigateTo('intel-missions') : alert('Dialog system not loaded')">
                         <div class="card-icon">📡</div>
                         <div class="card-title">INTEL</div>
                         <div class="card-desc">Surveillance & data</div>

@@ -6,6 +6,12 @@ const game = new CyberOpsGame();
 window.game = game; // Make game globally available for Three.js loader
 console.log('📦 Game instance created');
 
+// Initialize declarative dialogs
+if (game.initializeDeclarativeDialogs) {
+    game.initializeDeclarativeDialogs();
+    console.log('💬 Dialog system initialized');
+}
+
 // Initialize game
 game.init();
 console.log('✅ Game initialized successfully');

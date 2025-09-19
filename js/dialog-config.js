@@ -23,42 +23,19 @@ const DIALOG_CONFIG = {
             level: 1,
             parent: 'hub',
             title: '👥 AGENT MANAGEMENT',
-            layout: 'category-menu',
+            layout: 'standard',
             content: {
                 type: 'dynamic',
-                generator: 'generateAgentOverview'
+                generator: 'generateAgentManagement'
             },
-            buttons: {
-                template: 'category-grid',
-                items: [
-                    { id: 'view-squad', text: 'VIEW SQUAD', icon: '👁️', action: 'navigate:view-squad' },
-                    { id: 'hire-agents', text: 'HIRE AGENTS', icon: '💰', action: 'navigate:hire-agents' },
-                    { id: 'training-center', text: 'TRAINING CENTER', icon: '🎓', action: 'navigate:training-center' }
-                ]
-            },
+            buttons: [
+                { text: 'HIRE NEW AGENTS', action: 'navigate:hire-agents' },
+                { text: 'CLOSE', action: 'close' }
+            ],
             transitions: {
                 enter: { animation: 'slide-up', sound: 'dialog-open' },
                 exit: { animation: 'fade-out', sound: 'dialog-close' }
             }
-        },
-
-        // Level 2: View Squad
-        'view-squad': {
-            type: 'dialog',
-            level: 2,
-            parent: 'agent-management',
-            title: 'VIEW SQUAD',
-            layout: 'list-layout',
-            content: {
-                type: 'list',
-                source: 'activeAgents',
-                template: 'squad-agent-card',
-                emptyMessage: 'No agents in squad. Hire agents to build your team.'
-            },
-            buttons: [
-                { text: 'BACK', action: 'back' },
-                { text: 'CLOSE', action: 'close' }
-            ]
         },
 
         // Level 2: Hire Agents
@@ -110,194 +87,9 @@ const DIALOG_CONFIG = {
             }
         },
 
-        // Level 3: Agent Equipment
-        'agent-equipment': {
-            type: 'dialog',
-            level: 3,
-            parent: 'view-squad',
-            title: 'AGENT EQUIPMENT',
-            layout: 'standard',
-            content: {
-                type: 'dynamic',
-                generator: 'generateAgentEquipment'
-            },
-            buttons: [
-                { text: 'EQUIP WEAPON', action: 'navigate:select-weapon' },
-                { text: 'EQUIP ARMOR', action: 'navigate:select-armor' },
-                { text: 'BACK', action: 'back' }
-            ],
-            transitions: {
-                enter: { animation: 'slide-left' },
-                exit: { animation: 'slide-right' }
-            }
-        },
 
-        // Level 4: Select Weapon
-        'select-weapon': {
-            type: 'dialog',
-            level: 4,
-            parent: 'agent-equipment',
-            title: 'SELECT WEAPON',
-            layout: 'list-layout',
-            content: {
-                type: 'dynamic',
-                generator: 'generateWeaponSelection'
-            },
-            buttons: [
-                { text: 'BACK', action: 'back' }
-            ]
-        },
 
-        // Level 4: Select Armor
-        'select-armor': {
-            type: 'dialog',
-            level: 4,
-            parent: 'agent-equipment',
-            title: 'SELECT ARMOR',
-            layout: 'list-layout',
-            content: {
-                type: 'dynamic',
-                generator: 'generateArmorSelection'
-            },
-            buttons: [
-                { text: 'BACK', action: 'back' }
-            ]
-        },
-
-        // Level 2: Training Center
-        'training-center': {
-            type: 'dialog',
-            level: 2,
-            parent: 'agent-management',
-            title: 'TRAINING CENTER',
-            layout: 'training-layout',
-            content: {
-                type: 'conditional',
-                conditions: [
-                    {
-                        test: 'hasAgents',
-                        render: {
-                            type: 'list',
-                            source: 'trainingPrograms',
-                            template: 'training-program-card'
-                        }
-                    },
-                    {
-                        test: 'always',
-                        render: {
-                            type: 'static',
-                            html: '<p style="color: #ff6666;">No agents to train. Hire agents first.</p>'
-                        }
-                    }
-                ]
-            },
-            buttons: [
-                { text: 'BACK', action: 'back' },
-                { text: 'CLOSE', action: 'close' }
-            ]
-        },
-
-        // ========== EQUIPMENT & ARSENAL (Level 1) ==========
-        'equipment-arsenal': {
-            type: 'dialog',
-            level: 1,
-            parent: 'hub',
-            title: '⚔️ EQUIPMENT & ARSENAL',
-            layout: 'category-menu',
-            content: {
-                type: 'dynamic',
-                generator: 'generateEquipmentOverview'
-            },
-            buttons: {
-                template: 'category-grid',
-                items: [
-                    { id: 'agent-loadouts', text: 'AGENT LOADOUTS', icon: '🎯', action: 'navigate:agent-loadouts' },
-                    { id: 'shop', text: 'SHOP', icon: '🛒', action: 'navigate:shop' },
-                    { id: 'sell-items', text: 'SELL ITEMS', icon: '💵', action: 'navigate:sell-items' }
-                ]
-            }
-        },
-
-        // Level 2: Agent Loadouts
-        'agent-loadouts': {
-            type: 'dialog',
-            level: 2,
-            parent: 'equipment-arsenal',
-            title: 'AGENT LOADOUTS',
-            layout: 'list-layout',
-            content: {
-                type: 'dynamic',
-                generator: 'generateLoadoutsContent'
-            },
-            buttons: [
-                { text: 'BACK', action: 'back' },
-                { text: 'CLOSE', action: 'close' }
-            ]
-        },
-
-        // Level 2: Shop
-        'shop': {
-            type: 'dialog',
-            level: 2,
-            parent: 'equipment-arsenal',
-            title: 'EQUIPMENT SHOP',
-            layout: 'shop-layout',
-            content: {
-                type: 'list',
-                source: 'shopInventory',
-                groupBy: 'category',
-                template: 'shop-item-card',
-                filter: 'item => item.available'
-            },
-            filters: [
-                { id: 'all', label: 'All', filter: 'item => true' },
-                { id: 'weapons', label: 'Weapons', filter: 'item => item.type === "weapon"' },
-                { id: 'armor', label: 'Armor', filter: 'item => item.type === "armor"' },
-                { id: 'items', label: 'Items', filter: 'item => item.type === "item"' }
-            ],
-            buttons: [
-                { text: 'BACK', action: 'back' },
-                { text: 'CLOSE', action: 'close' }
-            ]
-        },
-
-        // Level 2: Sell Items
-        'sell-items': {
-            type: 'dialog',
-            level: 2,
-            parent: 'equipment-arsenal',
-            title: 'SELL ITEMS',
-            layout: 'list-layout',
-            content: {
-                type: 'dynamic',
-                generator: 'generateSellItemsContent'
-            },
-            buttons: [
-                { text: 'BACK', action: 'back' },
-                { text: 'CLOSE', action: 'close' }
-            ]
-        },
-
-        // Level 3: Buy Item
-        'buy-item': {
-            type: 'dialog',
-            level: 3,
-            parent: 'shop',
-            title: 'CONFIRM PURCHASE',
-            layout: 'confirmation',
-            content: {
-                type: 'template',
-                template: 'purchase-confirmation',
-                data: 'selectedItem'
-            },
-            buttons: [
-                { text: 'BUY', action: 'execute:purchaseItem', primary: true },
-                { text: 'CANCEL', action: 'back' }
-            ],
-            validation: {
-                canEnter: 'canAffordSelectedItem'
-            }
-        },
+        // ARSENAL REMOVED - Now directly opens equipment dialog via showEquipmentDialog()
 
         // ========== RESEARCH LAB (Level 1) ==========
         'research-lab': {
@@ -305,35 +97,50 @@ const DIALOG_CONFIG = {
             level: 1,
             parent: 'hub',
             title: '🔬 RESEARCH LABORATORY',
-            layout: 'research-layout',
+            layout: 'standard',
             content: {
                 type: 'dynamic',
-                generator: 'generateResearchOverview'
+                generator: 'generateResearchLab'
             },
-            buttons: {
-                template: 'category-grid',
-                items: [
-                    { id: 'available-research', text: 'AVAILABLE RESEARCH', icon: '🔍', action: 'navigate:available-research' },
-                    { id: 'tech-tree', text: 'TECH TREE', icon: '🌳', action: 'navigate:tech-tree' },
-                    { id: 'research-progress', text: 'PROGRESS', icon: '📊', action: 'navigate:research-progress' }
-                ]
+            buttons: [
+                { text: 'VIEW TECH TREE', action: 'navigate:tech-tree' },
+                { text: 'CLOSE', action: 'close' }
+            ]
+        },
+
+        // ========== HALL OF GLORY (Level 1) ==========
+        'hall-of-glory': {
+            type: 'dialog',
+            level: 1,
+            parent: 'hub',
+            title: '⚰️ HALL OF GLORY',
+            layout: 'memorial-layout',
+            content: {
+                type: 'dynamic',
+                generator: 'generateHallOfGlory'
+            },
+            buttons: [
+                { text: '← BACK TO HUB', action: 'execute:returnToHub' }
+            ],
+            transitions: {
+                enter: { animation: 'fade-in', sound: 'solemn-music' },
+                exit: { animation: 'fade-out' }
             }
         },
 
-        // Level 2: Available Research
-        'available-research': {
+        // ========== MISSION SELECT (Level 1) ==========
+        'mission-select-hub': {
             type: 'dialog',
-            level: 2,
-            parent: 'research-lab',
-            title: 'AVAILABLE RESEARCH',
-            layout: 'list-layout',
+            level: 1,
+            parent: 'hub',
+            title: '🎭 MISSION SELECTION',
+            layout: 'mission-grid',
             content: {
                 type: 'dynamic',
-                generator: 'researchProjects'
+                generator: 'generateMissionSelection'
             },
             buttons: [
-                { text: 'BACK', action: 'back' },
-                { text: 'CLOSE', action: 'close' }
+                { text: 'BACK', action: 'execute:returnToHub' }
             ]
         },
 
@@ -342,89 +149,14 @@ const DIALOG_CONFIG = {
             type: 'dialog',
             level: 1,
             parent: 'hub',
-            title: '📡 INTEL & MISSIONS',
-            layout: 'category-menu',
-            content: {
-                type: 'dynamic',
-                generator: 'generateIntelOverview'
-            },
-            buttons: {
-                template: 'category-grid',
-                items: [
-                    { id: 'intel-reports', text: 'INTEL REPORTS', icon: '📄', action: 'navigate:intel-reports' },
-                    { id: 'mission-select', text: 'MISSION SELECT', icon: '🎯', action: 'navigate:mission-select' },
-                    { id: 'campaign-progress', text: 'CAMPAIGN', icon: '📈', action: 'navigate:campaign-progress' }
-                ]
-            }
-        },
-
-        // Level 2: Mission Select
-        'mission-select': {
-            type: 'dialog',
-            level: 2,
-            parent: 'intel-missions',
-            title: 'SELECT MISSION',
-            layout: 'mission-layout',
-            content: {
-                type: 'list',
-                source: 'missions',
-                filter: 'mission => !mission.completed',
-                template: 'mission-card',
-                groupBy: 'difficulty'
-            },
-            buttons: [
-                { text: 'BACK', action: 'back' },
-                { text: 'CLOSE', action: 'close' }
-            ]
-        },
-
-        // Level 3: Mission Briefing
-        'mission-briefing': {
-            type: 'dialog',
-            level: 3,
-            parent: 'mission-select',
-            title: 'MISSION BRIEFING',
-            layout: 'briefing-layout',
-            content: {
-                type: 'template',
-                template: 'mission-briefing',
-                data: 'selectedMission'
-            },
-            buttons: [
-                { text: 'DEPLOY', action: 'execute:startMission', primary: true, danger: true },
-                { text: 'BACK', action: 'back' }
-            ]
-        },
-
-        // Level 2: Intel Reports
-        'intel-reports': {
-            type: 'dialog',
-            level: 2,
-            parent: 'intel-missions',
-            title: 'INTEL REPORTS',
-            layout: 'list-layout',
-            content: {
-                type: 'dynamic',
-                generator: 'generateIntelReports'
-            },
-            buttons: [
-                { text: 'BACK', action: 'back' }
-            ]
-        },
-
-        // Level 2: Campaign Progress
-        'campaign-progress': {
-            type: 'dialog',
-            level: 2,
-            parent: 'intel-missions',
-            title: 'CAMPAIGN PROGRESS',
+            title: '📡 INTEL & DATA',
             layout: 'standard',
             content: {
                 type: 'dynamic',
-                generator: 'generateCampaignProgress'
+                generator: 'generateIntelData'
             },
             buttons: [
-                { text: 'BACK', action: 'back' }
+                { text: 'CLOSE', action: 'close' }
             ]
         },
 
@@ -438,22 +170,6 @@ const DIALOG_CONFIG = {
             content: {
                 type: 'dynamic',
                 generator: 'generateTechTree'
-            },
-            buttons: [
-                { text: 'BACK', action: 'back' }
-            ]
-        },
-
-        // Level 2: Research Progress
-        'research-progress': {
-            type: 'dialog',
-            level: 2,
-            parent: 'research-lab',
-            title: 'RESEARCH PROGRESS',
-            layout: 'standard',
-            content: {
-                type: 'dynamic',
-                generator: 'generateResearchProgress'
             },
             buttons: [
                 { text: 'BACK', action: 'back' }
@@ -566,10 +282,6 @@ const DIALOG_CONFIG = {
             condition: 'always',
             animation: 'slide-up'
         },
-        'hub->equipment-arsenal': {
-            condition: 'always',
-            animation: 'slide-up'
-        },
         'hub->research-lab': {
             condition: 'hasResearchPoints',
             animation: 'slide-up'
@@ -577,10 +289,6 @@ const DIALOG_CONFIG = {
         'hub->intel-missions': {
             condition: 'always',
             animation: 'slide-up'
-        },
-        'agent-management->view-squad': {
-            condition: 'hasAgents',
-            animation: 'slide-left'
         },
         'agent-management->hire-agents': {
             condition: 'hasCredits',
@@ -716,7 +424,6 @@ const DIALOG_CONFIG = {
                     <div>Accuracy: {{accuracy}}%</div>
                 </div>
                 <div class="agent-actions">
-                    <button data-action="navigate:agent-equipment:{{id}}">Equip</button>
                     <button data-action="execute:dismissAgent:{{id}}" class="danger">Dismiss</button>
                 </div>
             </div>
@@ -742,23 +449,6 @@ const DIALOG_CONFIG = {
             </div>
         `,
 
-        'shop-item-card': `
-            <div class="shop-item {{category}}">
-                <div class="item-icon">{{icon}}</div>
-                <div class="item-info">
-                    <div class="item-name">{{name}}</div>
-                    <div class="item-stats">{{stats}}</div>
-                </div>
-                <div class="item-price">
-                    <span>{{price}} credits</span>
-                    {{#if affordable}}
-                        <button data-action="navigate:buy-item:{{id}}">BUY</button>
-                    {{else}}
-                        <button disabled>INSUFFICIENT</button>
-                    {{/if}}
-                </div>
-            </div>
-        `,
 
         'mission-card': `
             <div class="mission-card difficulty-{{difficulty}}">
