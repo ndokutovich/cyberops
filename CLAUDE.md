@@ -66,8 +66,10 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **rpg-service.js**: RPG system integration service
 
 ### Other Files
-- **index.html**: HTML structure with module loading
-- **cyberops-game.css** (3000+ lines): All styling including animations, HUD, screen transitions, and RPG UI
+- **index.html**: Main entry point with PWA support and module loading
+- **cyberops-game.css** (3500+ lines): All styling including animations, HUD, screen transitions, RPG UI, and turn-based overlays
+- **manifest.json**: PWA manifest for app installation
+- **service-worker.js**: Service worker for offline functionality
 
 ### Library Files (lib/ directory)
 - **lib/three.module.min.js**: Three.js r180 ES6 module
@@ -109,6 +111,7 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
   - **Experience & Leveling**: XP gain from missions and combat
   - **Equipment Bonuses**: Stats affected by equipped weapons and armor
 - **Game Speed**: Adjustable game speed (1x/2x/4x) with auto-slowdown near enemies
+- **Turn-Based Mode**: Tactical combat with action points and initiative system
 - **Keyboard System**: Centralized keyboard handling with customizable bindings
 - **Interaction System**: Universal H key for terminals, explosives, switches, gates, NPCs
 - **Objective Tracking**: Real-time mission progress with extraction point activation
@@ -408,6 +411,7 @@ python -m http.server 8000
 ## Recent Features and Approaches
 
 ### NPC System (game-npc.js)
+- **Campaign-Driven**: NPCs loaded from mission definitions, not hardcoded
 - **Dialog System**: HTML-based dialog boxes with typing animation effect
 - **Quest System**: Side quests with objectives, rewards, and completion tracking
 - **Context-Sensitive Actions**: NPCs offer different options based on nearby objects (terminals, enemies)
@@ -544,6 +548,7 @@ All interactions use the H key with context-sensitive behavior:
 - **ALWAYS** remove unused imports, variables, and functions
 - **ALWAYS** update related documentation when changing code
 - **NEVER** leave behind test code, console.logs (unless for errors), or temporary hacks
+- **NEVER** use console.log for debugging - use event logging system instead
 
 ### NEVER Use Old Approaches
 - **NEVER** create procedural map generation - all maps are embedded
@@ -602,9 +607,9 @@ The mission editor (`mission-editor.html` and `mission-editor.js`) provides comp
 ### Campaign Storage Architecture
 1. **Loading Priority** (in order):
    - IndexedDB (last saved campaign)
-   - Window.MAIN_CAMPAIGN_CONTENT (from code)
+   - Window.MAIN_CAMPAIGN_CONFIG (from campaign-config.js)
    - Default campaign creation
-2. **Mission Sync**: Missions from CAMPAIGN_MISSIONS merged into campaign.missions array
+2. **Mission Sync**: Missions dynamically loaded from campaign act folders
 3. **Persistence**: All changes saved to IndexedDB automatically
 
 ### Mission Structure Requirements
@@ -772,15 +777,12 @@ async saveCampaign() {
 ```
 
 ### 2. Global State Synchronization
-**Issue**: CAMPAIGN_MISSIONS and campaign.missions getting out of sync
-**Solution**: Always sync both directions with explicit sync functions
+**Issue**: Campaign data and game state getting out of sync
+**Solution**: Use ContentLoader service for consistent access
 ```javascript
-syncMissionsToGlobal() {
-    window.CAMPAIGN_MISSIONS = {};
-    this.currentCampaign.missions.forEach(m => {
-        window.CAMPAIGN_MISSIONS[m.id] = m;
-    });
-}
+// Always get content through ContentLoader
+const rpgConfig = window.ContentLoader.getContent('rpgConfig');
+const agents = window.ContentLoader.getContent('agents');
 ```
 
 ### 3. UI State Management
@@ -846,7 +848,7 @@ await this.saveCampaignToDB(campaign);
 
 ### 3. State Synchronization
 **Always** update all related state when making changes:
-- Update both `campaign.missions` AND `window.CAMPAIGN_MISSIONS`
+- Update campaign content through ContentLoader
 - Refresh UI components after data changes
 - Save to IndexedDB after modifications
 
@@ -1106,7 +1108,8 @@ campaigns/
 │   ├── act2/       # Act 2 missions
 │   │   ├── main-02-001.js
 │   │   └── main-02-002.js
-│   └── campaign.json  # Campaign metadata
+│   ├── campaign-config.js  # Campaign configuration and RPG settings
+│   └── campaign-content.js # Campaign agents, weapons, UI strings
 ```
 
 #### Mission Configuration
