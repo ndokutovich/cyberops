@@ -1897,6 +1897,23 @@ CyberOpsGame.prototype.togglePause = function() {
 }
 
 CyberOpsGame.prototype.showPauseMenu = function() {
+    // Always use declarative dialog system
+    // Store mission status for the dialog to display
+    this.pauseMenuData = {
+        missionTitle: this.currentMission?.title || 'Unknown',
+        missionTime: `${Math.floor(this.missionTimer / 60)}:${String(this.missionTimer % 60).padStart(2, '0')}`,
+        agentsAlive: this.agents.filter(a => a.alive).length,
+        totalAgents: this.agents.length,
+        enemiesRemaining: this.enemies.filter(e => e.alive).length,
+        totalEnemies: this.enemies.length
+    };
+    this.dialogEngine.navigateTo('pause-menu');
+
+    // OLD CODE REMOVED - Now always uses declarative system
+    return;
+
+    // Keep old implementation below for reference only
+    if (false) {
         this.showHudDialog(
             '⏸ GAME PAUSED',
             `<div style="text-align: center;">
@@ -1917,6 +1934,7 @@ CyberOpsGame.prototype.showPauseMenu = function() {
                 { text: 'SETTINGS', action: () => this.showSettingsFromPause() }
             ]
         );
+    }
 }
 
 CyberOpsGame.prototype.closePauseMenu = function() {

@@ -364,7 +364,11 @@ class ModalEngine {
             btn.onclick = () => {
                 const index = parseInt(btn.dataset.actionIndex);
                 const button = config.buttons[index];
-                if (button.action) {
+
+                // Call onButtonClick if provided (for DialogManager integration)
+                if (typeof config.onButtonClick === 'function') {
+                    config.onButtonClick(button.action, button);
+                } else if (button.action) {
                     if (button.action === 'close') {
                         modal.close();
                     } else if (typeof button.action === 'function') {

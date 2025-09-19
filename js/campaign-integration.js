@@ -76,6 +76,25 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
                 this.availableAgents = content.agents;
                 this.activeAgents = content.agents.filter(agent => agent.hired);
                 console.log(`✅ Loaded ${content.agents.length} agents`);
+
+                // Re-initialize equipment loadouts for newly loaded agents
+                if (this.activeAgents.length > 0) {
+                    console.log('🔧 Initializing equipment loadouts for active agents...');
+                    if (!this.agentLoadouts) {
+                        this.agentLoadouts = {};
+                    }
+                    this.activeAgents.forEach(agent => {
+                        if (!this.agentLoadouts[agent.id]) {
+                            this.agentLoadouts[agent.id] = {
+                                weapon: null,
+                                armor: null,
+                                utility: null,
+                                special: null
+                            };
+                            console.log(`   - Created loadout for ${agent.name} (ID: ${agent.id})`);
+                        }
+                    });
+                }
             }
 
             // Load weapons

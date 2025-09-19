@@ -302,119 +302,31 @@ CyberOpsGame.prototype.showHallOfGlory = function() {
         );
 }
 
+// Agent Management - Now uses declarative dialog
 CyberOpsGame.prototype.showAgentManagement = function() {
-        this.showHudDialog(
-            '👥 AGENT MANAGEMENT',
-            this.generateAgentManagementContent(),
-            [
-                { text: 'HIRE AGENTS', action: () => { this.transitionDialog(() => this.showHiringDialog()); } },
-                { text: 'MANAGE SQUAD', action: () => { this.closeDialog(); this.showSquadManagement(); } },
-                { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
-            ]
-        );
+    if (window.dialogManager && window.dialogManager.open) {
+        window.dialogManager.open('agent-management');
+    }
 }
+// Content generators moved to declarative dialog system
     
-CyberOpsGame.prototype.generateAgentManagementContent = function() {
-        let content = '<div style="max-height: 300px; overflow-y: auto;">';
-        content += '<h3 style="color: #00ffff; margin-bottom: 15px;">ACTIVE AGENTS</h3>';
-        
-        this.activeAgents.forEach(agent => {
-            content += `
-                <div style="background: rgba(0,255,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
-                    <div style="font-weight: bold; color: #fff;">${agent.name}</div>
-                    <div style="color: #ccc; font-size: 0.9em;">
-                        Specialization: ${agent.specialization} | 
-                        Skills: ${agent.skills.join(', ')} | 
-                        Health: ${agent.health} | Damage: ${agent.damage}
-                    </div>
-                </div>`;
-        });
-        
-        const availableAgents = this.availableAgents.filter(agent => !agent.hired);
-        if (availableAgents.length > 0) {
-            content += '<h3 style="color: #ff00ff; margin-top: 20px; margin-bottom: 15px;">AVAILABLE FOR HIRE</h3>';
-            availableAgents.forEach(agent => {
-                content += `
-                    <div style="background: rgba(255,0,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
-                        <div style="font-weight: bold; color: #fff;">${agent.name}</div>
-                        <div style="color: #ccc; font-size: 0.9em;">
-                            Cost: ${agent.cost} credits | 
-                            Skills: ${agent.skills.join(', ')} | 
-                            Health: ${agent.health} | Damage: ${agent.damage}
-                        </div>
-                    </div>`;
-            });
-        }
-        
-        content += '</div>';
-        return content;
-}
-    
+// Arsenal - Now uses declarative dialog
 CyberOpsGame.prototype.showArsenal = function() {
-    // Initialize equipment system if needed
-    if (!this.agentLoadouts) {
-        this.initializeEquipmentSystem();
+    if (window.dialogManager && window.dialogManager.open) {
+        window.dialogManager.open('equipment-arsenal');
     }
-
-    // Auto-select first agent if none selected (for hub context)
-    if (!this.selectedEquipmentAgent && this.activeAgents && this.activeAgents.length > 0) {
-        this.selectedEquipmentAgent = this.activeAgents[0].id;
-        console.log('🎯 Arsenal: Auto-selected agent:', this.activeAgents[0].name);
-    }
-
-    // Show equipment management directly
-    this.showEquipmentManagement();
 }
+// Content generators moved to declarative dialog system
     
-CyberOpsGame.prototype.generateArsenalContent = function() {
-        console.log('🔫 Generating Arsenal content...');
-        console.log('   Weapons array:', this.weapons);
-        console.log('   Equipment array:', this.equipment);
-
-        let content = '<div style="max-height: 300px; overflow-y: auto;">';
-        content += '<h3 style="color: #00ffff; margin-bottom: 15px;">WEAPONS</h3>';
-
-        if (!this.weapons || this.weapons.length === 0) {
-            content += '<div style="color: #888; padding: 10px;">No weapons available</div>';
-        } else {
-            this.weapons.forEach(weapon => {
-            content += `
-                <div style="background: rgba(0,255,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
-                    <div style="font-weight: bold; color: #fff;">${weapon.name}</div>
-                    <div style="color: #ccc; font-size: 0.9em;">
-                        Owned: ${weapon.owned} | Damage: ${weapon.damage} | Type: ${weapon.type}
-                    </div>
-                </div>`;
-        });
-        }
-
-        content += '<h3 style="color: #ff00ff; margin-top: 20px; margin-bottom: 15px;">EQUIPMENT</h3>';
-
-        if (!this.equipment || this.equipment.length === 0) {
-            content += '<div style="color: #888; padding: 10px;">No equipment available</div>';
-        } else {
-            this.equipment.forEach(item => {
-            let stats = '';
-            if (item.protection) stats += `Protection: ${item.protection}`;
-            if (item.hackBonus) stats += `Hack Bonus: ${item.hackBonus}%`;
-            if (item.stealthBonus) stats += `Stealth Bonus: ${item.stealthBonus}%`;
-            if (item.damage) stats += `Damage: ${item.damage}`;
-            
-            content += `
-                <div style="background: rgba(255,0,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
-                    <div style="font-weight: bold; color: #fff;">${item.name}</div>
-                    <div style="color: #ccc; font-size: 0.9em;">
-                        Owned: ${item.owned} | ${stats}
-                    </div>
-                </div>`;
-        });
-        }
-
-        content += '</div>';
-        return content;
-}
-    
+// Research Lab - Now uses declarative dialog
 CyberOpsGame.prototype.showResearchLab = function() {
+    if (window.dialogManager && window.dialogManager.open) {
+        window.dialogManager.open('research-lab');
+    }
+}
+
+// DEPRECATED - Old implementation kept for reference only
+CyberOpsGame.prototype.showResearchLabOld = function() {
         let content = '<div style="max-height: 400px; overflow-y: auto;">';
         content += `<div style="color: #00ffff; margin-bottom: 20px; text-align: center;">Available Research Points: ${this.researchPoints.toLocaleString()}</div>`;
         
@@ -517,21 +429,35 @@ CyberOpsGame.prototype.startResearch = function(projectId) {
         
         // Apply research benefits
         this.applyResearchBenefits(project);
-        
-        this.showHudDialog(
-            '🎯 RESEARCH COMPLETED',
-            `${project.name} research has been completed!<br><br>
-            <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                <strong>${project.name}</strong><br>
-                Category: ${project.category}<br>
-                Benefit: ${project.description}
-            </div>
-            Research Points Remaining: ${this.researchPoints.toLocaleString()}`,
-            [
-                { text: 'CONTINUE RESEARCH', action: () => this.showResearchLab() },
-                { text: 'BACK TO HUB', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
-            ]
-        );
+
+        // Close the declarative dialog first to prevent z-index issues
+        if (this.dialogEngine && this.dialogEngine.close) {
+            this.dialogEngine.close();
+        }
+
+        // Show completion dialog
+        setTimeout(() => {
+            this.showHudDialog(
+                '🎯 RESEARCH COMPLETED',
+                `${project.name} research has been completed!<br><br>
+                <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <strong>${project.name}</strong><br>
+                    Category: ${project.category}<br>
+                    Benefit: ${project.description}
+                </div>
+                Research Points Remaining: ${this.researchPoints.toLocaleString()}`,
+                [
+                    { text: 'CONTINUE RESEARCH', action: () => {
+                        this.closeDialog();
+                        // Re-open the declarative research dialog
+                        if (this.dialogEngine && this.dialogEngine.navigateTo) {
+                            this.dialogEngine.navigateTo('research-lab');
+                        }
+                    }},
+                    { text: 'BACK TO HUB', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+                ]
+            );
+        }, 100);
         
         this.updateHubStats();
 }
@@ -659,7 +585,15 @@ CyberOpsGame.prototype.completeMissionRewards = function(victory) {
         }
 }
     
+// Intelligence - Now uses declarative dialog
 CyberOpsGame.prototype.showIntelligence = function() {
+    if (window.dialogManager && window.dialogManager.open) {
+        window.dialogManager.open('intelligence');
+    }
+}
+
+// DEPRECATED - Old implementation kept for reference only
+CyberOpsGame.prototype.showIntelligenceOld = function() {
     // Initialize intel system if needed
     if (!this.intelByMission) this.intelByMission = {};
     if (!this.unlockedIntelReports) this.unlockedIntelReports = [];
@@ -950,7 +884,21 @@ CyberOpsGame.prototype.viewAgentDetails = function(agentId) {
 }
     
     // Equipment Shop System
+// Shop - Now uses declarative dialog
 CyberOpsGame.prototype.showShopDialog = function() {
+    if (window.dialogManager && window.dialogManager.open) {
+        window.dialogManager.open('shop');
+    }
+}
+
+// Settings - Uses original implementation from game-settings.js
+CyberOpsGame.prototype.showSettingsFromHub = function() {
+    // Just call the original settings dialog
+    this.showSettings();
+}
+
+// DEPRECATED - Old implementation kept for reference only
+CyberOpsGame.prototype.showShopDialogOld = function() {
         let content = '<div style="max-height: 400px; overflow-y: auto;">';
         content += `<div style="color: #00ffff; margin-bottom: 20px; text-align: center;">Available Credits: ${this.credits.toLocaleString()}</div>`;
         
@@ -1058,3 +1006,5 @@ CyberOpsGame.prototype.buyItem = function(type, itemId) {
         this.updateHubStats();
 }
 
+
+// ============= New Dialog Manager Content Generators =============

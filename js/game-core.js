@@ -13,6 +13,11 @@ class CyberOpsGame {
         // Initialize canvas and core game state
         this.initializeCanvasAndState();
 
+        // Initialize declarative dialog system
+        if (typeof this.initializeDeclarativeDialogs === 'function') {
+            this.initializeDeclarativeDialogs();
+        }
+
         // Enable audio on first user interaction
         this.setupAudioInteraction();
 

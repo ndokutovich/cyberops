@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
+    <!-- Disable caching during development -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -289,14 +294,14 @@
                         <div class="card-status" id="missionStatus">2 Available</div>
                     </div>
                     
-                    <div class="hub-card" onclick="game.showAgentManagement()">
+                    <div class="hub-card" onclick="game.dialogEngine.navigateTo('agent-management')">
                         <div class="card-icon">👥</div>
                         <div class="card-title">AGENTS</div>
                         <div class="card-desc">Hire & manage operatives</div>
                         <div class="card-status" id="agentStatus">4 Active</div>
                     </div>
                     
-                    <div class="hub-card" onclick="game.showResearchLab()">
+                    <div class="hub-card" onclick="game.dialogEngine.navigateTo('research-lab')">
                         <div class="card-icon">🔬</div>
                         <div class="card-title">RESEARCH</div>
                         <div class="card-desc">Upgrade capabilities</div>
@@ -361,14 +366,14 @@
             <div class="hub-panel resources-panel">
                 <div class="panel-header">🛡️ RESOURCES</div>
                 <div class="panel-content">
-                    <div class="hub-card" onclick="game.showArsenal()">
+                    <div class="hub-card" onclick="game.dialogEngine.navigateTo('equipment-arsenal')">
                         <div class="card-icon">🔫</div>
                         <div class="card-title">ARSENAL</div>
                         <div class="card-desc">Weapons & equipment</div>
                         <div class="card-status" id="arsenalStatus">8 Items</div>
                     </div>
                     
-                    <div class="hub-card" onclick="game.showIntelligence()">
+                    <div class="hub-card" onclick="game.dialogEngine.navigateTo('intel-missions')">
                         <div class="card-icon">📡</div>
                         <div class="card-title">INTEL</div>
                         <div class="card-desc">Surveillance & data</div>
@@ -927,7 +932,12 @@
     <script src="js/game-flow.js"></script>
     <script src="js/game-saveload.js"></script>
     <script src="js/game-hub.js"></script>
+    <script src="js/game-hub-dialog-generators.js"></script>
     <script src="js/modal-engine.js"></script>
+    <script src="js/dialog-manager.js"></script>
+    <script src="js/declarative-dialog-engine.js"></script>
+    <script src="js/dialog-config.js"></script>
+    <script src="js/dialog-integration.js"></script>
     <script src="js/game-dialogs.js"></script>
     <script src="js/game-npc.js"></script>
     <script src="js/game-screens.js"></script>
@@ -967,8 +977,35 @@
 
     <script src="js/game-init.js"></script>
 
-    <!-- Service Worker Registration for PWA -->
+    <!-- Service Worker DISABLED - Causes caching issues during development -->
     <script>
+        // DISABLED: Service worker causes caching confusion during development
+        // To re-enable, uncomment the registration code below
+
+        // First, unregister any existing service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister().then(function(success) {
+                        if (success) {
+                            console.log('🗑️ Service Worker unregistered successfully');
+                        }
+                    });
+                }
+            });
+
+            // Clear all caches
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    for (let name of names) {
+                        caches.delete(name);
+                        console.log('🗑️ Cache cleared:', name);
+                    }
+                });
+            }
+        }
+
+        /* DISABLED SERVICE WORKER REGISTRATION
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
@@ -1002,6 +1039,7 @@
                     });
             });
         }
+        */
 
         // PWA Install prompt
         let deferredPrompt;
