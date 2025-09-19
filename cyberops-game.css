@@ -2681,6 +2681,8 @@ body {
                 inset 0 0 30px rgba(0, 255, 255, 0.05);
     pointer-events: auto;
     font-family: 'Orbitron', monospace;
+    display: flex;
+    flex-direction: column;
 }
 
 .declarative-dialog.level-1 {
@@ -2740,7 +2742,8 @@ body {
 .dialog-content {
     padding: 20px;
     overflow-y: auto;
-    max-height: calc(70vh - 120px);
+    flex: 1;
+    min-height: 100px;
 }
 
 .dialog-actions {
@@ -2888,7 +2891,7 @@ body {
 /* Animations */
 @keyframes dialogSlideUp {
     from {
-        transform: translate(-50%, 100%);
+        transform: translate(-50%, calc(-50% + 50px));
         opacity: 0;
     }
     to {
@@ -2907,7 +2910,7 @@ body {
 }
 
 .declarative-dialog {
-    animation: dialogSlideUp 0.3s ease-out;
+    animation: dialogFadeIn 0.3s ease-out;
 }
 
 .agent-name-3d {

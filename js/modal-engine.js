@@ -615,6 +615,9 @@ class ModalEngine {
                 box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
                 transform: scale(0.9);
                 transition: transform 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                max-height: 85vh;
             }
 
             .modal-active .modal-content {
@@ -696,6 +699,7 @@ class ModalEngine {
                 overflow-y: auto;
                 color: #ffffff;
                 line-height: 1.6;
+                min-height: 100px;
             }
 
             .modal-actions {

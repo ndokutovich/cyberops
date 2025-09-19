@@ -33,7 +33,7 @@ const DIALOG_CONFIG = {
                 { text: 'CLOSE', action: 'close' }
             ],
             transitions: {
-                enter: { animation: 'slide-up', sound: 'dialog-open' },
+                enter: { animation: 'fade-in', sound: 'dialog-open' },
                 exit: { animation: 'fade-out', sound: 'dialog-close' }
             }
         },
@@ -276,19 +276,19 @@ const DIALOG_CONFIG = {
     transitions: {
         'hub->hub-settings': {
             condition: 'always',
-            animation: 'slide-up'
+            animation: 'fade-in'
         },
         'hub->agent-management': {
             condition: 'always',
-            animation: 'slide-up'
+            animation: 'fade-in'
         },
         'hub->research-lab': {
             condition: 'hasResearchPoints',
-            animation: 'slide-up'
+            animation: 'fade-in'
         },
         'hub->intel-missions': {
             condition: 'always',
-            animation: 'slide-up'
+            animation: 'fade-in'
         },
         'agent-management->hire-agents': {
             condition: 'hasCredits',
@@ -480,7 +480,7 @@ const DIALOG_CONFIG = {
     // Animation definitions
     animations: {
         'slide-up': {
-            from: { transform: 'translateY(100%)', opacity: 0 },
+            from: { transform: 'translateY(30px)', opacity: 0 },
             to: { transform: 'translateY(0)', opacity: 1 },
             duration: 300,
             easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
