@@ -1981,6 +1981,9 @@ body {
 }
 
 /* HUD Dialog System */
+/* Legacy Dialog Elements - Only hide if modal engine is handling them */
+/* Currently allowing mission select and equipment to use old system */
+
 .hud-dialog {
     position: fixed;
     inset: 0;

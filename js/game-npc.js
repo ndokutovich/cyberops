@@ -717,12 +717,48 @@ CyberOpsGame.prototype.getContextualChoices = function(agent, npc) {
     return choices;
 };
 
-// Show dialog UI
+// Show dialog UI - Now using Modal Engine
 CyberOpsGame.prototype.showDialog = function(dialogData) {
     // Pause the game during dialog
     this.dialogActive = true;
     this.pauseGame();
 
+    // Use new modal engine if available
+    if (window.modalEngine) {
+        // Close any existing NPC dialog
+        this.closeNPCDialog();
+
+        // Convert choices to modal engine format
+        const modalChoices = dialogData.choices ? dialogData.choices.map(choice => ({
+            text: choice.text,
+            action: () => {
+                if (choice.action) choice.action();
+                this.closeNPCDialog();
+            },
+            closeAfter: false  // We handle closing manually
+        })) : [];
+
+        // Create NPC dialog with modal engine
+        this.activeNPCModal = window.modalEngine.show({
+            type: 'npc',
+            position: 'bottom',
+            avatar: dialogData.npc.avatar || '👤',
+            name: dialogData.npc.name,
+            text: dialogData.text,
+            choices: modalChoices,
+            closeButton: true,
+            backdrop: true,
+            closeOnBackdrop: false,
+            onClose: () => {
+                this.activeNPCModal = null;
+                this.dialogActive = false;
+                this.resumeGame();
+            }
+        });
+        return;
+    }
+
+    // Fallback to old system if modal engine not available
     // Create or get dialog container
     let dialogContainer = document.getElementById('npcDialogContainer');
     if (!dialogContainer) {
@@ -1166,8 +1202,16 @@ CyberOpsGame.prototype.showMissionList = function() {
 };
 
 // Close dialog
-// Close NPC dialog specifically
+// Close NPC dialog specifically - Now works with Modal Engine
 CyberOpsGame.prototype.closeNPCDialog = function() {
+    // Close modal engine dialog if exists
+    if (this.activeNPCModal) {
+        this.activeNPCModal.close();
+        this.activeNPCModal = null;
+        return;
+    }
+
+    // Fallback to old system
     const dialogContainer = document.getElementById('npcDialogContainer');
     if (dialogContainer) {
         dialogContainer.style.display = 'none';

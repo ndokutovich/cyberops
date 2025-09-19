@@ -132,7 +132,10 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
 
 // Close equipment dialog
 CyberOpsGame.prototype.closeEquipmentDialog = function() {
-    document.getElementById('equipmentDialog').classList.remove('show');
+    const dialog = document.getElementById('equipmentDialog');
+    if (dialog) {
+        dialog.classList.remove('show');
+    }
 };
 
 // Refresh entire equipment UI

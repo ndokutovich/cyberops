@@ -32,7 +32,8 @@
       "Bash(git show:*)",
       "Bash(git diff:*)",
       "Bash(del:*)",
-      "Bash(start index.html)"
+      "Bash(start index.html)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

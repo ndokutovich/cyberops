@@ -1,4 +1,11 @@
 CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
+    // Use modal engine if available
+    if (window.modalEngine) {
+        this.showIntermissionModalEngine(victory);
+        return;
+    }
+
+    // Fallback to old system
         // Hide game HUD
         document.getElementById('gameHUD').style.display = 'none';
 
@@ -226,6 +233,126 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
         
         // Show the dialog
         document.getElementById('intermissionDialog').classList.add('show');
+}
+
+// New modal engine version of intermission dialog
+CyberOpsGame.prototype.showIntermissionModalEngine = function(victory) {
+    // Hide game HUD
+    document.getElementById('gameHUD').style.display = 'none';
+
+    // Gather mission data
+    const missionSummary = this.gatherMissionSummary(victory);
+    const uiText = this.uiText || {};
+    const title = victory ? (uiText.missionComplete || 'MISSION COMPLETE') : (uiText.missionFailed || 'MISSION FAILED');
+    const statusIcon = victory ? '✅' : '❌';
+    const statusText = victory ? (uiText.missionAccomplished || 'MISSION ACCOMPLISHED') : (uiText.missionFailed || 'MISSION FAILED');
+    const statusColor = victory ? '#00ff00' : '#ff0000';
+
+    // Build content HTML
+    let content = `
+        <div class="intermission-body" style="padding: 20px;">
+            <div class="status-display" style="text-align: center; margin-bottom: 30px;">
+                <div style="font-size: 64px; margin-bottom: 10px;">${statusIcon}</div>
+                <div style="color: ${statusColor}; font-size: 24px; font-weight: bold; text-shadow: 0 0 10px ${statusColor};">
+                    ${statusText}
+                </div>
+            </div>
+
+            <div class="intermission-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div><strong>Mission Time:</strong> <span style="color: #00ffff;">${document.getElementById('missionTimer').textContent}</span></div>
+                <div><strong>Enemies:</strong> <span style="color: #00ffff;">${this.enemies.filter(e => !e.alive).length}/${this.enemies.length}</span></div>
+                <div><strong>Objectives:</strong> <span style="color: #00ffff;">${missionSummary.completedMainObjectives}/${missionSummary.totalMainObjectives}</span></div>
+                <div><strong>Squad:</strong> <span style="color: #00ffff;">${this.agents.filter(a => a.alive).length}/${this.agents.length} Survived</span></div>
+                <div><strong>Intel Found:</strong> <span style="color: #00ffff;">${missionSummary.intelCollected} documents</span></div>
+                <div><strong>Research:</strong> <span style="color: #00ff41;">+${missionSummary.totalResearchPoints} RP</span></div>
+            </div>
+    `;
+
+    // Add objectives breakdown
+    if (missionSummary.mainObjectives.length > 0) {
+        content += '<div style="margin-top: 20px; border-top: 1px solid #00ffff; padding-top: 15px;"><h3 style="color: #00ffff;">Main Objectives:</h3><ul style="list-style: none; padding: 0;">';
+        missionSummary.mainObjectives.forEach(obj => {
+            const icon = obj.completed ? '✅' : '❌';
+            content += `<li style="margin: 5px 0;">${icon} ${obj.description}</li>`;
+        });
+        content += '</ul></div>';
+    }
+
+    // Add quest breakdown
+    if (missionSummary.quests.length > 0) {
+        content += '<div style="margin-top: 20px; border-top: 1px solid #00ffff; padding-top: 15px;"><h3 style="color: #00ffff;">Side Quests:</h3><ul style="list-style: none; padding: 0;">';
+        missionSummary.quests.forEach(quest => {
+            const icon = quest.completed ? '✅' : '❌';
+            content += `<li style="margin: 5px 0;">${icon} ${quest.name}</li>`;
+        });
+        content += '</ul></div>';
+    }
+
+    // Add rewards summary
+    if (victory && missionSummary.totalCredits > 0) {
+        content += `
+            <div style="margin-top: 20px; border-top: 1px solid #00ffff; padding-top: 15px; text-align: center;">
+                <h3 style="color: #00ff41;">Mission Rewards:</h3>
+                <div style="font-size: 20px; color: #00ffff;">
+                    💰 ${missionSummary.totalCredits} Credits | 🔬 ${missionSummary.totalResearchPoints} RP
+                </div>
+            </div>
+        `;
+    }
+
+    content += '</div>';
+
+    // Determine buttons based on victory state
+    const buttons = [];
+
+    if (victory) {
+        buttons.push({
+            text: 'CONTINUE',
+            primary: true,
+            action: () => {
+                this.proceedToHub();
+            }
+        });
+        buttons.push({
+            text: 'COMPLETE',
+            action: () => {
+                this.completeIntermission();
+            }
+        });
+    } else {
+        buttons.push({
+            text: 'RETRY',
+            primary: true,
+            action: () => {
+                this.retryMission();
+            }
+        });
+        buttons.push({
+            text: 'RETURN TO HUB',
+            action: () => {
+                this.returnToHubFromDefeat();
+            }
+        });
+    }
+
+    buttons.push({
+        text: 'MAIN MENU',
+        action: () => {
+            this.backToMainMenu();
+        }
+    });
+
+    // Show modal
+    this.activeIntermissionModal = window.modalEngine.show({
+        type: 'standard',
+        size: 'large',
+        title: statusIcon + ' ' + title,
+        content: content,
+        buttons: buttons,
+        closeButton: false,
+        backdrop: true,
+        closeOnBackdrop: false
+    });
 }
 
 // Gather comprehensive mission summary data
@@ -492,9 +619,18 @@ CyberOpsGame.prototype.backToMainMenuFromIntermission = function() {
 
 // Add close function for intermission dialog X button
 CyberOpsGame.prototype.closeIntermissionDialog = function() {
-        document.getElementById('intermissionDialog').classList.remove('show');
-        // Go back to main menu when closing intermission dialog
+    // Close modal engine dialog if exists
+    if (this.activeIntermissionModal) {
+        this.activeIntermissionModal.close();
+        this.activeIntermissionModal = null;
         this.backToMainMenu();
+        return;
+    }
+
+    // Fallback to old system
+    document.getElementById('intermissionDialog').classList.remove('show');
+    // Go back to main menu when closing intermission dialog
+    this.backToMainMenu();
 }
 
 CyberOpsGame.prototype.showGameCompleteScreen = function() {

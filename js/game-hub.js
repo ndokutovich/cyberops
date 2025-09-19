@@ -307,7 +307,7 @@ CyberOpsGame.prototype.showAgentManagement = function() {
             '👥 AGENT MANAGEMENT',
             this.generateAgentManagementContent(),
             [
-                { text: 'HIRE AGENTS', action: () => { this.closeDialog(); this.showHiringDialog(); } },
+                { text: 'HIRE AGENTS', action: () => { this.transitionDialog(() => this.showHiringDialog()); } },
                 { text: 'MANAGE SQUAD', action: () => { this.closeDialog(); this.showSquadManagement(); } },
                 { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
             ]
@@ -759,7 +759,7 @@ CyberOpsGame.prototype.showIntelligence = function() {
         '📡 INTELLIGENCE NETWORK',
         content,
         [
-            { text: 'RESEARCH LAB', action: () => { this.closeDialog(); this.showResearchLab(); } },
+            { text: 'RESEARCH LAB', action: () => { this.transitionDialog(() => this.showResearchLab()); } },
             { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
         ]
     );
@@ -809,10 +809,11 @@ CyberOpsGame.prototype.showHiringDialog = function() {
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
                         <span style="color: #00ffff; font-weight: bold;">Cost: ${agent.cost.toLocaleString()} credits</span>
-                        <button onclick="game.hireAgent(${agent.id})" 
-                                style="background: ${canAfford ? '#1e3c72' : '#666'}; 
-                                       color: ${canAfford ? '#fff' : '#999'}; 
-                                       border: 1px solid ${canAfford ? '#00ffff' : '#888'}; 
+                        <button data-agent-id="${agent.id}"
+                                class="hire-agent-btn"
+                                style="background: ${canAfford ? '#1e3c72' : '#666'};
+                                       color: ${canAfford ? '#fff' : '#999'};
+                                       border: 1px solid ${canAfford ? '#00ffff' : '#888'};
                                        padding: 8px 15px; border-radius: 4px; cursor: ${canAfford ? 'pointer' : 'not-allowed'};"
                                 ${!canAfford ? 'disabled' : ''}>
                             ${canAfford ? 'HIRE' : 'INSUFFICIENT FUNDS'}
@@ -827,9 +828,32 @@ CyberOpsGame.prototype.showHiringDialog = function() {
             '👥 HIRE AGENTS',
             content,
             [
-                { text: 'BACK', action: () => { this.closeDialog(); this.showAgentManagement(); } }
+                { text: 'BACK TO AGENTS', action: () => { this.transitionDialog(() => this.showAgentManagement()); } },
+                { text: 'CLOSE', action: () => { this.closeDialog(); } }
             ]
         );
+
+        // Add event delegation for hire buttons after a short delay to ensure DOM is ready
+        setTimeout(() => {
+            // Try to find buttons in both modal engine and legacy dialog
+            const modalContainer = document.getElementById('modalEngineContainer');
+            const legacyDialog = document.getElementById('hudDialog');
+
+            const containers = [modalContainer, legacyDialog].filter(c => c);
+
+            containers.forEach(container => {
+                const hireButtons = container.querySelectorAll('.hire-agent-btn:not([disabled])');
+                hireButtons.forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const agentId = parseInt(btn.dataset.agentId);
+                        console.log('Hiring agent:', agentId);
+                        this.hireAgent(agentId);
+                    };
+                });
+            });
+        }, 100);
 }
     
 CyberOpsGame.prototype.hireAgent = function(agentId) {
@@ -852,8 +876,9 @@ CyberOpsGame.prototype.hireAgent = function(agentId) {
             </div>
             Credits Remaining: ${this.credits.toLocaleString()}`,
             [
-                { text: 'HIRE MORE', action: () => { this.closeDialog(); this.showHiringDialog(); } },
-                { text: 'BACK TO HUB', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+                { text: 'HIRE MORE', action: () => { this.transitionDialog(() => this.showHiringDialog()); } },
+                { text: 'VIEW SQUAD', action: () => { this.closeDialog(); this.showEquipmentManagement(); } },
+                { text: 'BACK TO AGENTS', action: () => { this.closeDialog(); this.showAgentManagement(); } }
             ]
         );
         
