@@ -22,6 +22,16 @@ CyberOpsGame.prototype.initializeEquipmentSystem = function() {
             };
         }
     });
+
+    // Add global handler for equipment dialog close buttons (fallback)
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#equipmentDialog .dialog-close') ||
+            (e.target.textContent === '[X]' && e.target.closest('#equipmentDialog')) ||
+            (e.target.textContent === 'CLOSE' && e.target.closest('#equipmentDialog'))) {
+            console.log('🔒 Equipment close button clicked via delegation');
+            this.closeEquipmentDialog();
+        }
+    });
 };
 
 // Open equipment management dialog
@@ -46,7 +56,43 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
     }
 
     const dialog = document.getElementById('equipmentDialog');
-    dialog.classList.add('show');
+
+    // Ensure dialog is properly positioned before showing (prevents jumping)
+    dialog.style.display = 'flex';
+    dialog.style.alignItems = 'center';
+    dialog.style.justifyContent = 'center';
+
+    // Add a small delay to prevent visual jump
+    requestAnimationFrame(() => {
+        dialog.classList.add('show');
+    });
+
+    // Ensure close buttons are properly wired (in case inline onclick isn't working)
+    setTimeout(() => {
+        const closeButton = dialog.querySelector('.dialog-close');
+        const closeBtn = dialog.querySelector('button[onclick*="closeEquipmentDialog"]');
+
+        if (closeButton && !closeButton._hasHandler) {
+            closeButton._hasHandler = true;
+            closeButton.style.cursor = 'pointer';
+            closeButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔒 Close button clicked');
+                this.closeEquipmentDialog();
+            });
+        }
+
+        if (closeBtn && !closeBtn._hasHandler) {
+            closeBtn._hasHandler = true;
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔒 CLOSE button clicked');
+                this.closeEquipmentDialog();
+            });
+        }
+    }, 100);
 
     // Update button visibility based on screen
     if (this.currentScreen === 'game') {
@@ -132,9 +178,31 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
 
 // Close equipment dialog
 CyberOpsGame.prototype.closeEquipmentDialog = function() {
+    console.log('🔒 Closing equipment dialog...');
+
     const dialog = document.getElementById('equipmentDialog');
     if (dialog) {
+        // Remove show class
         dialog.classList.remove('show');
+
+        // Also hide with style to be sure
+        dialog.style.display = 'none';
+
+        // Clear any inline styles that might override
+        setTimeout(() => {
+            dialog.style.display = '';
+        }, 100);
+    }
+
+    // If there's an active modal from modal engine, close it too
+    if (this.activeModal) {
+        this.activeModal.close?.();
+        this.activeModal = null;
+    }
+
+    // Close any declarative dialogs if open
+    if (this.dialogEngine && this.dialogEngine.currentState) {
+        this.dialogEngine.closeAll();
     }
 };
 

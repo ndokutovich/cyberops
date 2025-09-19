@@ -1043,6 +1043,26 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         }
     });
 
+    // Select RPG agent for character sheet
+    engine.registerAction('selectRPGAgent', function(agentId) {
+        const agent = game.activeAgents.find(a => a.id === parseInt(agentId));
+        if (agent) {
+            game.selectedRPGAgent = agent;
+            // Refresh the current dialog
+            if (this.renderState) {
+                this.renderState(this.currentState.id, this.stateData);
+            }
+        }
+    });
+
+    // Open equipment manager from character sheet
+    engine.registerAction('openEquipmentManager', function() {
+        if (game.dialogEngine) {
+            game.dialogEngine.closeAll();
+        }
+        game.showEquipmentManagement();
+    });
+
     // Apply settings
     engine.registerAction('applySettings', function() {
         const musicVolume = document.getElementById('music-volume');

@@ -1,3 +1,18 @@
+// Select agent for RPG character sheet
+CyberOpsGame.prototype.selectRPGAgent = function(agentId) {
+    const agent = this.activeAgents.find(a => a.id === parseInt(agentId));
+    if (agent) {
+        this.selectedRPGAgent = agent;
+        // Refresh dialog if open
+        if (this.dialogEngine && this.dialogEngine.currentState) {
+            const currentStateId = this.dialogEngine.currentState.id;
+            if (currentStateId && currentStateId.includes('character')) {
+                this.dialogEngine.renderState(currentStateId, this.dialogEngine.stateData);
+            }
+        }
+    }
+};
+
 // Getter and setter for selectedAgent with logging
 Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
     get: function() {

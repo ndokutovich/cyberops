@@ -381,7 +381,7 @@ class DeclarativeDialogEngine {
         const closeBtn = element.querySelector('.dialog-close-button');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                this.closeAll();
+                this.close();
             });
         }
 
@@ -497,6 +497,29 @@ class DeclarativeDialogEngine {
                 this.currentState = null;
                 this.returnToBase();
             }
+        }
+    }
+
+    /**
+     * Close current dialog only
+     */
+    close() {
+        if (this.stateStack.length > 0) {
+            const state = this.stateStack.pop();
+            this.closeStateDialog(state.id);
+
+            // If there are more dialogs in the stack, show the previous one
+            if (this.stateStack.length > 0) {
+                const prevState = this.stateStack[this.stateStack.length - 1];
+                this.currentState = prevState.state;
+                // Re-render the previous state
+                this.navigateTo(prevState.state.id, prevState.params);
+            } else {
+                this.currentState = null;
+                this.returnToBase();
+            }
+
+            this.updateBreadcrumb();
         }
     }
 
@@ -739,8 +762,13 @@ class DeclarativeDialogEngine {
             this.back();
         });
 
-        // Close
+        // Close current dialog only
         this.actionRegistry.set('close', () => {
+            this.close();
+        });
+
+        // Close all dialogs
+        this.actionRegistry.set('closeAll', () => {
             this.closeAll();
         });
 

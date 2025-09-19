@@ -18,6 +18,16 @@ body {
     touch-action: none;
 }
 
+/* RPG Character Button Pulse Animation */
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 4px 15px rgba(153,102,255,0.3);
+    }
+    50% {
+        box-shadow: 0 4px 25px rgba(153,102,255,0.6);
+    }
+}
+
 /* Main Menu */
 #mainMenu {
     position: fixed;

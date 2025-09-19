@@ -11,9 +11,16 @@ CyberOpsGame.prototype.showCharacterSheet = function(agentIdOrName) {
     // Find agent by ID or name
     let agent;
     if (typeof agentIdOrName === 'string') {
-        agent = this.agents.find(a => a.id === agentIdOrName || a.name === agentIdOrName);
-    } else {
+        // Check both in-game agents and hub active agents
+        agent = (this.agents && this.agents.find(a => a.id === agentIdOrName || a.name === agentIdOrName)) ||
+                (this.activeAgents && this.activeAgents.find(a => a.id === agentIdOrName || a.name === agentIdOrName));
+    } else if (agentIdOrName && typeof agentIdOrName === 'object') {
         agent = agentIdOrName;
+    } else {
+        // If no parameter, try to get selected or first available
+        agent = this._selectedAgent ||
+                (this.agents && this.agents[0]) ||
+                (this.activeAgents && this.activeAgents[0]);
     }
 
     if (!agent) {

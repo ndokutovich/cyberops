@@ -92,25 +92,47 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         'Q': () => this.useAbilityForAllSelected(4),  // Shield
         'q': () => this.useAbilityForAllSelected(4),  // Shield
 
-        // RPG System
+        // RPG System - Use existing character sheet
         'C': () => {
-            if (this.currentScreen === 'game' && this._selectedAgent) {
-                console.log('📊 Opening character sheet for:', this._selectedAgent.name);
-                if (this.showCharacterSheet) {
-                    this.showCharacterSheet(this._selectedAgent.id || this._selectedAgent.name);
-                } else {
-                    console.warn('showCharacterSheet function not found');
-                }
+            console.log('📊 Opening character sheet...');
+
+            // Determine which agent to show
+            let agentToShow = null;
+
+            if (this.currentScreen === 'game') {
+                // In-game: use selected agent
+                agentToShow = this._selectedAgent;
+            } else if (this.currentScreen === 'hub' || this.currentScreen === 'menu') {
+                // In hub/menu: use first active agent
+                agentToShow = this.activeAgents && this.activeAgents.length > 0 ? this.activeAgents[0] : null;
+            }
+
+            if (agentToShow) {
+                // Use the existing showCharacterSheet function
+                this.showCharacterSheet(agentToShow.id || agentToShow.name || agentToShow);
+            } else {
+                console.warn('No agent available for character sheet');
             }
         },
         'c': () => {
-            if (this.currentScreen === 'game' && this._selectedAgent) {
-                console.log('📊 Opening character sheet for:', this._selectedAgent.name);
-                if (this.showCharacterSheet) {
-                    this.showCharacterSheet(this._selectedAgent.id || this._selectedAgent.name);
-                } else {
-                    console.warn('showCharacterSheet function not found');
-                }
+            console.log('📊 Opening character sheet...');
+
+            // Determine which agent to show
+            let agentToShow = null;
+
+            if (this.currentScreen === 'game') {
+                // In-game: use selected agent
+                agentToShow = this._selectedAgent;
+            } else if (this.currentScreen === 'hub' || this.currentScreen === 'menu') {
+                // In hub/menu: use first active agent
+                agentToShow = this.activeAgents && this.activeAgents.length > 0 ? this.activeAgents[0] : null;
+            }
+
+            if (agentToShow) {
+                // Use the existing showCharacterSheet function
+                this.showCharacterSheet(agentToShow.id || agentToShow.name || agentToShow);
+            } else {
+                console.warn('No agent available for character sheet');
             }
         },
         'I': () => {

@@ -113,6 +113,15 @@ CyberOpsGame.prototype.updateHubStats = function() {
                 intelStatus.textContent = `${totalIntel} Intel`;
             }
         }
+
+        // Update character status
+        const characterStatus = document.getElementById('characterStatus');
+        if (characterStatus && this.activeAgents && this.activeAgents[0]) {
+            const agent = this.activeAgents[0];
+            const level = agent.level || 1;
+            const xp = agent.xp || 0;
+            characterStatus.textContent = `Level ${level}`;
+        }
 }
     
 CyberOpsGame.prototype.showMissionsFromHub = function() {
