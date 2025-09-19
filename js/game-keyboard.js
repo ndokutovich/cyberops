@@ -259,13 +259,12 @@ CyberOpsGame.prototype.setupKeyboardListeners = function() {
         // Only process game keys when in game screen
         if (this.currentScreen !== 'game' && e.key !== 'Escape') return;
 
-        // Get the handler for this key - try both cases and the code
+        // Get the handler for this key - try both cases
         const handler = this.keyBindings[e.key] ||
                        this.keyBindings[e.key.toUpperCase()] ||
                        this.keyBindings[e.key.toLowerCase()];
 
         if (handler) {
-            console.log(`⌨️ Key pressed: ${e.key}, executing handler`);
             e.preventDefault();
             handler(e);
         }
