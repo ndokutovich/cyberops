@@ -631,12 +631,14 @@ class RPGInventory {
         const itemIndex = this.items.findIndex(i => i.id === itemId);
         if (itemIndex === -1) {
             // Item not in inventory, but allow equipping from config
-            if (window.RPG_CONFIG?.items) {
+            const rpgConfig = this.game?.getRPGConfig ? this.game.getRPGConfig() :
+                             (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {});
+            if (rpgConfig?.items) {
                 // Search all item categories for the item
                 let foundItem = null;
-                for (const category of Object.keys(window.RPG_CONFIG.items)) {
-                    if (window.RPG_CONFIG.items[category][itemId]) {
-                        foundItem = window.RPG_CONFIG.items[category][itemId];
+                for (const category of Object.keys(rpgConfig.items)) {
+                    if (rpgConfig.items[category][itemId]) {
+                        foundItem = rpgConfig.items[category][itemId];
                         break;
                     }
                 }

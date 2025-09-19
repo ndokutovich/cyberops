@@ -4,11 +4,26 @@
  * Provides backwards-compatible wrappers and adapters
  */
 
+// Helper to get RPG config
+CyberOpsGame.prototype.getRPGConfig = function() {
+    // Try content loader first
+    if (window.ContentLoader) {
+        const config = window.ContentLoader.getContent('rpgConfig');
+        if (config) return config;
+    }
+    // Fallback to campaign config
+    if (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig) {
+        return window.MAIN_CAMPAIGN_CONFIG.rpgConfig;
+    }
+    // Return empty config if none found
+    return {};
+};
+
 // Integration layer for existing agent/enemy/NPC systems
 CyberOpsGame.prototype.initRPGSystem = function() {
     console.log('🎮 Initializing RPG System...');
 
-    // Store original functions for backwards compatibility
+    // Store original functions
     this._originalCreateAgent = this.createAgent;
     this._originalCreateEnemy = this.createEnemy;
     this._originalCreateNPC = this.createNPC;
@@ -30,9 +45,27 @@ CyberOpsGame.prototype.initRPGSystem = function() {
         this.inventoryManager.game = this;
         this.shopManager = new ShopManager();
         this.shopManager.game = this;
+        // Load shops after game reference is set
+        this.shopManager.loadShops();
+    }
 
-        // Load RPG data from config
-        this.rpgManager.loadConfig(window.RPG_CONFIG || {});
+    // Load RPG config from campaign
+    let rpgConfig = null;
+
+    // Try to get from flexible content loader
+    if (window.ContentLoader) {
+        rpgConfig = window.ContentLoader.getContent('rpgConfig');
+    }
+
+    // Fallback to campaign config
+    if (!rpgConfig && window.MAIN_CAMPAIGN_CONFIG?.rpgConfig) {
+        rpgConfig = window.MAIN_CAMPAIGN_CONFIG.rpgConfig;
+    }
+
+    if (rpgConfig) {
+        this.rpgManager.loadConfig(rpgConfig);
+    } else {
+        console.error('❌ No RPG config found in campaign!');
     }
 
     // Sync existing hub equipment with RPG system
@@ -403,13 +436,15 @@ class InventoryManager {
 class ShopManager {
     constructor() {
         this.shops = new Map();
-        this.loadShops();
+        this.game = null; // Will be set when game initializes
     }
 
     loadShops() {
         // Load shops from config
-        if (window.RPG_CONFIG?.shops) {
-            Object.entries(window.RPG_CONFIG.shops).forEach(([id, shop]) => {
+        const rpgConfig = this.game?.getRPGConfig ? this.game.getRPGConfig() :
+                         (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {});
+        if (rpgConfig?.shops) {
+            Object.entries(rpgConfig.shops).forEach(([id, shop]) => {
                 this.shops.set(id, {
                     ...shop,
                     inventory: this.generateShopInventory(shop)
@@ -424,8 +459,10 @@ class ShopManager {
         if (shop.itemCategories) {
             shop.itemCategories.forEach(category => {
                 // Get items from config matching category
-                if (window.RPG_CONFIG?.items?.[category]) {
-                    Object.entries(window.RPG_CONFIG.items[category]).forEach(([id, item]) => {
+                const rpgConfig = this.game?.getRPGConfig ? this.game.getRPGConfig() :
+                                 (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {});
+                if (rpgConfig?.items?.[category]) {
+                    Object.entries(rpgConfig.items[category]).forEach(([id, item]) => {
                         inventory.push({
                             id,
                             ...item,
@@ -654,8 +691,9 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                 };
 
                 // Add to RPG config if not exists
-                if (!window.RPG_CONFIG.items.weapons[rpgWeapon.id]) {
-                    window.RPG_CONFIG.items.weapons[rpgWeapon.id] = rpgWeapon;
+                const rpgConfig = this.getRPGConfig();
+                if (rpgConfig.items && !rpgConfig.items.weapons[rpgWeapon.id]) {
+                    rpgConfig.items.weapons[rpgWeapon.id] = rpgWeapon;
                 }
 
                 console.log(`   ✅ Synced weapon: ${weapon.name} (x${weapon.owned})`);
@@ -689,8 +727,9 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                 if (item.explosiveDamage) rpgItem.stats.explosiveDamage = item.explosiveDamage;
 
                 // Add to RPG config if not exists
-                if (!window.RPG_CONFIG.items[itemType][rpgItem.id]) {
-                    window.RPG_CONFIG.items[itemType][rpgItem.id] = rpgItem;
+                const rpgConfig = this.getRPGConfig();
+                if (rpgConfig.items && !rpgConfig.items[itemType][rpgItem.id]) {
+                    rpgConfig.items[itemType][rpgItem.id] = rpgItem;
                 }
 
                 console.log(`   ✅ Synced ${itemType}: ${item.name} (x${item.owned})`);
@@ -725,7 +764,8 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                         const rpgWeaponId = `weapon_${loadout.weapon}`;
                         // Add weapon to inventory items if not there
                         if (!inventory.items.find(i => i.id === rpgWeaponId)) {
-                            const rpgWeapon = window.RPG_CONFIG.items.weapons[rpgWeaponId];
+                            const rpgConfig = this.getRPGConfig();
+                            const rpgWeapon = rpgConfig?.items?.weapons?.[rpgWeaponId];
                             if (rpgWeapon) {
                                 inventory.items.push({
                                     ...rpgWeapon,
@@ -746,7 +786,8 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                         const rpgArmorId = `armor_${loadout.armor}`;
                         // Add armor to inventory items if not there
                         if (!inventory.items.find(i => i.id === rpgArmorId)) {
-                            const rpgArmor = window.RPG_CONFIG.items.armor[rpgArmorId];
+                            const rpgConfig = this.getRPGConfig();
+                            const rpgArmor = rpgConfig?.items?.armor?.[rpgArmorId];
                             if (rpgArmor) {
                                 inventory.items.push({
                                     ...rpgArmor,
@@ -765,7 +806,8 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                     const utility = this.getItemById('equipment', loadout.utility);
                     if (utility) {
                         const rpgUtilityId = `consumables_${loadout.utility}`;
-                        const rpgUtility = window.RPG_CONFIG.items.consumables[rpgUtilityId];
+                        const rpgConfig = this.getRPGConfig();
+                        const rpgUtility = rpgConfig?.items?.consumables?.[rpgUtilityId];
                         if (rpgUtility && !inventory.items.find(i => i.id === rpgUtilityId)) {
                             inventory.addItem(rpgUtility, 1);
                             console.log(`   ✅ Added ${utility.name} to ${agent.name}'s inventory`);
@@ -794,7 +836,8 @@ CyberOpsGame.prototype.calculateDamage = function(attacker, target, weaponType =
     let damageLog = [`   Base Damage: ${baseDamage}`];
 
     // Get weapon config
-    const weapon = window.RPG_CONFIG?.items?.weapons?.[weaponType];
+    const rpgConfig = this.getRPGConfig();
+    const weapon = rpgConfig?.items?.weapons?.[weaponType];
     if (weapon) {
         baseDamage = weapon.damage || baseDamage;
         damageLog.push(`   Weapon Damage: ${weapon.damage} (from ${weaponType})`);
@@ -823,7 +866,8 @@ CyberOpsGame.prototype.calculateDamage = function(attacker, target, weaponType =
         // Check for damage perks
         if (attacker.rpgEntity.perks && attacker.rpgEntity.perks.length > 0) {
             attacker.rpgEntity.perks.forEach(perkId => {
-                const perk = window.RPG_CONFIG?.perks?.[perkId];
+                const rpgConfig = this.getRPGConfig();
+                const perk = rpgConfig?.perks?.[perkId];
                 if (perk?.effects?.damageBonus) {
                     const oldDamage = baseDamage;
                     baseDamage *= (1 + perk.effects.damageBonus);
@@ -940,7 +984,8 @@ CyberOpsGame.prototype.dropLoot = function(entity) {
 CyberOpsGame.prototype.useSkill = function(agent, skillId, target) {
     if (!agent.rpgEntity) return false;
 
-    const skill = window.RPG_CONFIG?.skills?.[skillId];
+    const rpgConfig = this.getRPGConfig();
+    const skill = rpgConfig?.skills?.[skillId];
     if (!skill) return false;
 
     // Check if agent has skill

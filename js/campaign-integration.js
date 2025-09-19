@@ -18,6 +18,32 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
     console.log(`📦 Loading content for campaign: ${campaignId}`);
 
     try {
+        // First try to use the new flexible content loader
+        if (window.ContentLoader && window.CampaignSystem?.campaignConfigs?.[campaignId]) {
+            console.log('🚀 Using flexible content loader system');
+            const campaign = window.CampaignSystem.campaignConfigs[campaignId];
+            const success = await window.ContentLoader.loadCampaign(campaign, this);
+
+            if (success) {
+                console.log('✅ Campaign loaded via flexible system');
+
+                // Apply starting resources if new game
+                if (!this.campaignStarted) {
+                    const economy = window.ContentLoader.getContent('economy');
+                    if (economy) {
+                        this.credits = economy.startingCredits || 5000;
+                        this.researchPoints = economy.startingResearchPoints || 100;
+                        this.worldControl = economy.startingWorldControl || 0;
+                    }
+                    this.campaignStarted = true;
+                }
+
+                // The flexible loader already set up agents, weapons, etc.
+                return;
+            }
+        }
+
+
         // Load the campaign content file
         const script = document.createElement('script');
         script.src = `campaigns/${campaignId}/campaign-content.js`;
@@ -35,7 +61,7 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
                        (window.CampaignSystem && window.CampaignSystem.getCampaignContent && window.CampaignSystem.getCampaignContent(campaignId));
 
         if (content) {
-            console.log('✅ Campaign content loaded, applying to game...');
+            console.log('✅ Campaign content loaded (legacy), applying to game...');
 
             // Apply starting resources if this is a new game
             if (!this.campaignStarted) {

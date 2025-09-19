@@ -27,9 +27,12 @@ class RPGService {
         this.shopManager = new ShopManager();
         this.shopManager.game = game;
 
-        // Load config
-        if (window.RPG_CONFIG) {
-            this.rpgManager.loadConfig(window.RPG_CONFIG);
+        // Get RPG config from campaign
+        this.loadRPGConfig();
+
+        // Load shops after config is loaded
+        if (this.shopManager) {
+            this.shopManager.loadShops();
         }
 
         // Store references on game instance
@@ -61,7 +64,8 @@ class RPGService {
 
         // Use RPG damage calculation
         let baseDamage = 20;
-        const weapon = window.RPG_CONFIG?.items?.weapons?.[weaponType];
+        const rpgConfig = this.getRPGConfig();
+        const weapon = rpgConfig?.items?.weapons?.[weaponType];
         if (weapon) {
             baseDamage = weapon.damage || baseDamage;
         }
@@ -133,8 +137,9 @@ class RPGService {
                         quantity: weapon.owned
                     };
 
-                    if (!window.RPG_CONFIG.items.weapons[rpgWeapon.id]) {
-                        window.RPG_CONFIG.items.weapons[rpgWeapon.id] = rpgWeapon;
+                    const rpgConfig = this.getRPGConfig();
+                    if (rpgConfig.items && !rpgConfig.items.weapons[rpgWeapon.id]) {
+                        rpgConfig.items.weapons[rpgWeapon.id] = rpgWeapon;
                     }
                 }
             });
@@ -160,8 +165,9 @@ class RPGService {
                     if (item.hackBonus) rpgItem.stats.hackBonus = item.hackBonus;
                     if (item.stealthBonus) rpgItem.stats.stealthBonus = item.stealthBonus;
 
-                    if (!window.RPG_CONFIG.items[itemType][rpgItem.id]) {
-                        window.RPG_CONFIG.items[itemType][rpgItem.id] = rpgItem;
+                    const rpgConfig = this.getRPGConfig();
+                    if (rpgConfig.items && !rpgConfig.items[itemType][rpgItem.id]) {
+                        rpgConfig.items[itemType][rpgItem.id] = rpgItem;
                     }
                 }
             });
@@ -201,7 +207,8 @@ class RPGService {
                     const weapon = game.getItemById('weapon', loadout.weapon);
                     if (weapon) {
                         const rpgWeaponId = `weapon_${loadout.weapon}`;
-                        const rpgWeapon = window.RPG_CONFIG?.items?.weapons?.[rpgWeaponId];
+                        const rpgConfig = this.getRPGConfig();
+                        const rpgWeapon = rpgConfig?.items?.weapons?.[rpgWeaponId];
                         if (rpgWeapon) {
                             // Add to inventory first, then equip
                             const itemToAdd = {
@@ -221,7 +228,8 @@ class RPGService {
                     const armor = game.getItemById('armor', loadout.armor);
                     if (armor) {
                         const rpgArmorId = `armor_${loadout.armor}`;
-                        const rpgArmor = window.RPG_CONFIG?.items?.armor?.[rpgArmorId];
+                        const rpgConfig = this.getRPGConfig();
+                        const rpgArmor = rpgConfig?.items?.armor?.[rpgArmorId];
                         if (rpgArmor) {
                             // Add to inventory first, then equip
                             const itemToAdd = {
@@ -241,7 +249,8 @@ class RPGService {
                     const utility = game.getItemById('equipment', loadout.utility);
                     if (utility) {
                         const rpgUtilityId = `consumables_${loadout.utility}`;
-                        const rpgUtility = window.RPG_CONFIG?.items?.consumables?.[rpgUtilityId];
+                        const rpgConfig = this.getRPGConfig();
+                        const rpgUtility = rpgConfig?.items?.consumables?.[rpgUtilityId];
                         if (rpgUtility) {
                             // Add to inventory
                             const itemToAdd = {
@@ -297,5 +306,46 @@ class RPGService {
         enemy.rpgEntity = rpgEntity;
 
         return rpgEntity;
+    }
+
+    /**
+     * Load RPG config from campaign
+     */
+    loadRPGConfig() {
+        let rpgConfig = null;
+
+        // Try content loader
+        if (window.ContentLoader) {
+            rpgConfig = window.ContentLoader.getContent('rpgConfig');
+        }
+
+        // Fallback to campaign config
+        if (!rpgConfig && window.MAIN_CAMPAIGN_CONFIG?.rpgConfig) {
+            rpgConfig = window.MAIN_CAMPAIGN_CONFIG.rpgConfig;
+        }
+
+        if (rpgConfig) {
+            this.rpgManager.loadConfig(rpgConfig);
+            this.rpgConfig = rpgConfig;
+        } else {
+            console.error('❌ No RPG config found in campaign!');
+        }
+    }
+
+    /**
+     * Get RPG config from campaign
+     */
+    getRPGConfig() {
+        return this.rpgConfig || this.rpgManager?.config || {};
+    }
+
+    /**
+     * Set RPG config dynamically
+     */
+    setConfig(config) {
+        this.rpgConfig = config;
+        if (this.rpgManager) {
+            this.rpgManager.loadConfig(config);
+        }
     }
 }

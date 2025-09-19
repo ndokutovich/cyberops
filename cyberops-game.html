@@ -865,6 +865,10 @@
     <script src="js/services/rpg-service.js"></script>
     <script src="js/services/game-services.js"></script>
 
+    <!-- Flexible Engine System (interface and loader first) -->
+    <script src="js/engine/campaign-interface.js"></script>
+    <script src="js/engine/content-loader.js"></script>
+
     <!-- Game Modules - Load in sequence to preserve functionality -->
     <script src="js/game-core.js"></script>
     <script src="js/game-equipment.js"></script>
@@ -920,12 +924,14 @@
     <script src="js/game-screen-music.js"></script>
 
     <!-- RPG System -->
-    <script src="js/game-rpg-config.js"></script>
     <script src="js/game-rpg-system.js"></script>
     <script src="js/game-rpg-integration.js"></script>
     <script src="js/game-rpg-ui.js"></script>
     <script src="js/game-effects-config.js"></script>
     <script src="js/game-visual-effects.js"></script>
+
+    <!-- Engine Integration (must load after CyberOpsGame is defined) -->
+    <script src="js/engine/engine-integration.js"></script>
     <script src="js/game-loop.js"></script>
     <script src="js/game-pathfinding.js"></script>
     <script src="js/game-rendering.js"></script>
@@ -939,6 +945,10 @@
     <script src="js/game-mission-executor.js"></script>
     <script src="js/game-mission-integration.js"></script>
     <script src="js/campaign-integration.js"></script>
+
+    <!-- Campaign Configuration -->
+    <script src="campaigns/main/campaign-content.js"></script>
+    <script src="campaigns/main/campaign-config.js"></script>
 
     <script src="js/game-init.js"></script>
 </body>

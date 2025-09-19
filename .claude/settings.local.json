@@ -28,7 +28,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(del cleanup-missions.js)",
-      "Bash(start test-turnbased.html)"
+      "Bash(start test-turnbased.html)",
+      "Bash(git show:*)",
+      "Bash(git diff:*)",
+      "Bash(del:*)"
     ],
     "deny": [],
     "ask": []

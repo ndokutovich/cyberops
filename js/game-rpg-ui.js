@@ -169,7 +169,8 @@ CyberOpsGame.prototype.renderSkillList = function(skills) {
     }
 
     return skills.map(skillId => {
-        const skill = window.RPG_CONFIG?.skills?.[skillId];
+        const rpgConfig = this.game?.getRPGConfig ? this.game.getRPGConfig() : {};
+        const skill = rpgConfig?.skills?.[skillId];
         if (!skill) return '';
 
         return `
@@ -189,7 +190,8 @@ CyberOpsGame.prototype.renderPerkList = function(perks) {
     }
 
     return perks.map(perkId => {
-        const perk = window.RPG_CONFIG?.perks?.[perkId];
+        const rpgConfig = this.game?.getRPGConfig ? this.game.getRPGConfig() : {};
+        const perk = rpgConfig?.perks?.[perkId];
         if (!perk) return '';
 
         return `
