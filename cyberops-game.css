@@ -2059,8 +2059,9 @@ body {
 }
 
 .dialog-actions .menu-button {
-    width: 140px;
-    padding: 12px 15px;
+    min-width: 140px;
+    width: auto;
+    padding: 12px 20px;
     margin: 0;
     font-size: 1em;
     text-align: center;
@@ -3185,6 +3186,7 @@ body {
 }
 
 .dialog-buttons button {
+    min-width: 160px;
     padding: 10px 30px;
     background: #00ffff;
     color: #000;
