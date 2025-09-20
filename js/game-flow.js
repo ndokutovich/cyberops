@@ -34,68 +34,20 @@ CyberOpsGame.prototype.continueCampaign = function() {
 }
 
 CyberOpsGame.prototype.selectMission = function() {
-        this.showMissionSelectDialog();
-}
-
-CyberOpsGame.prototype.showMissionSelectDialog = function() {
-        const missionList = document.getElementById('missionList');
-        missionList.innerHTML = '';
-
-        this.missions.forEach((mission, index) => {
-            const missionDiv = document.createElement('div');
-            missionDiv.className = 'mission-option';
-
-            const isCompleted = this.completedMissions.includes(mission.id);
-            // Mission is available if it's the first mission, or if the previous mission is completed
-            let isAvailable = true;
-            if (index > 0) {
-                const prevMission = this.missions[index - 1];
-                if (prevMission && !this.completedMissions.includes(prevMission.id)) {
-                    isAvailable = false;
-                }
-            }
-            const isLocked = !isAvailable;
-
-            if (isLocked) {
-                missionDiv.classList.add('locked');
-            }
-
-            missionDiv.innerHTML = `
-                <div class="mission-info">
-                    <div class="mission-name">Mission ${mission.missionNumber || mission.id}: ${mission.title}</div>
-                    <div class="mission-desc">${mission.description.substring(0, 100)}...</div>
-                </div>
-                <div class="mission-status ${isCompleted ? 'completed' : isAvailable ? 'available' : 'locked'}">
-                    ${isCompleted ? '✓' : isAvailable ? '◉' : '🔒'}
-                </div>
-            `;
-
-            if (isAvailable) {
-            missionDiv.onclick = () => {
-                this.closeMissionSelect();
-                if (this.currentScreen === 'hub') {
-                    document.getElementById('syndicateHub').style.display = 'none';
-                } else {
-                    document.getElementById('mainMenu').style.display = 'none';
-                }
-                this.startMissionFromHub(index);
-            };
-            }
-
-            missionList.appendChild(missionDiv);
-        });
-
-        document.getElementById('missionSelectDialog').classList.add('show');
-}
-
-CyberOpsGame.prototype.closeMissionSelect = function() {
-        document.getElementById('missionSelectDialog').classList.remove('show');
-
-        // If we came from hub, show it again
-        if (document.getElementById('syndicateHub').style.display === 'none') {
-            document.getElementById('syndicateHub').style.display = 'flex';
+        // Use declarative dialog system for mission selection
+        if (this.dialogEngine && this.dialogEngine.navigateTo) {
+            // Save where we came from
+            this.dialogReturnScreen = 'menu';
+            // Don't hide main menu - let it serve as background
+            // The dialog will overlay on top of it
+            // Show mission select dialog
+            this.dialogEngine.navigateTo('mission-select-hub');
+        } else {
+            console.error('Dialog engine not available for mission selection');
         }
 }
+
+// Old mission select dialog functions removed - now using declarative dialog system
 
 CyberOpsGame.prototype.showMissionBriefing = function(mission) {
         document.getElementById('missionBriefing').style.display = 'flex';

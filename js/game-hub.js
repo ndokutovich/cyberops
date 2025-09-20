@@ -125,15 +125,16 @@ CyberOpsGame.prototype.updateHubStats = function() {
 }
     
 CyberOpsGame.prototype.showMissionsFromHub = function() {
-    // Hide the hub first
-    document.getElementById('syndicateHub').style.display = 'none';
+    // Save where we came from
+    this.dialogReturnScreen = 'hub';
+    // Don't hide the hub - let it serve as background
+    // The dialog will overlay on top of it
 
     // Use the declarative dialog system
     if (this.dialogEngine && this.dialogEngine.navigateTo) {
         this.dialogEngine.navigateTo('mission-select-hub');
     } else {
-        // Fallback to old system
-        this.showMissionSelectDialog();
+        console.error('Dialog engine not available for mission selection');
     }
 }
 
@@ -182,8 +183,9 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
             this.dialogEngine.closeAll();
         }
 
-        // Hide the hub
+        // Hide both hub and menu (in case we came from either)
         document.getElementById('syndicateHub').style.display = 'none';
+        document.getElementById('mainMenu').style.display = 'none';
 
         const mission = this.missions[missionIndex];
         this.currentMissionIndex = missionIndex;
@@ -213,10 +215,25 @@ CyberOpsGame.prototype.returnToHub = function() {
     // Music will only restart when coming from missions (handled in showSyndicateHub)
     console.log('🎵 Returning to hub from dialog - music continues playing');
 
-    // Just show the hub again
-    document.getElementById('syndicateHub').style.display = 'flex';
-    this.currentScreen = 'hub';
-    this.updateHubStats();
+    // Check where we came from and return to the appropriate screen
+    // Use the saved return screen if available
+    const returnTo = this.dialogReturnScreen || this.currentScreen;
+
+    if (returnTo === 'menu') {
+        // We're already showing main menu, just ensure hub is hidden
+        document.getElementById('mainMenu').style.display = 'flex';
+        document.getElementById('syndicateHub').style.display = 'none';
+        this.currentScreen = 'menu';
+    } else {
+        // Make sure hub is visible and menu is hidden
+        document.getElementById('syndicateHub').style.display = 'flex';
+        document.getElementById('mainMenu').style.display = 'none';
+        this.currentScreen = 'hub';
+        this.updateHubStats();
+    }
+
+    // Clear the return screen flag
+    this.dialogReturnScreen = null;
 }
 
 // Agent Management - Now uses declarative dialog

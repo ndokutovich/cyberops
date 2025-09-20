@@ -813,7 +813,7 @@ CyberOpsGame.prototype.backToMainMenu = function() {
         document.getElementById('syndicateHub').style.display = 'none';  // Hide hub
         document.getElementById('intermissionDialog').classList.remove('show');
         document.getElementById('hudDialog').classList.remove('show');
-        document.getElementById('missionSelectDialog').classList.remove('show');
+        // Mission select dialog removed - using declarative dialog system
         
         // Show main menu
         document.getElementById('mainMenu').style.display = 'flex';
