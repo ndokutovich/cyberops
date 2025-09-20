@@ -198,6 +198,7 @@
         <button id="btn-run-all">🚀 RUN ALL TESTS</button>
         <button id="btn-run-dialogs">💬 TEST DIALOGS</button>
         <button id="btn-run-state">🔄 TEST STATE MACHINE</button>
+        <button id="btn-run-audit">🔍 AUDIT STATES</button>
         <button id="btn-run-parity">⚖️ TEST PARITY</button>
         <button id="btn-test-summary">📋 TEST SUMMARY</button>
         <button id="btn-test-diagnostic">🩺 DIAGNOSTICS</button>
@@ -296,6 +297,7 @@
     <script src="tests/dialog-basic-tests.js"></script>
     <script src="tests/dialog-test-suite.js"></script>
     <script src="tests/state-machine-tests.js"></script>
+    <script src="tests/dialog-state-audit.js"></script>
     <script src="tests/test-summary.js"></script>
     <script src="tests/test-diagnostic.js"></script>
 
@@ -486,6 +488,28 @@
             showSummary();
         }
 
+        async function runAuditTests() {
+            clearOutput();
+            summary.classList.add('hidden');
+
+            if (!await initializeGame()) return;
+
+            logToOutput('🔍 Starting dialog state audit...', 'log-suite');
+
+            // Reset execution counter
+            testFramework.executionCount = 0;
+            testFramework.isRunning = false;
+
+            // Configure test framework
+            testFramework.config.verbose = document.getElementById('verbose-mode').checked;
+            testFramework.config.stopOnFailure = document.getElementById('stop-on-failure').checked;
+
+            // Run only audit tests
+            const results = await testFramework.run('Complete Dialog State Audit');
+
+            showSummary();
+        }
+
         async function runParityTests() {
             clearOutput();
             summary.classList.add('hidden');
@@ -609,6 +633,7 @@
         document.getElementById('btn-run-all').addEventListener('click', runAllTests);
         document.getElementById('btn-run-dialogs').addEventListener('click', runDialogTests);
         document.getElementById('btn-run-state').addEventListener('click', runStateMachineTests);
+        document.getElementById('btn-run-audit').addEventListener('click', runAuditTests);
         document.getElementById('btn-run-parity').addEventListener('click', runParityTests);
         document.getElementById('btn-test-summary').addEventListener('click', showTestSummary);
         document.getElementById('btn-test-diagnostic').addEventListener('click', runDiagnostics);

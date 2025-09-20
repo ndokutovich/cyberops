@@ -637,6 +637,11 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
             enemy.rpgEntity = rpgEnemy;
             enemy.level = rpgEnemy.level || 1;
             console.log(`   📊 Added RPG entity to enemy - Level ${enemy.level}`);
+        } else {
+            console.warn(`   ⚠️ Could not add RPG entity to enemy:`, {
+                hasRPGManager: !!this.rpgManager,
+                hasRPGEnemyClass: !!window.RPGEnemy
+            });
         }
 
         this.enemies.push(enemy);

@@ -851,9 +851,17 @@ CyberOpsGame.prototype.calculateDamage = function(attacker, target, weaponType =
 
 // Handle entity death with XP rewards
 CyberOpsGame.prototype.onEntityDeath = function(entity, killer) {
+    console.log('💀 onEntityDeath called:', {
+        entity: entity?.type || entity?.name || 'unknown',
+        entityHasRPG: !!entity?.rpgEntity,
+        killer: killer?.name || 'unknown',
+        killerHasRPG: !!killer?.rpgEntity
+    });
+
     // Grant XP to killer
     if (killer && killer.rpgEntity && entity.rpgEntity) {
         const xpReward = this.calculateXPReward(entity);
+        console.log(`🎯 Granting ${xpReward} XP to ${killer.name}`);
         this.rpgManager.grantExperience(killer.rpgEntity, xpReward);
 
         // Show XP gain notification
