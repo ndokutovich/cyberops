@@ -837,44 +837,15 @@ const agents = window.ContentLoader.getContent('agents');
 
 ## Common Pitfalls to Avoid
 
-### 1. Method Name Typos
-**Never** assume method names - always verify:
-- `saveCampaignToDB()` not `saveCampaign()`
-- `refreshMissionList()` not `refresh()` or `update()`
+For detailed conversion guidelines and common mistakes, see:
+- **DIALOG_CONVERSION_GUIDE.md** - Section 6: "Common Conversion Mistakes to Avoid"
+- **DIALOG_CONVERSION_GUIDE.md** - Section 7: "When to Stop and Ask"
 
-### 2. Missing Async/Await
-**Always** check if a function is async before calling:
-```javascript
-// Will cause errors if function is async
-this.saveCampaignToDB(campaign);
-
-// Correct
-await this.saveCampaignToDB(campaign);
-```
-
-### 3. State Synchronization
-**Always** update all related state when making changes:
-- Update campaign content through ContentLoader
-- Refresh UI components after data changes
-- Save to IndexedDB after modifications
-
-### 4. Initialization Timing
-**Never** assume components are ready:
-```javascript
-// Bad - may not be initialized
-campaignManager.loadMissions();
-
-// Good - check initialization
-if (campaignManager && campaignManager.isInitialized) {
-    campaignManager.loadMissions();
-}
-```
-
-### 5. UI Refresh Patterns
-**Always** refresh UI after data operations:
-- `loadMissions()` - refresh missions tab
-- `refreshMissionList()` - refresh dropdown
-- `saveCampaignToDB()` - persist changes
+Key reminders:
+- **Never** recreate functionality - find and preserve existing implementations
+- **Always** check if functions are async before calling
+- **Always** refresh UI after data operations
+- **Never** assume components are initialized
 
 ## Common Issues and Solutions
 
@@ -956,84 +927,51 @@ if (campaignManager && campaignManager.isInitialized) {
 
 ## Declarative Dialog System
 
-The game features a fully declarative dialog system that replaces imperative dialog code with configuration-driven definitions.
+The game uses a state-machine based declarative dialog system for all UI interactions.
 
-### Architecture Overview
-- **State Machine Based**: All dialogs are states with defined transitions
-- **4-Level Hierarchy**: Hub → Category → Subcategory → Action → Deep Action
-- **Stack Navigation**: Proper breadcrumb navigation with automatic state cleanup
-- **Data-Driven**: 90% less code for new dialogs, 10x faster creation
-- **Hot Reload**: Configurations can be changed at runtime
+### 📚 Documentation
+- **Complete State Reference**: See `GAME_STATE_REFERENCE.md` for all 38 states and 98 transitions
+- **Conversion Guide**: See `DIALOG_CONVERSION_GUIDE.md` for converting imperative dialogs
 
-### Key Components
+### Quick Overview
+- **16 Converted States** (42% complete)
+- **66 Declarative Transitions** documented
+- **3-Level Hierarchy**: Hub/Game → Dialog (L1) → Sub-dialog (L2) → Modal (L3)
+- **8 Duplicate Functions** need cleanup (see reference doc)
 
-#### 1. Dialog Engine (`declarative-dialog-engine.js`)
+### Key Files
+- `declarative-dialog-engine.js` - Core state machine engine
+- `dialog-config.js` - State configurations
+- `dialog-integration.js` - Content generators and actions
+- `modal-engine.js` - Legacy modal system (being phased out)
+
+### Common Usage
 ```javascript
-const engine = new DeclarativeDialogEngine();
-engine.initialize(DIALOG_CONFIG);
-engine.navigateTo('agent-management');
+// Navigate to dialog
+this.dialogEngine.navigateTo('character');
+
+// Refresh current dialog (e.g., after data change)
+this.dialogEngine.navigateTo('arsenal', null, true);
+
+// Navigate back
+this.dialogEngine.back();
+
+// Close dialog
+this.dialogEngine.close();
 ```
 
-#### 2. Configuration (`dialog-config.js`)
-```javascript
-states: {
-    'agent-management': {
-        type: 'dialog',
-        level: 1,
-        parent: 'hub',
-        title: '👥 AGENT MANAGEMENT',
-        layout: 'category-menu',
-        content: {
-            type: 'dynamic',
-            generator: 'generateAgentOverview'
-        },
-        buttons: {
-            template: 'category-grid',
-            items: [
-                { text: 'VIEW SQUAD', action: 'navigate:view-squad' },
-                { text: 'HIRE AGENTS', action: 'navigate:hire-agents' }
-            ]
-        },
-        transitions: {
-            enter: { animation: 'slide-up' },
-            exit: { animation: 'fade-out' }
-        }
-    }
-}
-```
+### ⚠️ Important: Cleanup Needed
+These imperative functions still exist alongside declarative versions:
+- `showCharacterSheet()` → use `navigateTo('character')`
+- `showArsenal()` → use `navigateTo('arsenal')`
+- `showPauseMenu()` → use `navigateTo('pause-menu')`
+- `showAgentManagement()` → use `navigateTo('agent-management')`
+- `showResearchLab()` → use `navigateTo('research-lab')`
+- `showHallOfGlory()` → use `navigateTo('hall-of-glory')`
+- `showMissionSelectDialog()` → use `navigateTo('mission-select-hub')`
+- `showNPCDialog()` → use `navigateTo('npc-interaction')`
 
-#### 3. Integration (`dialog-integration.js`)
-- Registers content generators (e.g., `generateAgentOverview`)
-- Registers validators (e.g., `hasCredits`, `agentSelected`)
-- Registers action handlers (e.g., `hireAgent`, `equipWeapon`)
-- Bridges declarative system with existing game code
-
-### Dialog Depth Management
-- **Unlimited Depth**: Stack-based system supports any depth
-- **Smart Navigation**: Going from level 4 → 2 automatically closes intermediate levels
-- **Current Structure**:
-  - Level 1: Hub categories (5 states)
-  - Level 2: Subcategories (13 states)
-  - Level 3: Actions (4 states)
-  - Level 4: Deep actions (2 states)
-
-### Dynamic State Navigation
-The system handles dynamic state IDs with parameters:
-```javascript
-// Navigation with parameters
-data-action="navigate:agent-equipment:3"
-
-// Handled as:
-baseStateId: 'agent-equipment'
-dynamicId: '3'
-```
-
-### Benefits
-- **No Code for New Dialogs**: Just add configuration
-- **Consistent UX**: All dialogs follow same patterns
-- **Easy Testing**: Mock data in generators
-- **Backward Compatible**: Feature flag enables/disables system
-- **Maintainable**: Clear separation of logic and content
+See GAME_STATE_REFERENCE.md Section "Cleanup Tasks" for complete list.
 
 ## Declarative Configuration Systems
 
@@ -1412,38 +1350,22 @@ if (dialogEl && this.generateEquipmentManagement) {
 
 ### Declarative Dialog System Integration
 
-#### Converting Legacy Dialogs to Declarative System
-When converting old dialogs to the declarative system:
+For complete conversion instructions, see **DIALOG_CONVERSION_GUIDE.md**.
 
-1. **Create generator function** in `dialog-integration.js`:
+The guide covers:
+- 5-step conversion process (Find, Extract, Wrap, Connect, Test)
+- Preservation rules to avoid breaking functionality
+- Common mistakes and how to avoid them
+- When to stop and ask for help
+
+Quick reference:
 ```javascript
-CyberOpsGame.prototype.generateDialogContent = function*() {
-    // Build HTML content
-    yield { html: content };
-}
-```
+// OLD - Imperative
+this.showHudDialog('TITLE', content, buttons);
 
-2. **Register dialog config** in `dialog-config.js`:
-```javascript
-{
-    id: 'dialog-id',
-    title: 'Dialog Title',
-    generator: 'generateDialogContent',
-    template: 'large-layout',  // For wide dialogs
-    width: '1200px'  // Override default width if needed
-}
+// NEW - Declarative
+this.dialogEngine.navigateTo('dialog-state');
 ```
-
-3. **Add fallback pattern** in HTML buttons:
-```javascript
-onclick="game.dialogEngine ? game.dialogEngine.navigateTo('dialog-id') : game.oldMethod()"
-```
-
-#### Dialog Width Management
-For wide dialogs like Arsenal:
-- Set `template: 'large-layout'` in config
-- Override width in dialog config: `width: '1200px'`
-- Add CSS override if needed: `#dialog-arsenal { width: 1200px !important; }`
 
 ### Equipment System Initialization
 **Problem**: Agent loadouts showing empty in dialog
