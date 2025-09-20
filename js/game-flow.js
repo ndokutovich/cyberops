@@ -483,10 +483,23 @@ CyberOpsGame.prototype.initMission = function() {
             console.log(`🎨 Agent ${idx + 1}: ${agent.name} assigned color: ${agent.color}`);
 
             // Initialize RPG entity for agent if not already present
-            if (!agent.rpgEntity && this.rpgManager) {
-                const rpgAgent = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
-                agent.rpgEntity = rpgAgent;
-                console.log(`📊 Added RPG entity to agent: ${agent.name}`);
+            if (!agent.rpgEntity) {
+                const rpgManager = this.rpgManager || window.GameServices?.rpgService?.rpgManager;
+                if (rpgManager) {
+                    const rpgAgent = rpgManager.createRPGAgent(agent, agent.class || 'soldier');
+                    agent.rpgEntity = rpgAgent;
+                    console.log(`📊 Added RPG entity to agent: ${agent.name}`);
+                } else {
+                    // Create a basic RPG entity fallback
+                    agent.rpgEntity = {
+                        level: 1,
+                        experience: 0,
+                        stats: { strength: 10, agility: 10 },
+                        unspentStatPoints: 0,
+                        unspentSkillPoints: 0
+                    };
+                    console.warn(`⚠️ Created fallback RPG entity for agent: ${agent.name}`);
+                }
             }
 
             // Ensure required properties exist
@@ -632,16 +645,26 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
         enemy.targetY = enemy.y;
 
         // Add RPG entity for XP and leveling
-        if (this.rpgManager && window.RPGEnemy) {
-            const rpgEnemy = this.rpgManager.createRPGEnemy(enemy, enemyTypeName);
+        // Try to get rpgManager from various sources
+        const rpgManager = this.rpgManager || window.GameServices?.rpgService?.rpgManager;
+
+        if (rpgManager && window.RPGEnemy) {
+            const rpgEnemy = rpgManager.createRPGEnemy(enemy, enemyTypeName);
             enemy.rpgEntity = rpgEnemy;
             enemy.level = rpgEnemy.level || 1;
             console.log(`   📊 Added RPG entity to enemy - Level ${enemy.level}`);
         } else {
             console.warn(`   ⚠️ Could not add RPG entity to enemy:`, {
                 hasRPGManager: !!this.rpgManager,
+                hasGameServicesRPG: !!window.GameServices?.rpgService?.rpgManager,
                 hasRPGEnemyClass: !!window.RPGEnemy
             });
+            // Create a basic RPG entity fallback
+            enemy.rpgEntity = {
+                level: 1,
+                experience: 0,
+                stats: { strength: 10, agility: 10 }
+            };
         }
 
         this.enemies.push(enemy);
