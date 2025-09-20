@@ -932,7 +932,6 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                                                 onclick="(function() {
                                                     if (game.sellItem) {
                                                         game.sellItem('weapon', ${weapon.id});
-                                                        game.dialogEngine.navigateTo('arsenal');
                                                     }
                                                 })()">
                                             SELL
@@ -1070,7 +1069,6 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                                                 onclick="(function() {
                                                     if (game.sellItem) {
                                                         game.sellItem('equipment', ${item.id});
-                                                        game.dialogEngine.navigateTo('arsenal');
                                                     }
                                                 })()">
                                             SELL
