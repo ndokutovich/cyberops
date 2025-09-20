@@ -130,6 +130,178 @@
         onExit: 'cleanupHubScreen'
     };
 
+    // ========== MENU & NAVIGATION SCREENS ==========
+
+    // Splash screen
+    dialogConfig.states['splash-screen'] = {
+        type: 'screen',
+        level: 0,
+        layout: 'full-screen',
+        content: {
+            type: 'static',
+            html: '<div class="splash-content">' +
+                  '<h1 class="splash-title">CYBEROPS: SYNDICATE</h1>' +
+                  '<div class="splash-subtitle">A Tactical Cyberpunk Experience</div>' +
+                  '<div class="splash-progress">Loading...</div>' +
+                  '<div class="splash-hint">Click anywhere to skip</div>' +
+                  '</div>'
+        },
+        transitions: {
+            enter: { animation: 'fade-in', duration: 1000 },
+            exit: { animation: 'fade-out', duration: 500 }
+        },
+        events: [
+            { trigger: 'click', action: 'execute:skipSplash' },
+            { trigger: 'timer', delay: 3000, action: 'navigate:menu-screen' }
+        ]
+    };
+
+    // Main menu screen
+    dialogConfig.states['menu-screen'] = {
+        type: 'screen',
+        level: 0,
+        layout: 'full-screen',
+        content: {
+            type: 'static',
+            html: '<div class="menu-content">' +
+                  '<h1 class="menu-title">CYBEROPS: SYNDICATE</h1>' +
+                  '<div class="menu-subtitle">Select Option</div>' +
+                  '</div>'
+        },
+        buttons: [
+            { text: 'NEW CAMPAIGN', action: 'execute:startNewCampaign', primary: true },
+            { text: 'CONTINUE', action: 'execute:loadLastSave', condition: 'hasSavedGame' },
+            { text: 'LOAD GAME', action: 'navigate:save-load' },
+            { text: 'OPTIONS', action: 'navigate:settings' },
+            { text: 'CREDITS', action: 'navigate:credits-screen' }
+        ],
+        transitions: {
+            enter: { animation: 'slide-down', duration: 500 },
+            exit: { animation: 'fade-out', duration: 300 }
+        }
+    };
+
+    // Credits screen
+    dialogConfig.states['credits-screen'] = {
+        type: 'screen',
+        level: 0,
+        layout: 'full-screen',
+        scrollable: true,
+        content: { type: 'dynamic', generator: 'generateCreditsContent' },
+        buttons: [{ text: 'BACK TO MENU', action: 'navigate:menu-screen' }],
+        transitions: {
+            enter: { animation: 'scroll-up', duration: 500, sound: 'credits' },
+            exit: { animation: 'fade-out', duration: 300 }
+        },
+        events: [{ trigger: 'key', key: 'Escape', action: 'navigate:menu-screen' }]
+    };
+
+    // ========== GAMEPLAY DIALOGS ==========
+
+    // Terminal hack dialog
+    dialogConfig.states['terminal-hack'] = {
+        type: 'dialog',
+        level: 2,
+        parent: 'game',
+        title: 'TERMINAL ACCESS',
+        layout: 'centered',
+        modal: true,
+        content: { type: 'dynamic', generator: 'generateTerminalContent' },
+        buttons: [
+            { text: 'HACK', action: 'execute:performHack', primary: true, condition: 'canHack' },
+            { text: 'CANCEL', action: 'close' }
+        ],
+        transitions: {
+            enter: { animation: 'glitch-in', duration: 300, sound: 'terminal-open' },
+            exit: { animation: 'glitch-out', duration: 200 }
+        },
+        events: [{ trigger: 'hackComplete', action: 'execute:onHackComplete' }]
+    };
+
+    // World map screen
+    dialogConfig.states['world-map'] = {
+        type: 'screen',
+        level: 1,
+        parent: 'syndicate-hub',
+        title: 'GLOBAL OPERATIONS',
+        layout: 'full-screen',
+        content: { type: 'dynamic', generator: 'generateWorldMapContent' },
+        buttons: [
+            { text: 'SELECT REGION', action: 'execute:selectRegion', condition: 'hasSelectedRegion' },
+            { text: 'BACK TO HUB', action: 'navigate:syndicate-hub' }
+        ],
+        transitions: {
+            enter: { animation: 'zoom-out', duration: 500, sound: 'map-open' },
+            exit: { animation: 'zoom-in', duration: 300 }
+        },
+        keyboard: {
+            'Escape': 'navigate:syndicate-hub',
+            'Enter': 'execute:selectRegion'
+        }
+    };
+
+    // ========== END GAME SCREENS ==========
+
+    // Game over screen
+    dialogConfig.states['game-over'] = {
+        type: 'screen',
+        level: 0,
+        layout: 'full-screen',
+        title: 'GAME OVER',
+        content: {
+            type: 'static',
+            html: '<div class="game-over-content">' +
+                  '<h1>SYNDICATE DISSOLVED</h1>' +
+                  '<p>Your organization has fallen. The megacorporations have won.</p>' +
+                  '<div class="final-stats" id="gameOverStats"></div>' +
+                  '</div>'
+        },
+        buttons: [
+            { text: 'NEW GAME', action: 'execute:startNewCampaign', primary: true },
+            { text: 'LOAD GAME', action: 'navigate:save-load' },
+            { text: 'MAIN MENU', action: 'navigate:menu-screen' }
+        ],
+        transitions: {
+            enter: { animation: 'fade-in', duration: 2000, sound: 'game-over' }
+        }
+    };
+
+    // Campaign complete screen
+    dialogConfig.states['campaign-complete'] = {
+        type: 'screen',
+        level: 0,
+        layout: 'full-screen',
+        title: 'VICTORY',
+        content: { type: 'dynamic', generator: 'generateCampaignCompleteContent' },
+        buttons: [
+            { text: 'CONTINUE PLAYING', action: 'navigate:syndicate-hub' },
+            { text: 'VIEW CREDITS', action: 'navigate:credits-screen' },
+            { text: 'NEW GAME', action: 'execute:startNewCampaign' }
+        ],
+        transitions: {
+            enter: { animation: 'celebration', duration: 1000, sound: 'campaign-victory' }
+        }
+    };
+
+    // Tutorial overlay
+    dialogConfig.states['tutorial'] = {
+        type: 'dialog',
+        level: 3,
+        parent: 'game',
+        title: 'TUTORIAL',
+        layout: 'bottom-right',
+        modal: false,
+        content: { type: 'dynamic', generator: 'generateTutorialContent' },
+        buttons: [
+            { text: 'NEXT', action: 'execute:nextTutorialStep', condition: 'hasNextStep' },
+            { text: 'SKIP TUTORIAL', action: 'execute:skipTutorial' }
+        ],
+        transitions: {
+            enter: { animation: 'slide-left', duration: 300 },
+            exit: { animation: 'slide-right', duration: 200 }
+        }
+    };
+
     // ========== TEMPLATES ==========
 
     dialogConfig.templates['victory-summary'] = `
@@ -278,6 +450,181 @@
                 <div>Credits: {{baseCredits}}</div>
                 <div>Research Points: {{baseResearch}}</div>
                 <div>World Control: +{{worldControl}}%</div>
+            </div>
+        </div>
+    `;
+
+    // Additional templates for new screens
+    dialogConfig.templates['credits-content'] = `
+        <div class="credits-scroll">
+            <h1>CYBEROPS: SYNDICATE</h1>
+            <div class="credits-section">
+                <h2>Created By</h2>
+                <p>Your Development Team</p>
+            </div>
+            <div class="credits-section">
+                <h2>Programming</h2>
+                <p>Lead Developer</p>
+                <p>Gameplay Programmer</p>
+                <p>UI/UX Developer</p>
+            </div>
+            <div class="credits-section">
+                <h2>Art & Design</h2>
+                <p>Art Director</p>
+                <p>Environment Artist</p>
+                <p>Character Designer</p>
+            </div>
+            <div class="credits-section">
+                <h2>Sound & Music</h2>
+                <p>Audio Director</p>
+                <p>Sound Effects Designer</p>
+                <p>Composer</p>
+            </div>
+            <div class="credits-section">
+                <h2>Special Thanks</h2>
+                <p>All our players and supporters</p>
+                <p>The open source community</p>
+            </div>
+            <div class="credits-end">
+                <p>Thank you for playing!</p>
+            </div>
+        </div>
+    `;
+
+    dialogConfig.templates['terminal-display'] = `
+        <div class="terminal-interface">
+            <div class="terminal-header">
+                <span class="terminal-id">TERMINAL {{terminalId}}</span>
+                <span class="terminal-status {{statusClass}}">{{status}}</span>
+            </div>
+            <div class="terminal-content">
+                <div class="terminal-info">
+                    <p>Security Level: {{securityLevel}}</p>
+                    <p>Encryption: {{encryption}}</p>
+                    <p>Access Required: {{accessLevel}}</p>
+                </div>
+                {{#if isLocked}}
+                <div class="terminal-locked">
+                    <span class="lock-icon">🔒</span>
+                    <p>Terminal is locked. Hacking required.</p>
+                </div>
+                {{else}}
+                <div class="terminal-unlocked">
+                    <span class="unlock-icon">🔓</span>
+                    <p>Terminal access granted.</p>
+                </div>
+                {{/if}}
+                <div class="hack-progress" style="display: {{#if hacking}}block{{else}}none{{/if}}">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{hackProgress}}%"></div>
+                    </div>
+                    <p>Hacking... {{hackProgress}}%</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    dialogConfig.templates['world-map-display'] = `
+        <div class="world-map-container">
+            <div class="map-header">
+                <h2>Global Control: {{worldControl}}%</h2>
+                <div class="control-bar">
+                    <div class="control-fill" style="width: {{worldControl}}%"></div>
+                </div>
+            </div>
+            <div class="regions-grid">
+                {{#each regions}}
+                <div class="region-card {{#if controlled}}controlled{{/if}}" data-region="{{id}}">
+                    <h3>{{name}}</h3>
+                    <div class="region-stats">
+                        <p>Control: {{control}}%</p>
+                        <p>Resistance: {{resistance}}</p>
+                        <p>Resources: {{resources}}</p>
+                    </div>
+                    {{#if hasMission}}
+                    <div class="mission-available">
+                        <span class="mission-icon">⚡</span>
+                        <p>Mission Available</p>
+                    </div>
+                    {{/if}}
+                </div>
+                {{/each}}
+            </div>
+            <div class="map-legend">
+                <span class="legend-item controlled">Controlled</span>
+                <span class="legend-item contested">Contested</span>
+                <span class="legend-item hostile">Hostile</span>
+            </div>
+        </div>
+    `;
+
+    dialogConfig.templates['campaign-complete-display'] = `
+        <div class="campaign-complete-content">
+            <div class="victory-banner">
+                <h1>CAMPAIGN COMPLETE!</h1>
+                <p>The syndicate has achieved global dominance.</p>
+            </div>
+            <div class="final-statistics">
+                <h2>Campaign Statistics</h2>
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <h3>Missions Completed</h3>
+                        <p class="stat-value">{{missionsCompleted}}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Enemies Defeated</h3>
+                        <p class="stat-value">{{totalEnemiesDefeated}}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Agents Lost</h3>
+                        <p class="stat-value">{{totalAgentsLost}}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Credits Earned</h3>
+                        <p class="stat-value">{{totalCredits}}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Research Completed</h3>
+                        <p class="stat-value">{{researchCompleted}}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>World Control</h3>
+                        <p class="stat-value">{{worldControl}}%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="achievement-section">
+                <h2>Achievements Unlocked</h2>
+                <div class="achievement-list">
+                    {{#each achievements}}
+                    <div class="achievement-item">
+                        <span class="achievement-icon">{{icon}}</span>
+                        <span class="achievement-name">{{name}}</span>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+    `;
+
+    dialogConfig.templates['tutorial-step'] = `
+        <div class="tutorial-content">
+            <div class="tutorial-header">
+                <h3>Tutorial Step {{currentStep}}/{{totalSteps}}</h3>
+            </div>
+            <div class="tutorial-body">
+                <h4>{{title}}</h4>
+                <p>{{description}}</p>
+                {{#if hasVisual}}
+                <div class="tutorial-visual">
+                    {{visualContent}}
+                </div>
+                {{/if}}
+            </div>
+            <div class="tutorial-hints">
+                {{#each hints}}
+                <p class="hint">💡 {{this}}</p>
+                {{/each}}
             </div>
         </div>
     `;

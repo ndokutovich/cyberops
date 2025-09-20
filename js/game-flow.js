@@ -1913,31 +1913,6 @@ CyberOpsGame.prototype.showPauseMenu = function() {
     this.dialogEngine.navigateTo('pause-menu');
 
     // OLD CODE REMOVED - Now always uses declarative system
-    return;
-
-    // Keep old implementation below for reference only
-    if (false) {
-        this.showHudDialog(
-            '⏸ GAME PAUSED',
-            `<div style="text-align: center;">
-                <div style="background: rgba(0,255,255,0.1); padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="color: #fff; margin-bottom: 15px;">Mission Status</h3>
-                    <div style="color: #ccc;">
-                        <div>Mission: ${this.currentMission.title}</div>
-                        <div>Time: ${Math.floor(this.missionTimer / 60)}:${String(this.missionTimer % 60).padStart(2, '0')}</div>
-                        <div>Agents Alive: ${this.agents.filter(a => a.alive).length}/${this.agents.length}</div>
-                        <div>Enemies Remaining: ${this.enemies.filter(e => e.alive).length}/${this.enemies.length}</div>
-                    </div>
-                </div>
-            </div>`,
-            [
-                { text: 'RESUME', action: () => this.resumeFromPause() },
-                { text: 'SURRENDER', action: () => this.surrenderMission() },
-                { text: 'RETURN TO HUB', action: () => this.returnToHubFromMission() },
-                { text: 'SETTINGS', action: () => this.showSettingsFromPause() }
-            ]
-        );
-    }
 }
 
 CyberOpsGame.prototype.closePauseMenu = function() {

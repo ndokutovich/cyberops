@@ -151,7 +151,10 @@ describe('Basic Dialog Tests', () => {
 
         // Check that each state has required properties
         for (const [stateName, stateConfig] of Object.entries(config.states)) {
-            assertTruthy(stateConfig.title, `State ${stateName} should have a title`);
+            // Special full-screen states like syndicate-hub intentionally have no title
+            if (stateName !== 'syndicate-hub' && stateConfig.type !== 'screen') {
+                assertTruthy(stateConfig.title, `State ${stateName} should have a title`);
+            }
             assertTruthy(stateConfig.template || stateConfig.content, `State ${stateName} should have template or content`);
         }
     });

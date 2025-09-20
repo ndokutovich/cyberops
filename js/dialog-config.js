@@ -277,6 +277,27 @@ const DIALOG_CONFIG = {
             ]
         },
 
+        // Level 3: Hire Success
+        'hire-success': {
+            type: 'dialog',
+            level: 3,
+            parent: 'hire-agents',
+            title: 'AGENT HIRED',
+            layout: 'notification',
+            content: {
+                type: 'template',
+                template: 'hire-success-message',
+                data: 'agent'
+            },
+            buttons: [
+                { text: 'OK', action: 'back', primary: true }
+            ],
+            autoClose: {
+                timeout: 2000,
+                action: 'back'
+            }
+        },
+
         // Hub Settings (accessible from hub/menu)
         'hub-settings': {
             type: 'dialog',
