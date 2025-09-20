@@ -1,4 +1,23 @@
-# Dialog System Transitions Design Document
+# Dialog Conversion Guide
+*Step-by-step guide for converting imperative dialogs to declarative system*
+
+## ⚠️ CRITICAL CONVERSION RULES
+
+### 🛑 STOP AND ASK Policy
+1. **NEVER recreate functionality** - Always find and preserve existing implementation
+2. **NEVER guess at behavior** - If you can't find the imperative version, STOP and ASK
+3. **ALWAYS preserve ALL functionality** - Every button, every action, every feature must work
+4. **ALWAYS extract from existing** - Find the actual showDialog/showHudDialog calls first
+
+### ✅ Conversion Process
+1. **FIND** the imperative implementation (showHudDialog, showDialog, etc.)
+2. **EXTRACT** three key components:
+   - Title (dialog header)
+   - Content (HTML body)
+   - Actions (button array with callbacks)
+3. **WRAP** in declarative configuration
+4. **CONNECT** actions to new system
+5. **TEST** all functionality preserved
 
 ## 1. TRANSITION MECHANICS IN DECLARATIVE SYSTEM
 
@@ -81,31 +100,211 @@ game (virtual root)
 
 ## 4. IMPERATIVE TO DECLARATIVE CONVERSION PATTERNS
 
-### Current Imperative Patterns
-```javascript
-// OLD: Direct function calls
-this.showCharacterSheet();
-this.showArsenal();
-this.showHudDialog(title, content, buttons);
-this.closeDialog();
-this.refreshEquipmentUI();
+### Step 1: FIND the Imperative Implementation
 
-// OLD: DOM manipulation
-document.getElementById('dialog').style.display = 'block';
-dialog.classList.add('show');
+```javascript
+// Search for these patterns in game-*.js files:
+showHudDialog(
+showDialog(
+showBriefingScreen(
+showLoadoutSelection(
+showVictoryScreen(
+// etc.
 ```
 
-### Declarative Equivalents
+### Step 2: EXTRACT Components
+
+#### Example: Finding a showHudDialog Call
 ```javascript
-// NEW: State navigation
-this.dialogEngine.navigateTo('character');
-this.dialogEngine.navigateTo('arsenal');
-this.dialogEngine.navigateTo('confirm-dialog', {title, content, buttons});
-this.dialogEngine.close();
-this.dialogEngine.navigateTo('arsenal', null, true); // refresh
+// FOUND IN: game-flow.js:1986
+this.showHudDialog(
+    'CONFIRM EXIT',                    // <- TITLE
+    'Return to hub? Mission progress will be lost.',  // <- CONTENT
+    [
+        { text: 'CONFIRM', action: () => this.returnToHubFromMission() },  // <- ACTION 1
+        { text: 'CANCEL', action: () => this.showPauseMenu() }            // <- ACTION 2
+    ]
+);
 ```
 
-## 5. TRANSITION DESIGN FOR OLD SYSTEMS
+#### What to Extract:
+1. **Title**: The dialog header text
+2. **Content**: Can be:
+   - Simple string
+   - HTML string with styles
+   - Generated content (tables, lists, etc.)
+3. **Actions**: Button array with:
+   - Button text
+   - Callback function
+   - Optional styling (danger, primary, etc.)
+
+### Step 3: WRAP in Declarative Config
+
+```javascript
+// IN dialog-config.js:
+'confirm-exit': {
+    type: 'dialog',
+    level: 2,
+    parent: 'pause-menu',
+    title: 'CONFIRM EXIT',  // <- Extracted title
+    content: {
+        type: 'static',
+        text: 'Return to hub? Mission progress will be lost.'  // <- Extracted content
+    },
+    buttons: [
+        { text: 'CONFIRM', action: 'execute:returnToHubFromMission', danger: true },  // <- Converted action
+        { text: 'CANCEL', action: 'back' }  // <- Simplified to 'back'
+    ]
+}
+```
+
+### Step 4: CONNECT Actions
+
+```javascript
+// IN dialog-integration.js:
+engine.registerAction('returnToHubFromMission', function() {
+    // Copy the EXACT logic from the imperative callback
+    game.returnToHubFromMission();
+});
+```
+
+### Step 5: TEST Preservation
+
+Before:
+```javascript
+// OLD: Imperative call
+this.showHudDialog('CONFIRM EXIT', content, buttons);
+```
+
+After:
+```javascript
+// NEW: Declarative call
+this.dialogEngine.navigateTo('confirm-exit');
+```
+
+Both must have IDENTICAL behavior!
+
+## 5. COMPLEX CONTENT EXTRACTION
+
+### HTML Content with Styles
+```javascript
+// FOUND: Complex HTML content
+this.showHudDialog(
+    'RESEARCH LAB',
+    `<div style="max-height: 400px; overflow-y: auto;">
+        <div style="color: #00ffff;">Research Points: ${this.researchPoints}</div>
+        <table>...</table>
+    </div>`,
+    buttons
+);
+
+// CONVERT TO: Generator function
+'research-lab': {
+    content: {
+        type: 'dynamic',
+        generator: 'generateResearchContent'  // <- Move HTML generation to function
+    }
+}
+
+// IN dialog-integration.js:
+engine.registerGenerator('generateResearchContent', function() {
+    const game = window.game;
+    return `<div style="max-height: 400px; overflow-y: auto;">
+        <div style="color: #00ffff;">Research Points: ${game.researchPoints}</div>
+        <table>...</table>
+    </div>`;
+});
+```
+
+### Dynamic Buttons
+```javascript
+// FOUND: Conditional buttons
+const buttons = [];
+if (canSave) buttons.push({ text: 'SAVE', action: () => this.saveGame() });
+if (canLoad) buttons.push({ text: 'LOAD', action: () => this.loadGame() });
+buttons.push({ text: 'CANCEL', action: () => this.closeDialog() });
+
+// CONVERT TO: Dynamic button generator
+'save-load': {
+    buttons: {
+        type: 'dynamic',
+        generator: 'generateSaveLoadButtons'
+    }
+}
+
+engine.registerButtonGenerator('generateSaveLoadButtons', function() {
+    const buttons = [];
+    if (game.canSave) buttons.push({ text: 'SAVE', action: 'execute:saveGame' });
+    if (game.canLoad) buttons.push({ text: 'LOAD', action: 'execute:loadGame' });
+    buttons.push({ text: 'CANCEL', action: 'back' });
+    return buttons;
+});
+```
+
+## 6. COMMON CONVERSION MISTAKES TO AVOID
+
+### ❌ WRONG: Creating New Functionality
+```javascript
+// DON'T invent new features
+'inventory': {
+    content: {
+        // Making up a sorting feature that didn't exist
+        sortBy: 'value',
+        showCategories: true  // <- This wasn't in original!
+    }
+}
+```
+
+### ❌ WRONG: Losing Functionality
+```javascript
+// ORIGINAL had 3 buttons
+buttons: [
+    { text: 'SAVE', ... },
+    { text: 'LOAD', ... },
+    { text: 'DELETE', ... }  // <- Don't forget this!
+]
+
+// WRONG: Only converted 2 buttons
+buttons: [
+    { text: 'SAVE', ... },
+    { text: 'LOAD', ... }
+    // Missing DELETE!
+]
+```
+
+### ❌ WRONG: Changing Behavior
+```javascript
+// ORIGINAL: Returns to pause menu
+{ text: 'CANCEL', action: () => this.showPauseMenu() }
+
+// WRONG: Returns to hub instead
+{ text: 'CANCEL', action: 'execute:returnToHub' }  // <- Different behavior!
+
+// CORRECT: Preserve exact navigation
+{ text: 'CANCEL', action: 'execute:showPauseMenu' }
+```
+
+## 7. WHEN TO STOP AND ASK
+
+### 🛑 STOP if you can't find:
+1. The original `showDialog`/`showHudDialog` call
+2. The complete content generation code
+3. All button actions and their callbacks
+4. Special features (animations, sounds, timers)
+
+### 🛑 STOP if the dialog has:
+1. Complex mini-games (terminal hacking)
+2. Real-time updates (combat stats)
+3. External dependencies (save system)
+4. Multi-step flows (tutorial sequences)
+
+### ✅ PROCEED only when you have:
+1. Located exact imperative implementation
+2. Understood all functionality
+3. Mapped all actions to new system
+4. Verified no features will be lost
+
+## 8. TRANSITION DESIGN FOR OLD SYSTEMS
 
 ### Mission Flow Transitions
 | State | Parent | Level | Entry | Exit | Refresh Trigger |
@@ -277,5 +476,40 @@ engine.registerAction('confirmPurchase', function() {
 - [ ] State data persists across transitions
 - [ ] Multiple dialog levels stack correctly
 
+## 10. CONVERSION CHECKLIST
+
+For each dialog conversion:
+
+### Pre-Conversion
+- [ ] Found the original imperative implementation
+- [ ] Located all showHudDialog/showDialog calls
+- [ ] Identified the title string
+- [ ] Found complete content generation
+- [ ] Listed all buttons and actions
+- [ ] Checked for special features (timers, animations, sounds)
+
+### During Conversion
+- [ ] Created state config in dialog-config.js
+- [ ] Set correct parent and level
+- [ ] Extracted title exactly as-is
+- [ ] Moved content to generator if dynamic
+- [ ] Converted all button actions
+- [ ] Registered all execute: actions
+- [ ] Added keyboard shortcuts if present
+
+### Post-Conversion
+- [ ] Original function now calls dialogEngine.navigateTo
+- [ ] All buttons work identically
+- [ ] Content displays correctly
+- [ ] Navigation (back/close) works
+- [ ] Refresh works if applicable
+- [ ] No console errors
+- [ ] No lost functionality
+
+### Documentation
+- [ ] Updated GAME_STATE_REFERENCE.md
+- [ ] Marked imperative version for cleanup
+- [ ] Added to conversion progress tracking
+
 ## Last Updated
-2025-09-20
+2025-09-20 - Added extraction patterns and preservation rules

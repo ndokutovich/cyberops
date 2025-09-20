@@ -6,18 +6,19 @@
 1. **agent-management** - Level 1 (Hub)
 2. **hire-agents** - Level 2 (agent-management)
 3. **hire-confirm** - Level 3 (hire-agents)
-4. **character** - Level 1 (Hub)
-5. **arsenal** - Level 1 (Hub)
-6. **research-lab** - Level 1 (Hub)
-7. **tech-tree** - Level 2 (research-lab)
-8. **hall-of-glory** - Level 1 (Hub)
-9. **mission-select-hub** - Level 1 (Hub)
-10. **intel-missions** - Level 1 (Hub)
-11. **pause-menu** - Level 1 (Game)
-12. **save-load** - Level 2 (pause-menu)
-13. **settings** - Level 2 (pause-menu)
-14. **hub-settings** - Level 1 (Hub)
-15. **npc-interaction** - Level 1 (Game)
+4. **hire-success** - Level 3 (hire-agents) **[NEW]**
+5. **character** - Level 1 (Hub)
+6. **arsenal** - Level 1 (Hub)
+7. **research-lab** - Level 1 (Hub)
+8. **tech-tree** - Level 2 (research-lab)
+9. **hall-of-glory** - Level 1 (Hub)
+10. **mission-select-hub** - Level 1 (Hub)
+11. **intel-missions** - Level 1 (Hub) **[UNDOCUMENTED]**
+12. **pause-menu** - Level 1 (Game)
+13. **save-load** - Level 2 (pause-menu)
+14. **settings** - Level 2 (pause-menu)
+15. **hub-settings** - Level 1 (Hub) **[UNDOCUMENTED]**
+16. **npc-interaction** - Level 1 (Game)
 
 ### Virtual Root States
 - **hub** - Virtual root for hub dialogs
@@ -46,6 +47,8 @@
 | T15 | hire-confirm | hire-agents | "CONFIRM" success | Action | `navigateTo('hire-agents', null, true)` | zoom-out | Pop L3 | **YES** | ✅ |
 | T16 | hire-confirm | hire-agents | "CANCEL" | Button | `back` | zoom-out | Pop L3 | No | ✅ |
 | T17 | hire-agents | hire-agents | ESC key | Keyboard | `back` | slide-right | Pop L2 | No | ✅ |
+| **T17a** | hire-confirm | hire-success | After successful hire | System | `navigateTo('hire-success')` | fade | Replace L3 | No | ✅ |
+| **T17b** | hire-success | hire-agents | Auto after 2s/click | System | `navigateTo('hire-agents', null, true)` | fade | Pop to L2 | **YES** | ✅ |
 | **CHARACTER TRANSITIONS** |||||||||
 | T18 | character | character | Agent select in roster | Click | `navigateTo('character', null, true)` | none | No change | **YES** | ✅ |
 | T19 | character | hub | "← BACK TO HUB" (from hub) | Button | `execute:returnToHub` | fade-out | Pop L1 | No | ✅ |
@@ -69,6 +72,8 @@
 | T33 | mission-select-hub | hub | "BACK" | Button | `execute:returnToHub` | fade-out | Pop L1 | No | ✅ |
 | **INTEL TRANSITIONS** |||||||||
 | T34 | intel-missions | hub | "CLOSE" | Button | `close` | fade-out | Pop L1 | No | ✅ |
+| **T34a** | hub | intel-missions | "INTELLIGENCE" card | User | `navigateTo('intel-missions')` | fade-in | Push L1 | No | ✅ |
+| **T34b** | intel-missions | hub | ESC key | Keyboard | `back` | fade-out | Pop L1 | No | ✅ |
 | **IN-GAME → PAUSE MENU TRANSITIONS** |||||||||
 | T35 | game | pause-menu | ESC key/"Pause" button | User | `navigateTo('pause-menu')` | fade-in | Push L1 | No | ✅ |
 | T36 | pause-menu | game | "RESUME" | Button | `execute:resumeGame` | fade-out | Pop L1 | No | ✅ |
@@ -86,9 +91,11 @@
 | T46 | settings | settings | "APPLY" | Button | `execute:applySettings` → refresh | none | No change | **YES** | ✅ |
 | T47 | settings | settings | "DEFAULTS" | Button | `execute:resetSettings` → refresh | none | No change | **YES** | ✅ |
 | **HUB SETTINGS TRANSITIONS** |||||||||
+| **T47a** | hub | hub-settings | "SETTINGS" card | User | `navigateTo('hub-settings')` | fade-in | Push L1 | No | ✅ |
 | T48 | hub-settings | hub | "BACK TO HUB" | Button | `back` | fade-out | Pop L1 | No | ✅ |
 | T49 | hub-settings | hub-settings | "APPLY" | Button | `execute:applySettings` → refresh | none | No change | **YES** | ✅ |
 | T50 | hub-settings | hub-settings | "DEFAULTS" | Button | `execute:resetSettings` → refresh | none | No change | **YES** | ✅ |
+| **T50a** | hub-settings | hub | ESC key | Keyboard | `back` | fade-out | Pop L1 | No | ✅ |
 | **NPC INTERACTION TRANSITIONS** |||||||||
 | T51 | game | npc-interaction | NPC click/"H" key | User | `navigateTo('npc-interaction')` | fade-in | Push L1 | No | ✅ |
 | T52 | npc-interaction | game | Dialog complete | System | `close` | fade-out | Pop L1 | No | ✅ |
@@ -140,17 +147,18 @@
 ## VALIDATION CHECKLIST
 
 ### All States Accounted For ✅
-- [x] 15 converted declarative states
+- [x] 16 converted declarative states (including hire-success)
 - [x] 2 virtual root states (hub, game)
 - [x] All parent-child relationships mapped
 - [x] All levels (1-3) properly assigned
 
 ### All Transitions Mapped ✅
-- [x] 58 unique transitions documented
+- [x] 63 unique transitions documented (added 5 new)
 - [x] All button actions mapped
 - [x] All keyboard shortcuts included
 - [x] All system-triggered transitions
 - [x] All refresh scenarios identified
+- [x] Missing states now documented (intel-missions, hub-settings)
 
 ### Edge Cases Covered ✅
 - [x] Context-aware buttons (Close vs Back to Hub)
@@ -177,9 +185,11 @@ These states need to be added when converting from imperative:
 | delete-confirm | modal | save-load | 3 | LOW |
 
 ## Last Updated
-2025-09-20
+2025-09-20 - Added missing states and transitions
 
 ## Verification Status
 ✅ All existing converted states and transitions verified
+✅ Added hire-success, intel-missions, hub-settings documentation
+✅ Identified 8 imperative duplicates for cleanup
 ✅ No missing paths in current implementation
-✅ Ready for future conversions using this matrix as reference
+✅ Ready for cleanup phase to remove duplicate code
