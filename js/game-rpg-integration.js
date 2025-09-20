@@ -828,116 +828,16 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
 
 // Enhanced combat calculation using RPG stats
 CyberOpsGame.prototype.calculateDamage = function(attacker, target, weaponType = 'rifle') {
-    // Use GameServices if available for unified damage calculation
-    if (window.GameServices && window.GameServices.calculateAttackDamage) {
-        return window.GameServices.calculateAttackDamage(attacker, target, { weaponType });
+    // ALWAYS use GameServices - NO FALLBACKS
+    if (!window.GameServices || !window.GameServices.calculateAttackDamage) {
+        console.error('⚠️ CRITICAL: GameServices not available! No damage calculation possible.');
+        return 0; // No damage if service not available
     }
 
-    // Fallback to local calculation
-    console.log(`\n⚔️ DAMAGE CALCULATION: ${attacker.name || 'Unknown'} → ${target.name || 'Unknown'}`);
-    console.log(`   Weapon Type: ${weaponType}`);
-
-    let baseDamage = 20; // Default damage
-    let damageLog = [`   Base Damage: ${baseDamage}`];
-
-    // Get weapon config
-    const rpgConfig = this.getRPGConfig();
-    const weapon = rpgConfig?.items?.weapons?.[weaponType];
-    if (weapon) {
-        baseDamage = weapon.damage || baseDamage;
-        damageLog.push(`   Weapon Damage: ${weapon.damage} (from ${weaponType})`);
-    }
-
-    // Apply attacker stats
-    if (attacker.rpgEntity) {
-        const stats = attacker.rpgEntity.stats;
-        console.log(`   Attacker Stats:`, stats);
-
-        // Apply stat modifiers
-        let statBonus = 0;
-        if (weaponType === 'melee') {
-            statBonus = (stats.strength || 10) * 2;
-            damageLog.push(`   Melee Bonus: +${statBonus} (Strength ${stats.strength || 10} × 2)`);
-        } else if (weaponType === 'grenade') {
-            statBonus = (stats.tech || 10) * 1.5;
-            damageLog.push(`   Grenade Bonus: +${statBonus} (Tech ${stats.tech || 10} × 1.5)`);
-        } else {
-            statBonus = (stats.perception || 10);
-            damageLog.push(`   Ranged Bonus: +${statBonus} (Perception ${stats.perception || 10})`);
-        }
-        baseDamage += statBonus;
-        damageLog.push(`   Damage after stats: ${baseDamage}`);
-
-        // Check for damage perks
-        if (attacker.rpgEntity.perks && attacker.rpgEntity.perks.length > 0) {
-            attacker.rpgEntity.perks.forEach(perkId => {
-                const rpgConfig = this.getRPGConfig();
-                const perk = rpgConfig?.perks?.[perkId];
-                if (perk?.effects?.damageBonus) {
-                    const oldDamage = baseDamage;
-                    baseDamage *= (1 + perk.effects.damageBonus);
-                    damageLog.push(`   Perk "${perk.name}": ×${1 + perk.effects.damageBonus} (${oldDamage} → ${baseDamage})`);
-                }
-            });
-        }
-
-        // Critical hit chance
-        const derived = this.rpgManager.calculateDerivedStats(attacker.rpgEntity);
-        const critRoll = Math.random() * 100;
-        console.log(`   Crit Check: Roll ${critRoll.toFixed(1)} vs Chance ${derived.critChance.toFixed(1)}%`);
-
-        if (critRoll < derived.critChance) {
-            baseDamage *= 2;
-            damageLog.push(`   💥 CRITICAL HIT! Damage doubled: ${baseDamage}`);
-            if (this.logEvent) {
-                this.logEvent('💥 Critical Hit!', 'combat', true);
-            }
-        }
-    } else {
-        console.log(`   ⚠️ Attacker has no RPG entity`);
-    }
-
-    // Apply target defense
-    if (target.rpgEntity) {
-        const stats = target.rpgEntity.stats;
-        console.log(`   Target Stats:`, stats);
-
-        const armor = (stats.endurance || 10) * 0.5;
-        const oldDamage = baseDamage;
-        baseDamage = Math.max(1, baseDamage - armor);
-        damageLog.push(`   Armor Reduction: -${armor} (Endurance ${stats.endurance || 10} × 0.5)`);
-        damageLog.push(`   Damage after armor: ${oldDamage} - ${armor} = ${baseDamage}`);
-
-        // Check dodge
-        const derived = this.rpgManager.calculateDerivedStats(target.rpgEntity);
-        const dodgeRoll = Math.random() * 100;
-        console.log(`   Dodge Check: Roll ${dodgeRoll.toFixed(1)} vs Chance ${derived.dodge.toFixed(1)}%`);
-
-        if (dodgeRoll < derived.dodge) {
-            damageLog.push(`   🏃 DODGED! No damage dealt`);
-            if (this.logEvent) {
-                this.logEvent(`🏃 ${target.name} dodged the attack!`, 'combat');
-            }
-            console.log(`   Final Damage: 0 (DODGED)`);
-            damageLog.forEach(log => console.log(log));
-            return 0;
-        }
-    } else {
-        console.log(`   ⚠️ Target has no RPG entity`);
-    }
-
-    const finalDamage = Math.floor(baseDamage);
-    damageLog.push(`   Final Damage: ${finalDamage}`);
-
-    console.log(`   📊 DAMAGE SUMMARY:`);
-    damageLog.forEach(log => console.log(log));
-
-    if (this.logEvent) {
-        this.logEvent(`${attacker.name || 'Attacker'} dealt ${finalDamage} damage to ${target.name || 'target'}`, 'combat');
-    }
-
-    return finalDamage;
+    return window.GameServices.calculateAttackDamage(attacker, target, { weaponType });
 };
+
+// REMOVED: Old fallback damage calculation code - everything now goes through GameServices
 
 // Handle entity death with XP rewards
 CyberOpsGame.prototype.onEntityDeath = function(entity, killer) {

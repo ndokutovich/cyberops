@@ -51,36 +51,48 @@ class RPGService {
      * @returns {number} Calculated damage
      */
     calculateRPGDamage(attacker, target, weaponType = 'rifle') {
-        if (!this.rpgManager) {
-            // Fallback to formula service
-            return this.formulaService.calculateDamage(
-                attacker.damage || 10,
-                attacker.weaponDamage || 0,
-                attacker.damageBonus || 0,
-                target.protection || 0,
-                {}
-            );
+        // NO FALLBACKS - always calculate properly
+
+        // Use RPG damage calculation with REAL-TIME equipment check
+        // Get the agent's current loadout from the game
+        let baseDamage = 20; // Default base damage
+        let weaponBonus = 0;
+
+        // Check for real-time equipped weapon from loadout
+        if (window.game && window.game.agentLoadouts) {
+            const agentId = attacker.originalId || attacker.id || attacker.name;
+            const loadout = window.game.agentLoadouts[agentId];
+
+            if (loadout && loadout.weapon && window.game.weapons) {
+                // Find the actual weapon from the loadout
+                const equippedWeapon = window.game.weapons.find(w => w.id === loadout.weapon);
+                if (equippedWeapon) {
+                    weaponBonus = equippedWeapon.damage || 0;
+                }
+            }
         }
 
-        // Use RPG damage calculation
-        let baseDamage = 20;
-        const rpgConfig = this.getRPGConfig();
-        const weapon = rpgConfig?.items?.weapons?.[weaponType];
-        if (weapon) {
-            baseDamage = weapon.damage || baseDamage;
+        // Get agent's base damage (original damage without any weapons)
+        if (attacker.baseDamage !== undefined) {
+            baseDamage = attacker.baseDamage;
+        } else {
+            // Use the agent's stored damage value
+            baseDamage = attacker.damage || 20;
         }
+
+        let finalDamage = baseDamage + weaponBonus;
 
         // Get attacker stats
         const attackerRPG = attacker.rpgEntity;
         if (attackerRPG) {
             const strength = attackerRPG.stats?.strength?.value || 10;
             const damageBonus = Math.floor((strength - 10) / 2);
-            baseDamage += damageBonus;
+            finalDamage += damageBonus;
 
             // Check for crits
             const critChance = attackerRPG.derivedStats?.critChance || 5;
             if (Math.random() * 100 < critChance) {
-                baseDamage *= 2;
+                finalDamage *= 2;
                 console.log('   💥 CRITICAL HIT!');
             }
         }
@@ -89,7 +101,7 @@ class RPGService {
         const targetRPG = target.rpgEntity;
         if (targetRPG) {
             const armor = targetRPG.derivedStats?.damageResistance || 0;
-            baseDamage = Math.max(1, baseDamage - armor);
+            finalDamage = Math.max(1, finalDamage - armor);
 
             // Check dodge
             const dodgeChance = targetRPG.derivedStats?.dodge || 0;
@@ -99,7 +111,7 @@ class RPGService {
             }
         }
 
-        return Math.round(baseDamage);
+        return Math.round(finalDamage);
     }
 
     /**

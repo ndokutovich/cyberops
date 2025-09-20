@@ -560,15 +560,14 @@ CyberOpsGame.prototype.update = function() {
                     enemy.targetY = agent.y;
                     
                     if (Math.random() < 0.02 && dist < 5) {
-                        // Calculate damage using GameServices if available
-                        let damage = enemy.damage;
-                        if (window.GameServices && window.GameServices.formulaService) {
-                            damage = window.GameServices.formulaService.calculateDamage(
-                                enemy.damage || 10,
-                                0, // No weapon bonus for enemies
-                                0, // No research bonus for enemies
-                                0, // Armor calculated on impact
-                                { distance: dist }
+                        // Calculate damage using GameServices
+                        let damage = enemy.damage || 10;
+                        if (window.GameServices && window.GameServices.calculateAttackDamage) {
+                            // Use unified damage calculation
+                            damage = window.GameServices.calculateAttackDamage(
+                                enemy,
+                                agent,
+                                { weaponType: 'rifle', distance: dist }
                             );
                         }
 

@@ -482,6 +482,13 @@ CyberOpsGame.prototype.initMission = function() {
             agent.color = agentColors[idx % agentColors.length];
             console.log(`🎨 Agent ${idx + 1}: ${agent.name} assigned color: ${agent.color}`);
 
+            // Initialize RPG entity for agent if not already present
+            if (!agent.rpgEntity && this.rpgManager) {
+                const rpgAgent = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
+                agent.rpgEntity = rpgAgent;
+                console.log(`📊 Added RPG entity to agent: ${agent.name}`);
+            }
+
             // Ensure required properties exist
             agent.maxHealth = agent.maxHealth || agent.health;
             agent.protection = agent.protection || 0;

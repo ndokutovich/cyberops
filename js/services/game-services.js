@@ -54,9 +54,31 @@ class GameServices {
             );
         }
 
-        // Fallback to traditional calculation
-        const baseDamage = attacker.damage || 0;
-        const weaponBonus = attacker.weaponDamage || 0;
+        // Fallback to traditional calculation with REAL-TIME equipment check
+        let baseDamage = 20; // Default base damage
+        let weaponBonus = 0;
+
+        // Check for real-time equipped weapon from loadout
+        if (window.game && window.game.agentLoadouts) {
+            const agentId = attacker.originalId || attacker.id || attacker.name;
+            const loadout = window.game.agentLoadouts[agentId];
+
+            if (loadout && loadout.weapon && window.game.weapons) {
+                // Find the actual weapon from the loadout
+                const equippedWeapon = window.game.weapons.find(w => w.id === loadout.weapon);
+                if (equippedWeapon) {
+                    weaponBonus = equippedWeapon.damage || 0;
+                }
+            }
+        }
+
+        // Get agent's base damage
+        if (attacker.baseDamage !== undefined) {
+            baseDamage = attacker.baseDamage;
+        } else {
+            baseDamage = attacker.damage || 20;
+        }
+
         const researchBonus = attacker.damageBonus || 0;
         const targetArmor = target.protection || 0;
 

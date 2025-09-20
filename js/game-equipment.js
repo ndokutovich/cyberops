@@ -1138,6 +1138,8 @@ CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
         if (loadout.weapon) {
             const weapon = this.getItemById('weapon', loadout.weapon);
             if (weapon) {
+                // Store base damage before modification
+                modifiedAgent.baseDamage = modifiedAgent.damage || 0;
                 modifiedAgent.damage = (modifiedAgent.damage || 0) + weapon.damage;
                 modifiedAgent.weaponName = weapon.name;
                 modifiedAgent.weaponDamage = weapon.damage;
