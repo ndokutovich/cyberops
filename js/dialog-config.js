@@ -618,6 +618,9 @@ const DIALOG_CONFIG = {
     }
 };
 
+// Make config globally available
+window.DIALOG_CONFIG = DIALOG_CONFIG;
+
 // Initialize the engine with config when ready
 if (window.declarativeDialogEngine) {
     window.declarativeDialogEngine.initialize(DIALOG_CONFIG);

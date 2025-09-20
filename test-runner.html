@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberOps Game - Test Runner</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        #test-header {
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: rgba(0, 255, 0, 0.05);
+        }
+
+        h1 {
+            margin: 0;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        #controls {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #00ff00;
+            background: rgba(0, 255, 0, 0.02);
+        }
+
+        button {
+            background: #001100;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00ff00;
+            color: #001100;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        #test-output {
+            border: 1px solid #00ff00;
+            padding: 20px;
+            background: #000;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+
+        #test-summary {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid #00ffff;
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        .test-passed {
+            color: #00ff00;
+        }
+
+        .test-failed {
+            color: #ff0000;
+        }
+
+        .test-skipped {
+            color: #888888;
+        }
+
+        #game-container {
+            position: fixed;
+            top: -9999px;
+            left: -9999px;
+            width: 1280px;
+            height: 720px;
+        }
+
+        #progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #001100;
+            border: 1px solid #00ff00;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00ffff);
+            width: 0%;
+            transition: width 0.3s;
+            position: relative;
+        }
+
+        #progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px;
+        }
+
+        .log-suite {
+            color: #00ffff;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .log-test-pass {
+            color: #00ff00;
+            margin-left: 20px;
+        }
+
+        .log-test-fail {
+            color: #ff0000;
+            margin-left: 20px;
+        }
+
+        .log-test-skip {
+            color: #888888;
+            margin-left: 20px;
+        }
+
+        .log-error {
+            color: #ff6666;
+            margin-left: 40px;
+            font-size: 12px;
+        }
+
+        select {
+            background: #001100;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px;
+            font-family: inherit;
+        }
+
+        #export-buttons {
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="test-header">
+        <h1>🧪 CYBEROPS GAME TEST RUNNER</h1>
+        <p>Automated Testing System v1.0</p>
+    </div>
+
+    <div id="controls">
+        <button id="btn-run-all">🚀 RUN ALL TESTS</button>
+        <button id="btn-run-dialogs">💬 TEST DIALOGS</button>
+        <button id="btn-run-state">🔄 TEST STATE MACHINE</button>
+        <button id="btn-run-parity">⚖️ TEST PARITY</button>
+        <button id="btn-test-summary">📋 TEST SUMMARY</button>
+        <button id="btn-test-diagnostic">🩺 DIAGNOSTICS</button>
+        <button id="btn-clear">🗑️ CLEAR OUTPUT</button>
+        <button id="btn-hard-refresh" style="background: #440000; border-color: #ff0000;">🔄 HARD REFRESH</button>
+
+        <select id="test-filter">
+            <option value="">All Tests</option>
+            <option value="Dialog">Dialog Tests Only</option>
+            <option value="State">State Machine Only</option>
+            <option value="Parity">Parity Tests Only</option>
+        </select>
+
+        <label>
+            <input type="checkbox" id="verbose-mode"> Verbose Mode
+        </label>
+        <label>
+            <input type="checkbox" id="stop-on-failure"> Stop on Failure
+        </label>
+    </div>
+
+    <div id="progress-bar">
+        <div id="progress-fill"></div>
+    </div>
+
+    <div id="test-output"></div>
+
+    <div id="test-summary" class="hidden">
+        <h3>📊 Test Summary</h3>
+        <div id="summary-content"></div>
+        <div id="export-buttons">
+            <button id="btn-export-json">📄 Export JSON</button>
+            <button id="btn-export-html">📋 Export HTML Report</button>
+            <button id="btn-export-junit">🔧 Export JUnit XML</button>
+        </div>
+    </div>
+
+    <!-- Hidden game container for testing -->
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="hudContainer"></div>
+        <div id="game3DContainer"></div>
+        <div class="hud-dialog"></div>
+        <div class="modal-container"></div>
+        <!-- Add missing elements that game expects -->
+        <div id="mainMenu" style="display: none;"></div>
+        <div class="splash-screen" style="display: none;"></div>
+        <div id="loadingProgress" style="display: none;"></div>
+        <div id="loadingScreen" style="display: none;"></div>
+    </div>
+
+    <!-- Load Three.js properly -->
+    <script src="lib/three-loader.js" type="module"></script>
+
+    <!-- Game files in dependency order -->
+    <script src="js/game-mission-constants.js"></script>
+    <script src="js/campaign-system.js"></script>
+    <script src="js/game-core.js"></script>
+    <script src="js/game-events.js"></script>
+    <script src="js/game-flow.js"></script>
+    <script src="js/game-saveload.js"></script>
+    <script src="js/game-hub.js"></script>
+    <script src="js/game-dialogs.js"></script>
+    <script src="js/game-screens.js"></script>
+    <script src="js/game-demoscene.js"></script>
+    <script src="js/game-audio.js"></script>
+    <script src="js/game-music-config.js"></script>
+    <script src="js/game-music-system.js"></script>
+    <script src="js/game-screen-music.js"></script>
+    <script src="js/game-loop.js"></script>
+    <script src="js/game-rendering.js"></script>
+    <script src="js/game-3d.js"></script>
+    <script src="js/game-utils.js"></script>
+    <script src="js/game-keyboard.js"></script>
+    <script src="js/game-npc.js"></script>
+    <script src="js/campaign-integration.js"></script>
+    <script src="js/game-pathfinding.js"></script>
+    <script src="js/game-teamcommands.js"></script>
+    <script src="js/game-mission-executor.js"></script>
+    <script src="js/game-mission-integration.js"></script>
+    <!-- Load declarative engine BEFORE config -->
+    <script src="js/declarative-dialog-engine.js"></script>
+    <script src="js/dialog-config.js"></script>
+    <script src="js/dialog-integration.js"></script>
+
+    <!-- Load campaigns same as main game -->
+    <script src="campaigns/main/campaign-content.js"></script>
+    <script src="campaigns/main/campaign-config.js"></script>
+    <script src="campaigns/index.js"></script>
+
+    <!-- Don't include game-init.js - we'll initialize manually for testing -->
+
+    <!-- Test framework and suites -->
+    <script src="js/test-framework.js"></script>
+    <script src="tests/simple-test-suite.js"></script>
+    <script src="tests/dialog-basic-tests.js"></script>
+    <script src="tests/dialog-test-suite.js"></script>
+    <script src="tests/state-machine-tests.js"></script>
+    <script src="tests/test-summary.js"></script>
+    <script src="tests/test-diagnostic.js"></script>
+
+    <script>
+        // Initialize the game for testing (don't use const to avoid redeclaration)
+        var game = null;
+        const output = document.getElementById('test-output');
+        const summary = document.getElementById('test-summary');
+        const summaryContent = document.getElementById('summary-content');
+        const progressFill = document.getElementById('progress-fill');
+
+        // Custom console logger for test output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalGroup = console.group;
+        const originalGroupEnd = console.groupEnd;
+
+        function logToOutput(message, className = '') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${className}`;
+            entry.textContent = message;
+            output.appendChild(entry);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Override console for test output
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+
+            // Detect test result patterns
+            if (message.includes('✅')) {
+                logToOutput(message, 'log-test-pass');
+            } else if (message.includes('❌')) {
+                logToOutput(message, 'log-test-fail');
+            } else if (message.includes('⏭️')) {
+                logToOutput(message, 'log-test-skip');
+            } else if (message.includes('📦')) {
+                logToOutput(message, 'log-suite');
+            } else {
+                logToOutput(message);
+            }
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.join(' ');
+            logToOutput(message, 'log-error');
+        };
+
+        console.group = function(label) {
+            originalGroup.call(console, label);
+            logToOutput(label, 'log-suite');
+        };
+
+        console.groupEnd = function() {
+            originalGroupEnd.call(console);
+        };
+
+        // Initialize game
+        async function initializeGame() {
+            logToOutput('🎮 Initializing game for testing...', 'log-suite');
+
+            try {
+                // Create game instance
+                game = new CyberOpsGame();
+                window.game = game;
+
+                // Set test mode flags BEFORE initialization
+                game.testMode = true;
+                game.audioEnabled = false; // Disable audio during tests
+                game.animationsEnabled = false; // Speed up tests
+                game.skipDOMUpdates = true; // Skip DOM manipulation in test mode
+                game.disableKeyboardInTests = true; // Prevent keyboard events from triggering game actions
+
+                // Initialize campaign system first
+                if (window.CampaignSystem) {
+                    await window.CampaignSystem.init();
+                    logToOutput('🎮 Campaign system initialized');
+                }
+
+                // Initialize declarative dialogs
+                if (game.initializeDeclarativeDialogs) {
+                    game.initializeDeclarativeDialogs();
+                    logToOutput('💬 Dialog system initialized');
+                }
+
+                // Initialize game but skip the initial screen
+                game.init();
+
+                // Set screen to hub for testing (do this BEFORE overriding showInitialScreen)
+                game.screen = 'hub';
+                game.currentScreen = 'hub';
+
+                // Override showInitialScreen AFTER setting screen
+                if (game.showInitialScreen) {
+                    game.showInitialScreen = function() {
+                        console.log('Skipping initial screen in test mode');
+                    };
+                }
+
+                // Initialize 3D if available (but don't wait for it)
+                if (window.THREE && !game.scene3D) {
+                    try {
+                        game.init3D();
+                        logToOutput('🎮 3D system initialized');
+                    } catch (e) {
+                        logToOutput('⚠️ 3D initialization skipped (not critical for tests)');
+                    }
+                }
+
+                logToOutput('✅ Game initialized successfully');
+                return true;
+            } catch (error) {
+                logToOutput(`❌ Failed to initialize game: ${error.message}`, 'log-error');
+                console.error('Full error:', error);
+                return false;
+            }
+        }
+
+        // Test runners
+        async function runAllTests() {
+            clearOutput();
+            summary.classList.add('hidden');
+
+            if (!await initializeGame()) return;
+
+            logToOutput('🧪 Starting all tests...', 'log-suite');
+
+            // Reset execution counter for new test run
+            testFramework.executionCount = 0;
+            testFramework.isRunning = false;
+
+            // Configure test framework
+            testFramework.config.verbose = document.getElementById('verbose-mode').checked;
+            testFramework.config.stopOnFailure = document.getElementById('stop-on-failure').checked;
+
+            // Run tests
+            const results = await testFramework.run();
+
+            // Show summary
+            showSummary();
+        }
+
+        async function runDialogTests() {
+            clearOutput();
+            summary.classList.add('hidden');
+
+            if (!await initializeGame()) return;
+
+            logToOutput('💬 Starting dialog conversion tests...', 'log-suite');
+
+            // Reset execution counter
+            testFramework.executionCount = 0;
+            testFramework.isRunning = false;
+
+            // Configure test framework
+            testFramework.config.verbose = document.getElementById('verbose-mode').checked;
+            testFramework.config.stopOnFailure = document.getElementById('stop-on-failure').checked;
+
+            // Run only dialog tests
+            const results = await testFramework.run('Dialog Conversion Tests');
+
+            showSummary();
+        }
+
+        async function runStateMachineTests() {
+            clearOutput();
+            summary.classList.add('hidden');
+
+            if (!await initializeGame()) return;
+
+            logToOutput('🔄 Starting state machine tests...', 'log-suite');
+
+            // Reset execution counter
+            testFramework.executionCount = 0;
+            testFramework.isRunning = false;
+
+            // Configure test framework
+            testFramework.config.verbose = document.getElementById('verbose-mode').checked;
+            testFramework.config.stopOnFailure = document.getElementById('stop-on-failure').checked;
+
+            // Run only state machine tests
+            const results = await testFramework.run('State Machine Transition Tests');
+
+            showSummary();
+        }
+
+        async function runParityTests() {
+            clearOutput();
+            summary.classList.add('hidden');
+
+            if (!await initializeGame()) return;
+
+            logToOutput('⚖️ Parity tests disabled - DOM issues need fixing', 'log-suite');
+            logToOutput('Use "RUN ALL TESTS" for basic functionality tests instead', 'log-suite');
+
+            // Can't run parity tests without DialogTestSuite
+            // const suite = new DialogTestSuite();
+            // const results = await suite.testDuplicateFunctionParity();
+
+            showSummary();
+        }
+
+        async function runDiagnostics() {
+            clearOutput();
+            logToOutput('🩺 Running Test Diagnostics...', 'log-suite');
+
+            // Run diagnostics
+            const results = await TestDiagnostic.runDiagnostics();
+
+            // Display failures
+            if (results.failures.length > 0) {
+                logToOutput('\n❌ FAILED TESTS:', 'log-error');
+                for (const failure of results.failures) {
+                    logToOutput(`  ${failure.suite} - ${failure.test}`, 'log-error');
+                    logToOutput(`    Error: ${failure.error}`, 'log-warning');
+                }
+            } else {
+                logToOutput('\n✅ No test failures found!', 'log-pass');
+            }
+
+            // Check for problematic patterns
+            const problems = TestDiagnostic.identifyProblemTests();
+            if (problems.length > 0) {
+                logToOutput('\n⚠️ POTENTIAL ISSUES:', 'log-warning');
+                for (const problem of problems) {
+                    logToOutput(`  ${problem.suite} - ${problem.test}`, 'log-warning');
+                    logToOutput(`    ${problem.issue}`, 'log-info');
+                }
+            }
+
+            logToOutput('\nCheck browser console for detailed diagnostic report', 'log-info');
+        }
+
+        async function showTestSummary() {
+            clearOutput();
+            summary.classList.add('hidden');
+
+            if (!await initializeGame()) return;
+
+            logToOutput('📋 Generating Test Summary...', 'log-suite');
+
+            // Generate and display the test report
+            const report = await TestSummary.generateReport();
+            const stats = TestSummary.getTestStats();
+
+            logToOutput('\n═══════════════════════════════════════════════', 'log-info');
+            logToOutput('              TEST SUITE OVERVIEW', 'log-suite');
+            logToOutput('═══════════════════════════════════════════════', 'log-info');
+
+            logToOutput(`\n📊 TOTALS:`, 'log-suite');
+            logToOutput(`  Total Suites: ${report.totals.suites}`, 'log-info');
+            logToOutput(`  Total Tests:  ${report.totals.tests}`, 'log-info');
+            logToOutput(`  Ready Tests:  ${stats.byStatus.ready} ✅`, 'log-pass');
+            logToOutput(`  DOM-Dependent: ${stats.byStatus.domDependent} ⚠️`, 'log-warning');
+            logToOutput(`  Skipped:      ${report.totals.skipped} ⏭️`, 'log-info');
+
+            logToOutput(`\n📦 TEST SUITES:`, 'log-suite');
+            for (const suite of report.suites) {
+                logToOutput(`\n${suite.name} (${suite.tests} tests)`, 'log-info');
+                for (const test of suite.testList) {
+                    const icon = test.skip ? '⏭️' : '📝';
+                    logToOutput(`  ${icon} ${test.name}`, test.skip ? 'log-warning' : 'log-info');
+                }
+            }
+
+            logToOutput('\n═══════════════════════════════════════════════', 'log-info');
+
+            // Also log to console for detailed inspection
+            TestSummary.printReport(report);
+        }
+
+        function clearOutput() {
+            output.innerHTML = '';
+            progressFill.style.width = '0%';
+        }
+
+        function showSummary() {
+            const stats = testFramework.stats;
+            summary.classList.remove('hidden');
+
+            const passRate = stats.total > 0 ? ((stats.passed / stats.total) * 100).toFixed(1) : 0;
+            progressFill.style.width = `${passRate}%`;
+
+            summaryContent.innerHTML = `
+                <div class="test-passed">✅ Passed: ${stats.passed}</div>
+                <div class="test-failed">❌ Failed: ${stats.failed}</div>
+                <div class="test-skipped">⏭️ Skipped: ${stats.skipped}</div>
+                <div>📈 Pass Rate: ${passRate}%</div>
+                <div>⏱️ Duration: ${stats.duration.toFixed(2)}ms</div>
+            `;
+        }
+
+        function exportResults(format) {
+            const data = testFramework.exportResults(format);
+            const blob = new Blob([data], {
+                type: format === 'json' ? 'application/json' :
+                      format === 'html' ? 'text/html' : 'text/xml'
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `test-report-${Date.now()}.${format === 'junit' ? 'xml' : format}`;
+            a.click();
+        }
+
+        // Event listeners
+        document.getElementById('btn-run-all').addEventListener('click', runAllTests);
+        document.getElementById('btn-run-dialogs').addEventListener('click', runDialogTests);
+        document.getElementById('btn-run-state').addEventListener('click', runStateMachineTests);
+        document.getElementById('btn-run-parity').addEventListener('click', runParityTests);
+        document.getElementById('btn-test-summary').addEventListener('click', showTestSummary);
+        document.getElementById('btn-test-diagnostic').addEventListener('click', runDiagnostics);
+        document.getElementById('btn-clear').addEventListener('click', clearOutput);
+        document.getElementById('btn-hard-refresh').addEventListener('click', () => {
+            location.reload(true); // Force reload from server, bypassing cache
+        });
+        document.getElementById('btn-export-json').addEventListener('click', () => exportResults('json'));
+        document.getElementById('btn-export-html').addEventListener('click', () => exportResults('html'));
+        document.getElementById('btn-export-junit').addEventListener('click', () => exportResults('junit'));
+
+        // Auto-run tests if specified in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('auto') === 'true') {
+            window.addEventListener('load', () => {
+                setTimeout(runAllTests, 1000);
+            });
+        }
+    </script>
+</body>
+</html>
