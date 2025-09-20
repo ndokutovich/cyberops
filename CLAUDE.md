@@ -47,6 +47,16 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **dialog-config.js**: Complete dialog configuration (states, transitions, layouts)
 - **dialog-integration.js**: Integration adapter connecting declarative system to game
 
+### Testing Framework (tests/ directory)
+- **js/test-framework.js**: Core BDD-style test framework with async support
+- **tests/simple-test-suite.js**: Basic engine tests
+- **tests/dialog-basic-tests.js**: Dialog navigation tests
+- **tests/dialog-test-suite.js**: Comprehensive dialog conversion tests
+- **tests/state-machine-tests.js**: State machine transition validation
+- **tests/dialog-state-audit.js**: Complete state and transition coverage audit
+- **tests/dialog-state-full-coverage.js**: 100% coverage with mock data
+- **test-runner.html**: Test runner with visual interface
+
 ### Campaign Files (campaigns/ directory)
 - **campaigns/main/**: Main campaign with 5 acts
   - **act1/**: Missions main-01-001.js through main-01-003.js
@@ -806,6 +816,161 @@ const agents = window.ContentLoader.getContent('agents');
 ### 6. Visual Feedback Importance
 **Issue**: Users uncertain if operations completed
 **Solution**: Add notifications, loading states, and success confirmations
+
+## Testing Approach and Strategy
+
+### Test Framework Architecture
+
+The game uses a custom BDD-style test framework (`js/test-framework.js`) that provides:
+- **Async/await support** for testing asynchronous operations
+- **describe/it syntax** similar to Jest/Mocha
+- **Custom assertions**: `assertEqual`, `assertTruthy`, `assertFalsy`, `assertThrows`
+- **Visual test runner** with real-time results and progress tracking
+- **Test isolation**: Each test suite runs independently
+
+### Dialog System Testing Strategy
+
+#### 1. Coverage Levels
+The dialog system achieves 100% state coverage through a two-tier approach:
+
+**Tier 1: Simple State Testing (87% coverage)**
+- Tests 13 out of 15 dialog states that don't require special data
+- Direct navigation: `game.dialogEngine.navigateTo('state-name')`
+- Covers: agent-management, arsenal, character, hall-of-glory, hire-agents, hub-settings, intel-missions, mission-select-hub, pause-menu, research-lab, save-load, settings, tech-tree
+
+**Tier 2: Mock Data Testing (100% coverage)**
+- Tests remaining 2 states that require runtime data
+- Uses mock data injection for complete coverage:
+  ```javascript
+  // For hire-confirm state
+  game.dialogEngine.stateData = {
+      selectedAgent: { id: 'test_001', name: 'Ghost', cost: 5000 }
+  };
+
+  // For npc-interaction state
+  game.dialogEngine.currentNPC = {
+      id: 'npc_001', name: 'Informant', dialog: {...}
+  };
+  ```
+
+#### 2. Test Categories
+
+**Navigation Tests** (`dialog-basic-tests.js`)
+- Basic state navigation
+- Parent-child relationships
+- Back button functionality
+- State persistence
+
+**State Machine Tests** (`state-machine-tests.js`)
+- All documented transitions (53 total)
+- State reachability from hub/game
+- Navigation cycles
+- Stack depth validation
+
+**Audit Tests** (`dialog-state-audit.js`)
+- Comprehensive coverage analysis
+- Level hierarchy verification (1, 2, 3)
+- Refresh behavior
+- Transition validation
+
+**Full Coverage Tests** (`dialog-state-full-coverage.js`)
+- Mock data scenarios
+- Edge case handling (missing data)
+- Complete hiring flow simulation
+- 100% state coverage achievement
+
+#### 3. Testing Best Practices
+
+**DOM Isolation**
+- Tests run with minimal DOM (`test-runner.html` provides containers)
+- Game loop disabled in test mode: `game.testMode = true`
+- DOM element guards: Always check element exists before access
+  ```javascript
+  const element = document.getElementById('missionTimer');
+  if (element) {
+      element.textContent = '00:00';
+  }
+  ```
+
+**Async Handling**
+- Always use `await sleep(50)` after navigation for render completion
+- Mark all async test functions with `async`
+- Use try-catch for operations that may fail
+
+**Test Data Management**
+- Clear state before each test: `game.dialogEngine.closeAll()`
+- Reset mock data: `game.dialogEngine.stateData = {}`
+- Verify initial conditions before testing
+
+### Running Tests
+
+#### Quick Start
+```bash
+# Open test runner in browser
+open test-runner.html
+
+# Or serve locally
+python -m http.server 8000
+# Navigate to http://localhost:8000/test-runner.html
+```
+
+#### Test Runner Interface
+- **🚀 RUN ALL TESTS**: Execute complete test suite
+- **💬 TEST DIALOGS**: Run dialog-specific tests
+- **🔄 TEST STATE MACHINE**: Validate state transitions
+- **🔍 AUDIT STATES**: Run coverage audit (87% without mocks)
+- **📋 TEST SUMMARY**: View test statistics
+- **🩺 DIAGNOSTICS**: Identify problematic tests
+
+#### Expected Results
+- **Total Tests**: 35 (+ 7 skipped DOM-dependent)
+- **Dialog States**: 15/15 (100% coverage)
+- **Transitions**: 53 validated
+- **Pass Rate**: 100% for non-DOM tests
+
+### Common Test Issues and Solutions
+
+#### Issue: "cannot access property of null"
+**Cause**: DOM element doesn't exist in test environment
+**Solution**: Add guard checks or skip DOM updates in test mode
+```javascript
+if (this.testMode) return;
+```
+
+#### Issue: "transition not allowed"
+**Cause**: Trying to navigate to child state without parent
+**Solution**: Navigate to parent first, then child
+```javascript
+game.dialogEngine.navigateTo('agent-management');  // Parent
+game.dialogEngine.navigateTo('hire-agents');        // Child
+```
+
+#### Issue: "data is undefined"
+**Cause**: Dialog expects data that doesn't exist
+**Solution**: Provide mock data before navigation
+```javascript
+game.dialogEngine.stateData = { selectedAgent: mockAgent };
+```
+
+### Test Maintenance
+
+#### Adding New Dialog States
+1. Add state to `ALL_DIALOG_STATES` in `dialog-state-audit.js`
+2. Categorize as simple or data-required
+3. Add navigation test in appropriate suite
+4. Update coverage expectations
+
+#### Modifying Transitions
+1. Update transition list in `state-machine-tests.js`
+2. Add test case for new transition
+3. Verify reachability from hub/game
+4. Update documentation
+
+#### Performance Considerations
+- Keep individual tests under 100ms
+- Use `sleep(50)` not longer delays
+- Batch related assertions
+- Clean up after each test
 
 ## Development Best Practices
 
