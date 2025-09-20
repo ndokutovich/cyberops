@@ -237,6 +237,7 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
 
 // New modal engine version of intermission dialog
 CyberOpsGame.prototype.showIntermissionModalEngine = function(victory) {
+    const game = this;  // Capture game reference
     // Hide game HUD
     document.getElementById('gameHUD').style.display = 'none';
 
@@ -310,13 +311,27 @@ CyberOpsGame.prototype.showIntermissionModalEngine = function(victory) {
             text: 'CONTINUE',
             primary: true,
             action: () => {
-                this.proceedToHub();
+                // Close the modal first
+                if (game.activeIntermissionModal) {
+                    game.activeIntermissionModal.close();
+                    game.activeIntermissionModal = null;
+                }
+                // Apply healing and go to hub
+                game.applyMedicalHealing();
+                game.showSyndicateHub();
             }
         });
         buttons.push({
             text: 'COMPLETE',
             action: () => {
-                this.completeIntermission();
+                // Close the modal first
+                if (game.activeIntermissionModal) {
+                    game.activeIntermissionModal.close();
+                    game.activeIntermissionModal = null;
+                }
+                // Apply healing and go to hub
+                game.applyMedicalHealing();
+                game.showSyndicateHub();
             }
         });
     } else {
@@ -324,13 +339,54 @@ CyberOpsGame.prototype.showIntermissionModalEngine = function(victory) {
             text: 'RETRY',
             primary: true,
             action: () => {
-                this.retryMission();
+                // Close the modal first
+                if (game.activeModal) {
+                    game.activeModal.close();
+                    game.activeModal = null;
+                }
+
+                // Try to load the pre-mission autosave
+                const preMissionSave = localStorage.getItem('cyberops_save_pre_mission_autosave');
+
+                if (preMissionSave) {
+                    try {
+                        const saveData = JSON.parse(preMissionSave);
+                        console.log('📁 Loading pre-mission autosave to restore agent states...');
+
+                        // Restore the game state from before the mission
+                        game.performLoadGame(saveData);
+
+                        // After loading, immediately start the mission again
+                        setTimeout(() => {
+                            game.currentMission = game.missions[game.currentMissionIndex];
+                            console.log(`Restarting Mission ${game.currentMission.id}: ${game.currentMission.title} with restored agents`);
+                            game.startMission();
+                        }, 100);
+                    } catch (error) {
+                        console.error('Failed to load pre-mission save:', error);
+                        // Fallback: start mission anyway
+                        game.currentMission = game.missions[game.currentMissionIndex];
+                        game.startMission();
+                    }
+                } else {
+                    console.warn('No pre-mission autosave found.');
+                    // Start mission anyway without restore
+                    game.currentMission = game.missions[game.currentMissionIndex];
+                    game.startMission();
+                }
             }
         });
         buttons.push({
             text: 'RETURN TO HUB',
             action: () => {
-                this.returnToHubFromDefeat();
+                // Close the modal first
+                if (game.activeModal) {
+                    game.activeModal.close();
+                    game.activeModal = null;
+                }
+
+                // Return to hub
+                game.showSyndicateHub();
             }
         });
     }
@@ -338,7 +394,7 @@ CyberOpsGame.prototype.showIntermissionModalEngine = function(victory) {
     buttons.push({
         text: 'MAIN MENU',
         action: () => {
-            this.backToMainMenu();
+            game.backToMainMenu();
         }
     });
 
@@ -547,6 +603,12 @@ CyberOpsGame.prototype.continueToNextMission = function() {
 
         // Advance to next mission only if we just completed one
         if (this.missionJustCompleted) {
+            console.log('📊 Advancing mission index:', {
+                oldIndex: this.currentMissionIndex,
+                newIndex: this.currentMissionIndex + 1,
+                totalMissions: this.missions.length,
+                missionIds: this.missions.map(m => m.id)
+            });
             this.currentMissionIndex++;
             this.missionJustCompleted = false;
         }

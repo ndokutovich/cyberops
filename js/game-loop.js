@@ -884,7 +884,14 @@ CyberOpsGame.prototype.endMission = function(victory) {
 
             // Add to completed missions
             if (!this.completedMissions.includes(this.currentMission.id)) {
+                console.log('📊 Adding mission to completed list:', {
+                    missionId: this.currentMission.id,
+                    currentIndex: this.currentMissionIndex,
+                    completedBefore: [...this.completedMissions],
+                    allMissionIds: this.missions.map(m => m.id)
+                });
                 this.completedMissions.push(this.currentMission.id);
+                console.log('📊 Completed missions after:', [...this.completedMissions]);
 
                 // Generate 2 new agents available for hire after each completed mission
                 this.generateNewAgentsForHire();

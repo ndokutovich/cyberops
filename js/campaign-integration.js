@@ -423,16 +423,25 @@ const originalCompleteMission = CyberOpsGame.prototype.completeMission;
 CyberOpsGame.prototype.completeMission = function() {
     // Mark in campaign system if using it
     if (this.useCampaignSystem && this.currentMissionData) {
+        console.log('📊 Marking mission complete:', {
+            campaign: this.currentMissionData.campaign,
+            act: this.currentMissionData.act,
+            id: this.currentMissionData.id,
+            fullMissionData: this.currentMissionData
+        });
+
         CampaignSystem.markMissionComplete(
             this.currentMissionData.campaign,
             this.currentMissionData.act,
-            this.currentMissionData.mission
+            this.currentMissionData.id  // Use 'id' field, not 'mission'
         );
 
         // Check for next mission
         const nextMission = CampaignSystem.getNextMission();
         if (nextMission) {
-            console.log('Next mission available:', nextMission);
+            console.log('✅ Next mission available:', nextMission);
+        } else {
+            console.log('⚠️ No next mission found');
         }
     }
 
