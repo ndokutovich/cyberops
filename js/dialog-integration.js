@@ -80,7 +80,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                             ${agent.specialization || 'Operative'} Lvl ${agent.rpgEntity?.level || 1}
                         </div>
                         <div style="font-size: 0.85em; margin-top: 5px;">
-                            <span style="color: #00ff00;">HP: ${agent.health}/${agent.maxHealth || 100}</span>
+                            <span style="color: #00ff00;">HP: ${agent.health}/${agent.maxHealth || agent.health}</span>
                         </div>
                         ${weaponInfo}
                     </div>
