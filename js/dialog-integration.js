@@ -230,7 +230,16 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
             missions.forEach((mission, index) => {
                 const isCompleted = completedMissions.includes(mission.id);
-                const isLocked = mission.locked || index > this.currentMissionIndex;
+                // Mission is locked if explicitly marked as locked, or if previous mission isn't completed
+                // Allow access to any mission up to and including the first uncompleted mission
+                let isLocked = mission.locked;
+                if (!isLocked && index > 0) {
+                    // Check if the previous mission has been completed
+                    const prevMission = missions[index - 1];
+                    if (prevMission && !completedMissions.includes(prevMission.id)) {
+                        isLocked = true;
+                    }
+                }
 
                 html += `
                     <div style="background: ${isCompleted ? 'rgba(0,255,0,0.1)' : isLocked ? 'rgba(128,128,128,0.1)' : 'rgba(0,255,255,0.1)'};
@@ -239,7 +248,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                         <div style="display: flex; justify-content: space-between;">
                             <div>
                                 <div style="font-weight: bold; color: ${isCompleted ? '#00ff00' : '#fff'};">
-                                    Mission ${mission.id}: ${mission.name || mission.title}
+                                    Mission ${mission.missionNumber || mission.id}: ${mission.name || mission.title}
                                 </div>
                                 <div style="color: #ccc; margin: 10px 0;">
                                     ${mission.briefing || mission.description || 'No briefing available.'}

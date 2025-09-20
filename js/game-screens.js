@@ -316,6 +316,18 @@ CyberOpsGame.prototype.showIntermissionModalEngine = function(victory) {
                     game.activeIntermissionModal.close();
                     game.activeIntermissionModal = null;
                 }
+
+                // Advance mission index when returning to hub after victory
+                if (game.missionJustCompleted) {
+                    console.log('📊 Advancing mission index after victory (hub return):', {
+                        oldIndex: game.currentMissionIndex,
+                        newIndex: game.currentMissionIndex + 1,
+                        totalMissions: game.missions.length
+                    });
+                    game.currentMissionIndex++;
+                    game.missionJustCompleted = false;
+                }
+
                 // Apply healing and go to hub
                 game.applyMedicalHealing();
                 game.showSyndicateHub();
@@ -329,6 +341,18 @@ CyberOpsGame.prototype.showIntermissionModalEngine = function(victory) {
                     game.activeIntermissionModal.close();
                     game.activeIntermissionModal = null;
                 }
+
+                // Advance mission index when completing campaign
+                if (game.missionJustCompleted) {
+                    console.log('📊 Advancing mission index after final victory:', {
+                        oldIndex: game.currentMissionIndex,
+                        newIndex: game.currentMissionIndex + 1,
+                        totalMissions: game.missions.length
+                    });
+                    game.currentMissionIndex++;
+                    game.missionJustCompleted = false;
+                }
+
                 // Apply healing and go to hub
                 game.applyMedicalHealing();
                 game.showSyndicateHub();
@@ -359,7 +383,8 @@ CyberOpsGame.prototype.showIntermissionModalEngine = function(victory) {
                         // After loading, immediately start the mission again
                         setTimeout(() => {
                             game.currentMission = game.missions[game.currentMissionIndex];
-                            console.log(`Restarting Mission ${game.currentMission.id}: ${game.currentMission.title} with restored agents`);
+                            const missionNum = game.currentMission.missionNumber || game.currentMission.id;
+                            console.log(`Restarting Mission ${missionNum}: ${game.currentMission.title} with restored agents`);
                             game.startMission();
                         }, 100);
                     } catch (error) {
@@ -637,7 +662,8 @@ CyberOpsGame.prototype.tryAgainMission = function() {
                 // After loading, immediately start the mission again
                 setTimeout(() => {
                     this.currentMission = this.missions[this.currentMissionIndex];
-                    console.log(`Restarting Mission ${this.currentMission.id}: ${this.currentMission.title} with restored agents`);
+                    const missionNum = this.currentMission.missionNumber || this.currentMission.id;
+                    console.log(`Restarting Mission ${missionNum}: ${this.currentMission.title} with restored agents`);
                     this.startMission();
                 }, 100);
 

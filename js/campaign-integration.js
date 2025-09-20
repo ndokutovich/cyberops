@@ -285,7 +285,10 @@ CyberOpsGame.prototype.loadCampaignMissions = async function() {
 // Convert new mission format to legacy format
 CyberOpsGame.prototype.convertToLegacyFormat = function(missionData, index) {
     return {
-        id: missionData.missionNumber || index + 1,
+        // Use the string ID from missionData for proper tracking
+        id: missionData.id || `mission-${index + 1}`,
+        // Keep numeric ID for display purposes
+        missionNumber: missionData.missionNumber || index + 1,
         title: missionData.title || missionData.name,
         name: missionData.name,
         description: missionData.description,

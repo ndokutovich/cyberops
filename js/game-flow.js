@@ -46,7 +46,14 @@ CyberOpsGame.prototype.showMissionSelectDialog = function() {
             missionDiv.className = 'mission-option';
 
             const isCompleted = this.completedMissions.includes(mission.id);
-            const isAvailable = index <= this.currentMissionIndex;
+            // Mission is available if it's the first mission, or if the previous mission is completed
+            let isAvailable = true;
+            if (index > 0) {
+                const prevMission = this.missions[index - 1];
+                if (prevMission && !this.completedMissions.includes(prevMission.id)) {
+                    isAvailable = false;
+                }
+            }
             const isLocked = !isAvailable;
 
             if (isLocked) {
@@ -55,7 +62,7 @@ CyberOpsGame.prototype.showMissionSelectDialog = function() {
 
             missionDiv.innerHTML = `
                 <div class="mission-info">
-                    <div class="mission-name">Mission ${mission.id}: ${mission.title}</div>
+                    <div class="mission-name">Mission ${mission.missionNumber || mission.id}: ${mission.title}</div>
                     <div class="mission-desc">${mission.description.substring(0, 100)}...</div>
                 </div>
                 <div class="mission-status ${isCompleted ? 'completed' : isAvailable ? 'available' : 'locked'}">
@@ -92,7 +99,9 @@ CyberOpsGame.prototype.closeMissionSelect = function() {
 
 CyberOpsGame.prototype.showMissionBriefing = function(mission) {
         document.getElementById('missionBriefing').style.display = 'flex';
-        document.getElementById('missionTitle').textContent = `Mission ${mission.id}: ${mission.title}`;
+        // Use missionNumber for display, not id (which is now a string)
+        const missionNum = mission.missionNumber || mission.id;
+        document.getElementById('missionTitle').textContent = `Mission ${missionNum}: ${mission.title}`;
         document.getElementById('missionDesc').textContent = mission.description;
 
         // Continue main theme music during briefing (don't change music yet)
@@ -296,7 +305,8 @@ CyberOpsGame.prototype.initMission = function() {
 
         // Log mission start
         if (this.logEvent && this.currentMission) {
-            this.logEvent(`Mission ${this.currentMission.id}: ${this.currentMission.title} started`, 'mission', true);
+            const missionNum = this.currentMission.missionNumber || this.currentMission.id;
+            this.logEvent(`Mission ${missionNum}: ${this.currentMission.title} started`, 'mission', true);
         }
 
         // Reset state
