@@ -6,21 +6,26 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
             this.cleanup3D();
         }
 
-        // Hide all other screens
-        document.getElementById('mainMenu').style.display = 'none';
-        document.getElementById('gameCompleteScreen').style.display = 'none';
-        document.getElementById('creditsScreen').style.display = 'none';
-        document.getElementById('endScreen').style.display = 'none';
-        document.getElementById('gameHUD').style.display = 'none';
-        document.getElementById('hallOfGlory').style.display = 'none';
-        document.getElementById('intermissionDialog').classList.remove('show');
-        document.getElementById('hudDialog').classList.remove('show');
+        // Hide all other screens (with safety checks for test mode)
+        const elementsToHide = ['mainMenu', 'gameCompleteScreen', 'creditsScreen', 'endScreen', 'gameHUD', 'hallOfGlory'];
+        elementsToHide.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+
+        // Remove show class from dialogs (with safety checks)
+        const intermissionDialog = document.getElementById('intermissionDialog');
+        if (intermissionDialog) intermissionDialog.classList.remove('show');
+
+        const hudDialog = document.getElementById('hudDialog');
+        if (hudDialog) hudDialog.classList.remove('show');
 
         // Capture previous screen before updating
         const previousScreen = this.currentScreen;
 
-        // Show hub
-        document.getElementById('syndicateHub').style.display = 'flex';
+        // Show hub (with safety check)
+        const syndicateHub = document.getElementById('syndicateHub');
+        if (syndicateHub) syndicateHub.style.display = 'flex';
         this.currentScreen = 'hub';
 
         // Stop mission music and cleanup music system
@@ -57,15 +62,25 @@ CyberOpsGame.prototype.updateHubStats = function() {
             this.initializeHub();
         }
         
-        // Update resource displays
-        document.getElementById('hubCredits').textContent = this.credits.toLocaleString();
-        document.getElementById('hubResearchPoints').textContent = this.researchPoints;
-        document.getElementById('hubMissionsComplete').textContent = `${this.completedMissions.length}/${this.missions.length}`;
-        document.getElementById('hubActiveAgents').textContent = this.activeAgents.length;
-        
+        // Update resource displays (with safety checks for test mode)
+        const hubCredits = document.getElementById('hubCredits');
+        if (hubCredits) hubCredits.textContent = this.credits.toLocaleString();
+
+        const hubResearchPoints = document.getElementById('hubResearchPoints');
+        if (hubResearchPoints) hubResearchPoints.textContent = this.researchPoints;
+
+        const hubMissionsComplete = document.getElementById('hubMissionsComplete');
+        if (hubMissionsComplete) hubMissionsComplete.textContent = `${this.completedMissions.length}/${this.missions.length}`;
+
+        const hubActiveAgents = document.getElementById('hubActiveAgents');
+        if (hubActiveAgents) hubActiveAgents.textContent = this.activeAgents.length;
+
         // Update world control
-        document.getElementById('worldControlPercent').textContent = `${this.worldControl}%`;
-        document.getElementById('controlProgress').style.width = `${this.worldControl}%`;
+        const worldControlPercent = document.getElementById('worldControlPercent');
+        if (worldControlPercent) worldControlPercent.textContent = `${this.worldControl}%`;
+
+        const controlProgress = document.getElementById('controlProgress');
+        if (controlProgress) controlProgress.style.width = `${this.worldControl}%`;
         
         // Update status indicators
         const availableMissions = this.missions.length - this.completedMissions.length;
@@ -89,9 +104,14 @@ CyberOpsGame.prototype.updateHubStats = function() {
                 missionStatusEl.style.color = '#ffa500';
             }
         }
-        document.getElementById('agentStatus').textContent = `${this.activeAgents.length} Active`;
-        document.getElementById('arsenalStatus').textContent = `${this.weapons.length + this.equipment.length} Items`;
-        document.getElementById('researchStatus').textContent = `${Math.floor(this.researchPoints / 50)} Projects`;
+        const agentStatus = document.getElementById('agentStatus');
+        if (agentStatus) agentStatus.textContent = `${this.activeAgents.length} Active`;
+
+        const arsenalStatus = document.getElementById('arsenalStatus');
+        if (arsenalStatus) arsenalStatus.textContent = `${this.weapons.length + this.equipment.length} Items`;
+
+        const researchStatus = document.getElementById('researchStatus');
+        if (researchStatus) researchStatus.textContent = `${Math.floor(this.researchPoints / 50)} Projects`;
 
         // Update fallen agents status
         const fallenCount = this.fallenAgents ? this.fallenAgents.length : 0;

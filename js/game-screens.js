@@ -805,18 +805,24 @@ CyberOpsGame.prototype.backToMainMenu = function() {
             this.cleanupMusicSystem();
         }
 
-        // Hide all screens and dialogs
-        document.getElementById('gameCompleteScreen').style.display = 'none';
-        document.getElementById('creditsScreen').style.display = 'none';
-        document.getElementById('endScreen').style.display = 'none';
-        document.getElementById('gameHUD').style.display = 'none';
-        document.getElementById('syndicateHub').style.display = 'none';  // Hide hub
-        document.getElementById('intermissionDialog').classList.remove('show');
-        document.getElementById('hudDialog').classList.remove('show');
+        // Hide all screens and dialogs (with safety checks for test mode)
+        const elementsToHide = ['gameCompleteScreen', 'creditsScreen', 'endScreen', 'gameHUD', 'syndicateHub'];
+        elementsToHide.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+
+        // Remove show class from dialogs (with safety checks)
+        const intermissionDialog = document.getElementById('intermissionDialog');
+        if (intermissionDialog) intermissionDialog.classList.remove('show');
+
+        const hudDialog = document.getElementById('hudDialog');
+        if (hudDialog) hudDialog.classList.remove('show');
         // Mission select dialog removed - using declarative dialog system
-        
-        // Show main menu
-        document.getElementById('mainMenu').style.display = 'flex';
+
+        // Show main menu (with safety check)
+        const mainMenu = document.getElementById('mainMenu');
+        if (mainMenu) mainMenu.style.display = 'flex';
         this.currentScreen = 'menu';
         this.updateMenuState();
 

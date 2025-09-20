@@ -366,6 +366,16 @@ class RPGManager {
             this.game.logEvent(`🎊 ${entity.name} reached Level ${entity.level}!`, 'progression', true);
             this.game.logEvent(`Gained ${statPoints} stat points and ${skillPoints} skill points!`, 'progression');
         }
+
+        // Show level up notification if the game has the UI method
+        if (this.game && this.game.showLevelUpNotification) {
+            // Find the agent that leveled up
+            const agent = this.game.agents?.find(a => a.rpgEntity === entity) ||
+                         this.game.activeAgents?.find(a => a.rpgEntity === entity);
+            if (agent) {
+                this.game.showLevelUpNotification(agent);
+            }
+        }
     }
 
     getAvailablePerks(entity) {
@@ -863,6 +873,21 @@ CyberOpsGame.prototype.onEntityDeath = function(entity, killer) {
                 duration: 60,
                 dy: -0.5
             });
+        }
+
+        // Refresh character dialog if it's open to show new XP
+        const characterDialog = document.getElementById('dialog-character');
+        if (characterDialog && characterDialog.style.display !== 'none') {
+            // Check if the killer is the currently selected agent
+            if (killer === this._selectedAgent ||
+                (killer.id && this._selectedAgent?.id === killer.id) ||
+                (killer.name && this._selectedAgent?.name === killer.name)) {
+                // Refresh the dialog to show updated XP
+                const dialogEngine = this.dialogEngine || window.dialogEngine || window.declarativeDialogEngine;
+                if (dialogEngine && dialogEngine.navigateTo) {
+                    dialogEngine.navigateTo('character', null, true);
+                }
+            }
         }
     } else {
         // Debug why XP wasn't granted
