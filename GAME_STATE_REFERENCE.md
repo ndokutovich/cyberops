@@ -2,16 +2,16 @@
 *Single source of truth for all game states and transitions*
 
 ## Quick Stats
-- **38 Total States** (16 declarative, 22 imperative)
-- **66 Declarative Transitions** (T01-T58 + T17a/b, T34a/b, T47a, T50a)
-- **32 Imperative Transitions** (entry/menu/mission flow - listed separately)
+- **38 Total States** (22 declarative, 16 imperative)
+- **72 Declarative Transitions** (T01-T58 + T17a/b, T34a/b, T47a, T50a + 6 modal transitions)
+- **26 Imperative Transitions** (entry/menu/mission flow - listed separately)
 - **98 Total Documented Transitions** (more exist in code)
-- **42% States Converted** to declarative system
+- **58% States Converted** to declarative system (6 modals added)
 - **7 Duplicate Functions** need cleanup (1 removed: showMissionSelectDialog)
 
 ## State Inventory
 
-### 🟢 Converted (Declarative) - 16 states
+### 🟢 Converted (Declarative) - 22 states
 
 | State | Level | Parent | Imperative Duplicate | Status |
 |-------|-------|--------|---------------------|---------|
@@ -31,8 +31,15 @@
 | save-load | 2 | pause-menu | - | Working |
 | settings | 2 | pause-menu | - | Working |
 | npc-interaction | 1 | game | ⚠️ showNPCDialog() | Working |
+| **Modals** ||||
+| confirm-exit | 2 | pause-menu | ✅ CONVERTED | Working |
+| insufficient-funds | 2 | various | ✅ CONVERTED | Working |
+| save-confirm | 3 | save-load | ✅ CONVERTED | Working |
+| load-confirm | 3 | save-load | ✅ CONVERTED | Working |
+| delete-confirm | 3 | save-load | ✅ CONVERTED | Working |
+| confirm-surrender | 2 | game | ✅ CONVERTED | Working |
 
-### 🔴 Unconverted (Imperative) - 22 states
+### 🔴 Unconverted (Imperative) - 16 states
 
 | State | Function | Priority | Effort | Notes |
 |-------|----------|----------|--------|-------|
@@ -54,12 +61,12 @@
 | defeat | showDefeatScreen() | HIGH | 2h | Retry options |
 | **Modals** |||||
 | terminal-hack | showTerminalHack() | MEDIUM | 2h | Mini-game |
-| confirm-surrender | showHudDialog() | LOW | 30m | Simple |
-| confirm-exit | showHudDialog() | LOW | 30m | Simple |
-| insufficient-funds | showHudDialog() | LOW | 15m | Warning |
-| save-confirm | showHudDialog() | LOW | 15m | Confirmation |
-| load-confirm | showHudDialog() | LOW | 15m | Confirmation |
-| delete-confirm | showHudDialog() | LOW | 15m | Confirmation |
+| ~~confirm-surrender~~ | ~~showHudDialog()~~ | ~~LOW~~ | ~~30m~~ | ✅ CONVERTED |
+| ~~confirm-exit~~ | ~~showHudDialog()~~ | ~~LOW~~ | ~~30m~~ | ✅ CONVERTED |
+| ~~insufficient-funds~~ | ~~showHudDialog()~~ | ~~LOW~~ | ~~15m~~ | ✅ CONVERTED |
+| ~~save-confirm~~ | ~~showHudDialog()~~ | ~~LOW~~ | ~~15m~~ | ✅ CONVERTED |
+| ~~load-confirm~~ | ~~showHudDialog()~~ | ~~LOW~~ | ~~15m~~ | ✅ CONVERTED |
+| ~~delete-confirm~~ | ~~showHudDialog()~~ | ~~LOW~~ | ~~15m~~ | ✅ CONVERTED |
 | sell-confirm | Integrated in arsenal | - | - | ✅ Done |
 | buy-confirm | Integrated in arsenal | - | - | ✅ Done |
 
