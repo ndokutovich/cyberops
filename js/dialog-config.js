@@ -77,7 +77,7 @@ const DIALOG_CONFIG = {
                 data: 'selectedAgent'
             },
             buttons: [
-                { text: 'CONFIRM', action: 'execute:hireAgent', primary: true },
+                { text: 'CONFIRM', action: 'execute:confirmHire', primary: true },
                 { text: 'CANCEL', action: 'back' }
             ],
             autoClose: {

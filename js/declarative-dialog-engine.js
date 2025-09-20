@@ -326,8 +326,37 @@ class DeclarativeDialogEngine {
 
         // Apply filter
         if (config.filter) {
-            const filterFn = new Function('item', `return ${config.filter}`);
-            items = items.filter(filterFn);
+            console.log(`Applying filter: ${config.filter}`);
+            console.log(`Items before filter: ${items.length} agents`);
+            items.forEach(item => console.log(`  - ${item.name}: hired=${item.hired}`));
+
+            // Handle arrow function syntax
+            if (config.filter.includes('=>')) {
+                // It's already an arrow function, evaluate it
+                const filterFn = eval(`(${config.filter})`);
+                items = items.filter(filterFn);
+            } else {
+                // It's a simple expression, wrap in return
+                const filterFn = new Function('item', `return ${config.filter}`);
+                items = items.filter(filterFn);
+            }
+
+            console.log(`Items after filter: ${items.length} agents`);
+            items.forEach(item => console.log(`  - ${item.name}: hired=${item.hired}`));
+        }
+
+        // Add computed properties for hire-agents
+        if (config.source === 'availableAgents') {
+            items = items.map(agent => {
+                const canAfford = game.credits >= (agent.cost || 0);
+                console.log(`Agent ${agent.name}: cost=${agent.cost}, credits=${game.credits}, affordable=${canAfford}`);
+                return {
+                    ...agent,
+                    affordable: canAfford,
+                    // Format skills array for display
+                    skills: Array.isArray(agent.skills) ? agent.skills.join(', ') : (agent.skills || 'none')
+                };
+            });
         }
 
         // Apply sort
@@ -461,6 +490,18 @@ class DeclarativeDialogEngine {
         const parts = actionString.split(':');
         const actionType = parts[0];
         const actionParams = parts.slice(1);
+
+        // Add any data attributes to context
+        if (context.element) {
+            const dataAttrs = {};
+            for (const attr of context.element.attributes) {
+                if (attr.name.startsWith('data-') && attr.name !== 'data-action') {
+                    const key = attr.name.substring(5); // Remove 'data-' prefix
+                    dataAttrs[key] = attr.value;
+                }
+            }
+            context = { ...context, ...dataAttrs };
+        }
 
         // Special handling for navigation with dynamic states
         if (actionType === 'navigate' && actionParams.length > 1) {
@@ -644,12 +685,28 @@ class DeclarativeDialogEngine {
      * Template rendering
      */
     renderTemplate(template, data) {
-        // Simple template engine - replace {{variable}} with data
-        return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-            return data[key] !== undefined ? data[key] : '';
-        }).replace(/\{\{#if\s+(\w+)\}\}(.*?)\{\{else\}\}(.*?)\{\{\/if\}\}/gs, (match, condition, ifContent, elseContent) => {
-            return data[condition] ? ifContent : elseContent;
+        let result = template;
+
+        // First handle if/else blocks (must be done before variable replacement)
+        // Handle {{#if condition}}...{{else}}...{{/if}}
+        result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match, condition, content) => {
+            // Check if there's an else clause
+            const elseMatch = content.match(/^([\s\S]*?)\{\{else\}\}([\s\S]*?)$/);
+            if (elseMatch) {
+                // Has else clause
+                return data[condition] ? elseMatch[1] : elseMatch[2];
+            } else {
+                // No else clause
+                return data[condition] ? content : '';
+            }
         });
+
+        // Then replace simple variables
+        result = result.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+            return data[key] !== undefined ? data[key] : '';
+        });
+
+        return result;
     }
 
     /**
@@ -809,6 +866,28 @@ class DeclarativeDialogEngine {
     registerCoreActions() {
         // Navigation
         this.actionRegistry.set('navigate', (target, context) => {
+            // If navigating to hire-confirm, pass agent data
+            if (target === 'hire-confirm' && context.agent) {
+                // Find the agent and store it for the confirmation dialog
+                const game = window.game;
+                const agentId = parseInt(context.agent);
+                const agent = game.availableAgents?.find(a => a.id === agentId);
+                console.log('Navigate to hire-confirm: agentId=', agentId, 'found agent=', agent);
+                if (agent) {
+                    // Store only the original agent, not the enhanced version
+                    this.stateData.selectedAgent = {
+                        id: agent.id,
+                        name: agent.name,
+                        cost: agent.cost,
+                        health: agent.health,
+                        damage: agent.damage,
+                        speed: agent.speed,
+                        skills: agent.skills,
+                        hired: agent.hired
+                    };
+                    console.log('Stored selectedAgent:', this.stateData.selectedAgent);
+                }
+            }
             this.navigateTo(target, context);
         });
 

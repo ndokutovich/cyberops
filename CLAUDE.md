@@ -1501,3 +1501,54 @@ if (registeredHandler) {
     return;
 }
 ```
+
+### Dialog Refresh Without Blinking or Closing
+**Problem**: Dialog closes or blinks when refreshing content (e.g., after sell/buy actions)
+**Causes & Solutions**:
+
+1. **Dialog Engine Access**
+   - **Issue**: `game.dialogEngine.generators` is undefined
+   - **Fix**: Use `window.declarativeDialogEngine` or `window.dialogEngine`:
+   ```javascript
+   const dialogEngine = game.dialogEngine || window.dialogEngine || window.declarativeDialogEngine;
+   if (dialogEngine && dialogEngine.navigateTo) {
+       dialogEngine.navigateTo('arsenal');
+   }
+   ```
+
+2. **Dialog Closing on Refresh**
+   - **Issue**: `updateStateStack()` was closing dialog when navigating to same state
+   - **Fix**: Skip stack update when refreshing:
+   ```javascript
+   const isRefresh = this.currentState === stateId;
+   if (!isRefresh) {
+       this.updateStateStack(stateId, state);
+   }
+   ```
+
+3. **Blinking/Fade Animation on Refresh**
+   - **Issue**: Exit and enter transitions running even for refresh
+   - **Fix**: Skip animations and update content in-place:
+   ```javascript
+   if (isRefresh && dialogEl) {
+       const contentEl = dialogEl.querySelector('.dialog-content');
+       if (contentEl) {
+           contentEl.innerHTML = content;
+       }
+       return; // Skip animations and re-adding to DOM
+   }
+   ```
+
+4. **Duplicate Event Handlers**
+   - **Issue**: Re-binding event handlers without removing old ones
+   - **Fix**: Don't re-bind handlers on refresh (HTML onclick still works)
+
+**Best Practice for UI Refresh**:
+```javascript
+// For sell/buy operations, preserve state and navigate
+const wasInSellMode = game.currentInventoryMode === 'sell';
+if (wasInSellMode) {
+    game.currentInventoryMode = 'sell';
+}
+dialogEngine.navigateTo('arsenal'); // Will refresh without blinking
+```

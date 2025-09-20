@@ -668,7 +668,8 @@ body {
     box-shadow: 0 0 10px rgba(0,255,0,0.5);
 }
 
-.agent-name {
+/* Agent name in health bar overlay */
+.agent-health-bar .agent-name {
     position: absolute;
     left: 5px;
     top: 50%;
@@ -2058,7 +2059,7 @@ body {
     font-weight: bold;
 }
 
-.dialog-title {
+.hud-dialog .dialog-title {
     font-size: 1.1em;
     text-transform: uppercase;
 }
@@ -2740,7 +2741,7 @@ body {
     border-radius: 8px 8px 0 0;
 }
 
-.dialog-title {
+.dialog-header .dialog-title {
     font-size: 18px;
     font-weight: bold;
     color: #00ffff;
@@ -2859,6 +2860,16 @@ body {
 .hire-card.unaffordable {
     opacity: 0.5;
     border-color: #666;
+}
+
+/* Agent name in hire card */
+.hire-card .agent-name {
+    position: static;
+    transform: none;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #00ffff;
+    margin-bottom: 10px;
 }
 
 .agent-header, .agent-info {

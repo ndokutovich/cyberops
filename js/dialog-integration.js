@@ -1973,7 +1973,7 @@ CyberOpsGame.prototype.registerDialogValidators = function(engine) {
 CyberOpsGame.prototype.registerDialogActions = function(engine) {
     const game = this;
 
-    // Hire agent
+    // Hire agent (legacy - kept for compatibility)
     engine.registerAction('hireAgent', function(agentId, context) {
         if (!agentId) {
             agentId = this.stateData.selectedAgent?.id;
@@ -1994,6 +1994,62 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
                 this.back();
                 this.actionRegistry.get('refresh')();
             }, 2000);
+        }
+    });
+
+    // Confirm hire - uses selectedAgent from state
+    engine.registerAction('confirmHire', function(context) {
+        const selectedAgent = this.stateData.selectedAgent;
+
+        console.log('confirmHire action called');
+        console.log('Selected agent from state:', selectedAgent);
+
+        if (!selectedAgent) {
+            console.error('No agent selected for hire confirmation');
+            this.back();
+            return;
+        }
+
+        const agent = game.availableAgents.find(a => a.id === selectedAgent.id);
+
+        console.log('Found agent in availableAgents:', agent);
+        console.log('Agent details:', {
+            id: agent?.id,
+            name: agent?.name,
+            hired: agent?.hired,
+            cost: agent?.cost,
+            playerCredits: game.credits,
+            canAfford: game.credits >= (agent?.cost || 0)
+        });
+
+        if (agent && !agent.hired && game.credits >= agent.cost) {
+            game.credits -= agent.cost;
+            agent.hired = true;
+            game.activeAgents.push(agent);
+            game.updateHubStats();
+
+            console.log(`✅ Hired ${agent.name} for ${agent.cost} credits`);
+
+            // Close confirmation and refresh the hire list
+            this.back(); // Back to hire-agents
+
+            // Refresh the hire list to show updated state
+            setTimeout(() => {
+                const currentState = this.currentState;
+                if (currentState === 'hire-agents') {
+                    this.navigateTo('hire-agents'); // Refresh
+                }
+            }, 100);
+        } else {
+            console.error('Cannot hire agent - condition failed:', {
+                agent: agent,
+                agentExists: !!agent,
+                isHired: agent?.hired,
+                agentCost: agent?.cost,
+                playerCredits: game.credits,
+                canAfford: agent ? (game.credits >= agent.cost) : false
+            });
+            this.back();
         }
     });
 

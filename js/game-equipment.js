@@ -593,6 +593,17 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
         window.GameServices.formulaService.calculateSellPrice(item, 0.9) :
         Math.floor(item.cost * 0.6);
 
+    console.log('=== SELL PRICE DEBUG ===');
+    console.log('Item cost:', item.cost, 'type:', typeof item.cost);
+    console.log('Calculated sell price:', sellPrice, 'type:', typeof sellPrice);
+    console.log('Credits before:', this.credits, 'type:', typeof this.credits);
+
+    // Type safety check
+    if (typeof sellPrice !== 'number' || isNaN(sellPrice)) {
+        console.error('ERROR: Sell price is not a valid number!', sellPrice);
+        return;
+    }
+
     // Confirm sale
     this.showHudDialog(
         '💰 SELL ITEM',
@@ -602,10 +613,29 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
             {
                 text: 'SELL',
                 action: () => {
-                    console.log('Selling item:', item.name, 'Count before:', item.owned);
+                    console.log('=== EXECUTING SELL ===');
+                    console.log('Selling item:', item.name);
+                    console.log('Item count before:', item.owned);
+                    console.log('Credits before sell:', this.credits);
+                    console.log('Sell price to ADD:', sellPrice);
+
                     item.owned--;
-                    this.credits += sellPrice;
-                    console.log('Count after:', item.owned, 'Credits:', this.credits);
+                    const creditsBefore = this.credits;
+
+                    // Safeguard: ensure sellPrice is positive
+                    const finalSellPrice = Math.max(0, sellPrice);
+                    if (finalSellPrice <= 0) {
+                        console.error('WARNING: Sell price is not positive!', sellPrice);
+                    }
+
+                    // Add credits from sale
+                    this.credits = creditsBefore + finalSellPrice;
+
+                    console.log('Item count after:', item.owned);
+                    console.log('Credits after sell:', this.credits);
+                    console.log('Change in credits:', this.credits - creditsBefore);
+                    console.log('Expected change:', finalSellPrice);
+                    console.log('Formula used: credits = ', creditsBefore, ' + ', finalSellPrice, ' = ', this.credits);
 
                     // Store reference to game instance and current mode
                     const game = this;
