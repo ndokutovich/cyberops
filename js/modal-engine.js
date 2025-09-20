@@ -100,10 +100,10 @@ class ModalEngine {
         // Apply animation
         this.animateIn(modal);
 
-        // Handle typing effect for NPC dialogs
-        if (modalConfig.type === 'npc' && modalConfig.text) {
-            this.startTypingEffect(modalId, modalConfig.text);
-        }
+        // Handle typing effect for NPC dialogs (disabled for now - causes issues)
+        // if (modalConfig.type === 'npc' && modalConfig.text) {
+        //     this.startTypingEffect(modalId, modalConfig.text);
+        // }
 
         // Auto-focus first button if requested
         if (modalConfig.autoFocus) {
@@ -215,8 +215,7 @@ class ModalEngine {
                 <div class="modal-npc-info">
                     <div class="modal-npc-name">${config.name || 'Unknown'}</div>
                     <div class="modal-npc-text" id="npc-text-${config.modalId || Date.now()}">
-                        <span class="typing-text"></span>
-                        <span class="cursor">_</span>
+                        ${config.text || ''}
                     </div>
                 </div>
             </div>
@@ -387,6 +386,11 @@ class ModalEngine {
             const choiceButtons = wrapper.querySelectorAll('.modal-npc-choice');
             choiceButtons.forEach(btn => {
                 btn.onclick = () => {
+                    // Check if modal is already being closed
+                    if (!this.activeModals.find(m => m.id === modal.id)) {
+                        return;
+                    }
+
                     const index = parseInt(btn.dataset.choiceIndex);
                     const choice = config.choices[index];
                     if (choice.action) {
@@ -468,6 +472,13 @@ class ModalEngine {
 
         const modal = this.activeModals[modalIndex];
 
+        // Remove from active modals immediately to prevent further interaction
+        this.activeModals.splice(modalIndex, 1);
+        this.modalStack = this.modalStack.filter(id => id !== modalId);
+
+        // Immediately disable interaction to prevent clicks during animation
+        modal.element.style.pointerEvents = 'none';
+
         // Stop typing effect if exists
         if (this.typingEffects.has(modalId)) {
             clearInterval(this.typingEffects.get(modalId));
@@ -480,8 +491,6 @@ class ModalEngine {
 
         setTimeout(() => {
             modal.element.remove();
-            this.activeModals.splice(modalIndex, 1);
-            this.modalStack = this.modalStack.filter(id => id !== modalId);
 
             // Restore previous modal if exists
             if (this.modalStack.length > 0) {
@@ -541,8 +550,9 @@ class ModalEngine {
         if (updates.text !== undefined && modal.config.type === 'npc') {
             const textElement = modal.element.querySelector('.modal-npc-text');
             if (textElement) {
-                textElement.innerHTML = '<span class="typing-text"></span><span class="cursor">_</span>';
-                this.startTypingEffect(modalId, updates.text);
+                textElement.innerHTML = updates.text;
+                // Typing effect disabled - was causing issues
+                // this.startTypingEffect(modalId, updates.text);
             }
         }
     }

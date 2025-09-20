@@ -279,7 +279,7 @@ CyberOpsGame.prototype.showIntermissionModalEngine = function(victory) {
     }
 
     // Add quest breakdown
-    if (missionSummary.quests.length > 0) {
+    if (missionSummary.quests && missionSummary.quests.length > 0) {
         content += '<div style="margin-top: 20px; border-top: 1px solid #00ffff; padding-top: 15px;"><h3 style="color: #00ffff;">Side Quests:</h3><ul style="list-style: none; padding: 0;">';
         missionSummary.quests.forEach(quest => {
             const icon = quest.completed ? '✅' : '❌';

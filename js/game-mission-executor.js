@@ -743,6 +743,7 @@ CyberOpsGame.prototype.updateSurvivalTimers = function(deltaTime) {
 
 // Initialize quest system
 CyberOpsGame.prototype.initQuestSystem = function() {
+    this.quests = {};  // All quests given by NPCs
     this.activeQuests = {};
     this.completedQuests = new Set();
 

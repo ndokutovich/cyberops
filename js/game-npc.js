@@ -172,10 +172,11 @@ NPC.prototype.getNextDialog = function(game) {
             return this.dialog[dialogIndex];
         }
 
+        const npc = this;
         return {
             text: "Hello there, Agent.",
             choices: [
-                { text: "Goodbye", action: () => this.endDialog(game) }
+                { text: "Goodbye", action: function(game) { npc.endDialog(game); } }
             ]
         };
     }
@@ -249,24 +250,25 @@ NPC.prototype.giveQuest = function(quest, game) {
         // Use introDialog if available, otherwise use description
         const questText = quest.introDialog || quest.description || `I have a task for you: ${quest.name}`;
 
+        const npc = this;  // Capture NPC reference
         game.showDialog({
             npc: this,
             text: questText,
             choices: [
                 {
                     text: "I'll do it",
-                    action: () => {
-                        game.addNotification(`📜 New Quest: ${quest.name}`);
-                        if (game.logEvent) {
-                            game.logEvent(`Quest accepted: ${quest.name} from ${this.name}`, 'quest', true);
+                    action: function(gameInstance) {
+                        gameInstance.addNotification(`📜 New Quest: ${quest.name}`);
+                        if (gameInstance.logEvent) {
+                            gameInstance.logEvent(`Quest accepted: ${quest.name} from ${npc.name}`, 'quest', true);
                         }
-                        this.endDialog(game);
+                        npc.endDialog(gameInstance);
                     }
                 },
                 {
                     text: "Not right now",
-                    action: () => {
-                        this.endDialog(game);
+                    action: function(gameInstance) {
+                        npc.endDialog(gameInstance);
                     }
                 }
             ]
@@ -725,18 +727,24 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
 
     // Use new modal engine if available
     if (window.modalEngine) {
-        // Close any existing NPC dialog
-        this.closeNPCDialog();
+        // Close any existing NPC dialog before showing new one
+        if (this.activeNPCModal) {
+            this.closeNPCDialog();
+        }
 
         // Convert choices to modal engine format
-        const modalChoices = dialogData.choices ? dialogData.choices.map(choice => ({
-            text: choice.text,
-            action: () => {
-                if (choice.action) choice.action();
-                this.closeNPCDialog();
-            },
-            closeAfter: false  // We handle closing manually
-        })) : [];
+        const modalChoices = dialogData.choices ? dialogData.choices.map((choice, index) => {
+            return {
+                text: choice.text,
+                action: () => {
+                    if (choice.action) {
+                        // Call action with NPC as context and game as parameter (matching original system)
+                        choice.action.call(dialogData.npc, this);
+                    }
+                },
+                closeAfter: false  // We handle closing manually
+            };
+        }) : [];
 
         // Create NPC dialog with modal engine
         this.activeNPCModal = window.modalEngine.show({
@@ -750,7 +758,7 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
             backdrop: true,
             closeOnBackdrop: false,
             onClose: () => {
-                this.activeNPCModal = null;
+                // Don't set activeNPCModal = null here, it's handled in closeNPCDialog
                 this.dialogActive = false;
                 this.resumeGame();
             }
@@ -1206,8 +1214,9 @@ CyberOpsGame.prototype.showMissionList = function() {
 CyberOpsGame.prototype.closeNPCDialog = function() {
     // Close modal engine dialog if exists
     if (this.activeNPCModal) {
-        this.activeNPCModal.close();
-        this.activeNPCModal = null;
+        const modalToClose = this.activeNPCModal;
+        this.activeNPCModal = null;  // Clear reference immediately
+        modalToClose.close();  // But close the actual modal
         return;
     }
 
