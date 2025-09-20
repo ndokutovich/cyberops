@@ -185,16 +185,10 @@ const GAME_MUSIC_CONFIG = {
             tracks: {
                 retro: {
                     file: 'music/screens/demoscene.mp3',
-                    procedural: true,  // Use procedural generation
                     volume: 0.5,
                     loop: true,
                     fadeIn: 1000
                 }
-            },
-            proceduralConfig: {
-                style: 'chiptune',
-                tempo: 140,
-                complexity: 'medium'
             }
         }
     },
@@ -258,26 +252,22 @@ const GAME_MUSIC_CONFIG = {
             click: {
                 file: 'sfx-click.wav',
                 fallback: 'sfx-click.mp3',
-                volume: 0.3,
-                procedural: true
+                volume: 0.3
             },
             hover: {
                 file: 'sfx-hover.wav',
                 fallback: 'sfx-hover.mp3',
-                volume: 0.2,
-                procedural: true
+                volume: 0.2
             },
             error: {
                 file: 'sfx-error.wav',
                 fallback: 'sfx-error.mp3',
-                volume: 0.4,
-                procedural: true
+                volume: 0.4
             },
             success: {
                 file: 'sfx-success.wav',
                 fallback: 'sfx-success.mp3',
-                volume: 0.4,
-                procedural: true
+                volume: 0.4
             }
         },
 
@@ -287,26 +277,22 @@ const GAME_MUSIC_CONFIG = {
                 file: 'sfx-shoot.wav',
                 fallback: 'sfx-shoot.mp3',
                 volume: 0.5,
-                procedural: true,  // Always fallback to procedural if files missing
                 variations: ['sfx-shoot-1.wav', 'sfx-shoot-2.wav']
             },
             explosion: {
                 file: 'sfx-explosion.wav',
                 fallback: 'sfx-explosion.mp3',
-                volume: 0.6,
-                procedural: true  // Always fallback to procedural if files missing
+                volume: 0.6
             },
             hit: {
                 file: 'sfx-hit.wav',
                 fallback: 'sfx-hit.mp3',
-                volume: 0.4,
-                procedural: true  // Generate if missing
+                volume: 0.4
             },
             shield: {
                 file: 'sfx-shield.wav',
                 fallback: 'sfx-shield.mp3',
-                volume: 0.5,
-                procedural: true  // Always fallback to procedural if files missing
+                volume: 0.5
             }
         },
 
@@ -316,7 +302,6 @@ const GAME_MUSIC_CONFIG = {
                 file: 'sfx-hack.wav',
                 fallback: 'sfx-hack.mp3',
                 volume: 0.4,
-                procedural: true,
                 duration: 1000,  // Sound duration for timing
                 vibration: [20, 10, 20]  // Haptic feedback pattern
             },
@@ -324,32 +309,27 @@ const GAME_MUSIC_CONFIG = {
                 file: 'sfx-plant.wav',
                 fallback: 'sfx-plant.mp3',
                 volume: 0.5,
-                procedural: true,
                 description: 'Planting explosives'
             },
             door: {
                 file: 'sfx-door.wav',
                 fallback: 'sfx-door.mp3',
-                volume: 0.5,
-                procedural: true
+                volume: 0.5
             },
             terminal: {
                 file: 'sfx-terminal.wav',
                 fallback: 'sfx-terminal.mp3',
-                volume: 0.3,
-                procedural: true
+                volume: 0.3
             },
             pickup: {
                 file: 'sfx-pickup.wav',
                 fallback: 'sfx-pickup.mp3',
-                volume: 0.4,
-                procedural: true
+                volume: 0.4
             },
             type: {
                 file: 'sfx-type.wav',
                 fallback: 'sfx-type.mp3',
                 volume: 0.1,
-                procedural: true,
                 description: 'NPC dialog typing'
             }
         },
@@ -360,14 +340,12 @@ const GAME_MUSIC_CONFIG = {
                 file: 'sfx-footstep.wav',
                 fallback: 'sfx-footstep.mp3',
                 volume: 0.2,
-                procedural: true,
                 variations: ['sfx-footstep-1.wav', 'sfx-footstep-2.wav']
             },
             move: {
                 file: 'sfx-move.wav',
                 fallback: 'sfx-move.mp3',
-                volume: 0.1,
-                procedural: true
+                volume: 0.1
             }
         }
     },
@@ -417,66 +395,7 @@ const GAME_MUSIC_CONFIG = {
         }
     },
 
-    // Procedural sound generation settings
-    proceduralSettings: {
-        // Define how each sound type should be generated
-        templates: {
-            shoot: {
-                waveform: 'sawtooth',
-                frequency: 300,
-                duration: 100,
-                envelope: { attack: 0, decay: 100, sustain: 0, release: 0 }
-            },
-            explosion: {
-                waveform: 'noise',
-                frequency: 50,
-                duration: 500,
-                envelope: { attack: 0, decay: 100, sustain: 200, release: 200 }
-            },
-            hit: {
-                waveform: 'square',
-                frequency: 150,
-                duration: 50,
-                envelope: { attack: 0, decay: 50, sustain: 0, release: 0 }
-            },
-            shield: {
-                waveform: 'sine',
-                frequency: 800,
-                duration: 200,
-                envelope: { attack: 10, decay: 50, sustain: 100, release: 40 }
-            },
-            hack: {
-                waveform: 'triangle',
-                frequency: 400,
-                duration: 300,
-                modulation: { type: 'fm', rate: 10, depth: 100 }
-            },
-            plant: {
-                waveform: 'square',
-                frequency: 200,
-                duration: 400,
-                envelope: { attack: 50, decay: 100, sustain: 200, release: 50 }
-            },
-            type: {
-                waveform: 'sine',
-                frequency: 1000,
-                duration: 30,
-                randomPitch: 0.2  // ±20% pitch variation
-            },
-            click: {
-                waveform: 'sine',
-                frequency: 600,
-                duration: 50,
-                envelope: { attack: 0, decay: 50, sustain: 0, release: 0 }
-            },
-            footstep: {
-                waveform: 'noise',
-                frequency: 100,
-                duration: 100,
-                filter: { type: 'lowpass', frequency: 200 }
-            }
-        }
-    },
+    // Procedural sound generation removed - using only audio assets
 
     // Music event triggers
     triggers: {
@@ -500,28 +419,7 @@ const GAME_MUSIC_CONFIG = {
         }
     },
 
-    // Procedural music settings
-    procedural: {
-        enabled: true,
-        fallbackOnly: true,  // Only use when files missing
-        styles: {
-            chiptune: {
-                waveforms: ['square', 'triangle', 'sawtooth'],
-                tempo: [120, 140, 160],
-                scales: ['minor', 'pentatonic']
-            },
-            ambient: {
-                waveforms: ['sine', 'triangle'],
-                tempo: [60, 80],
-                scales: ['major', 'dorian']
-            },
-            combat: {
-                waveforms: ['sawtooth', 'square'],
-                tempo: [140, 160, 180],
-                scales: ['minor', 'phrygian']
-            }
-        }
-    }
+    // Procedural music removed - using only audio assets
 };
 
 // Helper function to get music config for a screen
