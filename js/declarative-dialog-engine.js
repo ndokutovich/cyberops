@@ -607,9 +607,9 @@ class DeclarativeDialogEngine {
             // If there are more dialogs in the stack, show the previous one
             if (this.stateStack.length > 0) {
                 const prevState = this.stateStack[this.stateStack.length - 1];
-                this.currentState = prevState.state;
+                this.currentState = prevState.id;  // Use the ID string, not the state object
                 // Re-render the previous state
-                this.navigateTo(prevState.state.id, prevState.params);
+                this.navigateTo(prevState.id, prevState.params);
             } else {
                 this.currentState = null;
                 this.returnToBase();

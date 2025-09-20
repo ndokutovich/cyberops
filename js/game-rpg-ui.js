@@ -22,7 +22,7 @@ CyberOpsGame.prototype.showCharacterSheet = function(agentIdOrName) {
             }
         }
 
-        this.dialogEngine.navigateTo('character-sheet');
+        this.dialogEngine.navigateTo('character');
         return;
     }
 

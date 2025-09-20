@@ -37,6 +37,81 @@ CyberOpsGame.prototype.initializeDeclarativeDialogs = function() {
 
 // Register content generators
 CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
+    // Store reference to game for shared components
+    const game = this;
+
+    // Shared agent roster component
+    const generateAgentRoster = function(selectedAgentId, onClickAction, showWeapon = false) {
+        let html = '<div class="agent-roster" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 5px; max-height: 600px; overflow-y: auto;">';
+        html += '<h3 style="color: #00ffff; margin-bottom: 15px;">SQUAD ROSTER</h3>';
+
+        if (game.activeAgents && game.activeAgents.length > 0) {
+            game.activeAgents.forEach((agent, index) => {
+                // Ensure consistent comparison - convert both to string
+                const isSelected = selectedAgentId && String(selectedAgentId) === String(agent.id);
+                const clickHandler = onClickAction ? onClickAction.replace(/\{\{index\}\}/g, index).replace(/\{\{agentId\}\}/g, agent.id) : '';
+
+                // Get weapon info if needed
+                let weaponInfo = '';
+                if (showWeapon) {
+                    const loadout = game.agentLoadouts?.[agent.id] || {};
+                    const weaponName = loadout.weapon && game.getItemById ? game.getItemById('weapon', loadout.weapon)?.name : 'None';
+                    weaponInfo = `
+                        <div style="color: #ffa500; font-size: 0.85em; margin-top: 5px;">
+                            🔫 ${weaponName}
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div class="roster-agent" style="
+                        background: ${isSelected ? 'rgba(0,255,255,0.2)' : 'rgba(0,255,255,0.05)'};
+                        border: 1px solid ${isSelected ? '#00ffff' : 'rgba(0,255,255,0.3)'};
+                        padding: 10px;
+                        margin: 5px 0;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        transition: all 0.3s;"
+                        ${clickHandler ? `onclick="${clickHandler}"` : ''}>
+                        <div style="font-weight: bold; color: ${isSelected ? '#00ffff' : '#fff'}; margin-bottom: 5px;">
+                            ${agent.name}
+                        </div>
+                        <div style="font-size: 0.85em; color: #888;">
+                            ${agent.specialization || 'Operative'} Lvl ${agent.rpgEntity?.level || 1}
+                        </div>
+                        <div style="font-size: 0.85em; margin-top: 5px;">
+                            <span style="color: #00ff00;">HP: ${agent.health}/${agent.maxHealth || 100}</span>
+                        </div>
+                        ${weaponInfo}
+                    </div>
+                `;
+            });
+        } else {
+            html += '<div style="color: #888; text-align: center; padding: 20px;">No agents in squad</div>';
+        }
+
+        html += '</div>';
+        return html;
+    };
+    // Button generators for context-aware close/return actions
+    engine.registerGenerator('generateCharacterButtons', function() {
+        // Check if we're in-game or in hub
+        if (game.currentScreen === 'game') {
+            return [{ text: '✖ CLOSE', action: 'close' }];
+        } else {
+            return [{ text: '← BACK TO HUB', action: 'execute:returnToHub' }];
+        }
+    });
+
+    engine.registerGenerator('generateArsenalButtons', function() {
+        // Check if we're in-game or in hub
+        if (game.currentScreen === 'game') {
+            return [{ text: '✖ CLOSE', action: 'close' }];
+        } else {
+            return [{ text: '← BACK TO HUB', action: 'execute:returnToHub' }];
+        }
+    });
+
     // Agent overview
     engine.registerGenerator('generateAgentOverview', function() {
         let html = '<div class="agent-overview">';
@@ -327,13 +402,29 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Character Sheet - RPG system
     engine.registerGenerator('generateCharacterSheet', function() {
-        // Find agent to display
-        let agent = this._selectedAgent ||
-                    (this.agents && this.agents[0]) ||
-                    (this.activeAgents && this.activeAgents[0]);
+        let html = '<div class="character-sheet-content" style="display: grid; grid-template-columns: 250px 1fr; gap: 20px; height: 100%;">';
+
+        // Left Panel - Agent Roster
+        const rosterClickAction = `(function() {
+            game._selectedAgent = game.activeAgents[{{index}}];
+            const dialogEngine = game.dialogEngine || window.dialogEngine || window.declarativeDialogEngine;
+            if (dialogEngine && dialogEngine.navigateTo) {
+                dialogEngine.navigateTo('character', null, true);
+            }
+        })()`;
+
+        html += generateAgentRoster(this._selectedAgent?.id, rosterClickAction);
+
+        // Right Panel - Character Details
+        html += '<div class="character-details" style="overflow-y: auto; max-height: 600px;">';
+
+        // Find selected agent
+        let agent = this._selectedAgent || (this.activeAgents && this.activeAgents[0]);
 
         if (!agent) {
-            return '<div style="color: #888; text-align: center; padding: 40px;">No agent selected</div>';
+            html += '<div style="color: #888; text-align: center; padding: 40px;">Select an agent from the roster</div>';
+            html += '</div></div>';
+            return html;
         }
 
         // Initialize RPG entity if not present
@@ -342,13 +433,13 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         }
 
         if (!agent.rpgEntity) {
-            return '<div style="color: #888; text-align: center; padding: 40px;">RPG system not initialized</div>';
+            html += '<div style="color: #888; text-align: center; padding: 40px;">RPG system not initialized</div>';
+            html += '</div></div>';
+            return html;
         }
 
         const rpg = agent.rpgEntity;
-        const derived = this.rpgManager.calculateDerivedStats(rpg);
-
-        let html = '<div class="character-sheet-content">';
+        const derived = this.rpgManager?.calculateDerivedStats?.(rpg) || {};
 
         // Header with agent name and level
         html += `
@@ -516,7 +607,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             `;
         }
 
-        html += '</div>';
+        html += '</div>'; // Close perks panel
+        html += '</div>'; // Close character-details
         html += '</div>'; // Close character-sheet-content
 
         return html;
@@ -560,41 +652,18 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             <div class="equipment-management-content" style="display: flex; gap: 20px; height: 60vh; width: 100%; padding: 10px; box-sizing: border-box;">
         `;
 
-        // Left Panel: Agents
-        html += `
-            <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column; padding: 5px;">
-                <h3 style="color: #00ffff; margin-bottom: 15px;">👥 SQUAD</h3>
-                <div style="flex: 1; overflow-y: auto;">
-        `;
+        // Left Panel: Agents (using shared roster component)
+        html += '<div style="flex: 1; min-width: 250px; display: flex; flex-direction: column; padding: 5px;">';
 
-        this.activeAgents.forEach(agent => {
-            // Ensure consistent comparison - convert both to string
-            const isSelected = String(this.selectedEquipmentAgent) === String(agent.id);
-            const loadout = this.agentLoadouts[agent.id] || {};
-            const weaponName = loadout.weapon && this.getItemById ? this.getItemById('weapon', loadout.weapon)?.name : 'None';
+        const arsenalClickAction = `(function() {
+            console.log('Agent clicked:', '{{agentId}}');
+            game.selectedEquipmentAgent = '{{agentId}}';
+            game.dialogEngine.navigateTo('arsenal');
+        })()`;
 
-            html += `
-                <div style="background: ${isSelected ? 'rgba(0,255,255,0.2)' : 'rgba(0,255,255,0.05)'};
-                           border: 2px solid ${isSelected ? '#00ffff' : 'transparent'};
-                           padding: 10px; margin: 5px 0; border-radius: 5px;
-                           cursor: pointer; transition: all 0.3s;"
-                     onclick="(function() {
-                         console.log('Agent clicked:', '${agent.id}');
-                         game.selectedEquipmentAgent = '${agent.id}';
-                         // Don't call selectAgentForEquipment as it's for the old dialog
-                         // Just refresh the current dialog
-                         game.dialogEngine.navigateTo('arsenal');
-                     })()">
-                    <div style="font-weight: bold; color: #fff;">${agent.name}</div>
-                    <div style="color: #888; font-size: 0.9em;">${agent.specialization}</div>
-                    <div style="color: #ffa500; font-size: 0.85em; margin-top: 5px;">
-                        🔫 ${weaponName}
-                    </div>
-                </div>
-            `;
-        });
-
-        html += '</div></div>';
+        // Use shared roster with weapon info enabled
+        html += generateAgentRoster(this.selectedEquipmentAgent, arsenalClickAction, true);
+        html += '</div>';
 
         // Center Panel: Current Loadout
         html += `
@@ -2026,20 +2095,24 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
             game.credits -= agent.cost;
             agent.hired = true;
             game.activeAgents.push(agent);
+
+            // Initialize equipment loadout for new agent
+            if (game.agentLoadouts && !game.agentLoadouts[agent.id]) {
+                game.agentLoadouts[agent.id] = {
+                    weapon: null,
+                    armor: null,
+                    utility: null,
+                    special: null
+                };
+                console.log(`Initialized loadout for ${agent.name}`);
+            }
+
             game.updateHubStats();
 
             console.log(`✅ Hired ${agent.name} for ${agent.cost} credits`);
 
-            // Close confirmation and refresh the hire list
-            this.back(); // Back to hire-agents
-
-            // Refresh the hire list to show updated state
-            setTimeout(() => {
-                const currentState = this.currentState;
-                if (currentState === 'hire-agents') {
-                    this.navigateTo('hire-agents'); // Refresh
-                }
-            }, 100);
+            // Navigate directly back to hire-agents (this will close the confirmation)
+            this.navigateTo('hire-agents', null, true); // Force refresh to show updated list
         } else {
             console.error('Cannot hire agent - condition failed:', {
                 agent: agent,

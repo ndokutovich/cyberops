@@ -109,7 +109,7 @@ const DIALOG_CONFIG = {
         },
 
         // ========== CHARACTER/RPG (Level 1) ==========
-        'character-sheet': {
+        'character': {
             type: 'dialog',
             level: 1,
             parent: 'hub',
@@ -119,9 +119,10 @@ const DIALOG_CONFIG = {
                 type: 'dynamic',
                 generator: 'generateCharacterSheet'
             },
-            buttons: [
-                { text: '← BACK TO HUB', action: 'execute:returnToHub' }
-            ],
+            buttons: {
+                type: 'dynamic',
+                generator: 'generateCharacterButtons'
+            },
             transitions: {
                 enter: { animation: 'fade-in', sound: 'dialog-open' },
                 exit: { animation: 'fade-out', sound: 'dialog-close' }
@@ -139,9 +140,10 @@ const DIALOG_CONFIG = {
                 type: 'dynamic',
                 generator: 'generateEquipmentManagement'
             },
-            buttons: [
-                { text: '← BACK TO HUB', action: 'execute:returnToHub' }
-            ],
+            buttons: {
+                type: 'dynamic',
+                generator: 'generateArsenalButtons'
+            },
             transitions: {
                 enter: { animation: 'fade-in', sound: 'dialog-open' },
                 exit: { animation: 'fade-out', sound: 'dialog-close' }
