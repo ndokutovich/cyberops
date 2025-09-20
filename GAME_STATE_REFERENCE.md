@@ -7,7 +7,7 @@
 - **32 Imperative Transitions** (entry/menu/mission flow - listed separately)
 - **98 Total Documented Transitions** (more exist in code)
 - **42% States Converted** to declarative system
-- **8 Duplicate Functions** need cleanup
+- **7 Duplicate Functions** need cleanup (1 removed: showMissionSelectDialog)
 
 ## State Inventory
 
@@ -24,7 +24,7 @@
 | research-lab | 1 | hub | ⚠️ showResearchLab() + showResearchLabOld() | Working |
 | tech-tree | 2 | research-lab | - | Working |
 | hall-of-glory | 1 | hub | ⚠️ showHallOfGlory() | Working |
-| mission-select-hub | 1 | hub | ⚠️ showMissionSelectDialog() | Working |
+| mission-select-hub | 1 | hub | ✅ FULLY CONVERTED | Working |
 | intel-missions | 1 | hub | - | Working |
 | hub-settings | 1 | hub | - | Working |
 | pause-menu | 1 | game | ⚠️ showPauseMenu() | Working |
@@ -176,16 +176,17 @@
 
 ## Cleanup Tasks
 
-### Priority 1: Remove Duplicate Functions
+### Priority 1: Remove Duplicate Functions (Updated 2025-09-20)
 | File | Line | Function | Action |
 |------|------|----------|--------|
-| game-hub.js | 223 | showAgentManagement() | Simplify to navigateTo only |
-| game-hub.js | 231 | showArsenal() | Simplify to navigateTo only |
-| game-hub.js | 239 | showResearchLab() | Simplify to navigateTo only |
-| game-hub.js | 246 | showResearchLabOld() | **DELETE ENTIRELY** |
-| game-hub.js | 193 | showHallOfGlory() | Simplify to navigateTo only |
-| game-flow.js | 40 | showMissionSelectDialog() | Convert to declarative |
-| game-flow.js | 1916-1928 | showPauseMenu() old code | **DELETE OLD CODE** |
+| game-hub.js | 240 | showAgentManagement() | Simplify to navigateTo only |
+| game-hub.js | 248 | showArsenal() | Simplify to navigateTo only |
+| game-hub.js | 256 | showResearchLab() | Simplify to navigateTo only |
+| game-hub.js | 263 | showResearchLabOld() | **DELETE ENTIRELY** |
+| game-hub.js | 195 | showHallOfGlory() | Simplify to navigateTo only |
+| game-flow.js | - | showMissionSelectDialog() | **✅ DELETED - Now fully declarative** |
+| game-flow.js | 1861 | showPauseMenu() | Simplify to navigateTo only |
+| game-rpg-ui.js | 8 | showCharacterSheet() | Simplify to navigateTo only |
 | modal-engine.js | 998 | showNPCDialog() | Check if still needed |
 
 ### Priority 2: Convert Critical Path (HIGH)

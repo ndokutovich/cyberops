@@ -968,10 +968,32 @@ These imperative functions still exist alongside declarative versions:
 - `showAgentManagement()` → use `navigateTo('agent-management')`
 - `showResearchLab()` → use `navigateTo('research-lab')`
 - `showHallOfGlory()` → use `navigateTo('hall-of-glory')`
-- `showMissionSelectDialog()` → use `navigateTo('mission-select-hub')`
+- ~~`showMissionSelectDialog()`~~ → **REMOVED** - now fully declarative
 - `showNPCDialog()` → use `navigateTo('npc-interaction')`
 
 See GAME_STATE_REFERENCE.md Section "Cleanup Tasks" for complete list.
+
+## Recent Refactoring (2025-09-20)
+
+### Mission Selection Dialog
+The mission selection dialog has been fully converted to the declarative system:
+- Old `showMissionSelectDialog()` function has been **completely removed**
+- Now uses `dialogEngine.navigateTo('mission-select-hub')`
+- HTML dialog elements removed from index.html
+- Full state management through declarative dialog engine
+
+### Remaining Duplicate Functions
+7 functions still have both imperative and declarative versions:
+- `showAgentManagement()` (line 240)
+- `showArsenal()` (line 248)
+- `showResearchLab()` (line 256)
+- `showResearchLabOld()` (line 263) - to be deleted
+- `showHallOfGlory()` (line 195)
+- `showPauseMenu()` (line 1861)
+- `showCharacterSheet()` (game-rpg-ui.js line 8)
+- `showNPCDialog()` (modal-engine.js line 998)
+
+See GAME_STATE_REFERENCE.md for complete cleanup list.
 
 ## Declarative Configuration Systems
 
