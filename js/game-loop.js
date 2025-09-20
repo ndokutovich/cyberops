@@ -1,5 +1,10 @@
     // Game Loop
 CyberOpsGame.prototype.gameLoop = function() {
+        // Skip game loop in test mode to avoid DOM errors
+        if (this.testMode) {
+            return;
+        }
+
         requestAnimationFrame(() => this.gameLoop());
 
         // Update FPS counter
@@ -148,6 +153,14 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
                     enemy.health = Math.max(0, enemy.health - damage);
                     if (enemy.health <= 0) {
                         enemy.alive = false;
+                        console.log(`⚔️ ENEMY KILLED! Details:`, {
+                            enemyType: enemy.type,
+                            enemyHasRPG: !!enemy.rpgEntity,
+                            shooterName: proj.shooter?.name || 'unknown',
+                            shooterHasRPG: !!proj.shooter?.rpgEntity,
+                            hasOnEntityDeath: !!this.onEntityDeath
+                        });
+
                         if (this.missionTrackers) {
                             this.missionTrackers.enemiesEliminated++;
                         }
@@ -157,7 +170,10 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
 
                         // Grant XP if RPG system is active
                         if (this.onEntityDeath) {
+                            console.log(`📞 Calling onEntityDeath...`);
                             this.onEntityDeath(enemy, proj.shooter);
+                        } else {
+                            console.error(`❌ onEntityDeath method not found!`);
                         }
                     }
 
@@ -283,8 +299,11 @@ CyberOpsGame.prototype.update = function() {
             this.updateTeamAI();
         }
         const minutes = Math.floor(seconds / 60);
-        document.getElementById('missionTimer').textContent =
-            `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+        const timerElement = document.getElementById('missionTimer');
+        if (timerElement) {
+            timerElement.textContent =
+                `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+        }
 
         // Update fog of war
         this.updateFogOfWar();
@@ -700,9 +719,23 @@ CyberOpsGame.prototype.update = function() {
                                 enemy.alive = false;
                                 this.totalEnemiesDefeated++;
 
+                                console.log(`⚔️ ENEMY KILLED (alternate path)! Details:`, {
+                                    enemyType: enemy.type,
+                                    enemyHasRPG: !!enemy.rpgEntity,
+                                    shooterFromProj: proj.shooter?.name || proj.agent?.name || 'unknown',
+                                    shooterHasRPG: !!(proj.shooter?.rpgEntity || proj.agent?.rpgEntity)
+                                });
+
                                 // Track enemy elimination for mission objectives
                                 if (this.onEnemyEliminated) {
                                     this.onEnemyEliminated(enemy);
+                                }
+
+                                // Grant XP for kills!
+                                const killer = proj.shooter || proj.agent || null;
+                                if (this.onEntityDeath && killer) {
+                                    console.log(`📞 Calling onEntityDeath from alternate path...`);
+                                    this.onEntityDeath(enemy, killer);
                                 }
 
                                 // Log enemy death

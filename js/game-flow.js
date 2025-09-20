@@ -1199,6 +1199,12 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                         if (this.logEvent) {
                             this.logEvent(`Grenade eliminated enemy!`, 'combat');
                         }
+
+                        // Grant XP for grenade kills!
+                        if (this.onEntityDeath) {
+                            console.log(`🎯 Granting XP for grenade kill`);
+                            this.onEntityDeath(enemy, agent);
+                        }
                     } else {
                         if (this.logEvent) {
                             this.logEvent(`Grenade damaged enemy (50 damage)`, 'combat');

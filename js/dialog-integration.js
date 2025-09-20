@@ -529,13 +529,15 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         const currentXP = rpg.experience || 0;
         const nextLevelXP = this.rpgManager?.experienceTable?.[rpg.level + 1] || 1000;
 
+        console.log(`🎨 XP Bar Display: ${currentXP}/${nextLevelXP} XP = ${xpPercent.toFixed(1)}% width`);
+
         html += `
             <div class="xp-panel" style="margin-top: 20px;">
-                <h3 style="color: #00ff00; margin-bottom: 10px;">Experience</h3>
-                <div style="background: rgba(0,0,0,0.3); height: 30px; border-radius: 15px; overflow: hidden; position: relative;">
-                    <div style="background: linear-gradient(90deg, #00ff00, #00ffff); width: ${xpPercent}%; height: 100%;"></div>
-                    <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff;">
-                        ${currentXP} / ${nextLevelXP} XP
+                <h3 style="color: #00ff00; margin-bottom: 10px;">Experience - Level ${rpg.level || 1}</h3>
+                <div style="background: rgba(0,0,0,0.3); height: 30px; border-radius: 15px; overflow: hidden; position: relative; border: 1px solid rgba(0,255,0,0.3);">
+                    <div style="background: linear-gradient(90deg, #00ff00, #00ffff); width: ${Math.max(0, xpPercent)}%; height: 100%; transition: width 0.3s ease;"></div>
+                    <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+                        ${currentXP} / ${nextLevelXP} XP (${xpPercent.toFixed(0)}%)
                     </span>
                 </div>
             </div>

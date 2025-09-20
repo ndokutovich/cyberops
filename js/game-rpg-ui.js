@@ -235,13 +235,25 @@ CyberOpsGame.prototype.renderPerkList = function(perks) {
 CyberOpsGame.prototype.calculateXPPercent = function(rpgEntity) {
     const currentLevel = rpgEntity.level || 1;
     const currentXP = rpgEntity.experience || 0;
-    const currentRequired = this.rpgManager.experienceTable[currentLevel] || 0;
+
+    // For level 1, XP starts from 0
+    // For higher levels, calculate from the previous level's requirement
+    let previousLevelXP = 0;
+    if (currentLevel > 1) {
+        previousLevelXP = this.rpgManager.experienceTable[currentLevel] || 0;
+    }
+
     const nextRequired = this.rpgManager.experienceTable[currentLevel + 1] || 1000;
 
-    const levelXP = currentXP - currentRequired;
-    const levelRange = nextRequired - currentRequired;
+    // Calculate progress from previous level to next level
+    const xpIntoCurrentLevel = currentXP - previousLevelXP;
+    const xpNeededForLevel = nextRequired - previousLevelXP;
 
-    return Math.min(100, (levelXP / levelRange) * 100);
+    const percent = (xpIntoCurrentLevel / xpNeededForLevel) * 100;
+
+    console.log(`📊 XP Progress: ${currentXP}/${nextRequired} = ${percent.toFixed(1)}% (Level ${currentLevel})`);
+
+    return Math.min(100, Math.max(0, percent));
 };
 
 // Inventory UI - Always use hub equipment system
