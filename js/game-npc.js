@@ -8,7 +8,6 @@ console.log('🚀 Loading NPC system file...');
 // Initialize NPC system
 CyberOpsGame.prototype.initNPCSystem = function() {
     this.npcs = [];
-    this.activeDialog = null;
     this.dialogQueue = [];
     this.quests = {};
     this.completedQuests = new Set();
@@ -719,14 +718,17 @@ CyberOpsGame.prototype.getContextualChoices = function(agent, npc) {
     return choices;
 };
 
-// Show dialog UI - Now using Modal Engine
+// Show dialog UI - Using Modal Engine
 CyberOpsGame.prototype.showDialog = function(dialogData) {
     // Pause the game during dialog
     this.dialogActive = true;
     this.pauseGame();
 
-    // Use new modal engine if available
-    if (window.modalEngine) {
+    // Modal engine is required
+    if (!window.modalEngine) {
+        console.error('Modal engine not available!');
+        return;
+    }
         // Close any existing NPC dialog before showing new one
         if (this.activeNPCModal) {
             this.closeNPCDialog();
@@ -763,219 +765,6 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
                 this.resumeGame();
             }
         });
-        return;
-    }
-
-    // Fallback to old system if modal engine not available
-    // Create or get dialog container
-    let dialogContainer = document.getElementById('npcDialogContainer');
-    if (!dialogContainer) {
-        dialogContainer = document.createElement('div');
-        dialogContainer.id = 'npcDialogContainer';
-        dialogContainer.style.cssText = `
-            position: fixed;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 800px;
-            background: linear-gradient(135deg, rgba(0,0,0,0.95) 0%, rgba(20,20,40,0.95) 100%);
-            border: 2px solid #00ffff;
-            border-radius: 10px;
-            padding: 30px;
-            z-index: 10000;
-            box-shadow: 0 0 30px rgba(0,255,255,0.5);
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-        `;
-        document.body.appendChild(dialogContainer);
-    }
-
-    // Build dialog content
-    let html = `
-        <div style="display: flex; gap: 25px; margin-bottom: 20px;">
-            <div style="font-size: 64px; line-height: 1;">${dialogData.npc.avatar}</div>
-            <div style="flex: 1;">
-                <div style="color: #00ffff; font-weight: bold; margin-bottom: 10px; font-size: 18px;">
-                    ${dialogData.npc.name}
-                </div>
-                <div id="dialogText" style="color: #ffffff !important; min-height: 60px; font-size: 16px; line-height: 1.5; width: 100%; word-wrap: break-word; white-space: pre-wrap;">
-                    <span class="typing-text" style="display: inline; white-space: pre-wrap; word-wrap: break-word; color: #ffffff !important;"></span><span class="cursor" style="display: inline; color: #ffffff;">_</span>
-                </div>
-            </div>
-        </div>
-        <div id="dialogChoices" style="margin-top: 20px;">
-    `;
-
-    // Add choices
-    if (dialogData.choices && dialogData.choices.length > 0) {
-        dialogData.choices.forEach((choice, index) => {
-            html += `
-                <button class="dialog-choice" data-index="${index}" style="
-                    display: block;
-                    width: 100%;
-                    padding: 12px 15px;
-                    margin: 8px 0;
-                    background: rgba(0,255,255,0.1);
-                    border: 1px solid #00ffff;
-                    color: #fff;
-                    cursor: pointer;
-                    text-align: left;
-                    transition: all 0.2s;
-                    font-size: 14px;
-                    font-family: 'Courier New', monospace;
-                    border-radius: 5px;
-                ">
-                    ${index + 1}. ${choice.text}
-                </button>
-            `;
-        });
-    }
-
-    html += '</div>';
-    dialogContainer.innerHTML = html;
-    dialogContainer.style.display = 'block';
-
-    // Add hover effects to choices
-    const choiceButtons = dialogContainer.querySelectorAll('.dialog-choice');
-    choiceButtons.forEach(btn => {
-        btn.onmouseover = () => {
-            btn.style.background = 'rgba(0,255,255,0.3)';
-            btn.style.transform = 'translateX(5px)';
-        };
-        btn.onmouseout = () => {
-            btn.style.background = 'rgba(0,255,255,0.1)';
-            btn.style.transform = 'translateX(0)';
-        };
-        btn.onclick = () => {
-            const index = parseInt(btn.dataset.index);
-            const choice = dialogData.choices[index];
-            if (choice.action) {
-                // Pass game (this) as parameter to the action
-                choice.action.call(dialogData.npc, this);
-            }
-        };
-    });
-
-    // Type out the text with effect - use setTimeout to ensure DOM is updated
-    console.log('Dialog text to display:', dialogData.text);
-    if (dialogData.text) {
-        // TEMPORARY: Skip typing effect and just show text directly to debug visibility
-        requestAnimationFrame(() => {
-            const dialogTextDiv = document.getElementById('dialogText');
-            if (dialogTextDiv) {
-                // Set text directly with forced white color
-                dialogTextDiv.innerHTML = `<span style="color: white !important; font-size: 16px !important; display: inline !important;">${dialogData.text}</span><span class="cursor" style="color: white;">_</span>`;
-                console.log('✅ Text set directly in dialog div');
-
-                // Also try typing effect
-                const textElement = document.querySelector('.typing-text');
-                if (textElement && false) { // Disabled for now
-                    this.typeText(dialogData.text, () => {
-                        // Choices are already visible, no need to show them
-                    });
-                }
-            } else {
-                console.error('❌ Could not find dialogText div!');
-            }
-        });
-    } else {
-        console.warn('No text provided for dialog!');
-    }
-
-    // Store active dialog
-    this.activeDialog = dialogData;
-};
-
-// Type text effect
-CyberOpsGame.prototype.typeText = function(text, callback) {
-    const textElement = document.querySelector('.typing-text');
-    const cursor = document.querySelector('.cursor');
-
-    if (!textElement) {
-        console.error('❌ Could not find .typing-text element!');
-        // Fallback: try to find the dialog text div directly
-        const dialogTextDiv = document.getElementById('dialogText');
-        if (dialogTextDiv) {
-            // Just set the text directly as fallback
-            dialogTextDiv.innerHTML = text + '<span class="cursor">_</span>';
-        }
-        if (callback) callback();
-        return;
-    }
-
-    console.log('✓ Found typing-text element, typing:', text);
-    console.log('  Element initial content:', textElement.textContent);
-
-    // Check computed styles to see what's wrong
-    const computedStyle = window.getComputedStyle(textElement);
-    console.log('  Computed styles:', {
-        color: computedStyle.color,
-        backgroundColor: computedStyle.backgroundColor,
-        fontSize: computedStyle.fontSize,
-        display: computedStyle.display,
-        visibility: computedStyle.visibility,
-        opacity: computedStyle.opacity,
-        width: computedStyle.width,
-        height: computedStyle.height,
-        overflow: computedStyle.overflow,
-        position: computedStyle.position,
-        zIndex: computedStyle.zIndex
-    });
-
-    // Make sure element has proper display style and is visible
-    textElement.style.display = 'inline';
-    textElement.style.whiteSpace = 'pre-wrap';
-    textElement.style.wordWrap = 'break-word';
-    textElement.style.width = 'auto';
-    textElement.style.color = '#ffffff';  // Force white color
-    textElement.style.fontSize = '16px';
-    textElement.style.visibility = 'visible';
-    textElement.style.opacity = '1';
-
-    // Clear any existing intervals to prevent conflicts
-    if (this.currentTypeInterval) {
-        clearInterval(this.currentTypeInterval);
-    }
-
-    let index = 0;
-    textElement.textContent = '';
-
-    // Store interval reference
-    this.currentTypeInterval = setInterval(() => {
-        if (index < text.length) {
-            textElement.textContent += text[index];
-            index++;
-
-            // Debug every 10 characters
-            if (index % 10 === 0) {
-                console.log(`  Typed ${index}/${text.length} characters`);
-            }
-
-            // Play typing sound (optional)
-            if (this.playSound) {
-                this.playSound('type', 0.1);
-            }
-        } else {
-            clearInterval(this.currentTypeInterval);
-            this.currentTypeInterval = null;
-            console.log('✓ Typing complete, final text:', textElement.textContent);
-
-            // Final check - what's actually in the DOM?
-            const dialogTextDiv = document.getElementById('dialogText');
-            console.log('  Final DOM check:');
-            console.log('    - Dialog div innerHTML:', dialogTextDiv ? dialogTextDiv.innerHTML : 'NOT FOUND');
-            console.log('    - Text element content:', textElement.textContent);
-            console.log('    - Text element innerHTML:', textElement.innerHTML);
-            console.log('    - Parent computed color:', window.getComputedStyle(dialogTextDiv).color);
-            console.log('    - Text element computed color:', window.getComputedStyle(textElement).color);
-
-            // Try to force visibility one more time
-            textElement.style.cssText = 'color: #ffffff !important; font-size: 16px !important; display: inline !important; visibility: visible !important; opacity: 1 !important;';
-
-            if (callback) callback();
-        }
-    }, 30); // Typing speed
 };
 
 // Check if an objective is complete
@@ -1217,18 +1006,10 @@ CyberOpsGame.prototype.closeNPCDialog = function() {
         const modalToClose = this.activeNPCModal;
         this.activeNPCModal = null;  // Clear reference immediately
         modalToClose.close();  // But close the actual modal
-        return;
-    }
-
-    // Fallback to old system
-    const dialogContainer = document.getElementById('npcDialogContainer');
-    if (dialogContainer) {
-        dialogContainer.style.display = 'none';
     }
 
     this.dialogActive = false;
     this.resumeGame();
-    this.activeDialog = null;
 };
 
 // Update NPCs
