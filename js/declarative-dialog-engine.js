@@ -88,28 +88,41 @@ class DeclarativeDialogEngine {
             return false;
         }
 
+        // Check if we're refreshing the same state
+        const isRefresh = this.currentState === stateId;
+
+        if (isRefresh) {
+            console.log(`🔄 Refreshing state: ${stateId}`);
+        } else {
+            console.log(`➡️ Navigating from ${this.currentState} to ${stateId}`);
+        }
+
         // Check if transition is allowed
         if (!this.canTransition(this.currentState, stateId)) {
             console.warn(`Transition not allowed: ${this.currentState} -> ${stateId}`);
             return false;
         }
 
-        // Execute exit transition for current state
-        if (this.currentState) {
+        // Execute exit transition for current state (skip if refreshing)
+        if (this.currentState && !isRefresh) {
             this.executeStateExit(this.currentState);
         }
 
-        // Update stack based on level
-        this.updateStateStack(stateId, state);
+        // Update stack based on level (skip if refreshing to avoid closing dialog)
+        if (!isRefresh) {
+            this.updateStateStack(stateId, state);
+        }
 
         // Store state data
         this.stateData[stateId] = params;
 
-        // Render the new state
-        this.renderState(stateId, state, params);
+        // Render the new state (pass isRefresh flag)
+        this.renderState(stateId, state, params, isRefresh);
 
-        // Execute enter transition
-        this.executeStateEnter(stateId, state);
+        // Execute enter transition (skip if refreshing)
+        if (!isRefresh) {
+            this.executeStateEnter(stateId, state);
+        }
 
         // Update current state
         this.currentState = stateId;
@@ -164,7 +177,7 @@ class DeclarativeDialogEngine {
     /**
      * Render state to DOM
      */
-    renderState(stateId, state, params) {
+    renderState(stateId, state, params, isRefresh = false) {
         // Get or create container
         let container = document.getElementById('declarative-dialog-container');
         if (!container) {
@@ -192,10 +205,29 @@ class DeclarativeDialogEngine {
             level: state.level
         });
 
-        // Create dialog element
-        const dialogEl = document.createElement('div');
-        dialogEl.className = `declarative-dialog level-${state.level}`;
-        dialogEl.id = `dialog-${stateId}`;
+        // Check if dialog already exists (refresh scenario)
+        let dialogEl = document.getElementById(`dialog-${stateId}`);
+
+        if (isRefresh && dialogEl) {
+            // Just update the content without creating a new element
+            const contentEl = dialogEl.querySelector('.dialog-content');
+            if (contentEl) {
+                contentEl.innerHTML = content;
+            }
+
+            // Note: We're NOT updating buttons or re-binding handlers
+            // because the buttons don't change and re-binding causes issues
+            // The onclick handlers in the HTML will still work
+
+            return; // Skip the rest, no need for animations or re-adding to DOM
+        }
+
+        // Create new dialog element if not refreshing
+        if (!dialogEl) {
+            dialogEl = document.createElement('div');
+            dialogEl.className = `declarative-dialog level-${state.level}`;
+            dialogEl.id = `dialog-${stateId}`;
+        }
         dialogEl.innerHTML = html;
 
         // Apply styles
