@@ -973,6 +973,70 @@ These imperative functions still exist alongside declarative versions:
 
 See GAME_STATE_REFERENCE.md Section "Cleanup Tasks" for complete list.
 
+## Automated Testing Framework
+
+### Overview
+A lightweight, browser-native test framework has been implemented to validate dialog conversions and state transitions. No build process required - tests run directly in the browser.
+
+### Running Tests
+```bash
+# Open test runner in browser
+start test-runner.html
+
+# Or with auto-run
+start test-runner.html?auto=true
+```
+
+### Test Architecture
+```
+test-runner.html          # Main test interface
+├── js/test-framework.js  # Core test runner (describe, it, assertions)
+├── tests/
+│   ├── dialog-test-suite.js    # Dialog conversion parity tests
+│   └── state-machine-tests.js  # Transition validation tests
+```
+
+### Key Test Capabilities
+1. **Dialog Parity Testing**: Compares imperative vs declarative implementations
+2. **State Machine Validation**: Tests all 66 documented transitions
+3. **Navigation Stack Testing**: Validates proper stack management
+4. **Refresh Behavior**: Ensures no flicker during updates
+5. **Button Action Testing**: Verifies all buttons work correctly
+6. **Keyboard Shortcut Testing**: Validates all key bindings
+
+### Writing Tests
+```javascript
+describe('My Test Suite', () => {
+    it('should do something', async () => {
+        // Arrange
+        game.dialogEngine.navigateTo('arsenal');
+        await sleep(100);
+
+        // Act
+        const state = captureDialogState();
+
+        // Assert
+        assertEqual(state.title, 'ARSENAL');
+        assertTruthy(state.buttons.length > 0);
+    });
+});
+```
+
+### Test Coverage Goals
+- All 16 declarative dialog states
+- All 66 documented transitions
+- All 7 duplicate function pairs
+- Complete navigation cycles
+- Keyboard shortcuts
+- Refresh behaviors
+
+### CI/CD Integration (Future)
+```yaml
+# Can be integrated with GitHub Actions
+npm install -g playwright
+npx playwright test --config=test.config.js
+```
+
 ## Recent Refactoring (2025-09-20)
 
 ### Mission Selection Dialog
