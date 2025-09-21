@@ -49,7 +49,22 @@ class CyberOpsGame {
         // Initialize services
         this.gameServices = window.GameServices;
 
-        // Hub Resources - will be loaded from campaign
+        // Initialize centralized services if available
+        if (this.gameServices) {
+            // ResourceService manages all resources centrally
+            this.gameServices.resourceService.initialize({
+                credits: 0,
+                researchPoints: 0,
+                worldControl: 0,
+                intel: 0
+            });
+
+            // AgentService manages all agents centrally
+            this.gameServices.agentService.initialize([]);
+        }
+
+        // Legacy properties for backward compatibility (redirect to services)
+        // These will be synced with services when campaign loads
         this.credits = 0;
         this.researchPoints = 0;
         this.worldControl = 0;

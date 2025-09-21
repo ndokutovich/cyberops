@@ -31,9 +31,20 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
                 if (!this.campaignStarted) {
                     const economy = window.ContentLoader.getContent('economy');
                     if (economy) {
-                        this.credits = economy.startingCredits || 5000;
-                        this.researchPoints = economy.startingResearchPoints || 100;
-                        this.worldControl = economy.startingWorldControl || 0;
+                        // Use ResourceService if available
+                        if (this.gameServices?.resourceService) {
+                            this.gameServices.resourceService.initialize({
+                                credits: economy.startingCredits || 5000,
+                                researchPoints: economy.startingResearchPoints || 100,
+                                worldControl: economy.startingWorldControl || 0,
+                                intel: 0
+                            });
+                        } else {
+                            // Fallback to direct assignment
+                            this.credits = economy.startingCredits || 5000;
+                            this.researchPoints = economy.startingResearchPoints || 100;
+                            this.worldControl = economy.startingWorldControl || 0;
+                        }
                     }
                     this.campaignStarted = true;
                 }
@@ -65,16 +76,36 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
 
             // Apply starting resources if this is a new game
             if (!this.campaignStarted) {
-                this.credits = content.startingResources.credits;
-                this.researchPoints = content.startingResources.researchPoints;
-                this.worldControl = content.startingResources.worldControl;
+                // Use ResourceService if available
+                if (this.gameServices?.resourceService) {
+                    this.gameServices.resourceService.initialize({
+                        credits: content.startingResources.credits,
+                        researchPoints: content.startingResources.researchPoints,
+                        worldControl: content.startingResources.worldControl,
+                        intel: 0
+                    });
+                } else {
+                    // Fallback to direct assignment
+                    this.credits = content.startingResources.credits;
+                    this.researchPoints = content.startingResources.researchPoints;
+                    this.worldControl = content.startingResources.worldControl;
+                }
                 this.campaignStarted = true;
             }
 
             // Load agents
             if (content.agents) {
-                this.availableAgents = content.agents;
-                this.activeAgents = content.agents.filter(agent => agent.hired);
+                // Use AgentService if available
+                if (this.gameServices?.agentService) {
+                    this.gameServices.agentService.initialize(content.agents);
+                    // Re-index for backward compatibility
+                    this.availableAgents = this.gameServices.agentService.getAvailableAgents();
+                    this.activeAgents = this.gameServices.agentService.getActiveAgents();
+                } else {
+                    // Fallback to direct assignment
+                    this.availableAgents = content.agents;
+                    this.activeAgents = content.agents.filter(agent => agent.hired);
+                }
                 console.log(`✅ Loaded ${content.agents.length} agents`);
 
                 // Re-initialize equipment loadouts for newly loaded agents

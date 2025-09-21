@@ -46,6 +46,141 @@ Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
     }
 });
 
+// Resource getters/setters that redirect to ResourceService
+Object.defineProperty(CyberOpsGame.prototype, 'credits', {
+    get: function() {
+        if (this.gameServices?.resourceService) {
+            return this.gameServices.resourceService.get('credits');
+        }
+        return this._credits || 0;
+    },
+    set: function(value) {
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('credits', value, 'direct assignment');
+        } else {
+            this._credits = value;
+        }
+    }
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'researchPoints', {
+    get: function() {
+        if (this.gameServices?.resourceService) {
+            return this.gameServices.resourceService.get('researchPoints');
+        }
+        return this._researchPoints || 0;
+    },
+    set: function(value) {
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('researchPoints', value, 'direct assignment');
+        } else {
+            this._researchPoints = value;
+        }
+    }
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'worldControl', {
+    get: function() {
+        if (this.gameServices?.resourceService) {
+            return this.gameServices.resourceService.get('worldControl');
+        }
+        return this._worldControl || 0;
+    },
+    set: function(value) {
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('worldControl', value, 'direct assignment');
+        } else {
+            this._worldControl = value;
+        }
+    }
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'intel', {
+    get: function() {
+        if (this.gameServices?.resourceService) {
+            return this.gameServices.resourceService.get('intel');
+        }
+        return this._intel || 0;
+    },
+    set: function(value) {
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('intel', value, 'direct assignment');
+        } else {
+            this._intel = value;
+        }
+    }
+});
+
+// Agent getters/setters that redirect to AgentService
+Object.defineProperty(CyberOpsGame.prototype, 'activeAgents', {
+    get: function() {
+        if (this.gameServices?.agentService) {
+            return this.gameServices.agentService.getActiveAgents();
+        }
+        return this._activeAgents || [];
+    },
+    set: function(value) {
+        if (this.gameServices?.agentService) {
+            // Replace all active agents
+            this.gameServices.agentService.activeAgents = value;
+        } else {
+            this._activeAgents = value;
+        }
+    }
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'availableAgents', {
+    get: function() {
+        if (this.gameServices?.agentService) {
+            return this.gameServices.agentService.getAvailableAgents();
+        }
+        return this._availableAgents || [];
+    },
+    set: function(value) {
+        if (this.gameServices?.agentService) {
+            // Replace all available agents
+            this.gameServices.agentService.availableAgents = value;
+        } else {
+            this._availableAgents = value;
+        }
+    }
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'fallenAgents', {
+    get: function() {
+        if (this.gameServices?.agentService) {
+            return this.gameServices.agentService.getFallenAgents();
+        }
+        return this._fallenAgents || [];
+    },
+    set: function(value) {
+        if (this.gameServices?.agentService) {
+            // Replace all fallen agents
+            this.gameServices.agentService.fallenAgents = value;
+        } else {
+            this._fallenAgents = value;
+        }
+    }
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'selectedAgents', {
+    get: function() {
+        if (this.gameServices?.agentService) {
+            return this.gameServices.agentService.getSelectedAgents();
+        }
+        return this._selectedAgents || [];
+    },
+    set: function(value) {
+        if (this.gameServices?.agentService && Array.isArray(value)) {
+            // Select agents by their IDs/objects
+            const agentIds = value.map(a => typeof a === 'object' ? (a.id || a.name) : a);
+            this.gameServices.agentService.selectAgentsForMission(agentIds);
+        } else {
+            this._selectedAgents = value;
+        }
+    }
+});
+
 CyberOpsGame.prototype.resizeCanvas = function() {
     if (this.canvas) {
         this.canvas.width = window.innerWidth;

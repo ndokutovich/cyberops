@@ -4,17 +4,45 @@
  */
 class GameServices {
     constructor() {
-        // Initialize services with dependency injection
+        // Initialize core services
         this.formulaService = new FormulaService();
+
+        // Initialize centralized management services
+        this.resourceService = new ResourceService();
+        this.agentService = new AgentService(this.resourceService);
+
+        // Initialize feature services
         this.researchService = new ResearchService(this.formulaService);
         this.equipmentService = new EquipmentService(this.formulaService);
         this.rpgService = new RPGService(this.formulaService);
         this.inventoryService = new InventoryService(this.formulaService, this.equipmentService);
 
+        // Initialize state management
+        this.gameStateService = new GameStateService(
+            this.resourceService,
+            this.agentService,
+            this.inventoryService
+        );
+
+        // Initialize system services
+        this.audioService = new AudioService();
+        this.effectsService = new EffectsService();
+        this.eventLogService = new EventLogService();
+        this.missionService = new MissionService(
+            this.resourceService,
+            this.agentService,
+            this.eventLogService
+        );
+
+        // Initialize services that need it
+        this.effectsService.initialize();
+
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
         this.applyAllModifiers = this.applyAllModifiers.bind(this);
         this.calculateAttackDamage = this.calculateAttackDamage.bind(this);
+
+        console.log('🎮 GameServices initialized with all centralized services');
     }
 
     /**
