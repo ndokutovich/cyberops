@@ -1994,7 +1994,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <div style="font-weight: bold;">${save.name || `Save ${index + 1}`}</div>
-                                <div style="color: #888; font-size: 0.8em;">${save.date || 'Unknown date'}</div>
+                                <div style="color: #888; font-size: 0.8em;">${save.timestamp ? new Date(save.timestamp).toLocaleString() : 'Unknown date'}</div>
                             </div>
                             <button class="dialog-button" onclick="game.loadSaveSlot('${save.id}')">LOAD</button>
                         </div>
