@@ -318,20 +318,59 @@
 
         // Hub initialization
         engine.registerAction('initializeHubScreen', function() {
+            // CRITICAL: Disable 3D mode if active
+            if (game && game.is3DMode) {
+                console.log('🔄 Disabling 3D mode when entering Hub');
+                if (game.cleanup3D) game.cleanup3D();
+            }
+
+            // Hide all other screens (with safety checks for test mode)
+            const elementsToHide = ['mainMenu', 'gameCompleteScreen', 'creditsScreen', 'endScreen', 'gameHUD', 'hallOfGlory'];
+            elementsToHide.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+
+            // Remove show class from dialogs
+            const intermissionDialog = document.getElementById('intermissionDialog');
+            if (intermissionDialog) intermissionDialog.classList.remove('show');
+
+            const hudDialog = document.getElementById('hudDialog');
+            if (hudDialog) hudDialog.classList.remove('show');
+
+            // Capture previous screen before updating
+            const previousScreen = game ? game.currentScreen : null;
+
             // Show the hub DOM element
             const hubElement = document.getElementById('syndicateHub');
             if (hubElement) {
                 hubElement.style.display = 'flex';
             }
 
-            // Update hub statistics
-            if (game.updateHubStats) {
-                game.updateHubStats();
-            }
+            if (game) {
+                game.currentScreen = 'hub';
 
-            // Start hub music
-            if (game.loadScreenMusic) {
-                game.loadScreenMusic('hub');
+                // Stop mission music and cleanup music system
+                if (game.musicSystem && game.cleanupMusicSystem) {
+                    console.log('🛑 Stopping mission music when returning to hub');
+                    game.cleanupMusicSystem();
+                }
+
+                // Handle music transition based on where we're coming from
+                if (game.transitionScreenMusic && previousScreen && previousScreen !== 'game') {
+                    // Use transition system if coming from another screen (not from mission)
+                    console.log(`🎵 Transitioning music from ${previousScreen} to hub`);
+                    game.transitionScreenMusic(previousScreen, 'hub');
+                } else if (game.loadScreenMusic) {
+                    // Direct load if no previous screen or coming from mission
+                    console.log('🎵 Loading hub music');
+                    game.loadScreenMusic('hub');
+                }
+
+                // Update hub statistics
+                if (game.updateHubStats) {
+                    game.updateHubStats();
+                }
             }
         });
 

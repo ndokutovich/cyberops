@@ -333,11 +333,45 @@ CyberOpsGame.prototype.init = function() {
             screen.style.display = 'none';
         });
 
-        // Show initial start screen first
-        if (this.showInitialScreen) {
-            this.showInitialScreen();
+        // Initialize screen manager
+        if (window.screenManager) {
+            window.screenManager.init(this);
+        }
+
+        // Set up the initial START EXPERIENCE screen
+        const initialScreen = document.getElementById('initialScreen');
+        const resetButton = document.getElementById('resetButton');
+
+        if (initialScreen && resetButton) {
+            // Make sure initial screen is visible
+            initialScreen.style.display = 'flex';
+
+            // Set up button click handler
+            resetButton.onclick = () => {
+                console.log('🚀 START EXPERIENCE clicked - enabling audio and starting game');
+
+                // Enable audio context on user interaction
+                this.enableAudio();
+
+                // Hide the initial screen
+                initialScreen.style.display = 'none';
+
+                // Start the ScreenManager flow with splash screen
+                if (window.screenManager) {
+                    console.log('📺 Navigating to splash screen');
+                    window.screenManager.navigateTo('splash');
+                } else {
+                    console.error('Screen manager not available!');
+                }
+            };
         } else {
-            console.warn('showInitialScreen not yet loaded, skipping initial screen');
+            // Fallback if initial screen not found
+            console.warn('⚠️ Initial screen not found, starting directly with splash');
+            setTimeout(() => {
+                if (window.screenManager) {
+                    window.screenManager.navigateTo('splash');
+                }
+            }, 100);
         }
 
         // Add debug info for game state

@@ -2954,6 +2954,440 @@ body {
     animation: dialogFadeIn 0.3s ease-out;
 }
 
+/* Full-screen layout overrides */
+.declarative-dialog.layout-full-screen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    transform: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.98), rgba(10, 20, 40, 0.98)) !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.declarative-dialog.layout-full-screen .screen-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    width: 100%;
+    padding: 50px;
+    text-align: center;
+}
+
+.declarative-dialog.layout-full-screen .screen-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 50px;
+    width: 100%;
+}
+
+.declarative-dialog.layout-full-screen-no-dialog {
+    display: none !important;
+}
+
+/* ========== SCREEN MANAGER STYLES ========== */
+/* Screen container and base styles */
+.game-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+}
+
+/* Screen content areas */
+.screen-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 50px;
+    text-align: center;
+}
+
+.screen-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 30px;
+    width: 100%;
+}
+
+/* Screen action buttons */
+.screen-action {
+    padding: 15px 40px;
+    background: linear-gradient(135deg, rgba(0, 100, 200, 0.3), rgba(0, 50, 100, 0.3));
+    border: 2px solid #00aaff;
+    color: #00aaff;
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.screen-action:hover {
+    background: linear-gradient(135deg, rgba(0, 100, 200, 0.5), rgba(0, 50, 100, 0.5));
+    border-color: #00ffff;
+    color: #00ffff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0, 255, 255, 0.3);
+}
+
+.screen-action.primary {
+    background: linear-gradient(135deg, rgba(0, 200, 100, 0.3), rgba(0, 100, 50, 0.3));
+    border-color: #00ff88;
+    color: #00ff88;
+}
+
+.screen-action.primary:hover {
+    background: linear-gradient(135deg, rgba(0, 200, 100, 0.5), rgba(0, 100, 50, 0.5));
+    border-color: #00ffaa;
+    color: #00ffaa;
+}
+
+/* Splash screen specific */
+.splash-container {
+    text-align: center;
+}
+
+.game-title {
+    font-size: 72px;
+    color: #00ffff;
+    text-shadow: 0 0 30px rgba(0, 255, 255, 0.8),
+                 0 0 60px rgba(0, 255, 255, 0.4);
+    margin-bottom: 20px;
+    letter-spacing: 4px;
+    animation: titleGlow 2s ease-in-out infinite;
+}
+
+.game-subtitle {
+    font-size: 24px;
+    color: #888;
+    margin-bottom: 60px;
+    letter-spacing: 2px;
+}
+
+.loading-bar {
+    width: 400px;
+    height: 4px;
+    background: rgba(0, 100, 200, 0.2);
+    border: 1px solid rgba(0, 200, 255, 0.3);
+    margin: 0 auto 40px;
+}
+
+.loading-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #00aaff, #00ffff);
+    animation: loadingProgress 3s ease-out;
+}
+
+@keyframes loadingProgress {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+@keyframes titleGlow {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+
+.splash-hint {
+    font-size: 16px;
+    color: #666;
+    animation: blink 1.5s infinite;
+}
+
+/* Menu screen specific */
+.menu-container {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.menu-title {
+    font-size: 64px;
+    color: #00ffff;
+    text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+    margin-bottom: 20px;
+    letter-spacing: 4px;
+}
+
+.menu-subtitle {
+    font-size: 20px;
+    color: #666;
+    letter-spacing: 2px;
+}
+
+/* Briefing screen specific */
+.briefing-container {
+    max-width: 800px;
+    width: 100%;
+}
+
+.briefing-title {
+    font-size: 32px;
+    color: #00ffff;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+}
+
+.mission-name {
+    font-size: 28px;
+    color: #00ff88;
+    margin-bottom: 30px;
+}
+
+.briefing-content {
+    text-align: left;
+    background: rgba(0, 20, 40, 0.5);
+    padding: 30px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.mission-location {
+    font-size: 18px;
+    color: #00aaff;
+    margin-bottom: 20px;
+}
+
+.mission-description {
+    font-size: 16px;
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.objectives-section h4,
+.rewards-section h4 {
+    color: #00ffff;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.objectives-list {
+    list-style: none;
+    padding: 0;
+}
+
+.objectives-list li {
+    padding: 8px 0;
+    padding-left: 20px;
+    position: relative;
+}
+
+.objectives-list li:before {
+    content: '▶';
+    position: absolute;
+    left: 0;
+    color: #00ff88;
+}
+
+.objectives-list li.optional:before {
+    color: #ffaa00;
+}
+
+.rewards {
+    color: #ffd700;
+    font-size: 18px;
+}
+
+/* Loadout screen specific */
+.loadout-container {
+    max-width: 1000px;
+    width: 100%;
+}
+
+.loadout-title {
+    font-size: 32px;
+    color: #00ffff;
+    margin-bottom: 10px;
+}
+
+.loadout-subtitle {
+    font-size: 18px;
+    color: #888;
+    margin-bottom: 40px;
+}
+
+.agents-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.agent-card {
+    background: rgba(0, 20, 40, 0.6);
+    border: 2px solid rgba(0, 100, 200, 0.3);
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.agent-card:hover {
+    background: rgba(0, 40, 80, 0.6);
+    border-color: #00aaff;
+    transform: translateY(-5px);
+}
+
+.agent-card.selected {
+    background: rgba(0, 100, 50, 0.4);
+    border-color: #00ff88;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.agent-name {
+    font-size: 18px;
+    color: #00ffff;
+    margin-bottom: 5px;
+}
+
+.agent-class {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 15px;
+}
+
+.agent-stats {
+    font-size: 14px;
+    color: #aaa;
+}
+
+.selection-info {
+    font-size: 18px;
+    color: #00ff88;
+}
+
+/* Victory/Defeat screen specific */
+.victory-container,
+.defeat-container {
+    text-align: center;
+}
+
+.victory-title {
+    font-size: 48px;
+    color: #00ff88;
+    text-shadow: 0 0 30px rgba(0, 255, 136, 0.8);
+    margin-bottom: 40px;
+}
+
+.defeat-title {
+    font-size: 48px;
+    color: #ff4444;
+    text-shadow: 0 0 30px rgba(255, 68, 68, 0.8);
+    margin-bottom: 20px;
+}
+
+.failure-reason {
+    font-size: 20px;
+    color: #ff8888;
+    margin-bottom: 40px;
+}
+
+.mission-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.mission-stats .stat {
+    font-size: 18px;
+    color: #aaa;
+}
+
+.rewards h3 {
+    font-size: 24px;
+    color: #00ffff;
+    margin-bottom: 20px;
+}
+
+.rewards div {
+    font-size: 20px;
+    color: #ffd700;
+    margin: 10px 0;
+}
+
+/* Credits screen specific */
+.credits-container {
+    text-align: center;
+    max-width: 600px;
+}
+
+.credits-title {
+    font-size: 48px;
+    color: #00ffff;
+    margin-bottom: 40px;
+}
+
+.credits-scroll {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.credit-section {
+    margin-bottom: 30px;
+}
+
+.credit-section h3 {
+    font-size: 20px;
+    color: #00ff88;
+    margin-bottom: 10px;
+}
+
+.credit-section p {
+    font-size: 16px;
+    color: #aaa;
+}
+
+/* ========== END SCREEN STYLES ========== */
+
+/* Splash screen specific styling */
+.splash-title {
+    font-size: 72px;
+    color: #00ffff;
+    text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+    margin-bottom: 20px;
+    font-family: 'Orbitron', monospace;
+    letter-spacing: 4px;
+}
+
+.splash-subtitle {
+    font-size: 24px;
+    color: #888;
+    margin-bottom: 40px;
+}
+
+.splash-progress, .splash-hint {
+    font-size: 16px;
+    color: #666;
+    margin-top: 20px;
+}
+
 .agent-name-3d {
     color: #00ffff;
     font-family: 'Courier New', monospace;

@@ -15,6 +15,87 @@ const DIALOG_CONFIG = {
         enableGamepadSupport: false
     },
 
+    // Layout definitions
+    layouts: {
+        'standard': {
+            structure: `
+                <div class="dialog-header">
+                    <span class="dialog-title">{{title}}</span>
+                    <button class="dialog-close-button">×</button>
+                </div>
+                <div class="dialog-content">{{content}}</div>
+                <div class="dialog-actions">{{buttons}}</div>
+            `,
+            styles: {
+                maxWidth: '600px',
+                maxHeight: '500px'
+            }
+        },
+        'wide': {
+            structure: `
+                <div class="dialog-header">
+                    <span class="dialog-title">{{title}}</span>
+                    <button class="dialog-close-button">×</button>
+                </div>
+                <div class="dialog-content">{{content}}</div>
+                <div class="dialog-actions">{{buttons}}</div>
+            `,
+            styles: {
+                maxWidth: '900px',
+                maxHeight: '600px'
+            }
+        },
+        'full-screen': {
+            structure: `
+                <div class="screen-content">{{content}}</div>
+                <div class="screen-actions">{{buttons}}</div>
+            `,
+            styles: {
+                width: '100%',
+                height: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                position: 'fixed',
+                top: '0',
+                left: '0',
+                background: 'rgba(0, 0, 0, 0.95)',
+                zIndex: '9999'
+            }
+        },
+        'full-screen-no-dialog': {
+            structure: `{{content}}`,
+            styles: {
+                display: 'none'  // Special case - hub uses existing DOM
+            }
+        },
+        'centered': {
+            structure: `
+                <div class="dialog-header">
+                    <span class="dialog-title">{{title}}</span>
+                    <button class="dialog-close-button">×</button>
+                </div>
+                <div class="dialog-content">{{content}}</div>
+                <div class="dialog-actions">{{buttons}}</div>
+            `,
+            styles: {
+                maxWidth: '500px',
+                maxHeight: '400px'
+            }
+        },
+        'notification': {
+            structure: `
+                <div class="notification-content">{{content}}</div>
+            `,
+            styles: {
+                maxWidth: '400px',
+                maxHeight: '200px',
+                position: 'fixed',
+                top: '20px',
+                right: '20px'
+            }
+        }
+    },
+
     // State definitions
     states: {
         // ========== HUB DIALOGS (Level 1) ==========

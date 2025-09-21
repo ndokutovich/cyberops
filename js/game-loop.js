@@ -940,9 +940,9 @@ CyberOpsGame.prototype.endMission = function(victory) {
             }
         }
         
-        // Show intermission dialog instead of end screen
+        // Navigate to victory/defeat screen using screen manager
         setTimeout(() => {
-            this.showIntermissionDialog(victory);
+            window.screenManager.navigateTo(victory ? 'victory' : 'defeat');
         }, 1000); // Brief delay for dramatic effect
 }
 

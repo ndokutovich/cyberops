@@ -243,11 +243,15 @@
         <div id="game3DContainer"></div>
         <div class="hud-dialog"></div>
         <div class="modal-container"></div>
+        <!-- Screen Manager container -->
+        <div id="screenContainer"></div>
         <!-- Add missing elements that game expects -->
         <div id="mainMenu" style="display: none;"></div>
         <div class="splash-screen" style="display: none;"></div>
         <div id="loadingProgress" style="display: none;"></div>
         <div id="loadingScreen" style="display: none;"></div>
+        <div id="syndicateHub" class="game-screen" style="display: none;"></div>
+        <div id="gameHUD" style="display: none;"></div>
     </div>
 
     <!-- Load Three.js properly -->
@@ -274,11 +278,18 @@
     <script src="js/game-utils.js"></script>
     <script src="js/game-keyboard.js"></script>
     <script src="js/game-npc.js"></script>
+    <script src="js/game-settings.js"></script>
+    <script src="js/game-equipment.js"></script>
     <script src="js/campaign-integration.js"></script>
     <script src="js/game-pathfinding.js"></script>
     <script src="js/game-teamcommands.js"></script>
     <script src="js/game-mission-executor.js"></script>
     <script src="js/game-mission-integration.js"></script>
+
+    <!-- Screen Manager (Three-layer UI architecture) -->
+    <script src="js/screen-manager.js"></script>
+    <script src="js/screen-config.js"></script>
+
     <!-- Load declarative engine BEFORE config -->
     <script src="js/declarative-dialog-engine.js"></script>
     <script src="js/dialog-config.js"></script>
@@ -307,6 +318,8 @@
     <script src="tests/modal-dialog-tests.js"></script>
     <script src="tests/screen-dialog-tests.js"></script>
     <script src="tests/complete-dialog-tests.js"></script>
+    <script src="tests/screen-layer-tests.js"></script>
+    <script src="tests/game-integration-tests.js"></script>
     <script src="tests/test-summary.js"></script>
     <script src="tests/test-diagnostic.js"></script>
 
@@ -394,6 +407,12 @@
                 if (game.initializeDeclarativeDialogs) {
                     game.initializeDeclarativeDialogs();
                     logToOutput('💬 Dialog system initialized');
+                }
+
+                // Initialize screen manager
+                if (window.screenManager) {
+                    window.screenManager.init(game);
+                    logToOutput('📺 Screen manager initialized');
                 }
 
                 // Initialize game but skip the initial screen

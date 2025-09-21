@@ -316,11 +316,19 @@ ROOT
 
 ## Navigation Patterns
 
+### Screen Navigation (Full-screen states)
+| Pattern | Usage | Example |
+|---------|-------|---------|
+| `screenManager.navigateTo(id)` | Switch screens | `screenManager.navigateTo('hub')` |
+| `screenManager.navigateTo(id, params)` | With data | `screenManager.navigateTo('briefing', {mission})` |
+| Screen configs | Define screens | `screen-config.js` |
+
+### Dialog Navigation (Modal overlays)
 | Pattern | Usage | Example |
 |---------|-------|---------|
 | `navigate:state` | Button action | `navigate:hire-agents` |
-| `navigateTo(state)` | Direct call | `navigateTo('character')` |
-| `navigateTo(state, null, true)` | Force refresh | `navigateTo('arsenal', null, true)` |
+| `dialogEngine.navigateTo(state)` | Direct call | `dialogEngine.navigateTo('character')` |
+| `dialogEngine.navigateTo(state, null, true)` | Force refresh | `dialogEngine.navigateTo('arsenal', null, true)` |
 | `back` | Return to parent | Button: `back` |
 | `close` | Close dialog | Button: `close` |
 | `execute:function` | Custom action | `execute:returnToHub` |
@@ -336,12 +344,27 @@ ROOT
 
 ## Files Using State System
 
-| File | Purpose | States Used |
+### Screen System Files
+| File | Purpose | Screens Used |
 |------|---------|-------------|
-| dialog-config.js | State definitions | All declarative states |
-| dialog-integration.js | Generators & actions | All declarative states |
-| declarative-dialog-engine.js | Core engine | - |
-| game-*.js files | Imperative wrappers | Various |
+| screen-manager.js | Screen management engine | All screens |
+| screen-config.js | Screen definitions | All 13 screens |
+| game-screens.js | Screen integration | Screen-specific logic |
+| game-screen-music.js | Screen music system | Music for each screen |
+
+### Dialog System Files
+| File | Purpose | Dialogs Used |
+|------|---------|-------------|
+| declarative-dialog-engine.js | Dialog engine | All modals |
+| dialog-config.js | Dialog definitions | All 38 dialogs |
+| dialog-integration.js | Dialog generators | Dialog-specific logic |
+
+### Integration Points
+| File | Purpose | Usage |
+|------|---------|-------|
+| game-core.js | Initialization | Sets up both systems |
+| game-flow.js | Game flow | Navigates between screens |
+| game-hub.js | Hub logic | Opens dialogs from hub |
 
 ## Testing Checklist
 

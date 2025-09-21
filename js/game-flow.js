@@ -19,18 +19,44 @@ CyberOpsGame.prototype.startCampaign = function() {
         this.currentMissionIndex = 0;
         this.completedMissions = [];
 
+        // Initialize game state for new campaign
+        this.credits = this.startingCredits || 10000;
+        this.researchPoints = this.startingResearchPoints || 100;
+        this.worldControl = 0;
+
+        // Assign 4 random agents from available pool if not already assigned
+        if (!this.activeAgents || this.activeAgents.length === 0) {
+            const availableAgents = [...this.availableAgents];
+            this.activeAgents = [];
+            for (let i = 0; i < 4 && availableAgents.length > 0; i++) {
+                const randomIndex = Math.floor(Math.random() * availableAgents.length);
+                this.activeAgents.push(availableAgents.splice(randomIndex, 1)[0]);
+            }
+        }
+
         // EMERGENCY CHECK: Make sure missions are initialized before showing hub
         if (!this.missions || this.missions.length === 0) {
             console.error('🚨 EMERGENCY in startCampaign: missions not initialized! Calling initializeHub...');
             this.initializeHub();
         }
 
-        this.showSyndicateHub();
+        window.screenManager.navigateTo('hub');
+}
+
+// Alias for compatibility with screen system
+CyberOpsGame.prototype.startNewGame = function() {
+    // Close any open dialogs
+    if (this.dialogEngine) {
+        this.dialogEngine.closeAll();
+    }
+
+    // Start the campaign
+    this.startCampaign();
 }
 
 CyberOpsGame.prototype.continueCampaign = function() {
         this.clearDemosceneTimer(); // Clear timer when user takes action
-        this.showSyndicateHub();
+        window.screenManager.navigateTo('hub');
 }
 
 CyberOpsGame.prototype.selectMission = function() {
@@ -50,11 +76,13 @@ CyberOpsGame.prototype.selectMission = function() {
 // Old mission select dialog functions removed - now using declarative dialog system
 
 CyberOpsGame.prototype.showMissionBriefing = function(mission) {
-        document.getElementById('missionBriefing').style.display = 'flex';
-        // Use missionNumber for display, not id (which is now a string)
-        const missionNum = mission.missionNumber || mission.id;
-        document.getElementById('missionTitle').textContent = `Mission ${missionNum}: ${mission.title}`;
-        document.getElementById('missionDesc').textContent = mission.description;
+    // Always use declarative dialog system
+    if (this.dialogEngine) {
+        this.currentMission = mission;
+        window.screenManager.navigateTo('mission-briefing', { selectedMission: mission });
+        return;
+    }
+    console.error('Dialog engine not available for mission briefing');
 
         // Continue main theme music during briefing (don't change music yet)
         console.log('🎵 Mission briefing - keeping main theme music playing');
@@ -165,13 +193,36 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
 }
 
 CyberOpsGame.prototype.startMission = function() {
+        // Debug agent state
+        console.log('🔍 startMission called:');
+        console.log('  - this.selectedAgents:', this.selectedAgents?.length || 0);
+        console.log('  - this.activeAgents:', this.activeAgents?.length || 0);
+        console.log('  - this.activeAgents[0]:', this.activeAgents?.[0]);
+
+        // Auto-select agents if none selected
         if (this.selectedAgents.length === 0) {
-            this.showHudDialog(
-                'DEPLOYMENT ERROR',
-                '⚠️ Mission deployment failed!<br><br>You must select at least one agent before deployment.<br><br>Select your squad from the agent roster and try again.',
-                [{ text: 'UNDERSTOOD', action: 'close' }]
-            );
-            return;
+            console.log('⚠️ No agents selected, auto-selecting available agents');
+
+            // Auto-select up to 4 active agents
+            const maxAgents = 4;
+            // Active agents might not have 'alive' property yet, default to true
+            const availableAgents = this.activeAgents.filter(a => a.alive !== false);
+
+            console.log(`🔍 Checking activeAgents:`, this.activeAgents?.length || 0, 'agents');
+            console.log(`🔍 Available agents after filter:`, availableAgents.length, 'agents');
+
+            if (availableAgents.length === 0) {
+                this.showHudDialog(
+                    'DEPLOYMENT ERROR',
+                    '⚠️ No agents available!<br><br>You need at least one agent to start a mission.',
+                    [{ text: 'UNDERSTOOD', action: 'close' }]
+                );
+                return;
+            }
+
+            // Auto-select agents
+            this.selectedAgents = availableAgents.slice(0, Math.min(maxAgents, availableAgents.length));
+            console.log('✅ Auto-selected agents:', this.selectedAgents.map(a => a.name));
         }
 
         // Auto-save before mission if enabled
@@ -405,16 +456,52 @@ CyberOpsGame.prototype.initMission = function() {
             (this.currentMissionIndex === 0 ? 4 :
              this.currentMissionIndex < 3 ? 5 : 6);
 
+        // Debug agent availability
+        console.log('📊 Agent availability check:');
+        console.log('  - this.activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
+        console.log('  - this.selectedAgents:', this.selectedAgents ? this.selectedAgents.length : 'undefined');
+
         // Use all hired agents up to the mission limit
-        const availableForMission = this.activeAgents.slice(0, maxAgentsForMission);
+        const availableForMission = this.activeAgents ? this.activeAgents.slice(0, maxAgentsForMission) : [];
 
         // If we have selectedAgents, prioritize them, otherwise use all available
         let baseAgents;
         if (this.selectedAgents && this.selectedAgents.length > 0) {
+            console.log('📝 Selected agents structure:', this.selectedAgents);
+            console.log('  First selected agent:', this.selectedAgents[0]);
+
             // Add selected agents first
             baseAgents = this.selectedAgents.map(selectedAgent => {
-                return this.activeAgents.find(a => a.name === selectedAgent.name) || selectedAgent;
-            });
+                // selectedAgent might be just an ID number OR a full agent object
+                const isJustId = typeof selectedAgent === 'number';
+                const agentInfo = isJustId ? `ID ${selectedAgent}` : (selectedAgent.name || selectedAgent.id || 'unknown');
+                console.log('  Mapping selected agent:', agentInfo, '(type:', typeof selectedAgent, ')');
+
+                if (this.activeAgents && this.activeAgents.length > 0) {
+                    // Try to match by different criteria depending on what we have
+                    let found;
+                    if (isJustId) {
+                        // If selectedAgent is just an ID number, match by ID
+                        found = this.activeAgents.find(a => a.id === selectedAgent);
+                    } else {
+                        // If it's an object, try to match by name, id, or object reference
+                        found = this.activeAgents.find(a =>
+                            a.name === selectedAgent.name ||
+                            a.id === selectedAgent.id ||
+                            a === selectedAgent
+                        );
+                    }
+
+                    if (found) {
+                        console.log('    ✅ Found match in activeAgents:', found.name);
+                        return found;
+                    } else {
+                        console.log('    ⚠️ No match found, using selectedAgent as-is');
+                        return isJustId ? null : selectedAgent;
+                    }
+                }
+                return isJustId ? null : selectedAgent;
+            }).filter(agent => agent !== null);  // Remove any nulls from failed ID lookups
 
             // Add more hired agents if we have room
             const additionalAgents = availableForMission.filter(
@@ -425,7 +512,17 @@ CyberOpsGame.prototype.initMission = function() {
             baseAgents = availableForMission;
         }
 
+        // Safety check: if no agents available, log error
+        if (!baseAgents || baseAgents.length === 0) {
+            console.error('❌ No agents available for mission!');
+            console.log('  - activeAgents:', this.activeAgents);
+            console.log('  - selectedAgents:', this.selectedAgents);
+            // Don't continue with empty agents array
+            return;
+        }
+
         console.log(`🎯 Mission ${this.currentMissionIndex + 1}: Deploying ${baseAgents.length} agents (max: ${maxAgentsForMission})`);
+        console.log('  - Agent names:', baseAgents.map(a => a.name || 'unnamed'));
 
         // Apply loadouts if equipment system is initialized
         let agentsWithLoadouts = baseAgents;
@@ -441,7 +538,7 @@ CyberOpsGame.prototype.initMission = function() {
 
         // Apply research modifiers
         let modifiedAgents;
-        if (window.GameServices) {
+        if (window.GameServices && window.GameServices.researchService) {
             // Apply research bonuses (weapons already handled by loadouts)
             modifiedAgents = agentsWithLoadouts.map(agent => {
                 return window.GameServices.researchService.applyResearchToAgent(
@@ -449,10 +546,25 @@ CyberOpsGame.prototype.initMission = function() {
                     this.completedResearch || []
                 );
             });
+        } else {
+            // No research service available, use agents as-is
+            modifiedAgents = agentsWithLoadouts;
+        }
+
+        // Safety check for modifiedAgents
+        if (!modifiedAgents || modifiedAgents.length === 0) {
+            console.error('❌ No modified agents available!');
+            return;
         }
 
         // Add mission-specific properties to each agent
         modifiedAgents.forEach((agent, idx) => {
+            // Debug agent data
+            console.log(`🔍 Processing agent ${idx}:`, {
+                name: agent.name,
+                id: agent.id,
+                specialization: agent.specialization
+            });
 
             // Store original ID for loadout lookup
             const originalId = agent.id || agent.name;
@@ -460,6 +572,10 @@ CyberOpsGame.prototype.initMission = function() {
             // Add mission-specific properties
             agent.id = 'agent_' + idx;
             agent.originalId = originalId; // Preserve for loadout lookup
+            // IMPORTANT: Preserve the agent name!
+            if (!agent.name && originalId) {
+                agent.name = originalId;
+            }
             agent.x = spawn.x + idx % 2;
             agent.y = spawn.y + Math.floor(idx / 2);
             agent.targetX = spawn.x + idx % 2;
@@ -519,9 +635,12 @@ CyberOpsGame.prototype.initMission = function() {
                 const firstAgent = this.agents[0];
                 firstAgent.selected = true;
                 this._selectedAgent = firstAgent;
+                // Also set selectedAgent (without underscore) for compatibility
+                this.selectedAgent = firstAgent;
 
-                console.log('🎯 Auto-selected first agent for better UX:', firstAgent.name);
-                console.log('👥 Available agents:', this.agents.map(a => a.name));
+                console.log('🎯 Auto-selected first agent for better UX:', firstAgent.name || firstAgent.id);
+                console.log('👥 Available agents:', this.agents.map(a => a.name || a.id));
+                console.log('✅ Selected agent stored as:', this._selectedAgent?.name || this._selectedAgent?.id);
                 console.log('✅ Press E to switch camera modes, Tab to change agents');
 
             // CRITICAL: Center camera on agents when mission starts to prevent NaN camera positions
@@ -1877,6 +1996,52 @@ CyberOpsGame.prototype.updateCooldownDisplay = function() {
         }
 }
 
+// Music pause/resume functions for pause menu
+CyberOpsGame.prototype.pauseLevelMusic = function() {
+    // Pause any active music
+    if (this.missionAudio) {
+        Object.values(this.missionAudio).forEach(audio => {
+            if (audio && !audio.paused) {
+                audio.dataset.wasPlaying = 'true';
+                audio.pause();
+            }
+        });
+    }
+    if (this.currentMusic && !this.currentMusic.paused) {
+        this.currentMusic.pause();
+    }
+}
+
+CyberOpsGame.prototype.resumeLevelMusic = function() {
+    // Resume any paused music
+    if (this.missionAudio) {
+        Object.values(this.missionAudio).forEach(audio => {
+            if (audio && audio.paused && audio.dataset?.wasPlaying === 'true') {
+                audio.play().catch(e => console.warn('Could not resume audio:', e));
+                delete audio.dataset.wasPlaying;
+            }
+        });
+    }
+    if (this.currentMusic && this.currentMusic.paused) {
+        this.currentMusic.play().catch(e => console.warn('Could not resume music:', e));
+    }
+}
+
+// Aliases and helper functions
+CyberOpsGame.prototype.pauseMusic = function() { return this.pauseLevelMusic(); }
+CyberOpsGame.prototype.resumeMusic = function() { return this.resumeLevelMusic(); }
+CyberOpsGame.prototype.stopMusic = function() {
+    this.pauseLevelMusic();
+    if (this.currentMusic) this.currentMusic.currentTime = 0;
+}
+CyberOpsGame.prototype.playMusic = function() { return this.resumeLevelMusic(); }
+CyberOpsGame.prototype.fadeOutMusic = function() { this.pauseLevelMusic(); }
+CyberOpsGame.prototype.fadeInMusic = function() { this.resumeLevelMusic(); }
+CyberOpsGame.prototype.isPaused = function() { return this.paused === true; }
+CyberOpsGame.prototype.exitToHub = function() {
+    return this.returnToHub ? this.returnToHub() : this.showSyndicateHub();
+}
+
 CyberOpsGame.prototype.togglePause = function() {
         this.isPaused = !this.isPaused;
         const pauseButton = document.querySelector('.pause-button');
@@ -1944,7 +2109,7 @@ CyberOpsGame.prototype.surrenderMission = function() {
             'Are you sure you want to surrender this mission?<br><br><strong>Warning:</strong> You will lose all progress and return to the Syndicate Hub without rewards.',
             [
                 { text: 'CONFIRM SURRENDER', action: () => this.performSurrender() },
-                { text: 'CANCEL', action: () => this.showPauseMenu() }
+                { text: 'CANCEL', action: () => this.dialogEngine.navigateTo('pause-menu') }
             ]
         );
 }
@@ -1958,7 +2123,7 @@ CyberOpsGame.prototype.performSurrender = function() {
         document.getElementById('gameHUD').style.display = 'none';
 
         // Return to hub
-        this.showSyndicateHub();
+        window.screenManager.navigateTo('hub');
 }
 
 CyberOpsGame.prototype.returnToHubFromMission = function() {
@@ -1967,7 +2132,7 @@ CyberOpsGame.prototype.returnToHubFromMission = function() {
             'Return to Syndicate Hub?<br><br><strong>Note:</strong> Your mission progress will be saved and you can resume later.',
             [
                 { text: 'RETURN TO HUB', action: () => this.performReturnToHub() },
-                { text: 'CANCEL', action: () => this.showPauseMenu() }
+                { text: 'CANCEL', action: () => this.dialogEngine.navigateTo('pause-menu') }
             ]
         );
 }
@@ -1984,7 +2149,7 @@ CyberOpsGame.prototype.performReturnToHub = function() {
         document.getElementById('gameHUD').style.display = 'none';
 
         // Save mission state (could be implemented later for mission resumption)
-        this.showSyndicateHub();
+        window.screenManager.navigateTo('hub');
 }
 
 // Moved to game-settings.js

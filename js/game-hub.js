@@ -179,7 +179,8 @@ CyberOpsGame.prototype.startNextMission = function() {
 
         // Set current mission index and start briefing
         this.currentMissionIndex = nextMissionIndex;
-        this.showMissionBriefing(nextMission);
+        this.currentMission = nextMission;
+        window.screenManager.navigateTo('mission-briefing', { selectedMission: nextMission });
     } else {
         // All missions completed
         this.showHudDialog(
@@ -209,7 +210,8 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
 
         const mission = this.missions[missionIndex];
         this.currentMissionIndex = missionIndex;
-        this.showMissionBriefing(mission);
+        this.currentMission = mission;
+        window.screenManager.navigateTo('mission-briefing', { selectedMission: mission });
 }
     
 CyberOpsGame.prototype.showHallOfGlory = function() {
@@ -346,7 +348,7 @@ CyberOpsGame.prototype.showResearchLabOld = function() {
             '🔬 RESEARCH LABORATORY',
             content,
             [
-                { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+                { text: 'BACK', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }
             ]
         );
 }
@@ -408,7 +410,7 @@ CyberOpsGame.prototype.startResearch = function(projectId) {
                             this.dialogEngine.navigateTo('research-lab');
                         }
                     }},
-                    { text: 'BACK TO HUB', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+                    { text: 'BACK TO HUB', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }
                 ]
             );
         }, 100);
@@ -648,7 +650,7 @@ CyberOpsGame.prototype.showIntelligenceOld = function() {
         content,
         [
             { text: 'RESEARCH LAB', action: () => { this.transitionDialog(() => this.showResearchLab()); } },
-            { text: 'BACK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+            { text: 'BACK', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }
         ]
     );
 };
@@ -675,7 +677,7 @@ CyberOpsGame.prototype.showHiringDialog = function() {
             this.showHudDialog(
                 '👥 NO AGENTS AVAILABLE',
                 'All available agents have already been hired!<br><br>Check back later for new recruits.',
-                [{ text: 'OK', action: () => { this.closeDialog(); this.showSyndicateHub(); } }]
+                [{ text: 'OK', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }]
             );
             return;
         }
@@ -953,7 +955,7 @@ CyberOpsGame.prototype.buyItem = function(type, itemId) {
             Credits Remaining: ${this.credits.toLocaleString()}`,
             [
                 { text: 'BUY MORE', action: () => this.showShopDialog() },
-                { text: 'BACK TO HUB', action: () => { this.closeDialog(); this.showSyndicateHub(); } }
+                { text: 'BACK TO HUB', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }
             ]
         );
         

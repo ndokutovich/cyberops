@@ -671,8 +671,8 @@ CyberOpsGame.prototype.completeMission = function(victory) {
         this.giveRewards(this.currentMissionDef.rewards);
     }
 
-    // Show intermission screen
-    this.showIntermissionDialog(victory);
+    // Navigate to victory/defeat screen using screen manager
+    window.screenManager.navigateTo(victory ? 'victory' : 'defeat');
 };
 
 // Custom objective check functions

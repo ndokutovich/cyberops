@@ -424,11 +424,22 @@ const GAME_MUSIC_CONFIG = {
 
 // Helper function to get music config for a screen
 function getMusicConfigForScreen(screenName) {
+    // Map screen names from ScreenManager to music config names
+    const screenNameMap = {
+        'main-menu': 'menu',
+        'mission-briefing': 'briefing',
+        'mission-loadout': 'loadout',
+        // Add more mappings as needed
+    };
+
+    // Use mapped name or original
+    const configName = screenNameMap[screenName] || screenName;
+
     // Use campaign music if available, fallback to hardcoded
     if (window.game && window.game.campaignMusic && window.game.campaignMusic.screens) {
-        return window.game.campaignMusic.screens[screenName] || GAME_MUSIC_CONFIG.screens[screenName] || null;
+        return window.game.campaignMusic.screens[configName] || GAME_MUSIC_CONFIG.screens[configName] || null;
     }
-    return GAME_MUSIC_CONFIG.screens[screenName] || null;
+    return GAME_MUSIC_CONFIG.screens[configName] || null;
 }
 
 // Helper function to get mission music defaults

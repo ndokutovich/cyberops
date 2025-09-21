@@ -193,7 +193,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
                 this.togglePause();
             }
         },
-        'Escape': () => this.showPauseMenu(),
+        'Escape': () => this.dialogEngine.navigateTo('pause-menu'),
 
         // Turn-based controls
         'Y': () => {

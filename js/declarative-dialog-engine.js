@@ -225,7 +225,9 @@ class DeclarativeDialogEngine {
         // Create new dialog element if not refreshing
         if (!dialogEl) {
             dialogEl = document.createElement('div');
-            dialogEl.className = `declarative-dialog level-${state.level}`;
+            // Add layout-specific class for proper styling
+            const layoutClass = state.layout ? `layout-${state.layout}` : 'layout-standard';
+            dialogEl.className = `declarative-dialog level-${state.level} ${layoutClass}`;
             dialogEl.id = `dialog-${stateId}`;
         }
         dialogEl.innerHTML = html;
@@ -547,9 +549,11 @@ class DeclarativeDialogEngine {
 
         if (targetLevel <= currentLevel) {
             // Pop states until we reach the right level
-            while (this.stateStack.length >= targetLevel) {
+            while (this.stateStack.length > targetLevel) {
                 const poppedState = this.stateStack.pop();
-                this.closeStateDialog(poppedState.id);
+                if (poppedState) {
+                    this.closeStateDialog(poppedState.id);
+                }
             }
         }
 

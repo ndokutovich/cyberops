@@ -284,7 +284,8 @@ CyberOpsGame.prototype.moveAgentWithPathfinding = function(agent) {
                 agent.currentPathIndex = 0;
 
                 if (agent.selected) {
-                    console.log(`📍 Path calculated for ${agent.name}: ${agent.path.length} waypoints`);
+                    const agentIdentifier = agent.name || agent.id || 'unknown';
+                    console.log(`📍 Path calculated for ${agentIdentifier}: ${agent.path.length} waypoints`);
                 }
             }
         }
@@ -301,7 +302,8 @@ CyberOpsGame.prototype.moveAgentWithPathfinding = function(agent) {
 
         // Safety check for waypoint
         if (!waypoint) {
-            console.error(`❌ Invalid waypoint for ${agent.name} at index ${agent.currentPathIndex}`);
+            const agentName = agent.name || agent.id || 'unknown agent';
+            console.error(`❌ Invalid waypoint for ${agentName} at index ${agent.currentPathIndex}`);
             agent.path = null;
             return;
         }
@@ -339,11 +341,13 @@ CyberOpsGame.prototype.moveAgentWithPathfinding = function(agent) {
                 // Update facing angle
                 agent.facingAngle = Math.atan2(dy, dx);
             } else {
-                console.error(`❌ Invalid movement for ${agent.name}: dist=${dist}, dx=${dx}, dy=${dy}`);
+                const agentName = agent.name || agent.id || 'unknown agent';
+                console.error(`❌ Invalid movement for ${agentName}: dist=${dist}, dx=${dx}, dy=${dy}`);
             }
         }
     } catch (error) {
-        console.error(`❌ Pathfinding error for ${agent.name}:`, error);
+        const agentName = agent.name || agent.id || 'unknown agent';
+        console.error(`❌ Pathfinding error for ${agentName}:`, error);
         // Reset to safe state
         agent.path = null;
         agent.targetX = agent.x;

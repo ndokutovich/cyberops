@@ -368,6 +368,31 @@ CyberOpsGame.prototype.quickSave = function() {
     this.saveToSlot(quickSaveId, `Quick Save - ${timestamp}`);
 }
 
+CyberOpsGame.prototype.quickLoad = function() {
+    // Try to load the quicksave first
+    const quickSaveKey = 'cyberops_save_quicksave';
+    const quickSave = localStorage.getItem(quickSaveKey);
+
+    if (quickSave) {
+        this.loadSaveSlot('quicksave');
+    } else {
+        // Fall back to most recent save
+        const saves = this.getAllSaves();
+        if (saves.length > 0) {
+            this.loadSaveSlot(saves[0].id);
+        } else {
+            console.warn('No saves available for quick load');
+            if (this.showHudDialog) {
+                this.showHudDialog(
+                    '⚠️ No Saves Found',
+                    'No saved games available to load.',
+                    [{ text: 'OK', action: 'close' }]
+                );
+            }
+        }
+    }
+}
+
 // Update the original saveGame to use the new system
 CyberOpsGame.prototype.saveGame = function() {
     // Show save list in save mode
@@ -541,4 +566,44 @@ CyberOpsGame.prototype.returnToInitialScreen = function() {
 CyberOpsGame.prototype.checkForSavedGame = function() {
         // This is called during initialization to set up the menu properly
         // Will be used when the menu is displayed after splash screens
+}
+
+// Aliases for expected function names (for compatibility)
+CyberOpsGame.prototype.getSaveSlots = function() {
+    return this.getAllSaves();
+}
+
+CyberOpsGame.prototype.getSavedGames = function() {
+    return this.getAllSaves();
+}
+
+CyberOpsGame.prototype.loadFromSlot = function(slotId) {
+    return this.loadSaveSlot(slotId);
+}
+
+CyberOpsGame.prototype.deleteSaveSlot = function(slotId) {
+    return this.deleteSave(slotId);
+}
+
+// Save game with a specific name (called from save dialog)
+CyberOpsGame.prototype.saveGameWithName = function(name) {
+    if (!name || name.trim() === '') {
+        name = `Save ${this.getAllSaves().length + 1}`;
+    }
+    const saveId = Date.now().toString();
+    this.saveToSlot(saveId, name.trim());
+
+    // Close the dialog if it's open
+    if (this.dialogEngine) {
+        this.dialogEngine.closeAll();
+    }
+
+    // Show confirmation
+    if (this.showHudDialog) {
+        this.showHudDialog(
+            '💾 Game Saved',
+            `Game saved as "${name.trim()}"`,
+            [{ text: 'OK', action: 'close' }]
+        );
+    }
 }

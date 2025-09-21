@@ -1,5 +1,92 @@
-# Dialog Conversion Guide
-*Step-by-step guide for converting imperative dialogs to declarative system*
+# UI Architecture Guide
+*Complete guide for the three-layer UI architecture: Screens, Modals, and HUD*
+
+## 🏗️ ARCHITECTURE OVERVIEW
+
+### Three-Layer UI System
+The game uses a three-layer architecture for UI management:
+
+1. **Screen Layer (ScreenManager)** - Full-screen application states
+   - Managed by `screen-manager.js` and `screen-config.js`
+   - Examples: splash, main-menu, hub, game, victory, defeat
+   - Handles major navigation between game states
+
+2. **Modal Layer (DialogEngine)** - Blocking modal dialogs
+   - Managed by `declarative-dialog-engine.js` and `dialog-config.js`
+   - Examples: mission-select, agent-management, research-lab, pause-menu
+   - Overlays on top of current screen
+
+3. **HUD Layer** - Non-blocking UI elements
+   - Direct DOM manipulation or canvas rendering
+   - Examples: health bars, mission objectives, notifications
+   - Always visible during gameplay
+
+## 📺 SCREEN MANAGER
+
+### Purpose
+Manages full-screen application states and transitions between major game screens.
+
+### Configuration (screen-config.js)
+```javascript
+const SCREEN_CONFIG = {
+    'screen-id': {
+        type: 'dom' | 'canvas' | 'generated',
+        elementId: 'domElementId',  // For DOM screens
+        music: true | false,         // Enable screen-specific music
+        background: 'css-gradient',  // For generated screens
+        content: (params) => `HTML`, // For generated screens
+        actions: [],                 // Button actions
+        onEnter: function() {},      // Called when entering screen
+        onExit: function() {}        // Called when leaving screen
+    }
+}
+```
+
+### Screen Types
+- **DOM**: Shows/hides existing HTML elements (`syndicateHub`, `mainMenu`)
+- **Canvas**: Shows the game canvas with HUD
+- **Generated**: Creates HTML dynamically (splash, victory, defeat)
+
+### Navigation
+```javascript
+// Navigate to a screen
+window.screenManager.navigateTo('hub');
+
+// With parameters
+window.screenManager.navigateTo('mission-briefing', { mission: missionData });
+```
+
+### Screen Flow
+```
+Initial HTML Overlay (START EXPERIENCE)
+    ↓
+Splash Screen (ScreenManager)
+    ↓
+Main Menu (ScreenManager)
+    ↓
+Hub (ScreenManager) ←→ Game (ScreenManager)
+    ↓                    ↓
+[Modal Dialogs]    Victory/Defeat (ScreenManager)
+```
+
+## 🎭 DIALOG ENGINE (Modal Layer)
+
+### Purpose
+Manages modal dialogs that overlay on top of screens.
+
+### When to Use DialogEngine vs ScreenManager
+- **Use ScreenManager for:**
+  - Full application state changes
+  - Main game screens (menu, hub, game)
+  - Victory/defeat screens
+  - Any full-screen content
+
+- **Use DialogEngine for:**
+  - Modal dialogs over screens
+  - Confirmation dialogs
+  - Inventory/equipment screens
+  - Mission selection
+  - Settings/options
 
 ## ⚠️ CRITICAL CONVERSION RULES
 
@@ -51,10 +138,37 @@ this.actionRegistry.get('refresh')();
 this.navigateTo(this.currentState);
 ```
 
-## 2. CONVERTED SYSTEM STATE HIERARCHY
+## 2. UI SYSTEM STATE HIERARCHY
 
+### Screen Layer (ScreenManager)
 ```
-hub (virtual root)
+[HTML Initial Overlay]
+    ↓
+splash
+    ↓
+main-menu
+    ├→ hub
+    │   └── [Modal Dialogs via DialogEngine]
+    ├→ credits
+    └→ settings
+
+hub
+    ├→ mission-briefing
+    │   └→ loadout
+    │       └→ game
+    └→ [Various Modal Dialogs]
+
+game
+    ├→ victory
+    │   └→ hub
+    └→ defeat
+        └→ hub or retry
+```
+
+### Modal Layer (DialogEngine)
+```
+hub context (modals over hub screen)
+├── mission-select-hub (Level 1)
 ├── agent-management (Level 1)
 │   └── hire-agents (Level 2)
 │       └── hire-confirm (Level 3)
@@ -63,11 +177,10 @@ hub (virtual root)
 ├── research-lab (Level 1)
 │   └── tech-tree (Level 2)
 ├── hall-of-glory (Level 1)
-├── mission-selection (Level 1)
-├── intel-data (Level 1)
-├── settings-controls (Level 1)
+├── intel-missions (Level 1)
+└── settings-controls (Level 1)
 
-game (virtual root)
+game context (modals over game screen)
 ├── pause-menu (Level 1)
 │   ├── save-load (Level 2)
 │   └── settings (Level 2)

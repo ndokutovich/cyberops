@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Manager Test Suite</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+            color: #0ff;
+            padding: 20px;
+            margin: 0;
+        }
+
+        h1 {
+            text-align: center;
+            text-shadow: 0 0 10px #0ff;
+            margin-bottom: 30px;
+        }
+
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #0ff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        button {
+            background: linear-gradient(45deg, #0ff, #00a);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+        }
+
+        #testOutput {
+            background: #000;
+            border: 1px solid #0ff;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .success {
+            color: #0f0;
+        }
+
+        .error {
+            color: #f00;
+        }
+
+        .info {
+            color: #ff0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Mock screen styles */
+        #screenContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+        }
+
+        .game-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        #testStatus {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        #testStatus.success {
+            background: rgba(0, 255, 0, 0.2);
+            border: 1px solid #0f0;
+            color: #0f0;
+        }
+
+        #testStatus.failure {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #f00;
+            color: #f00;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Screen Manager Test Suite</h1>
+
+    <div class="test-container">
+        <div class="controls">
+            <button id="runAllTests">Run All Tests</button>
+            <button id="runNavigationTests">Test Navigation</button>
+            <button id="runIntegrationTests">Test Integration</button>
+            <button id="clearOutput">Clear Output</button>
+        </div>
+
+        <div id="testOutput">Test output will appear here...</div>
+
+        <div id="testStatus"></div>
+    </div>
+
+    <!-- Mock DOM elements for testing -->
+    <div id="syndicateHub" class="game-screen hidden">Mock Hub</div>
+    <canvas id="gameCanvas" class="hidden"></canvas>
+    <div id="gameHUD" class="hidden">Mock HUD</div>
+
+    <!-- Load Screen Manager -->
+    <script src="js/screen-manager.js"></script>
+
+    <!-- Load test suite -->
+    <script src="tests/screen-manager-tests.js"></script>
+
+    <script>
+        // Override console methods to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const outputEl = document.getElementById('testOutput');
+        const statusEl = document.getElementById('testStatus');
+
+        function addOutput(text, className = '') {
+            const line = document.createElement('div');
+            line.className = className;
+            line.textContent = text;
+            outputEl.appendChild(line);
+            outputEl.scrollTop = outputEl.scrollHeight;
+        }
+
+        console.log = function(...args) {
+            const text = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+
+            if (text.includes('✅')) {
+                addOutput(text, 'success');
+            } else if (text.includes('📊') || text.includes('📈')) {
+                addOutput(text, 'info');
+            } else {
+                addOutput(text);
+            }
+
+            originalLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            const text = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+            addOutput(text, 'error');
+            originalError.apply(console, args);
+        };
+
+        // Button handlers
+        document.getElementById('runAllTests').addEventListener('click', async () => {
+            outputEl.innerHTML = '';
+            statusEl.textContent = '';
+            statusEl.className = '';
+
+            addOutput('🚀 Starting Screen Manager Tests...', 'info');
+            addOutput('=' .repeat(50));
+
+            try {
+                await screenManagerTests.runTests();
+
+                // Update status
+                const passed = screenManagerTests.results.passed;
+                const failed = screenManagerTests.results.failed;
+                const total = passed + failed;
+                const percentage = total > 0 ? (passed / total * 100).toFixed(1) : 0;
+
+                if (failed === 0) {
+                    statusEl.textContent = `✅ All ${passed} tests passed! (${percentage}% success rate)`;
+                    statusEl.className = 'success';
+                } else {
+                    statusEl.textContent = `⚠️ ${passed} passed, ${failed} failed (${percentage}% success rate)`;
+                    statusEl.className = 'failure';
+                }
+            } catch (error) {
+                addOutput(`Critical error: ${error.message}`, 'error');
+                statusEl.textContent = '❌ Test suite failed to complete';
+                statusEl.className = 'failure';
+            }
+        });
+
+        document.getElementById('runNavigationTests').addEventListener('click', async () => {
+            outputEl.innerHTML = '';
+            statusEl.textContent = '';
+            addOutput('🧭 Running Navigation Tests...', 'info');
+
+            const navTests = [
+                'Should show and hide DOM screens correctly',
+                'Should show and hide canvas screens correctly',
+                'Should create and display generated screens',
+                'Should handle screen transitions correctly'
+            ];
+
+            for (const testName of navTests) {
+                const test = screenManagerTests.tests.find(t => t.name === testName);
+                if (test) {
+                    try {
+                        await test.testFn();
+                        addOutput(`✅ ${test.name}`, 'success');
+                    } catch (error) {
+                        addOutput(`❌ ${test.name}: ${error.message}`, 'error');
+                    }
+                }
+            }
+        });
+
+        document.getElementById('runIntegrationTests').addEventListener('click', async () => {
+            outputEl.innerHTML = '';
+            statusEl.textContent = '';
+            addOutput('🔗 Running Integration Tests...', 'info');
+
+            const integrationTests = [
+                'Should maintain separation between screens and dialogs',
+                'Should handle complete application flow',
+                'Should trigger music loading for screens',
+                'Should manage pointer events correctly'
+            ];
+
+            for (const testName of integrationTests) {
+                const test = screenManagerTests.tests.find(t => t.name === testName);
+                if (test) {
+                    try {
+                        await test.testFn();
+                        addOutput(`✅ ${test.name}`, 'success');
+                    } catch (error) {
+                        addOutput(`❌ ${test.name}: ${error.message}`, 'error');
+                    }
+                }
+            }
+        });
+
+        document.getElementById('clearOutput').addEventListener('click', () => {
+            outputEl.innerHTML = '';
+            statusEl.textContent = '';
+            statusEl.className = '';
+        });
+
+        // Initial message
+        addOutput('Screen Manager Test Suite Ready', 'info');
+        addOutput('Click "Run All Tests" to begin testing');
+    </script>
+</body>
+</html>
