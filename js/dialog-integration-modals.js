@@ -71,7 +71,7 @@
             }
 
             // Perform the load
-            game.loadFromSlot(slotData.slotNumber);
+            game.loadSaveSlot(slotData.slotNumber);
 
             // Close all dialogs and return to game
             this.closeAll();
@@ -86,7 +86,7 @@
             }
 
             // Delete the save
-            game.deleteSaveSlot(slotData.slotNumber);
+            game.deleteSave(slotData.slotNumber);
 
             // Refresh the save/load dialog
             this.navigateTo('save-load', null, true);

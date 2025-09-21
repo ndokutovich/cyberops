@@ -186,10 +186,10 @@ describe('Game Integration Tests', () => {
             'loadGame',        // Basic load
             'quickSave',       // F5 quick save
             'quickLoad',       // F9 quick load
-            'getSaveSlots',    // List saves
+            'getAllSaves',     // List saves (corrected name)
             'saveToSlot',      // Save to specific slot
-            'loadFromSlot',    // Load from specific slot
-            'deleteSaveSlot'   // Delete a save
+            'loadSaveSlot',    // Load from specific slot (corrected name)
+            'deleteSave'       // Delete a save (corrected name)
         ];
 
         const missing = [];

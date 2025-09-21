@@ -568,23 +568,6 @@ CyberOpsGame.prototype.checkForSavedGame = function() {
         // Will be used when the menu is displayed after splash screens
 }
 
-// Aliases for expected function names (for compatibility)
-CyberOpsGame.prototype.getSaveSlots = function() {
-    return this.getAllSaves();
-}
-
-CyberOpsGame.prototype.getSavedGames = function() {
-    return this.getAllSaves();
-}
-
-CyberOpsGame.prototype.loadFromSlot = function(slotId) {
-    return this.loadSaveSlot(slotId);
-}
-
-CyberOpsGame.prototype.deleteSaveSlot = function(slotId) {
-    return this.deleteSave(slotId);
-}
-
 // Save game with a specific name (called from save dialog)
 CyberOpsGame.prototype.saveGameWithName = function(name) {
     if (!name || name.trim() === '') {

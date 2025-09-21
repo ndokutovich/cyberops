@@ -1984,7 +1984,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         `;
 
         // List saved games
-        const saves = this.getSavedGames ? this.getSavedGames() : [];
+        const saves = this.getAllSaves ? this.getAllSaves() : [];
         if (saves.length === 0) {
             html += '<p style="color: #888;">No saved games found</p>';
         } else {
@@ -1996,7 +1996,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                                 <div style="font-weight: bold;">${save.name || `Save ${index + 1}`}</div>
                                 <div style="color: #888; font-size: 0.8em;">${save.date || 'Unknown date'}</div>
                             </div>
-                            <button class="dialog-button" onclick="game.loadGameSlot(${index})">LOAD</button>
+                            <button class="dialog-button" onclick="game.loadSaveSlot('${save.id}')">LOAD</button>
                         </div>
                     </div>
                 `;
