@@ -893,15 +893,13 @@
     <script src="js/services/game-state-service.js"></script>
     <script src="js/services/game-services.js"></script>
 
-    <!-- Services Integration -->
-    <script src="js/game-services-integration.js"></script>
-
     <!-- Flexible Engine System (interface and loader first) -->
     <script src="js/engine/campaign-interface.js"></script>
     <script src="js/engine/content-loader.js"></script>
 
     <!-- Game Modules - Load in sequence to preserve functionality -->
     <script src="js/game-core.js"></script>
+
     <script src="js/game-equipment.js"></script>
     <script src="js/game-eventlog.js"></script>
     <script src="js/game-teamcommands.js"></script>
@@ -982,6 +980,10 @@
     <script src="js/game-loop.js"></script>
     <script src="js/game-pathfinding.js"></script>
     <script src="js/game-rendering.js"></script>
+
+    <!-- Services Integration - MUST be after game-rendering.js to override render method -->
+    <script src="js/game-services-integration.js"></script>
+
     <script src="js/game-3d.js"></script>
     <script src="js/game-utils.js"></script>
 

@@ -361,8 +361,6 @@ CyberOpsGame.prototype.handleMouseDown = function(e) {
         this.lastMouseY = e.clientY;
         this.isDragging = false;
 
-        // Simplified mousedown - just track mouse state
-        console.log('🖱️ Mouse down detected! Screen:', this.currentScreen);
         // All selection and movement logic moved to handleTap in mouseup
 }
 
@@ -388,8 +386,17 @@ CyberOpsGame.prototype.handleMouseMove = function(e) {
 
             if (distance > 10) {
                 this.isDragging = true;
-                this.cameraX += e.clientX - this.lastMouseX;
-                this.cameraY += e.clientY - this.lastMouseY;
+                const deltaX = e.clientX - this.lastMouseX;
+                const deltaY = e.clientY - this.lastMouseY;
+
+                // Update camera position
+                this.cameraX += deltaX;
+                this.cameraY += deltaY;
+
+                // Sync with CameraService if available
+                if (this.gameServices && this.gameServices.cameraService) {
+                    this.gameServices.cameraService.setPosition(-this.cameraX, -this.cameraY);
+                }
             }
 
             this.lastMouseX = e.clientX;
@@ -421,7 +428,8 @@ CyberOpsGame.prototype.handleWheel = function(e) {
 }
 
 CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
-        if (this.currentScreen !== 'game' || this.isPaused) return;
+        // Allow tap to work in game and certain other screens
+        if ((this.currentScreen !== 'game' && this.currentScreen !== 'mission' && this.currentScreen !== 'combat') || this.isPaused) return;
 
         // Handle 3D mode shooting
         if (this.is3DMode) {

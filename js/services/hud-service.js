@@ -121,6 +121,12 @@ class HUDService {
      * Initialize default HUD components
      */
     initializeComponents() {
+        // Safety check - don't initialize if no container
+        if (!this.hudContainer) {
+            console.warn('⚠️ HUDService: Cannot initialize components without hudContainer');
+            return;
+        }
+
         // Agent status panel
         this.createAgentStatusPanel();
 
@@ -664,8 +670,13 @@ class HUDService {
      * Show HUD (and initialize components if needed)
      */
     show() {
+        // Ensure container exists before trying to initialize
+        if (!this.hudContainer) {
+            this.createHUDContainer();
+        }
+
         // Initialize components on first show
-        if (!this.components.agentStatus) {
+        if (!this.components.agentStatus && this.hudContainer) {
             this.initializeComponents();
         }
 

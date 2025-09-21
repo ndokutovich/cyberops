@@ -130,6 +130,9 @@ class RenderingService {
         const startTime = performance.now();
         this.stats.drawCalls = 0;
 
+        // Store camera in gameState for child methods
+        gameState.camera = camera;
+
         // Clear canvas
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -154,6 +157,7 @@ class RenderingService {
         // Render layers in order
         this.renderBackground(gameState);
         this.renderMap(gameState);
+        this.renderFogOfWar(gameState); // Add fog of war after map
         this.renderObjects(gameState);
         this.renderEntities(gameState);
         this.renderEffects(gameState);
@@ -361,6 +365,21 @@ class RenderingService {
      * Render game objects (terminals, doors, items, etc.)
      */
     renderObjects(gameState) {
+        // Render cover
+        if (gameState.map && gameState.map.cover) {
+            gameState.map.cover.forEach(cover => {
+                // Skip rendering if in fog and location is unexplored
+                if (gameState.fogEnabled && gameState.fogOfWar) {
+                    const tileX = Math.floor(cover.x);
+                    const tileY = Math.floor(cover.y);
+                    if (gameState.fogOfWar[tileY] && gameState.fogOfWar[tileY][tileX] === 0) {
+                        return; // Don't render in unexplored areas
+                    }
+                }
+                this.renderCover(cover.x, cover.y, gameState);
+            });
+        }
+
         // Render terminals
         if (gameState.terminals) {
             gameState.terminals.forEach(terminal =>
@@ -380,6 +399,68 @@ class RenderingService {
             gameState.collectables.forEach(item =>
                 this.renderCollectable(item, gameState)
             );
+        }
+
+        // Render markers
+        if (gameState.map && gameState.map.items) {
+            gameState.map.items.forEach(item => {
+                // Skip rendering if in fog and location is unexplored
+                if (gameState.fogEnabled && gameState.fogOfWar) {
+                    const tileX = Math.floor(item.x);
+                    const tileY = Math.floor(item.y);
+                    if (gameState.fogOfWar[tileY] && gameState.fogOfWar[tileY][tileX] === 0) {
+                        return; // Don't render in unexplored areas
+                    }
+                }
+                if (item.type === 'marker') {
+                    this.renderMarker(item.x, item.y, item.sprite || '📍', item.name, gameState);
+                }
+            });
+        }
+
+        // Render explosive targets
+        if (gameState.map && gameState.map.explosiveTargets) {
+            gameState.map.explosiveTargets.forEach(target => {
+                // Skip rendering if in fog and location is unexplored
+                if (gameState.fogEnabled && gameState.fogOfWar) {
+                    const tileX = Math.floor(target.x);
+                    const tileY = Math.floor(target.y);
+                    if (gameState.fogOfWar[tileY] && gameState.fogOfWar[tileY][tileX] === 0) {
+                        return; // Don't render in unexplored areas
+                    }
+                }
+                this.renderExplosiveTarget(target.x, target.y, target.planted, gameState);
+            });
+        }
+
+        // Render assassination targets
+        if (gameState.map && gameState.map.targets) {
+            gameState.map.targets.forEach(target => {
+                // Skip rendering if in fog and location is unexplored
+                if (gameState.fogEnabled && gameState.fogOfWar) {
+                    const tileX = Math.floor(target.x);
+                    const tileY = Math.floor(target.y);
+                    if (gameState.fogOfWar[tileY] && gameState.fogOfWar[tileY][tileX] === 0) {
+                        return; // Don't render in unexplored areas
+                    }
+                }
+                this.renderAssassinationTarget(target.x, target.y, target.type, target.eliminated, gameState);
+            });
+        }
+
+        // Render gates
+        if (gameState.map && gameState.map.gates) {
+            gameState.map.gates.forEach(gate => {
+                // Skip rendering if in fog and location is unexplored
+                if (gameState.fogEnabled && gameState.fogOfWar) {
+                    const tileX = Math.floor(gate.x);
+                    const tileY = Math.floor(gate.y);
+                    if (gameState.fogOfWar[tileY] && gameState.fogOfWar[tileY][tileX] === 0) {
+                        return; // Don't render in unexplored areas
+                    }
+                }
+                this.renderGate(gate.x, gate.y, gate.breached, gameState);
+            });
         }
 
         // Render extraction point
@@ -539,7 +620,7 @@ class RenderingService {
 
         // Render NPCs (delegated to NPC system if exists)
         if (gameState.npcs && gameState.renderNPCs) {
-            gameState.renderNPCs();
+            gameState.renderNPCs(this.ctx);  // Pass context to NPC rendering
         }
     }
 
@@ -549,45 +630,74 @@ class RenderingService {
     renderAgent(agent, gameState) {
         if (!agent || agent.health <= 0) return;
 
+        // Render path if agent has one
+        if (agent.path && agent.path.length > 0) {
+            this.renderPath(agent.path, agent.currentPathIndex, agent.color, gameState);
+        }
+
         const ctx = this.ctx;
-        const iso = this.worldToIsometric(agent.x, agent.y);
+        const isoPos = this.worldToIsometric(agent.x, agent.y);
 
         ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
 
-        // Selection indicator
+        // Draw body and selection WITHOUT rotation
         if (agent.selected) {
-            ctx.strokeStyle = '#0ff';
-            ctx.lineWidth = 2;
+            // Pulsing selection ring for selected agents
+            const pulse = Math.sin(Date.now() * 0.005) * 0.2 + 0.8;
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = pulse;
             ctx.beginPath();
-            ctx.arc(iso.x, iso.y, 20, 0, Math.PI * 2);
+            ctx.arc(0, 0, 25, 0, Math.PI * 2);
             ctx.stroke();
+
+            // Inner ring
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 1;
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Selection indicator on ground
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(-15, -5, 30, 20);
+            ctx.setLineDash([]);
         }
 
-        // Agent body
-        ctx.fillStyle = agent.color || '#00ff00';
-        ctx.beginPath();
-        ctx.arc(iso.x, iso.y - 10, 8, 0, Math.PI * 2);
-        ctx.fill();
+        if (agent.shield > 0) {
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(0, -10, 25, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-        // Direction indicator
-        const angle = agent.facing || 0;
-        ctx.strokeStyle = '#fff';
+        ctx.fillStyle = '#4a7c8c';
+        ctx.fillRect(-10, -25, 20, 30);
+
+        ctx.fillStyle = '#00ffff';
+        ctx.fillRect(-8, -23, 16, 5);
+
+        // Now apply rotation ONLY for vision cone and direction indicator
+        ctx.save();
+        // Add 90 degrees (PI/2) to agent facing angle, then adjust for isometric view
+        const isoAngle = (agent.facingAngle || 0) + Math.PI/2 - Math.PI/4; // +90 degrees then adjust for isometric
+        ctx.rotate(isoAngle);
+
+        // Direction indicator (rotated)
+        ctx.strokeStyle = '#00ffff';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(iso.x, iso.y - 10);
-        ctx.lineTo(
-            iso.x + Math.cos(angle) * 12,
-            iso.y - 10 + Math.sin(angle) * 12
-        );
+        ctx.moveTo(0, 0);
+        ctx.lineTo(15, 0);
         ctx.stroke();
 
-        // Health bar
-        this.renderHealthBar(iso.x, iso.y - 30, agent.health, agent.maxHealth);
+        ctx.restore(); // Remove rotation
 
-        // Shield if active
-        if (agent.shield > 0) {
-            this.renderShield(iso.x, iso.y - 10, agent.shield);
-        }
+        // Health bar (no rotation)
+        this.renderHealthBar(0, -40, agent.health, agent.maxHealth);
 
         ctx.restore();
         this.stats.drawCalls += 3;
@@ -600,40 +710,54 @@ class RenderingService {
         if (!enemy || enemy.health <= 0) return;
 
         const ctx = this.ctx;
-        const iso = this.worldToIsometric(enemy.x, enemy.y);
+        const isoPos = this.worldToIsometric(enemy.x, enemy.y);
 
         ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
 
-        // Alert indicator
+        // Draw body and alert indicator WITHOUT rotation
         if (enemy.alertLevel > 0) {
-            ctx.strokeStyle = enemy.alertLevel > 50 ? '#f00' : '#ff0';
-            ctx.lineWidth = 2;
+            ctx.fillStyle = `rgba(255, 0, 0, ${enemy.alertLevel / 100})`;
             ctx.beginPath();
-            ctx.arc(iso.x, iso.y, 15, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.arc(0, -30, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (enemy.alertLevel > 50) {
+                ctx.fillStyle = '#ff0000';
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('!', 0, -27);
+            }
         }
 
-        // Enemy body
-        ctx.fillStyle = enemy.color || '#ff0000';
+        ctx.fillStyle = '#8c4a4a';
+        ctx.fillRect(-10, -25, 20, 30);
+
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(-8, -23, 16, 5);
+
+        // Now apply rotation ONLY for vision cone and direction indicator
+        ctx.save();
+        const isoAngle = (enemy.facingAngle || 0) - Math.PI/4; // Adjust for isometric view
+        ctx.rotate(isoAngle);
+
+        // Direction indicator (rotated)
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(iso.x, iso.y - 10, 7, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Type indicator
-        if (enemy.type) {
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 10px monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText(enemy.type[0].toUpperCase(), iso.x, iso.y - 7);
-        }
-
-        // Health bar
-        this.renderHealthBar(iso.x, iso.y - 25, enemy.health, enemy.maxHealth);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(15, 0);
+        ctx.stroke();
 
         // Vision cone if debug enabled
         if (this.debug.showVisionCones) {
             this.renderVisionCone(enemy);
         }
+
+        ctx.restore(); // Remove rotation
+
+        // Health bar (no rotation)
+        this.renderHealthBar(0, -40, enemy.health, enemy.maxHealth);
 
         ctx.restore();
         this.stats.drawCalls += 2;
@@ -1181,6 +1305,286 @@ class RenderingService {
         if (this.debug.hasOwnProperty(flag)) {
             this.debug[flag] = !this.debug[flag];
         }
+    }
+
+    /**
+     * Render cover object
+     */
+    renderCover(x, y, gameState) {
+        const ctx = this.ctx;
+        const isoPos = gameState.worldToIsometric(x, y);
+
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+
+        ctx.fillStyle = '#2a4a6a';
+        ctx.fillRect(-15, -10, 30, 20);
+
+        ctx.beginPath();
+        ctx.moveTo(-15, -10);
+        ctx.lineTo(0, -20);
+        ctx.lineTo(15, -10);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.fillStyle = '#3a5a7a';
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    /**
+     * Render fog of war overlay
+     */
+    renderFogOfWar(gameState) {
+        if (!gameState.fogOfWar || !gameState.fogEnabled) {
+            return; // Skip rendering when fog is disabled
+        }
+
+        const ctx = this.ctx;
+
+        for (let y = 0; y < gameState.map.height; y++) {
+            for (let x = 0; x < gameState.map.width; x++) {
+                const fogState = gameState.fogOfWar[y][x];
+
+                if (fogState === 0) {
+                    // Unexplored - fully dark (black)
+                    const isoPos = gameState.worldToIsometric(x + 0.5, y + 0.5);
+                    ctx.save();
+                    ctx.translate(isoPos.x, isoPos.y);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 1)';  // Completely black
+                    ctx.fillRect(-32, -16, 64, 32);
+                    ctx.restore();
+                } else if (fogState === 1) {
+                    // Explored but not visible - very light blue tint
+                    const isoPos = gameState.worldToIsometric(x + 0.5, y + 0.5);
+                    ctx.save();
+                    ctx.translate(isoPos.x, isoPos.y);
+                    ctx.fillStyle = 'rgba(10, 20, 40, 0.15)';  // Very transparent dark blue
+                    ctx.fillRect(-32, -16, 64, 32);
+                    ctx.restore();
+                }
+                // fogState === 2 is fully visible, no overlay needed
+            }
+        }
+    }
+
+    /**
+     * Render path for agent movement
+     */
+    renderPath(path, currentIndex, agentColor, gameState) {
+        if (!path || path.length === 0) return;
+
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.strokeStyle = agentColor || '#00ff00';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.globalAlpha = 0.6;
+
+        ctx.beginPath();
+        for (let i = 0; i < path.length - 1; i++) {
+            const current = gameState.worldToIsometric(path[i].x, path[i].y);
+            const next = gameState.worldToIsometric(path[i + 1].x, path[i + 1].y);
+
+            if (i === 0) {
+                ctx.moveTo(current.x, current.y);
+            }
+            ctx.lineTo(next.x, next.y);
+        }
+        ctx.stroke();
+
+        // Draw waypoint markers
+        for (let i = currentIndex || 0; i < path.length; i++) {
+            const pos = gameState.worldToIsometric(path[i].x, path[i].y);
+
+            ctx.fillStyle = i === currentIndex ? '#ffff00' : agentColor || '#00ff00';
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Render marker on map
+     */
+    renderMarker(x, y, sprite, name, gameState) {
+        const ctx = this.ctx;
+        const isoPos = gameState.worldToIsometric(x, y);
+
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+
+        // Draw marker base
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw sprite or icon
+        ctx.font = '16px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sprite || '📍', 0, 0);
+
+        // Draw name if provided
+        if (name) {
+            ctx.font = '10px monospace';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(name, 0, -20);
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Render explosive target
+     */
+    renderExplosiveTarget(x, y, planted, gameState) {
+        const ctx = this.ctx;
+        const isoPos = gameState.worldToIsometric(x, y);
+
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+
+        // Draw bomb/target indicator
+        ctx.fillStyle = planted ? '#00ff00' : '#ff0000';
+        ctx.strokeStyle = planted ? '#00ff00' : '#ff0000';
+        ctx.lineWidth = 2;
+
+        // Draw base
+        ctx.fillRect(-15, -10, 30, 20);
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(-20, -15, 40, 30);
+        ctx.globalAlpha = 1;
+
+        // Draw icon
+        ctx.font = 'bold 20px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#000';
+        ctx.fillText(planted ? '✓' : '💣', 0, 0);
+
+        // Pulsing effect if not planted
+        if (!planted) {
+            const pulse = Math.sin(Date.now() * 0.005) * 0.5 + 0.5;
+            ctx.strokeStyle = `rgba(255, 0, 0, ${pulse})`;
+            ctx.strokeRect(-25, -20, 50, 40);
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Render assassination target
+     */
+    renderAssassinationTarget(x, y, type, eliminated, gameState) {
+        const ctx = this.ctx;
+        const isoPos = gameState.worldToIsometric(x, y);
+
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+
+        // Draw target indicator
+        if (!eliminated) {
+            // Draw crosshair
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, -10, 15, 0, Math.PI * 2);
+            ctx.moveTo(-20, -10);
+            ctx.lineTo(20, -10);
+            ctx.moveTo(0, -30);
+            ctx.lineTo(0, 10);
+            ctx.stroke();
+
+            // Draw target name/type
+            ctx.font = '12px monospace';
+            ctx.fillStyle = '#ff0000';
+            ctx.textAlign = 'center';
+            ctx.fillText(type || 'TARGET', 0, -35);
+        } else {
+            // Draw elimination marker
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-10, -10);
+            ctx.lineTo(10, 10);
+            ctx.moveTo(10, -10);
+            ctx.lineTo(-10, 10);
+            ctx.stroke();
+
+            ctx.font = '12px monospace';
+            ctx.fillStyle = '#00ff00';
+            ctx.textAlign = 'center';
+            ctx.fillText('ELIMINATED', 0, -25);
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Render gate/breach point
+     */
+    renderGate(x, y, breached, gameState) {
+        const ctx = this.ctx;
+        const isoPos = gameState.worldToIsometric(x, y);
+
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+
+        // Draw gate
+        ctx.fillStyle = breached ? '#444444' : '#888888';
+        ctx.strokeStyle = breached ? '#00ff00' : '#ffaa00';
+        ctx.lineWidth = breached ? 1 : 3;
+
+        // Draw gate structure
+        ctx.fillRect(-25, -30, 50, 40);
+
+        if (!breached) {
+            // Draw reinforcement bars
+            ctx.strokeStyle = '#666666';
+            ctx.lineWidth = 2;
+            for (let i = -20; i <= 20; i += 10) {
+                ctx.beginPath();
+                ctx.moveTo(i, -30);
+                ctx.lineTo(i, 10);
+                ctx.stroke();
+            }
+
+            // Draw breach indicator
+            ctx.strokeStyle = '#ffaa00';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-25, -30, 50, 40);
+
+            // Pulsing effect
+            const pulse = Math.sin(Date.now() * 0.003) * 0.5 + 0.5;
+            ctx.globalAlpha = pulse;
+            ctx.fillStyle = '#ffaa00';
+            ctx.fillText('BREACH POINT', 0, -40);
+            ctx.globalAlpha = 1;
+        } else {
+            // Draw breach damage
+            ctx.fillStyle = '#222222';
+            ctx.beginPath();
+            ctx.moveTo(-20, -25);
+            ctx.lineTo(-10, -10);
+            ctx.lineTo(5, -20);
+            ctx.lineTo(15, 5);
+            ctx.lineTo(20, -5);
+            ctx.lineTo(10, 10);
+            ctx.lineTo(-15, 10);
+            ctx.lineTo(-20, -25);
+            ctx.fill();
+
+            ctx.fillStyle = '#00ff00';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('BREACHED', 0, -40);
+        }
+
+        ctx.restore();
     }
 }
 

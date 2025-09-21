@@ -658,30 +658,8 @@ CyberOpsGame.prototype.initMission = function() {
                 console.log('✅ Press E to switch camera modes, Tab to change agents');
 
             // CRITICAL: Center camera on agents when mission starts to prevent NaN camera positions
-            console.log('🎥 Before camera centering - cameraX:', this.cameraX, 'cameraY:', this.cameraY);
-
-            // Calculate center point of all agents
-            if (this.agents && this.agents.length > 0) {
-                let totalX = 0;
-                let totalY = 0;
-                this.agents.forEach(agent => {
-                    totalX += agent.x;
-                    totalY += agent.y;
-                });
-
-                // Center camera on average agent position
-                this.cameraX = Math.floor(totalX / this.agents.length - this.canvas.width / (2 * this.tileWidth));
-                this.cameraY = Math.floor(totalY / this.agents.length - this.canvas.height / (2 * this.tileHeight));
-
-                console.log('🎥 Manual camera centering completed - agents average pos:', {
-                    avgX: totalX / this.agents.length,
-                    avgY: totalY / this.agents.length,
-                    cameraX: this.cameraX,
-                    cameraY: this.cameraY
-                });
-            }
-
-            console.log('🎥 After camera centering - cameraX:', this.cameraX, 'cameraY:', this.cameraY);
+            // Use the proper centerCameraOnAgents function
+            this.centerCameraOnAgents();
         } else {
             console.log('⚠️ No agents available to select!');
         }
@@ -909,6 +887,8 @@ CyberOpsGame.prototype.getStrategicEnemyPositions = function(count) {
 
 CyberOpsGame.prototype.centerCameraOnAgents = function() {
         if (this.agents.length === 0) return;
+
+        // Calculate average agent position
         let avgX = 0, avgY = 0;
         this.agents.forEach(agent => {
             avgX += agent.x;
@@ -917,15 +897,20 @@ CyberOpsGame.prototype.centerCameraOnAgents = function() {
         avgX /= this.agents.length;
         avgY /= this.agents.length;
 
+        // Convert to isometric screen coordinates
         const screenPos = this.worldToIsometric(avgX, avgY);
-        this.cameraX = this.canvas.width / 2 - screenPos.x * this.zoom;
-        this.cameraY = this.canvas.height / 2 - screenPos.y * this.zoom;
+        const zoom = this.zoom || 1;
+
+        // Center the camera - this is the CORRECT formula
+        this.cameraX = this.canvas.width / 2 - screenPos.x * zoom;
+        this.cameraY = this.canvas.height / 2 - screenPos.y * zoom;
 }
 
 CyberOpsGame.prototype.centerCameraOnAgent = function(agent) {
         const screenPos = this.worldToIsometric(agent.x, agent.y);
-        this.cameraX = this.canvas.width / 2 - screenPos.x * this.zoom;
-        this.cameraY = this.canvas.height / 2 - screenPos.y * this.zoom;
+        const zoom = this.zoom || 1; // Use 1 if zoom is undefined
+        this.cameraX = this.canvas.width / 2 - screenPos.x * zoom;
+        this.cameraY = this.canvas.height / 2 - screenPos.y * zoom;
 }
 
 CyberOpsGame.prototype.updateSquadHealth = function() {

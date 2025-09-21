@@ -46,8 +46,9 @@ class GameServices {
         // Initialize services that need it
         this.cameraService.setViewport(window.innerWidth, window.innerHeight);
         this.effectsService.initialize();
-        // Don't initialize HUD yet - wait until game screen
-        // this.hudService.initialize();
+        // Initialize HUD but keep it hidden initially
+        this.hudService.initialize();
+        this.hudService.hide(); // Start hidden
 
         // Initialize UIService with existing dialog systems
         this.uiService.initialize({

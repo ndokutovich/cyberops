@@ -4,9 +4,8 @@
  * This preserves existing functionality while using services where available
  */
 
-// Store original methods for fallback
+// Store original update method for fallback (render is fully replaced by RenderingService)
 CyberOpsGame.prototype._originalUpdate = CyberOpsGame.prototype.update;
-CyberOpsGame.prototype._originalRender = CyberOpsGame.prototype.render;
 
 /**
  * Enhanced update method that integrates services
@@ -81,7 +80,9 @@ CyberOpsGame.prototype.update = function() {
             this.gameServices.mapService.updateFogOfWar(viewerPositions);
         }
 
-        // Update HUD Service
+        // Update HUD Service - DISABLED to prevent conflicts with old HUD
+        // TODO: Remove old HUD system first, then re-enable this
+        /*
         if (this.gameServices.hudService) {
             // Only show HUD when in game or certain screens
             const hudScreens = ['game', 'mission', 'combat'];
@@ -113,6 +114,7 @@ CyberOpsGame.prototype.update = function() {
                 });
             }
         }
+        */
 
         // Update Input Service
         if (this.gameServices.inputService && !this.gameServices.inputService._initialized) {
@@ -146,11 +148,12 @@ CyberOpsGame.prototype.update = function() {
 };
 
 /**
- * Enhanced render method that can use RenderingService
+ * Render method that uses RenderingService
+ * The old render implementation has been completely removed
  */
 CyberOpsGame.prototype.render = function() {
-    // Check if we should use RenderingService
-    if (this.gameServices && this.gameServices.renderingService && this.useRenderingService) {
+    // Always use RenderingService (old implementation removed)
+    if (this.gameServices && this.gameServices.renderingService) {
         // Initialize rendering service if needed
         if (!this.gameServices.renderingService.canvas) {
             this.gameServices.renderingService.initialize(this.canvas);
@@ -193,15 +196,16 @@ CyberOpsGame.prototype.render = function() {
         // Use RenderingService for main rendering
         this.gameServices.renderingService.renderFrame(gameState, camera);
 
-        // Render HUD through HUDService
+        // Render HUD through HUDService - DISABLED to prevent conflicts
+        // TODO: Remove old HUD system first, then re-enable this
+        /*
         if (this.gameServices.hudService) {
             this.gameServices.hudService.renderCanvasHUD(this.ctx, gameState);
         }
+        */
     } else {
-        // Fall back to original render
-        if (this._originalRender) {
-            this._originalRender.call(this);
-        }
+        // No fallback - RenderingService is required
+        console.error('❌ RenderingService not available!');
     }
 };
 
@@ -321,15 +325,18 @@ CyberOpsGame.prototype.initializeServicesIntegration = function() {
     this.explode = this.createExplosionEnhanced.bind(this);
     this.logCombat = this.addCombatLogEnhanced.bind(this);
 
-    // Set flag to use RenderingService (can be toggled for testing)
-    this.useRenderingService = false; // Start with false, enable when ready
+    // RenderingService is always used (old implementation removed)
+    this.useRenderingService = true; // Always true now
 
     // Initialize HUD if service available but keep it hidden
+    // DISABLED to prevent conflicts with old HUD
+    /*
     if (this.gameServices && this.gameServices.hudService && !this.gameServices.hudService.initialized) {
         this.gameServices.hudService.initialize(this.canvas);
         // Make sure it stays hidden until we're in game
         this.gameServices.hudService.hide();
     }
+    */
 
     console.log('✅ Services integration complete');
 };
