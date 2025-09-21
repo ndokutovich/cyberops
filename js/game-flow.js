@@ -627,6 +627,11 @@ CyberOpsGame.prototype.initMission = function() {
                 }
             }
 
+            // Apply equipment from InventoryService
+            if (this.gameServices?.inventoryService) {
+                this.gameServices.inventoryService.applyAgentEquipment(agent);
+            }
+
             // Ensure required properties exist
             agent.maxHealth = agent.maxHealth || agent.health;
             agent.protection = agent.protection || 0;
@@ -767,7 +772,8 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
             visionRange: enemyTemplate.visionRange,
             color: enemyTemplate.color,
             facingAngle: Math.random() * Math.PI * 2,
-            patrolRoute: position.patrol || null
+            patrolRoute: position.patrol || null,
+            weapon: enemyTemplate.weapon // Add weapon from template
         };
         enemy.targetX = enemy.x;
         enemy.targetY = enemy.y;

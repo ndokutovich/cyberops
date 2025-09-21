@@ -933,59 +933,164 @@ CyberOpsGame.prototype.showShopDialogOld = function() {
         );
 }
     
-CyberOpsGame.prototype.buyItem = function(type, itemId) {
-        const items = type === 'weapon' ? this.weapons : this.equipment;
-        const item = items.find(i => i.id === itemId);
-        
-        if (!item || this.credits < item.cost) return;
-        
-        // Purchase item
-        this.credits -= item.cost;
-        item.owned += 1;
-        
-        this.showHudDialog(
-            '✅ PURCHASE SUCCESSFUL',
-            `${item.name} has been added to your arsenal!<br><br>
-            <div style="background: rgba(0,255,255,0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                <strong>${item.name}</strong><br>
-                Type: ${item.type}<br>
-                ${type === 'weapon' ? `Damage: ${item.damage}` : `Stats: Various bonuses`}<br>
-                Now Owned: ${item.owned}
-            </div>
-            Credits Remaining: ${this.credits.toLocaleString()}`,
-            [
-                { text: 'BUY MORE', action: () => this.showShopDialog() },
-                { text: 'BACK TO HUB', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }
-            ]
-        );
-        
-        this.updateHubStats();
-}
+// buyItem is now in game-equipment.js and uses InventoryService
 
+// Generate world map content for dialog system
+CyberOpsGame.prototype.generateWorldMapContent = function() {
+    console.log('🗺️ Generating world map content...');
 
-// Show world map
-CyberOpsGame.prototype.showWorldMap = function() {
-    if (this.showHudDialog) {
-        this.showHudDialog(
-            '🗺️ WORLD MAP',
-            `
-            <div style="text-align: center; padding: 20px;">
-                <div style="font-size: 1.2em; color: #00ffff; margin-bottom: 20px;">
-                    GLOBAL CONTROL STATUS
+    // Define world regions with mission data
+    const regions = [
+        {
+            id: 'north_america',
+            name: 'North America',
+            control: 25,
+            status: 'contested',
+            cities: ['New York', 'Chicago', 'Los Angeles'],
+            missions: this.missions ? this.missions.filter(m => m.region === 'north_america') : []
+        },
+        {
+            id: 'europe',
+            name: 'Europe',
+            control: 15,
+            status: 'hostile',
+            cities: ['London', 'Berlin', 'Moscow'],
+            missions: this.missions ? this.missions.filter(m => m.region === 'europe') : []
+        },
+        {
+            id: 'asia',
+            name: 'Asia',
+            control: 10,
+            status: 'hostile',
+            cities: ['Tokyo', 'Beijing', 'Seoul'],
+            missions: this.missions ? this.missions.filter(m => m.region === 'asia') : []
+        },
+        {
+            id: 'south_america',
+            name: 'South America',
+            control: 35,
+            status: 'friendly',
+            cities: ['Rio', 'Buenos Aires', 'Bogota'],
+            missions: this.missions ? this.missions.filter(m => m.region === 'south_america') : []
+        },
+        {
+            id: 'africa',
+            name: 'Africa',
+            control: 5,
+            status: 'locked',
+            cities: ['Cairo', 'Lagos', 'Johannesburg'],
+            missions: this.missions ? this.missions.filter(m => m.region === 'africa') : []
+        },
+        {
+            id: 'oceania',
+            name: 'Oceania',
+            control: 20,
+            status: 'contested',
+            cities: ['Sydney', 'Melbourne', 'Auckland'],
+            missions: this.missions ? this.missions.filter(m => m.region === 'oceania') : []
+        }
+    ];
+
+    // Count completed missions
+    const completedCount = this.completedMissions ? this.completedMissions.length : 0;
+    const totalMissions = this.missions ? this.missions.length : 0;
+
+    // Generate region HTML using CSS classes
+    const regionCards = regions.map(region => {
+        const statusClass = region.status === 'friendly' ? 'controlled' : '';
+        const borderColor = {
+            friendly: '#0f0',
+            contested: '#ff0',
+            hostile: '#f00',
+            locked: '#666'
+        }[region.status];
+
+        const missionCount = region.missions.length;
+        const completedInRegion = region.missions.filter(m =>
+            this.completedMissions && this.completedMissions.includes(m.id)
+        ).length;
+
+        return `
+            <div class="region-card ${statusClass}"
+                 style="border-color: ${borderColor}; ${region.status === 'locked' ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
+                 ${region.status !== 'locked' ? `onclick="game.selectRegion('${region.id}')"` : ''}>
+                <h3>${region.name}</h3>
+                <div class="region-stats">
+                    <p>Control: ${region.control}%</p>
+                    <p>Status: ${region.status.toUpperCase()}</p>
+                    <p>Cities: ${region.cities.join(', ')}</p>
+                    <p>Missions: ${completedInRegion}/${missionCount}</p>
                 </div>
-                <div style="margin: 20px 0;">
-                    <div style="color: #ff0; margin-bottom: 10px;">Current Access Level: L1</div>
-                    <div style="color: #0f0; margin-bottom: 10px;">World Control: ${this.worldControl || 15}%</div>
-                    <div style="color: #fff; margin-bottom: 10px;">Active Regions: 3/12</div>
-                </div>
-                <div style="margin-top: 30px; color: #888; font-style: italic;">
-                    Advanced world map features coming soon!<br>
-                    Complete more missions to unlock new regions.
-                </div>
+                ${missionCount > 0 && region.status !== 'locked' ?
+                    `<div class="mission-available">
+                        <span class="mission-icon">⚡</span>
+                        <p>Mission Available</p>
+                    </div>` :
+                    region.status === 'locked' ?
+                    '<div style="color: #f00; margin-top: 10px; text-align: center;">🔒 Locked</div>' :
+                    ''
+                }
             </div>
-            `,
-            [{ text: 'CLOSE', action: 'close' }]
-        );
+        `;
+    }).join('');
+
+    const worldControl = regions.reduce((sum, r) => sum + r.control, 0) / regions.length;
+
+    // Create HTML content using proper CSS classes
+    let mapContent = '<div class="world-map-container">';
+    mapContent += '<div class="map-header">';
+    mapContent += '<h2>SYNDICATE GLOBAL CONTROL</h2>';
+    mapContent += '<div class="control-bar">';
+    mapContent += '<div class="control-fill" style="width: ' + worldControl + '%;"></div>';
+    mapContent += '</div>';
+    mapContent += '<div style="text-align: center; color: #0ff; margin: 10px 0;">';
+    mapContent += 'Global Control: ' + Math.round(worldControl) + '% | ';
+    mapContent += 'Missions: ' + completedCount + '/' + totalMissions + ' | ';
+    mapContent += 'Access Level: L' + (Math.floor(completedCount / 3) + 1);
+    mapContent += '</div>';
+    mapContent += '</div>';
+
+    mapContent += '<div class="regions-grid">';
+    mapContent += regionCards;
+    mapContent += '</div>';
+
+    mapContent += '<div class="map-legend">';
+    mapContent += '<span class="legend-item controlled">● Controlled</span>';
+    mapContent += '<span class="legend-item contested">● Contested</span>';
+    mapContent += '<span class="legend-item hostile">● Hostile</span>';
+    mapContent += '</div>';
+    mapContent += '</div>';
+
+    console.log('🗺️ Map HTML content length:', mapContent.length);
+
+    // Return the HTML content for the dialog system
+    return mapContent;
+};
+
+// Select a region from the world map
+CyberOpsGame.prototype.selectRegion = function(regionId) {
+    console.log(`🗺️ Selected region: ${regionId}`);
+
+    // Get missions for this region
+    const regionMissions = this.missions ? this.missions.filter(m => m.region === regionId) : [];
+    console.log(`🗺️ Found ${regionMissions.length} missions in ${regionId}`);
+
+    // Store selected region and its missions for filtering
+    this.selectedRegion = regionId;
+    this.filteredMissions = regionMissions;
+
+    // Close world map dialog
+    this.closeDialog();
+
+    // Open mission selection dialog with filtered missions
+    if (this.dialogEngine) {
+        this.dialogEngine.navigateTo('mission-select-hub', {
+            region: regionId,
+            missions: regionMissions
+        });
+    } else if (this.showMissionsFromHub) {
+        // Fallback to direct mission display
+        this.showMissionsFromHub(regionMissions);
     }
 };
 

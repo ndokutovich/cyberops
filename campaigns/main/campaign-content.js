@@ -180,7 +180,8 @@
                 damage: 10,
                 visionRange: 5,
                 color: '#ff6666',
-                description: 'Basic security personnel'
+                description: 'Basic security personnel',
+                weapon: { type: 'pistol', damage: 10, range: 5, dropChance: 0.4 }
             },
             {
                 type: 'soldier',
@@ -189,7 +190,8 @@
                 damage: 15,
                 visionRange: 6,
                 color: '#ff8888',
-                description: 'Trained military units'
+                description: 'Trained military units',
+                weapon: { type: 'rifle', damage: 15, range: 8, dropChance: 0.4 }
             },
             {
                 type: 'elite',
@@ -198,7 +200,8 @@
                 damage: 20,
                 visionRange: 7,
                 color: '#ffaaaa',
-                description: 'Special forces operatives'
+                description: 'Special forces operatives',
+                weapon: { type: 'assault_rifle', damage: 20, range: 10, dropChance: 0.4 }
             },
             {
                 type: 'heavy',
@@ -207,7 +210,8 @@
                 damage: 25,
                 visionRange: 4,
                 color: '#ff4444',
-                description: 'Heavily armored units'
+                description: 'Heavily armored units',
+                weapon: { type: 'shotgun', damage: 25, range: 3, dropChance: 0.4 }
             },
             {
                 type: 'sniper',
@@ -216,7 +220,8 @@
                 damage: 35,
                 visionRange: 10,
                 color: '#ff9999',
-                description: 'Long-range specialists'
+                description: 'Long-range specialists',
+                weapon: { type: 'sniper_rifle', damage: 35, range: 15, dropChance: 0.4 }
             },
             {
                 type: 'commander',
@@ -225,7 +230,8 @@
                 damage: 22,
                 visionRange: 8,
                 color: '#ffcccc',
-                description: 'Enemy leadership units'
+                description: 'Enemy leadership units',
+                weapon: { type: 'plasma_rifle', damage: 22, range: 9, dropChance: 0.4 }
             }
         ],
 

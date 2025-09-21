@@ -448,6 +448,12 @@ CyberOpsGame.prototype.update = function() {
             if (this.map.collectables) {
                 this.map.collectables.forEach(item => {
                     if (!item.collected) {
+                        // Check if quest is required and active
+                        if (item.questRequired) {
+                            const questActive = this.activeQuests && this.activeQuests.some(q => q.id === item.questRequired);
+                            if (!questActive) return; // Skip if quest not active
+                        }
+
                         const dist = Math.sqrt(
                             Math.pow(item.x - agent.x, 2) +
                             Math.pow(item.y - agent.y, 2)
@@ -1019,9 +1025,110 @@ CyberOpsGame.prototype.generateNewAgentsForHire = function() {
 
 // Handle collectable item pickup
 CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
+    // Mark item as collected
+    item.collected = true;
+
     // Log the item pickup if event logging is enabled
     if (this.logItemPickup) {
         this.logItemPickup(agent, item);
+    }
+
+    // ONLY use InventoryService - no fallback
+    const inventoryService = this.gameServices.inventoryService;
+    if (!inventoryService) {
+        console.error('❌ InventoryService is required!');
+        return;
+    }
+
+    // Handle credits separately (managed by game)
+    if (item.credits) {
+        this.credits = (this.credits || 0) + item.credits;
+        this.creditsThisMission = (this.creditsThisMission || 0) + item.credits;
+        this.addNotification(`💰 +${item.credits} credits`);
+    }
+
+    // Let InventoryService handle the pickup
+    const success = inventoryService.pickupItem(agent, item);
+
+    if (success) {
+        // Sync inventory state back to game
+        this.weapons = inventoryService.inventory.weapons;
+
+        // Track collected weapons for mission rewards
+        if (item.type === 'weapon' && item.weapon) {
+            this.collectedWeapons = this.collectedWeapons || [];
+            this.collectedWeapons.push({
+                type: item.weapon,
+                name: item.name || item.weapon,
+                damage: item.weaponDamage || item.damage || 10,
+                range: item.weaponRange || item.range || 5
+            });
+
+            this.addNotification(`🔫 Picked up: ${item.name || item.weapon}`);
+            console.log(`🎯 Agent ${agent.name} picked up ${item.name || item.weapon} (damage: ${item.weaponDamage || item.damage || 10})`);
+
+            // Check if auto-equipped
+            const agentId = agent.originalId || agent.id || agent.name;
+            const equipment = inventoryService.getAgentEquipment(agentId);
+            if (equipment.weapon && equipment.weapon.id === item.weapon) {
+                this.addNotification(`⚔️ ${agent.name} equipped ${item.name || item.weapon} (no weapon equipped)`);
+            }
+        }
+
+        // Track intel
+        if (item.type === 'intel') {
+            this.totalIntelCollected = inventoryService.inventory.intel;
+            this.intelThisMission = (this.intelThisMission || 0) + (item.value || 1);
+
+            // Track intel by mission
+            if (this.currentMission) {
+                const missionId = this.currentMission.id;
+                if (!this.intelByMission) this.intelByMission = {};
+                this.intelByMission[missionId] = (this.intelByMission[missionId] || 0) + (item.value || 1);
+                console.log(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
+            }
+
+            // Unlock intel reports
+            if (this.unlockIntelReport) this.unlockIntelReport();
+        }
+
+        // Handle other item notifications
+        if (item.type !== 'weapon' && item.type !== 'credits' && item.type !== 'intel') {
+            this.addNotification(`📦 Collected: ${item.name || item.type}`);
+        }
+    }
+
+    // Handle collectable effects
+    this.handleCollectableEffects(agent, item);
+};
+
+// Handle collectable effects (separated for cleaner code)
+CyberOpsGame.prototype.handleCollectableEffects = function(agent, item) {
+
+    if (item.item) {
+        // Add to inventory
+        this.inventory = this.inventory || {};
+        this.inventory[item.item] = (this.inventory[item.item] || 0) + 1;
+        this.addNotification(`📦 Collected: ${item.name || item.item}`);
+
+        // Track intel specifically
+        if (item.item.includes('intel') || item.name?.toLowerCase().includes('intel')) {
+            this.totalIntelCollected = (this.totalIntelCollected || 0) + 1;
+            this.intelThisMission = (this.intelThisMission || 0) + 1;
+
+            // Track intel by mission
+            if (this.currentMission) {
+                const missionId = this.currentMission.id;
+                if (!this.intelByMission) this.intelByMission = {};
+                this.intelByMission[missionId] = (this.intelByMission[missionId] || 0) + 1;
+                console.log(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
+            }
+
+            // Unlock intel reports based on collection
+            if (this.unlockIntelReport) this.unlockIntelReport();
+
+            console.log(`📊 Total Intel: ${this.totalIntelCollected} documents`);
+        }
     }
 
     // Track items collected this mission
@@ -1211,4 +1318,5 @@ CyberOpsGame.prototype.isDoorBlocking = function(x, y) {
         }
         return false;
 }
+
 

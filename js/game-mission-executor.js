@@ -712,6 +712,34 @@ CyberOpsGame.prototype.onEnemyEliminated = function(enemy) {
 
     console.log(`💀 Enemy eliminated! Total: ${this.missionTrackers.enemiesEliminated}`);
 
+    // Handle weapon drops (40% chance)
+    if (enemy.weapon && enemy.weapon.dropChance) {
+        const dropRoll = Math.random();
+        if (dropRoll < enemy.weapon.dropChance) {
+            // Create a weapon collectable at enemy's position
+            if (!this.map.collectables) {
+                this.map.collectables = [];
+            }
+
+            const weaponDrop = {
+                type: 'weapon',
+                x: enemy.x,
+                y: enemy.y,
+                id: 'weapon_drop_' + Date.now() + '_' + Math.random(),
+                name: enemy.weapon.type.replace(/_/g, ' ').toUpperCase(),
+                sprite: '🔫',
+                weapon: enemy.weapon.type,
+                weaponDamage: enemy.weapon.damage,
+                weaponRange: enemy.weapon.range,
+                collected: false
+            };
+
+            this.map.collectables.push(weaponDrop);
+            this.addNotification(`💥 ${enemy.type} dropped ${weaponDrop.name}!`);
+            console.log(`🔫 Weapon dropped at (${enemy.x}, ${enemy.y}): ${weaponDrop.name}`);
+        }
+    }
+
     // Check objectives
     this.checkMissionObjectives();
 };

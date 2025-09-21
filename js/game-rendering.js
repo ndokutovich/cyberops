@@ -181,7 +181,25 @@ CyberOpsGame.prototype.render = function() {
                     this.renderTerminal(terminal.x, terminal.y, terminal.hacked);
                 });
             }
-            
+
+            // Render generic items (markers, etc.)
+            if (this.map.items) {
+                this.map.items.forEach(item => {
+                    // Skip rendering if in fog and location is unexplored
+                    if (this.fogEnabled && this.fogOfWar) {
+                        const tileX = Math.floor(item.x);
+                        const tileY = Math.floor(item.y);
+                        if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+                            return; // Don't render in unexplored areas
+                        }
+                    }
+
+                    if (item.type === 'marker') {
+                        this.renderMarker(item.x, item.y, item.sprite || '📍', item.name);
+                    }
+                });
+            }
+
             if (this.map.explosiveTargets) {
                 this.map.explosiveTargets.forEach(target => {
                     // Skip rendering if in fog and location is unexplored
@@ -252,6 +270,12 @@ CyberOpsGame.prototype.render = function() {
             if (this.map.collectables) {
                 this.map.collectables.forEach(item => {
                     if (!item.collected) {
+                        // Check if quest is required and active
+                        if (item.questRequired && item.hidden) {
+                            const questActive = this.activeQuests && this.activeQuests.some(q => q.id === item.questRequired);
+                            if (!questActive) return; // Don't render if quest not active
+                        }
+
                         // Skip rendering if in fog and location is unexplored
                         if (this.fogEnabled && this.fogOfWar) {
                             const tileX = Math.floor(item.x);
@@ -260,7 +284,9 @@ CyberOpsGame.prototype.render = function() {
                                 return; // Don't render in unexplored areas
                             }
                         }
-                        this.renderCollectable(item.x, item.y, item.type);
+                        // Use sprite if available, otherwise use type
+                        const displaySprite = item.sprite || item.type;
+                        this.renderCollectable(item.x, item.y, displaySprite);
                     }
                 });
             }
@@ -741,6 +767,17 @@ CyberOpsGame.prototype.renderCollectable = function(x, y, type) {
 
         // Pulse effect
         const pulse = Math.sin(this.missionTimer * 0.1) * 0.3 + 0.7;
+
+        // Check if type is an emoji sprite
+        if (type && (type.length <= 2 || type.includes('💰') || type.includes('📄') || type.includes('💵'))) {
+            ctx.font = '20px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.globalAlpha = pulse;
+            ctx.fillText(type, 0, -10);
+            ctx.restore();
+            return;
+        }
 
         // Draw based on type
         switch(type) {
@@ -1287,6 +1324,32 @@ CyberOpsGame.prototype.renderMinimap = function() {
         }
 }
     
+CyberOpsGame.prototype.renderMarker = function(x, y, sprite, name) {
+        const ctx = this.ctx;
+        const isoPos = this.worldToIsometric(x, y);
+
+        ctx.save();
+        ctx.translate(isoPos.x, isoPos.y);
+
+        // Draw marker sprite
+        ctx.font = '24px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sprite, 0, -10);
+
+        // Draw marker name if provided
+        if (name) {
+            ctx.font = '10px monospace';
+            ctx.fillStyle = '#00ff00';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeText(name, 0, 5);
+            ctx.fillText(name, 0, 5);
+        }
+
+        ctx.restore();
+    }
+
 CyberOpsGame.prototype.renderExplosiveTarget = function(x, y, planted) {
         const ctx = this.ctx;
         const isoPos = this.worldToIsometric(x, y);

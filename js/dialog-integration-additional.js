@@ -43,6 +43,14 @@
 
         // World map content generator
         engine.registerGenerator('generateWorldMapContent', function() {
+            // Use the game's generateWorldMapContent if available - it returns complete HTML
+            if (game && game.generateWorldMapContent) {
+                const htmlContent = game.generateWorldMapContent();
+                console.log('📍 World map generator returning HTML content');
+                return htmlContent;
+            }
+
+            // Fallback to basic HTML (since template engine doesn't support {{#each}})
             const regions = (game && game.worldRegions) || [
                 { id: 'north-america', name: 'North America', control: 45, resistance: 'Moderate', resources: 'High', controlled: false, hasMission: true },
                 { id: 'europe', name: 'Europe', control: 30, resistance: 'High', resources: 'Medium', controlled: false, hasMission: false },
@@ -52,10 +60,29 @@
                 { id: 'oceania', name: 'Oceania', control: 70, resistance: 'Very Low', resources: 'Medium', controlled: true, hasMission: false }
             ];
 
-            return engine.renderTemplate('world-map-display', {
-                worldControl: (game && game.worldControl) || 0,
-                regions: regions
+            // Build HTML directly since template doesn't support loops
+            let html = '<div class="world-map-container">';
+            html += '<div class="map-header">';
+            html += '<h2>Global Control: ' + ((game && game.worldControl) || 0) + '%</h2>';
+            html += '<div class="control-bar"><div class="control-fill" style="width: ' + ((game && game.worldControl) || 0) + '%"></div></div>';
+            html += '</div><div class="regions-grid">';
+
+            regions.forEach(region => {
+                html += '<div class="region-card ' + (region.controlled ? 'controlled' : '') + '" data-region="' + region.id + '">';
+                html += '<h3>' + region.name + '</h3>';
+                html += '<div class="region-stats">';
+                html += '<p>Control: ' + region.control + '%</p>';
+                html += '<p>Resistance: ' + region.resistance + '</p>';
+                html += '<p>Resources: ' + region.resources + '</p>';
+                html += '</div>';
+                if (region.hasMission) {
+                    html += '<div class="mission-available"><span class="mission-icon">⚡</span><p>Mission Available</p></div>';
+                }
+                html += '</div>';
             });
+
+            html += '</div></div>';
+            return html;
         });
 
         // Campaign complete content generator

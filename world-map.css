@@ -1,0 +1,50 @@
+/* World Map Styles for CyberOps Game */
+
+.world-map-region {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    background-image: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,20,40,0.8));
+}
+
+.world-map-region::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent, rgba(0,255,255,0.1));
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.world-map-region:hover::before {
+    opacity: 1;
+}
+
+.world-map-region:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(0,255,255,0.3);
+    z-index: 1;
+}
+
+.world-map-region[style*="locked"] {
+    filter: grayscale(0.8);
+}
+
+/* Progress bar animation */
+@keyframes pulseBar {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.world-control-bar {
+    animation: pulseBar 2s infinite;
+}

@@ -15,6 +15,8 @@
         title: 'Data Heist',
         description: 'Infiltrate SecureCorp and steal critical data while avoiding detection.',
         briefing: 'Intelligence suggests Nexus Corp is developing illegal surveillance tech. We need you to infiltrate their facility and download evidence from their mainframe. Watch out for their security systems.',
+        region: 'north_america',
+        location: 'New York',
 
         // Agent Configuration
         agents: {
@@ -121,7 +123,13 @@
                 items: [
                     { type: 'terminal', x: 20, y: 20, id: 0 },
                     { type: 'terminal', x: 60, y: 20, id: 1 },
-                    { type: 'terminal', x: 40, y: 40, id: 2 }
+                    { type: 'terminal', x: 40, y: 40, id: 2 },
+                    { type: 'marker', x: 72, y: 70, id: 'maintenance_tunnel', name: 'Maintenance Tunnel', sprite: '🚪' }
+                ],
+                collectables: [
+                    { type: 'collectable', x: 73, y: 70, id: 'tunnel_intel', name: 'Intel Documents', sprite: '📄', item: 'tunnel_intel', questRequired: 'secret_passage', hidden: true },
+                    { type: 'collectable', x: 74, y: 70, id: 'credits_1', name: 'Credits Cache', sprite: '💰', credits: 200, questRequired: 'secret_passage', hidden: true },
+                    { type: 'collectable', x: 79, y: 71, id: 'credits_2', name: 'Credits Stash', sprite: '💵', credits: 150, questRequired: 'secret_passage', hidden: true }
                 ],
                 doors: [],
                 coverCount: 100

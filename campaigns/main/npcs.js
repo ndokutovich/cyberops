@@ -20,7 +20,7 @@
                     objectives: [
                         { id: 'hack_all', type: 'hack', count: 3, description: 'Hack 3 terminals' }
                     ],
-                    rewards: { credits: 500, researchPoints: 10 }
+                    rewards: { credits: 500, researchPoints: 10, experience: 150 }
                 },
                 {
                     id: 'intel_gathering',
@@ -31,7 +31,7 @@
                     objectives: [
                         { id: 'find_intel', type: 'collect', item: 'classified_docs', count: 1 }
                     ],
-                    rewards: { credits: 750, items: ['keycard'] }
+                    rewards: { credits: 750, items: ['keycard'], experience: 200 }
                 }
             ]
         },
@@ -50,9 +50,9 @@
                     introDialog: 'There\'s a maintenance tunnel that can get you past security. I marked it on your map.',
                     completionDialog: 'You found it! That tunnel will save you a lot of trouble.',
                     objectives: [
-                        { id: 'find_tunnel', type: 'reach', location: 'maintenance_tunnel' }
+                        { id: 'find_tunnel', type: 'reach', x: 72, y: 70, description: 'Find the maintenance tunnel in the southeast area' }
                     ],
-                    rewards: { credits: 300 }
+                    rewards: { credits: 300, experience: 100 }
                 }
             ]
         },
@@ -73,7 +73,7 @@
                     objectives: [
                         { id: 'upload_virus', type: 'hack', count: 1 }
                     ],
-                    rewards: { credits: 600, researchPoints: 15 }
+                    rewards: { credits: 600, researchPoints: 15, experience: 175 }
                 }
             ]
         },
@@ -94,7 +94,7 @@
                     objectives: [
                         { id: 'precise_placement', type: 'interact', target: 'explosive', count: 3 }
                     ],
-                    rewards: { credits: 800 }
+                    rewards: { credits: 800, experience: 250 }
                 }
             ]
         }

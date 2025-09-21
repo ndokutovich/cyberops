@@ -9,6 +9,7 @@ class GameServices {
         this.researchService = new ResearchService(this.formulaService);
         this.equipmentService = new EquipmentService(this.formulaService);
         this.rpgService = new RPGService(this.formulaService);
+        this.inventoryService = new InventoryService(this.formulaService, this.equipmentService);
 
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);

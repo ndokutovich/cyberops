@@ -14,6 +14,8 @@
         title: 'Government Facility',
         description: 'Infiltrate the government facility and access their secure network.',
         briefing: 'A government facility is developing dangerous AI weapons. Break into their network and steal the plans.',
+        region: 'europe',
+        location: 'London',
 
         agents: {
             max: 4,

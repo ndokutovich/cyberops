@@ -246,6 +246,12 @@ NPC.prototype.giveQuest = function(quest, game) {
         game.quests[quest.id] = quest;
         quest.active = true;
 
+        // Add to active quests for tracking
+        if (!game.activeQuests) {
+            game.activeQuests = [];
+        }
+        game.activeQuests.push(quest);
+
         // Use introDialog if available, otherwise use description
         const questText = quest.introDialog || quest.description || `I have a task for you: ${quest.name}`;
 
@@ -290,6 +296,43 @@ NPC.prototype.completeQuest = function(quest, game) {
             if (quest.rewards.researchPoints) {
                 game.researchPoints = (game.researchPoints || 0) + quest.rewards.researchPoints;
                 game.addNotification(`🔬 +${quest.rewards.researchPoints} RP`);
+            }
+
+            // Distribute XP to all active agents
+            if (quest.rewards.experience || quest.rewards.xp) {
+                const xpReward = quest.rewards.experience || quest.rewards.xp;
+
+                // Give XP to all agents in the mission
+                if (game.agents && game.agents.length > 0) {
+                    const xpPerAgent = Math.floor(xpReward / game.agents.length);
+
+                    game.agents.forEach(agent => {
+                        if (agent.rpgEntity && agent.health > 0) {
+                            // Add experience directly to the rpgEntity
+                            if (typeof agent.rpgEntity.addExperience === 'function') {
+                                agent.rpgEntity.addExperience(xpPerAgent);
+                            } else {
+                                // Fallback: directly add to experience property
+                                agent.rpgEntity.experience = (agent.rpgEntity.experience || 0) + xpPerAgent;
+                                agent.rpgEntity.totalExperience = (agent.rpgEntity.totalExperience || 0) + xpPerAgent;
+                            }
+                            game.addNotification(`⭐ ${agent.name} gained ${xpPerAgent} XP`);
+
+                            // Check for level up
+                            const levelBefore = agent.rpgEntity.level || 1;
+                            if (agent.rpgEntity.checkLevelUp) {
+                                agent.rpgEntity.checkLevelUp();
+                                if (agent.rpgEntity.level > levelBefore) {
+                                    game.addNotification(`🎉 ${agent.name} reached level ${agent.rpgEntity.level}!`);
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    // Fallback: add to global experience
+                    game.experience = (game.experience || 0) + xpReward;
+                    game.addNotification(`⭐ +${xpReward} XP`);
+                }
             }
 
             if (quest.rewards.items) {
@@ -349,13 +392,21 @@ Quest.prototype.checkObjective = function(objective, game) {
                 return game.inventory && game.inventory[objective.item] >= objective.count;
 
             case 'reach':
-                const agent = game.agents[0];
-                if (!agent) return false;
-                const dist = Math.sqrt(
-                    Math.pow(agent.x - objective.x, 2) +
-                    Math.pow(agent.y - objective.y, 2)
-                );
-                return dist < 2;
+                if (!game.agents || game.agents.length === 0) return false;
+
+                // Check if ANY agent is close to the objective
+                for (let agent of game.agents) {
+                    if (agent.alive) {
+                        const dist = Math.sqrt(
+                            Math.pow(agent.x - objective.x, 2) +
+                            Math.pow(agent.y - objective.y, 2)
+                        );
+                        if (dist < 2) {
+                            return true;  // Any agent reached the location
+                        }
+                    }
+                }
+                return false;
 
             case 'hack':
                 // Simple hack count check

@@ -223,11 +223,11 @@
         type: 'screen',
         level: 1,
         parent: 'syndicate-hub',
-        title: 'GLOBAL OPERATIONS',
+        title: '🗺️ WORLD MAP - GLOBAL OPERATIONS',
         layout: 'full-screen',
         content: { type: 'dynamic', generator: 'generateWorldMapContent' },
         buttons: [
-            { text: 'SELECT REGION', action: 'execute:selectRegion', condition: 'hasSelectedRegion' },
+            { text: 'MISSION SELECT', action: 'navigate:mission-select-hub' },
             { text: 'BACK TO HUB', action: 'navigate:syndicate-hub' }
         ],
         transitions: {

@@ -196,10 +196,10 @@ class DeclarativeDialogEngine {
         // Generate buttons
         const buttons = this.generateButtons(state.buttons, stateId);
 
-        // Build final HTML
+        // Build final HTML - use placeholder for content to insert later
         const html = this.renderTemplate(layout.structure, {
             title: state.title || '',
-            content: content,
+            content: '__CONTENT_PLACEHOLDER__',
             buttons: buttons,
             stateId: stateId,
             level: state.level
@@ -231,6 +231,12 @@ class DeclarativeDialogEngine {
             dialogEl.id = `dialog-${stateId}`;
         }
         dialogEl.innerHTML = html;
+
+        // Replace placeholder with actual HTML content
+        const contentEl = dialogEl.querySelector('.dialog-content');
+        if (contentEl && content !== '__CONTENT_PLACEHOLDER__') {
+            contentEl.innerHTML = content.replace('__CONTENT_PLACEHOLDER__', '');
+        }
 
         // Apply styles
         if (layout.styles) {

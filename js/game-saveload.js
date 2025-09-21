@@ -249,7 +249,10 @@ CyberOpsGame.prototype.saveToSlot = function(slotId, name) {
                     // Equipment and research
                     weapons: JSON.parse(JSON.stringify(this.weapons)),
                     equipment: JSON.parse(JSON.stringify(this.equipment)),
-                    completedResearch: this.completedResearch || []
+                    completedResearch: this.completedResearch || [],
+                    // InventoryService state
+                    inventoryState: this.gameServices?.inventoryService?.exportState() || null,
+                    agentLoadouts: this.agentLoadouts || {}
                 }
             };
 
@@ -440,6 +443,44 @@ CyberOpsGame.prototype.performLoadGame = function(saveData) {
                 this.weapons = saveData.gameState.weapons;
                 this.equipment = saveData.gameState.equipment;
                 this.completedResearch = saveData.gameState.completedResearch || [];
+                this.agentLoadouts = saveData.gameState.agentLoadouts || {};
+
+                // Restore InventoryService state if available
+                if (saveData.gameState.inventoryState && this.gameServices?.inventoryService) {
+                    this.gameServices.inventoryService.importState(saveData.gameState.inventoryState);
+                    // Sync weapons back from InventoryService
+                    this.weapons = this.gameServices.inventoryService.inventory.weapons;
+                    this.agentLoadouts = this.gameServices.inventoryService.agentLoadouts;
+                }
+            }
+
+            // Determine which screen to transition to based on saved state
+            const targetScreen = saveData.gameState.currentScreen || 'hub';
+
+            // If we're currently in a mission, exit it first
+            if (this.currentScreen === 'game') {
+                // Clean up current mission
+                if (this.cleanup3D) this.cleanup3D();
+                this.agents = [];
+                this.enemies = [];
+                this.projectiles = [];
+                this.effects = [];
+            }
+
+            // Transition to the appropriate screen
+            if (targetScreen === 'hub' || !saveData.gameState.currentScreen) {
+                // Go to hub by default
+                this.currentScreen = 'hub';
+                this.initHub();
+            } else if (targetScreen === 'game' && this.currentMission) {
+                // Resume mission if one was in progress
+                this.currentScreen = 'game';
+                // Note: Mission state would need to be saved/restored for this to work properly
+                this.initHub(); // For now, go to hub instead
+            } else {
+                // Default to hub
+                this.currentScreen = 'hub';
+                this.initHub();
             }
 
             // Close dialog and update menu

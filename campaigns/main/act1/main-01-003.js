@@ -14,6 +14,8 @@
         title: 'Sabotage Operation',
         description: 'Infiltrate industrial facility and sabotage critical infrastructure.',
         briefing: 'An arms dealer is using this industrial complex to manufacture illegal weapons. Plant explosives at key points to shut down production permanently.',
+        region: 'asia',
+        location: 'Tokyo',
 
         agents: {
             max: 5,
