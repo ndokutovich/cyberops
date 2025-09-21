@@ -599,12 +599,21 @@ CyberOpsGame.prototype.initMission = function() {
             console.log(`🎨 Agent ${idx + 1}: ${agent.name} assigned color: ${agent.color}`);
 
             // Initialize RPG entity for agent if not already present
-            if (!agent.rpgEntity) {
+            // IMPORTANT: Check if this agent already has a persistent RPG entity
+            const persistentAgent = this.activeAgents?.find(a =>
+                a.name === agent.name || a.originalId === agent.originalId
+            );
+
+            if (persistentAgent?.rpgEntity) {
+                // Preserve existing RPG entity with all XP and stats
+                agent.rpgEntity = persistentAgent.rpgEntity;
+                console.log(`📊 Preserved RPG entity for agent: ${agent.name} (Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience})`);
+            } else if (!agent.rpgEntity) {
                 const rpgManager = this.rpgManager || window.GameServices?.rpgService?.rpgManager;
                 if (rpgManager) {
                     const rpgAgent = rpgManager.createRPGAgent(agent, agent.class || 'soldier');
                     agent.rpgEntity = rpgAgent;
-                    console.log(`📊 Added RPG entity to agent: ${agent.name}`);
+                    console.log(`📊 Created new RPG entity for agent: ${agent.name}`);
                 } else {
                     // Create a basic RPG entity fallback
                     agent.rpgEntity = {
@@ -2141,6 +2150,22 @@ CyberOpsGame.prototype.performReturnToHub = function() {
         this.closeDialog();
         this.isPaused = false;
         document.querySelector('.pause-button').textContent = '⏸';
+
+        // Preserve agent RPG states before leaving mission
+        if (this.agents && this.activeAgents) {
+            this.agents.forEach(agent => {
+                if (agent.rpgEntity) {
+                    // Find the corresponding active agent and update its RPG entity
+                    const activeAgent = this.activeAgents.find(a =>
+                        a.name === agent.name || a.originalId === agent.originalId
+                    );
+                    if (activeAgent) {
+                        activeAgent.rpgEntity = agent.rpgEntity;
+                        console.log(`💾 Preserved RPG state for ${agent.name}: Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience}`);
+                    }
+                }
+            });
+        }
 
         // Keep level music playing in the hub for atmosphere
         console.log('🎵 Keeping level music playing in hub');

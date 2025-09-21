@@ -963,4 +963,30 @@ CyberOpsGame.prototype.buyItem = function(type, itemId) {
 }
 
 
+// Show world map
+CyberOpsGame.prototype.showWorldMap = function() {
+    if (this.showHudDialog) {
+        this.showHudDialog(
+            '🗺️ WORLD MAP',
+            `
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 1.2em; color: #00ffff; margin-bottom: 20px;">
+                    GLOBAL CONTROL STATUS
+                </div>
+                <div style="margin: 20px 0;">
+                    <div style="color: #ff0; margin-bottom: 10px;">Current Access Level: L1</div>
+                    <div style="color: #0f0; margin-bottom: 10px;">World Control: ${this.worldControl || 15}%</div>
+                    <div style="color: #fff; margin-bottom: 10px;">Active Regions: 3/12</div>
+                </div>
+                <div style="margin-top: 30px; color: #888; font-style: italic;">
+                    Advanced world map features coming soon!<br>
+                    Complete more missions to unlock new regions.
+                </div>
+            </div>
+            `,
+            [{ text: 'CLOSE', action: 'close' }]
+        );
+    }
+};
+
 // ============= New Dialog Manager Content Generators =============

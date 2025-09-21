@@ -1,6 +1,22 @@
 // Screen Management - Simplified to use declarative dialog system
 
 CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
+    // Preserve agent RPG states before transitioning
+    if (this.agents && this.activeAgents) {
+        this.agents.forEach(agent => {
+            if (agent.rpgEntity) {
+                // Find the corresponding active agent and update its RPG entity
+                const activeAgent = this.activeAgents.find(a =>
+                    a.name === agent.name || a.originalId === agent.originalId
+                );
+                if (activeAgent) {
+                    activeAgent.rpgEntity = agent.rpgEntity;
+                    console.log(`💾 Preserved RPG state for ${agent.name}: Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience}`);
+                }
+            }
+        });
+    }
+
     // Use screen manager for full-screen victory/defeat screens
     if (window.screenManager) {
         window.screenManager.navigateTo(victory ? 'victory' : 'defeat');

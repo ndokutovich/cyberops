@@ -937,4 +937,126 @@ CyberOpsGame.prototype.initRPGSystem = function() {
     }
 };
 
+// Show skill tree dialog
+CyberOpsGame.prototype.showSkillTree = function(agentId) {
+    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    if (!agent) return;
+
+    // For now, show a placeholder dialog
+    if (this.showHudDialog) {
+        this.showHudDialog(
+            'Skill Tree',
+            `Skill tree for ${agent.name} - Coming soon!`,
+            [{ text: 'OK', action: 'close' }]
+        );
+    }
+};
+
+// Show perk selection dialog
+CyberOpsGame.prototype.showPerkSelection = function(agentId) {
+    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    if (!agent) return;
+
+    // For now, show a placeholder dialog
+    if (this.showHudDialog) {
+        this.showHudDialog(
+            'Perk Selection',
+            `Perk selection for ${agent.name} - Coming soon!`,
+            [{ text: 'OK', action: 'close' }]
+        );
+    }
+};
+
+// Use health pack
+CyberOpsGame.prototype.useHealthPack = function(agentId) {
+    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    if (!agent) return;
+
+    // Check if agent has health packs
+    const healthPack = agent.inventory?.find(item => item.type === 'consumable' && item.subtype === 'health');
+    if (!healthPack) {
+        if (this.logEvent) {
+            this.logEvent(`${agent.name} has no health packs!`, 'error');
+        }
+        return;
+    }
+
+    // Use the health pack
+    const healAmount = healthPack.healAmount || 50;
+    agent.health = Math.min(agent.health + healAmount, agent.maxHealth);
+
+    // Remove from inventory
+    const index = agent.inventory.indexOf(healthPack);
+    if (index > -1) {
+        agent.inventory.splice(index, 1);
+    }
+
+    if (this.logEvent) {
+        this.logEvent(`${agent.name} used a health pack (+${healAmount} HP)`, 'combat');
+    }
+
+    // Refresh UI if character sheet is open
+    const dialog = document.querySelector('.rpg-character-sheet');
+    if (dialog) {
+        this.showCharacterSheet(agentId);
+    }
+};
+
+// Drop item from inventory
+CyberOpsGame.prototype.dropItem = function(agentId, itemId) {
+    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    if (!agent || !agent.inventory) return;
+
+    const itemIndex = agent.inventory.findIndex(item => item.id === itemId);
+    if (itemIndex > -1) {
+        const item = agent.inventory[itemIndex];
+        agent.inventory.splice(itemIndex, 1);
+
+        if (this.logEvent) {
+            this.logEvent(`${agent.name} dropped ${item.name}`, 'inventory');
+        }
+
+        // Refresh UI if character sheet is open
+        const dialog = document.querySelector('.rpg-character-sheet');
+        if (dialog) {
+            this.showCharacterSheet(agentId);
+        }
+    }
+};
+
+// Use item from inventory
+CyberOpsGame.prototype.useItem = function(agentId, itemId) {
+    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    if (!agent || !agent.inventory) return;
+
+    const item = agent.inventory.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Handle different item types
+    if (item.type === 'consumable') {
+        if (item.subtype === 'health') {
+            this.useHealthPack(agentId);
+        } else {
+            if (this.logEvent) {
+                this.logEvent(`${agent.name} used ${item.name}`, 'inventory');
+            }
+            // Remove consumable after use
+            const index = agent.inventory.indexOf(item);
+            if (index > -1) {
+                agent.inventory.splice(index, 1);
+            }
+        }
+    } else {
+        if (this.logEvent) {
+            this.logEvent(`Cannot use ${item.name} - not a consumable`, 'error');
+        }
+    }
+
+    // Refresh UI if character sheet is open
+    const dialog = document.querySelector('.rpg-character-sheet');
+    if (dialog) {
+        this.showCharacterSheet(agentId);
+    }
+};
+
 console.log('🎮 RPG UI System loaded');
