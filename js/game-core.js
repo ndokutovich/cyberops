@@ -49,6 +49,9 @@ class CyberOpsGame {
         // Initialize services
         this.gameServices = window.GameServices;
 
+        // Initialize service integration flags
+        this.useRenderingService = false; // Will be enabled when ready
+
         // Initialize centralized services if available
         if (this.gameServices) {
             // ResourceService manages all resources centrally

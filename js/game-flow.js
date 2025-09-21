@@ -930,6 +930,7 @@ CyberOpsGame.prototype.centerCameraOnAgent = function(agent) {
 
 CyberOpsGame.prototype.updateSquadHealth = function() {
         const container = document.getElementById('squadHealth');
+        if (!container) return; // Skip if container doesn't exist (e.g., in test mode)
         container.innerHTML = '';
 
         this.agents.forEach((agent, index) => {

@@ -64,6 +64,27 @@ class ResourceService {
     }
 
     /**
+     * Convenience method to get credits
+     */
+    getCredits() {
+        return this.get('credits');
+    }
+
+    /**
+     * Convenience method to get research points
+     */
+    getResearchPoints() {
+        return this.get('researchPoints');
+    }
+
+    /**
+     * Convenience method to get world control
+     */
+    getWorldControl() {
+        return this.get('worldControl');
+    }
+
+    /**
      * Set a resource to a specific value (with validation)
      */
     set(resourceType, value, reason = 'direct set') {

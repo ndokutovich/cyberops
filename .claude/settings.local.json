@@ -38,7 +38,8 @@
       "Bash(for file in game-mission-constants campaign-system game-core game-events game-flow game-saveload game-hub game-dialogs game-screens game-demoscene game-audio game-music-config game-music-system game-screen-music game-loop game-rendering game-3d game-utils game-keyboard game-npc campaign-integration game-pathfinding game-teamcommands game-mission-executor game-mission-integration dialog-config declarative-dialog-engine dialog-integration test-framework)",
       "Bash(do if [ ! -f \"js/$file.js\" ])",
       "Bash(then echo \"MISSING: js/$file.js\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(sort:*)"
     ],
     "deny": [],
     "ask": []

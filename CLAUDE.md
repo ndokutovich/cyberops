@@ -8,7 +8,23 @@ CyberOps: Syndicate is a browser-based cyberpunk tactical game built with vanill
 
 ## Architecture
 
-The game uses a modular JavaScript architecture with the main `CyberOpsGame` class split across multiple files for better organization. All functionality remains exactly the same, just divided into logical modules:
+### Service-Oriented Architecture (SOA)
+The game now uses a **Service-Oriented Architecture** with 23 centralized services managed through `GameServices` singleton. This provides:
+- **Single Source of Truth** - All game state managed through services
+- **SOLID Principles** - Each service has single responsibility
+- **Dependency Injection** - Services receive dependencies via constructor
+- **Event-Driven** - Services communicate via events
+- **100% Backward Compatibility** - Legacy code continues working
+
+#### Service Categories
+- **Core Services (8)**: Formula, Resource, Agent, Research, Equipment, RPG, Inventory, GameState
+- **System Services (9)**: Map, Camera, Input, AI, Projectile, Animation, Rendering, UI, HUD
+- **Support Services (6)**: Audio, Effects, EventLog, Mission, Keybinding, GameServices
+
+Access services via: `game.gameServices.serviceName` or `window.GameServices.serviceName`
+
+### Legacy Module Structure
+The game retains a modular JavaScript architecture with the main `CyberOpsGame` class split across multiple files. These modules now integrate with the service layer:
 
 ### JavaScript Modules (js/ directory)
 - **game-core.js**: Core constructor and initialization

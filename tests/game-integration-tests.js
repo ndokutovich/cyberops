@@ -363,5 +363,347 @@ describe('Game Integration Tests', () => {
     });
 });
 
+/**
+ * Service Integration Tests
+ * Tests for the new service-oriented architecture
+ */
+describe('Service Integration Tests', () => {
+
+    it('should have GameServices singleton initialized', () => {
+        assertTruthy(window.GameServices, 'GameServices singleton should exist');
+        assertTruthy(game.gameServices, 'Game should have gameServices reference');
+        assertEqual(game.gameServices, window.GameServices, 'Game should use GameServices singleton');
+    });
+
+    it('should have all core calculation services', () => {
+        const services = game.gameServices;
+
+        // Core services
+        assertTruthy(services.formulaService, 'FormulaService should exist');
+        assertTruthy(services.resourceService, 'ResourceService should exist');
+        assertTruthy(services.agentService, 'AgentService should exist');
+
+        // Feature services
+        assertTruthy(services.researchService, 'ResearchService should exist');
+        assertTruthy(services.equipmentService, 'EquipmentService should exist');
+        assertTruthy(services.rpgService, 'RPGService should exist');
+        assertTruthy(services.inventoryService, 'InventoryService should exist');
+
+        // State management
+        assertTruthy(services.gameStateService, 'GameStateService should exist');
+    });
+
+    it('should have all system services', () => {
+        const services = game.gameServices;
+
+        // System services
+        assertTruthy(services.mapService, 'MapService should exist');
+        assertTruthy(services.cameraService, 'CameraService should exist');
+        assertTruthy(services.inputService, 'InputService should exist');
+        assertTruthy(services.aiService, 'AIService should exist');
+        assertTruthy(services.projectileService, 'ProjectileService should exist');
+        assertTruthy(services.animationService, 'AnimationService should exist');
+        assertTruthy(services.renderingService, 'RenderingService should exist');
+        assertTruthy(services.uiService, 'UIService should exist');
+        assertTruthy(services.hudService, 'HUDService should exist');
+        assertTruthy(services.audioService, 'AudioService should exist');
+        assertTruthy(services.effectsService, 'EffectsService should exist');
+        assertTruthy(services.eventLogService, 'EventLogService should exist');
+        assertTruthy(services.missionService, 'MissionService should exist');
+    });
+
+    it('should have service integration methods', () => {
+        // Check integration wrapper methods exist
+        assertTruthy(game._originalUpdate, 'Should store original update method');
+        assertTruthy(game._originalRender, 'Should store original render method');
+        assertTruthy(game.initializeServicesIntegration, 'Should have integration initialization');
+
+        // Check enhanced methods
+        assertTruthy(game.fireProjectileEnhanced, 'Should have enhanced projectile method');
+        assertTruthy(game.showNotificationEnhanced, 'Should have enhanced notification method');
+        assertTruthy(game.applyScreenShakeEnhanced, 'Should have enhanced screen shake method');
+        assertTruthy(game.createExplosionEnhanced, 'Should have enhanced explosion method');
+        assertTruthy(game.addCombatLogEnhanced, 'Should have enhanced combat log method');
+    });
+
+    it('should have backward compatibility properties', () => {
+        // Test property getters/setters for backward compatibility
+        const originalCameraX = -100;
+        const originalCameraY = -200;
+
+        // Set camera position through old properties
+        game.cameraX = originalCameraX;
+        game.cameraY = originalCameraY;
+
+        // Check service received the values (note: camera uses negative values)
+        assertEqual(game.gameServices.cameraService.x, -originalCameraX, 'Camera X should be set');
+        assertEqual(game.gameServices.cameraService.y, -originalCameraY, 'Camera Y should be set');
+
+        // Test projectiles property
+        if (game.gameServices.projectileService) {
+            const projectiles = game.projectiles;
+            assertTruthy(Array.isArray(projectiles), 'Projectiles should be accessible as array');
+        }
+    });
+
+    it('should have service dependencies properly injected', () => {
+        const services = game.gameServices;
+
+        // AIService should have MapService injected
+        if (services.aiService && services.aiService.mapService) {
+            assertEqual(services.aiService.mapService, services.mapService,
+                'AIService should use shared MapService instance');
+        }
+
+        // MissionService should have dependencies
+        if (services.missionService) {
+            assertTruthy(services.missionService.resourceService,
+                'MissionService should have ResourceService');
+            assertTruthy(services.missionService.agentService,
+                'MissionService should have AgentService');
+            assertTruthy(services.missionService.eventLogService,
+                'MissionService should have EventLogService');
+        }
+
+        // GameStateService should have dependencies
+        if (services.gameStateService) {
+            assertTruthy(services.gameStateService.resourceService,
+                'GameStateService should have ResourceService');
+            assertTruthy(services.gameStateService.agentService,
+                'GameStateService should have AgentService');
+            assertTruthy(services.gameStateService.inventoryService,
+                'GameStateService should have InventoryService');
+        }
+    });
+
+    it('should initialize services with proper state', () => {
+        const services = game.gameServices;
+
+        // CameraService should have viewport
+        if (services.cameraService) {
+            assertTruthy(services.cameraService.viewport, 'CameraService should have viewport');
+            assertTruthy(services.cameraService.viewport.width > 0, 'Viewport width should be set');
+            assertTruthy(services.cameraService.viewport.height > 0, 'Viewport height should be set');
+        }
+
+        // UIService should have dialog systems
+        if (services.uiService && services.uiService.dialogSystems) {
+            assertTruthy(services.uiService.dialogSystems.modalEngine ||
+                       services.uiService.dialogSystems.declarativeEngine,
+                       'UIService should have dialog systems initialized');
+        }
+
+        // HUDService should be initialized
+        if (services.hudService) {
+            assertTruthy(services.hudService.initialized || services.hudService.canvas,
+                'HUDService should be initialized');
+        }
+    });
+
+    it('should handle service method calls without errors', () => {
+        const services = game.gameServices;
+
+        try {
+            // Test FormulaService
+            if (services.formulaService) {
+                const damage = services.formulaService.calculateDamage(20, 5, 2, 3);
+                assertTruthy(typeof damage === 'number', 'Damage calculation should return number');
+            }
+
+            // Test ResourceService
+            if (services.resourceService) {
+                const credits = services.resourceService.getCredits();
+                assertTruthy(typeof credits === 'number', 'Credits should be a number');
+            }
+
+            // Test MapService collision detection
+            if (services.mapService) {
+                const walkable = services.mapService.isWalkable(0, 0);
+                assertTruthy(typeof walkable === 'boolean', 'isWalkable should return boolean');
+            }
+
+            // Test CameraService methods
+            if (services.cameraService) {
+                services.cameraService.setPosition(0, 0, true);
+                assertEqual(services.cameraService.x, 0, 'Camera X should be set');
+                assertEqual(services.cameraService.y, 0, 'Camera Y should be set');
+            }
+
+            // Test AIService pathfinding
+            if (services.aiService && services.aiService.findPath) {
+                const path = services.aiService.findPath(0, 0, 1, 1);
+                assertTruthy(Array.isArray(path), 'Pathfinding should return array');
+            }
+
+        } catch (error) {
+            fail(`Service method call failed: ${error.message}`);
+        }
+    });
+
+    it('should update services in game loop', () => {
+        // Test that services are called during update
+        if (game.update && game.gameServices) {
+            const originalUpdateAI = game.gameServices.aiService ?
+                game.gameServices.aiService.update : null;
+
+            if (originalUpdateAI) {
+                let aiUpdateCalled = false;
+                game.gameServices.aiService.update = function(deltaTime) {
+                    aiUpdateCalled = true;
+                    if (originalUpdateAI) originalUpdateAI.call(this, deltaTime);
+                };
+
+                // Trigger an update
+                game.update();
+
+                // Restore original
+                game.gameServices.aiService.update = originalUpdateAI;
+
+                assertTruthy(aiUpdateCalled, 'AIService.update should be called in game loop');
+            }
+        }
+    });
+
+    it('should handle service integration flags', () => {
+        // Check rendering service flag
+        assertTruthy(typeof game.useRenderingService === 'boolean',
+            'useRenderingService flag should exist');
+
+        // Test that we can toggle it
+        const originalValue = game.useRenderingService;
+        game.useRenderingService = true;
+        assertEqual(game.useRenderingService, true, 'Should be able to enable RenderingService');
+        game.useRenderingService = false;
+        assertEqual(game.useRenderingService, false, 'Should be able to disable RenderingService');
+        game.useRenderingService = originalValue; // Restore
+    });
+
+    it('should have service alias methods', () => {
+        // Check that alias methods were created
+        if (game.initializeServicesIntegration) {
+            // Initialize if not already done
+            game.initializeServicesIntegration();
+
+            // Check aliases
+            assertTruthy(game.fireWeapon, 'fireWeapon alias should exist');
+            assertTruthy(game.notify, 'notify alias should exist');
+            assertTruthy(game.shakeScreen, 'shakeScreen alias should exist');
+            assertTruthy(game.explode, 'explode alias should exist');
+            assertTruthy(game.logCombat, 'logCombat alias should exist');
+
+            // Test that aliases are functions (they're bound, so not strictly equal)
+            assertTruthy(typeof game.fireWeapon === 'function',
+                'fireWeapon should be a function');
+            assertTruthy(typeof game.notify === 'function',
+                'notify should be a function');
+            assertTruthy(typeof game.shakeScreen === 'function',
+                'shakeScreen should be a function');
+        }
+    });
+
+    it('should calculate agent stats with all modifiers', () => {
+        const services = game.gameServices;
+
+        if (services.calculateAgentStats) {
+            const baseAgent = {
+                name: 'Test Agent',
+                health: 100,
+                damage: 20,
+                speed: 5
+            };
+
+            const modifiedAgent = services.calculateAgentStats(
+                baseAgent,
+                [], // completed research
+                [], // weapons
+                []  // equipment
+            );
+
+            assertTruthy(modifiedAgent, 'Should return modified agent');
+            assertEqual(modifiedAgent.name, 'Test Agent', 'Should preserve agent name');
+            assertTruthy(typeof modifiedAgent.health === 'number', 'Health should be a number');
+        }
+    });
+
+    it('should calculate attack damage correctly', () => {
+        const services = game.gameServices;
+
+        if (services.calculateAttackDamage) {
+            const attacker = { damage: 20, damageBonus: 5 };
+            const target = { protection: 3 };
+            const context = { distance: 5, critical: false };
+
+            const damage = services.calculateAttackDamage(attacker, target, context);
+
+            assertTruthy(typeof damage === 'number', 'Damage should be a number');
+            assertTruthy(damage >= 0, 'Damage should not be negative');
+        }
+    });
+
+    it('should validate game state consistency', () => {
+        const services = game.gameServices;
+
+        if (services.validateGameState) {
+            const gameState = {
+                agents: [
+                    { name: 'Agent1', health: 100, speed: 5 },
+                    { name: 'Agent2', health: 80, speed: 4 }
+                ],
+                completedResearch: [],
+                totalResearchSpent: 0
+            };
+
+            const validation = services.validateGameState(gameState);
+
+            assertTruthy(validation, 'Should return validation result');
+            assertTruthy(typeof validation.valid === 'boolean', 'Should have valid flag');
+            assertTruthy(Array.isArray(validation.errors), 'Should have errors array');
+
+            // This state should be valid
+            assertEqual(validation.valid, true, 'Valid state should pass validation');
+            assertEqual(validation.errors.length, 0, 'Valid state should have no errors');
+        }
+    });
+
+    it('should handle mission rewards calculation', () => {
+        const services = game.gameServices;
+
+        if (services.calculateMissionRewards) {
+            const missionData = {
+                baseCredits: 1000,
+                baseResearch: 50,
+                difficulty: 'normal',
+                objectives: { completed: 3, total: 3 },
+                bonusObjectives: { completed: 1, total: 2 }
+            };
+
+            const rewards = services.calculateMissionRewards(missionData);
+
+            assertTruthy(rewards, 'Should return rewards object');
+            assertTruthy(typeof rewards.credits === 'number' ||
+                       typeof rewards.research === 'number',
+                       'Should have numeric rewards');
+        }
+    });
+
+    it('should provide service statistics', () => {
+        const services = game.gameServices;
+
+        if (services.getStatistics) {
+            const stats = services.getStatistics();
+
+            assertTruthy(stats, 'Should return statistics object');
+            assertTruthy(typeof stats.totalResearchProjects === 'number',
+                'Should have research project count');
+            assertTruthy(typeof stats.totalWeapons === 'number',
+                'Should have weapon count');
+            assertTruthy(typeof stats.totalEquipment === 'number',
+                'Should have equipment count');
+            assertTruthy(stats.formulaConstants,
+                'Should have formula constants');
+        }
+    });
+});
+
 // Export for test runner
 window.GameIntegrationTests = true;

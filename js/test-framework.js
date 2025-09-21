@@ -280,6 +280,10 @@ class TestFramework {
         }
     }
 
+    fail(message = 'Test failed') {
+        throw new Error(message);
+    }
+
     async assertThrows(callback, message) {
         let thrown = false;
         try {
@@ -433,6 +437,7 @@ window.assertDeepEqual = (actual, expected, message) => testFramework.assertDeep
 window.assertContains = (haystack, needle, message) => testFramework.assertContains(haystack, needle, message);
 window.assertTruthy = (value, message) => testFramework.assertTruthy(value, message);
 window.assertFalsy = (value, message) => testFramework.assertFalsy(value, message);
+window.fail = (message) => testFramework.fail(message);
 window.assertThrows = async (callback, message) => await testFramework.assertThrows(callback, message);
 
 // Utilities

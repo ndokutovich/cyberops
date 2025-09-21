@@ -25,6 +25,15 @@ class GameServices {
         );
 
         // Initialize system services
+        this.mapService = new MapService();
+        this.cameraService = new CameraService();
+        this.inputService = new InputService();
+        this.aiService = new AIService(this.mapService);
+        this.projectileService = new ProjectileService();
+        this.animationService = new AnimationService();
+        this.renderingService = new RenderingService();
+        this.uiService = new UIService();
+        this.hudService = new HUDService();
         this.audioService = new AudioService();
         this.effectsService = new EffectsService();
         this.eventLogService = new EventLogService();
@@ -35,7 +44,17 @@ class GameServices {
         );
 
         // Initialize services that need it
+        this.cameraService.setViewport(window.innerWidth, window.innerHeight);
         this.effectsService.initialize();
+        // Don't initialize HUD yet - wait until game screen
+        // this.hudService.initialize();
+
+        // Initialize UIService with existing dialog systems
+        this.uiService.initialize({
+            modalEngine: window.modalEngine,
+            declarativeEngine: window.dialogEngine,
+            dialogManager: window.dialogManager
+        });
 
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);

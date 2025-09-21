@@ -223,6 +223,12 @@ CyberOpsGame.prototype.updateFPS = function() {
     
 // Collision detection helper
 CyberOpsGame.prototype.isWalkable = function(x, y) {
+        // Use MapService if available
+        if (this.gameServices?.mapService) {
+            return this.gameServices.mapService.isWalkable(x, y);
+        }
+
+        // Original implementation as fallback
         // Check map bounds
         if (x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) {
             return false;
@@ -255,6 +261,12 @@ CyberOpsGame.prototype.isWalkable = function(x, y) {
 // Movement is always with pathfinding - no simple movement fallback
 
 CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
+        // Use MapService if available
+        if (this.gameServices?.mapService) {
+            return this.gameServices.mapService.canMoveTo(fromX, fromY, toX, toY);
+        }
+
+        // Original implementation as fallback
         // Check if target position is walkable
         if (!this.isWalkable(toX, toY)) {
             return false;

@@ -256,6 +256,223 @@ if (agent.rpgEntity) {
 }
 ```
 
+## 📷 CameraService - Camera Control
+```javascript
+// Position and movement
+cameraService.setPosition(x, y, immediate)              // Set camera position
+cameraService.move(dx, dy)                              // Move by delta
+cameraService.centerOn(worldX, worldY)                  // Center on world position
+
+// Zoom control
+cameraService.zoomIn()                                  // Zoom in
+cameraService.zoomOut()                                 // Zoom out
+cameraService.setZoom(level, centerX, centerY)          // Set zoom level
+
+// Camera effects
+cameraService.shake(intensity, duration)                // Screen shake
+cameraService.followEntity(entity, offset)              // Follow target
+cameraService.stopFollowing()                           // Stop following
+
+// Viewport and boundaries
+cameraService.setViewport(width, height)                // Update viewport
+cameraService.setBoundaries(minX, minY, maxX, maxY)     // Set camera limits
+cameraService.isVisible(x, y, margin)                   // Check visibility
+
+// Edge scrolling
+cameraService.edgeScrollEnabled = true                  // Enable edge scroll
+cameraService.handleEdgeScroll(mouseX, mouseY)          // Process edge scroll
+
+// Update (call each frame)
+cameraService.update(deltaTime)                         // Update camera
+```
+
+## 🗺️ MapService - Map Management
+```javascript
+// Load map
+mapService.loadMap(mapData)                             // Load from mission data
+
+// Tile queries
+const tile = mapService.getTileAt(x, y)                 // Get tile type
+mapService.setTileAt(x, y, tileType)                    // Change tile
+mapService.isWalkable(x, y)                             // Check if walkable
+mapService.canMoveTo(fromX, fromY, toX, toY)            // Check movement path
+
+// Fog of war
+mapService.setFogEnabled(true)                          // Enable/disable fog
+mapService.updateFogOfWar(viewerPositions)              // Update visibility
+mapService.isVisible(x, y)                              // Check visibility
+mapService.isExplored(x, y)                             // Check if explored
+
+// Entities
+const terminal = mapService.getTerminalAt(x, y)         // Get nearby terminal
+const door = mapService.getDoorAt(x, y)                 // Get door at position
+mapService.unlockDoor(x, y, terminalId)                 // Unlock door
+const item = mapService.getCollectibleAt(x, y)          // Get collectible
+mapService.removeCollectible(index)                     // Remove collected item
+
+// Line of sight
+mapService.hasLineOfSight(x1, y1, x2, y2)               // Check LOS
+
+// Utilities
+mapService.findNearestWalkable(x, y, maxDist)           // Find walkable position
+mapService.getEntitiesAt(x, y, radius)                  // Get all entities
+```
+
+## 🎮 InputService - Input Handling
+```javascript
+// Initialize
+inputService.initialize(canvas, {
+    screenToWorld: (x, y) => game.screenToWorld(x, y)
+})
+
+// Mouse state
+const pos = inputService.mousePosition                  // {x, y}
+const worldPos = inputService.mouseWorldPosition        // World coords
+const dragging = inputService.isDragging                // Is dragging?
+inputService.isMouseButtonPressed(0)                    // Left button?
+
+// Keyboard state
+inputService.isKeyPressed('KeyW')                       // W pressed?
+const pressed = inputService.getPressedKeys()           // All pressed keys
+
+// Touch support
+inputService.touches                                    // Active touches
+inputService.pinchDistance                              // Pinch distance
+
+// Event listeners
+inputService.on('click', (data) => { })                 // Click event
+inputService.on('drag', (data) => { })                  // Drag event
+inputService.on('keydown', (data) => { })               // Key press
+inputService.on('wheel', (data) => { })                 // Mouse wheel
+inputService.on('pinch', (data) => { })                 // Touch pinch
+
+// Control
+inputService.setEnabled(false)                          // Disable all input
+inputService.captureMouse = false                       // Disable mouse
+inputService.captureKeyboard = false                    // Disable keyboard
+```
+
+## ⌨️ KeybindingService - Keyboard Shortcuts
+```javascript
+// Register/update bindings
+keybindingService.registerBinding('action', 'K', 'Description', 'category')
+keybindingService.updateBinding('fire', 'Space')        // Change key
+keybindingService.resetAllBindings()                    // Reset to defaults
+
+// Check keys
+const key = keybindingService.getKey('hack')            // → 'H'
+const action = keybindingService.getActionByKey('F')    // → 'fire'
+if (keybindingService.matchesBinding('hack', event)) { }
+
+// Get organized bindings
+keybindingService.getBindingsByCategory('combat')       // Combat keys
+keybindingService.getAllBindings()                      // All categories
+keybindingService.getHelpText()                         // Formatted help
+
+// Persistence
+keybindingService.saveUserBindings()                    // Save to localStorage
+keybindingService.loadUserBindings()                    // Load from localStorage
+```
+
+## 🤖 AIService - Enemy AI
+```javascript
+// Add/Remove enemies
+aiService.addEnemy(enemy)
+aiService.removeEnemy(enemyId)
+
+// Pathfinding
+aiService.findPath(startX, startY, endX, endY)
+
+// Vision & detection
+aiService.canSeeTarget(enemy, target)
+aiService.detectPlayer(enemy, players)
+
+// Update AI
+aiService.update(deltaTime)
+```
+
+## 🎯 ProjectileService - Projectiles
+```javascript
+// Fire projectile
+projectileService.fireProjectile(from, to, { damage: 20, speed: 10 })
+
+// Update projectiles
+projectileService.update(deltaTime, { agents, enemies, walls })
+
+// Get stats
+projectileService.getStats()                            // accuracy info
+```
+
+## 🎬 AnimationService - Animations
+```javascript
+// Sprite animations
+animationService.createSpriteAnimation(target, 'walk', { loop: true })
+
+// Transitions
+animationService.fadeIn(element, 1000)
+animationService.moveTo(obj, fromX, fromY, toX, toY, 1000)
+animationService.shake(obj, intensity, duration)
+
+// Floating text
+animationService.createFloatingText(x, y, '+100 XP')
+
+// Update
+animationService.update(deltaTime)
+```
+
+## 🎨 RenderingService - Rendering
+```javascript
+// Initialize
+renderingService.initialize(canvas)
+
+// Render frame
+renderingService.renderFrame(gameState, camera)
+
+// Effects
+renderingService.applyScreenShake(10, 500)
+renderingService.applyScreenFlash('#fff', 0.5, 200)
+
+// Debug
+renderingService.setDebug('showFPS', true)
+```
+
+## 🖼️ UIService - UI Elements
+```javascript
+// Notifications
+uiService.showNotification('Mission Complete!', 'success')
+
+// Dialogs
+uiService.showDialog({ title: 'Confirm', content: 'Are you sure?' })
+
+// Tooltips
+uiService.showTooltip(element, 'Info text')
+
+// Context menus
+uiService.showContextMenu(x, y, menuItems)
+
+// Blocking
+uiService.blockUI('Loading...')
+uiService.unblockUI()
+```
+
+## 🎮 HUDService - Game HUD
+```javascript
+// Update HUD
+hudService.updateAgentStatus(agents)
+hudService.updateMissionObjectives(objectives)
+hudService.updateResources({ credits: 5000, research: 100 })
+
+// Combat log
+hudService.addCombatLogEntry('Enemy killed', 'kill')
+
+// Alerts
+hudService.showAlert('OBJECTIVE COMPLETE', 3000, 'success')
+
+// Control HUD
+hudService.toggleVisibility()
+hudService.setOpacity(0.8)
+```
+
 ## 🎯 MissionService - Objectives
 ```javascript
 // Start mission
