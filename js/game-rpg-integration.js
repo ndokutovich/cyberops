@@ -83,21 +83,33 @@ class RPGManager {
         this.config = null;
         this.entities = new Map(); // Track all RPG entities
         this.experienceTable = [];
+
+        // Set rpgService first
+        this.rpgService = window.GameServices?.rpgService;
+
+        // Then generate experience table
         this.generateExperienceTable();
     }
 
     loadConfig(config) {
         this.config = config;
+        // Don't call back to RPGService to avoid recursion
     }
 
     generateExperienceTable() {
-        // Generate XP requirements for levels 1-100
-        for (let level = 1; level <= 100; level++) {
-            this.experienceTable[level] = Math.floor(100 * Math.pow(1.5, level - 1));
+        // Use RPGService experience table if available, otherwise generate default
+        if (this.rpgService && this.rpgService.experienceTable) {
+            this.experienceTable = this.rpgService.experienceTable;
+        } else {
+            // Generate default table
+            for (let level = 1; level <= 100; level++) {
+                this.experienceTable[level] = Math.floor(100 * Math.pow(1.5, level - 1));
+            }
         }
     }
 
     createRPGAgent(baseAgent, classType = 'soldier') {
+        // Direct implementation - don't call RPGService to avoid recursion
         console.log(`\n🎮 Creating RPG Agent: ${baseAgent.name}`);
         console.log(`   Class: ${classType}`);
 
@@ -113,7 +125,6 @@ class RPGManager {
         });
 
         console.log(`   Initial Stats:`, rpgAgent.stats);
-        console.log(`   Starting Skills:`, rpgAgent.skills);
 
         // Copy existing agent properties
         Object.keys(baseAgent).forEach(key => {
@@ -124,13 +135,11 @@ class RPGManager {
 
         // Calculate and store derived stats
         const derived = this.calculateDerivedStats(rpgAgent);
-        rpgAgent.derivedStats = derived;  // Store derived stats on entity
+        rpgAgent.derivedStats = derived;
 
         console.log(`   Derived Stats Summary:`);
         console.log(`   - Max Health: ${derived.maxHealth}`);
         console.log(`   - Max AP: ${derived.maxAP}`);
-        console.log(`   - Crit Chance: ${derived.critChance.toFixed(1)}%`);
-        console.log(`   - Dodge: ${derived.dodge.toFixed(1)}%`);
 
         // Register entity
         this.entities.set(baseAgent.id || baseAgent.name, rpgAgent);
@@ -178,10 +187,13 @@ class RPGManager {
     }
 
     generateInitialStats(classType) {
-        const classConfig = this.config?.classes?.[classType];
+        // Use RPGService if available
+        if (this.rpgService && this.rpgService.generateInitialStats) {
+            return this.rpgService.generateInitialStats(classType);
+        }
 
-        // Start with default base values - ensure they're numbers, not objects
-        const stats = {
+        // Fallback to default stats
+        return {
             strength: 10,
             agility: 10,
             intellect: 10,
@@ -190,20 +202,6 @@ class RPGManager {
             perception: 10,
             endurance: 10
         };
-
-        // Apply class modifiers if available
-        if (classConfig && classConfig.statModifiers) {
-            Object.keys(classConfig.statModifiers).forEach(stat => {
-                if (stats[stat] !== undefined) {
-                    stats[stat] += classConfig.statModifiers[stat];
-                }
-            });
-        }
-
-        // Log final stats to verify they're numbers
-        console.log(`   Generated stats for ${classType}:`, stats);
-
-        return stats;
     }
 
     generateEnemyStats(type, level) {
@@ -239,48 +237,19 @@ class RPGManager {
     }
 
     calculateDerivedStats(entity) {
-        const stats = entity.stats || {};
-        const derived = {};
+        // Use RPGService if available
+        if (this.rpgService && this.rpgService.calculateDerivedStats) {
+            return this.rpgService.calculateDerivedStats(entity);
+        }
 
-        // Extract numeric values from stats (handle both objects and numbers)
-        const getStatValue = (stat) => {
-            const value = stats[stat];
-            if (typeof value === 'object' && value !== null) {
-                return value.baseValue || value.value || 10;
-            }
-            return value || 10;
+        // Fallback to basic derived stats
+        return {
+            maxHealth: 100,
+            maxAP: 6,
+            critChance: 5,
+            dodge: 5,
+            carryWeight: 100
         };
-
-        const strength = getStatValue('strength');
-        const agility = getStatValue('agility');
-        const intellect = getStatValue('intellect');
-        const tech = getStatValue('tech');
-        const charisma = getStatValue('charisma');
-        const perception = getStatValue('perception');
-        const endurance = getStatValue('endurance');
-
-        // Calculate max health
-        derived.maxHealth = 100 + (endurance * 10);
-        console.log(`📊 Max Health: 100 + (${endurance} * 10) = ${derived.maxHealth}`);
-
-        // Calculate max AP
-        derived.maxAP = 6 + Math.floor(agility / 10);
-        console.log(`📊 Max AP: 6 + floor(${agility} / 10) = ${derived.maxAP}`);
-
-        // Calculate crit chance
-        derived.critChance = 5 + (perception * 0.5);
-        console.log(`📊 Crit Chance: 5 + (${perception} * 0.5) = ${derived.critChance}%`);
-
-        // Calculate dodge
-        derived.dodge = agility * 0.5;
-        console.log(`📊 Dodge: ${agility} * 0.5 = ${derived.dodge}%`);
-
-        // Calculate carry weight
-        derived.carryWeight = 50 + (strength * 5);
-        console.log(`📊 Carry Weight: 50 + (${strength} * 5) = ${derived.carryWeight}kg`);
-
-        console.log('📊 Final derived stats:', derived);
-        return derived;
     }
 
     applyStatModifiers(entity, modifiers) {
@@ -295,6 +264,7 @@ class RPGManager {
     }
 
     grantExperience(entity, amount) {
+        // Direct implementation - don't call back to RPGService to avoid recursion
         if (!entity.experience) entity.experience = 0;
         const oldXP = entity.experience;
         entity.experience += amount;
@@ -306,21 +276,14 @@ class RPGManager {
         console.log(`\n📈 XP GAIN:`);
         console.log(`   ${entity.name} gained ${amount} XP`);
         console.log(`   XP Progress: ${oldXP} → ${entity.experience} / ${requiredXP} (${progressPercent}%)`);
-        console.log(`   Current Level: ${currentLevel}`);
 
         // Check for level up
         if (entity.experience >= requiredXP) {
             console.log(`   🎉 LEVEL UP TRIGGERED!`);
             this.levelUp(entity);
-        } else {
-            const xpToNext = requiredXP - entity.experience;
-            console.log(`   XP to next level: ${xpToNext}`);
         }
 
-        // Log XP gain
-        if (this.game && this.game.logEvent) {
-            this.game.logEvent(`${entity.name} gained ${amount} XP! (${progressPercent}% to level ${currentLevel + 1})`, 'progression');
-        }
+        return entity;
     }
 
     levelUp(entity) {
@@ -1001,7 +964,8 @@ CyberOpsGame.prototype.useSkill = function(agent, skillId, target) {
 CyberOpsGame.prototype.applySkillEffects = function(agent, skill, target) {
     if (skill.damage && target) {
         const damage = this.calculateSkillDamage(agent, skill);
-        target.health -= damage;
+        // Use FormulaService to apply damage
+        window.GameServices.formulaService.applyDamage(target, damage);
 
         if (this.logEvent) {
             this.logEvent(`${skill.name} dealt ${damage} damage!`, 'combat');

@@ -152,19 +152,20 @@ CyberOpsGame.prototype.generateTrainingContent = function() {
                     if (this.credits >= cost) {
                         this.credits -= cost;
                         this.activeAgents.forEach(agent => {
+                            // Use FormulaService to modify stats properly
+                            const formulaService = window.GameServices.formulaService;
                             switch(stat) {
                                 case 'accuracy':
-                                    agent.accuracy = Math.min((agent.accuracy || 70) + 10, 100);
+                                    formulaService.modifyStat(agent, 'accuracy', 10);
                                     break;
                                 case 'damage':
-                                    agent.damage = (agent.damage || 25) + 5;
+                                    formulaService.modifyStat(agent, 'damage', 5);
                                     break;
                                 case 'speed':
-                                    agent.speed = (agent.speed || 4) + 1;
+                                    formulaService.modifyStat(agent, 'speed', 1);
                                     break;
                                 case 'health':
-                                    agent.health += 20;
-                                    agent.maxHealth = (agent.maxHealth || 100) + 20;
+                                    formulaService.modifyStat(agent, 'health', 20);
                                     break;
                             }
                         });

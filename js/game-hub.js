@@ -419,89 +419,37 @@ CyberOpsGame.prototype.startResearch = function(projectId) {
 }
     
 CyberOpsGame.prototype.applyResearchBenefits = function(project) {
-        // Apply research benefits to game systems
-        switch (project.id) {
-            case 1: // Weapon Upgrades
-                this.activeAgents.forEach(agent => {
-                    agent.damage += 5;
-                });
-                break;
-            case 2: // Stealth Technology
-                // Stealth bonus will be applied during missions
-                break;
-            case 3: // Combat Systems
-                this.activeAgents.forEach(agent => {
-                    agent.health += 15;
-                    if (!agent.maxHealth) {
-                        agent.maxHealth = agent.health;
-                    } else {
-                        agent.maxHealth += 15;
-                    }
-                });
-                break;
-            case 4: // Hacking Protocols
-                // Hacking bonus will be applied during missions
-                break;
-            case 5: // Medical Systems
-                // Auto-heal will be applied between missions
-                this.applyMedicalHealing();
-                break;
-            case 6: // Advanced Tactics
-                this.activeAgents.forEach(agent => {
-                    agent.speed += 1;
-                });
-                break;
-        }
+    // Apply research to all active agents via ResearchService
+    this.activeAgents = this.activeAgents.map(agent =>
+        this.gameServices.researchService.applyResearchToAgent(
+            agent,
+            this.completedResearch || []
+        )
+    );
+
+    // Special handling for Medical Systems
+    if (project.id === 5) {
+        this.applyMedicalHealing();
+    }
 }
     
     // Apply equipment bonuses to mission agents
 CyberOpsGame.prototype.applyEquipmentBonuses = function(agent) {
-        // Apply bonuses from owned equipment
-        this.equipment.forEach(item => {
-            if (item.owned > 0) {
-                // Apply bonuses based on equipment type
-                switch(item.name) {
-                    case 'Body Armor':
-                        agent.protection += item.protection * item.owned;
-                        break;
-                    case 'Hacking Kit':
-                        agent.hackBonus += item.hackBonus * item.owned;
-                        break;
-                    case 'Explosives Kit':
-                        // Explosives increase grenade damage
-                        agent.explosiveDamage = (agent.explosiveDamage || 0) + item.damage * item.owned;
-                        break;
-                    case 'Stealth Suit':
-                        agent.stealthBonus += item.stealthBonus * item.owned;
-                        break;
-                }
-            }
-        });
-
-        // Apply weapon bonuses (best weapon available)
-        let bestWeaponBonus = 0;
-        this.weapons.forEach(weapon => {
-            if (weapon.owned > 0 && weapon.damage > bestWeaponBonus) {
-                bestWeaponBonus = weapon.damage;
-            }
-        });
-        agent.damage += bestWeaponBonus;
+    // Apply equipment bonuses via EquipmentService
+    return this.gameServices.equipmentService.applyEquipmentToAgent(
+        agent,
+        this.weapons || [],
+        this.equipment || []
+    );
 }
     
     // Apply research bonuses during missions
 CyberOpsGame.prototype.applyMissionResearchBonuses = function(agent) {
-        if (!this.completedResearch) return;
-        
-        this.completedResearch.forEach(researchId => {
-            switch (researchId) {
-                case 2: // Stealth Technology
-                    agent.stealthBonus += 20;
-                    break;
-                case 4: // Hacking Protocols
-                    agent.hackBonus += 25;
-                    break;
-            }
-        });
+    // Apply mission-specific research bonuses via ResearchService
+    return this.gameServices.researchService.applyResearchToAgent(
+        agent,
+        this.completedResearch || []
+    );
 }
     
     // Apply medical healing between missions

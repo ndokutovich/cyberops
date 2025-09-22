@@ -315,8 +315,10 @@ CyberOpsGame.prototype.updateLoadoutDisplay = function(agentId) {
     const agent = this.activeAgents.find(a => a.id === agentId);
     if (!agent) return;
 
-    // ONLY use InventoryService
-    const loadout = this.gameServices.inventoryService.agentLoadouts[agentId] || {};
+    // ONLY use InventoryService if available
+    const loadout = (this.gameServices && this.gameServices.inventoryService)
+        ? this.gameServices.inventoryService.agentLoadouts[agentId] || {}
+        : this.agentLoadouts[agentId] || {};
     // Sync back to game for consistency
     this.agentLoadouts[agentId] = loadout;
 
@@ -552,7 +554,14 @@ CyberOpsGame.prototype.getEquipmentSlot = function(item) {
 
 // Get available count (not equipped)
 CyberOpsGame.prototype.getAvailableCount = function(type, itemId) {
-    // ONLY use InventoryService
+    // ONLY use InventoryService if available
+    if (!this.gameServices || !this.gameServices.inventoryService) {
+        // Fallback to basic calculation
+        const items = this[type + 's'] || [];
+        const item = items.find(i => i.id === itemId);
+        if (!item) return 0;
+        return item.owned || 0;
+    }
     const inventoryService = this.gameServices.inventoryService;
     inventoryService.syncEquippedCounts();
 
@@ -569,6 +578,11 @@ CyberOpsGame.prototype.getAvailableCount = function(type, itemId) {
 
 // Equip item to agent
 CyberOpsGame.prototype.equipItem = function(agentId, slot, itemId) {
+    // Check if service is available
+    if (!this.gameServices || !this.gameServices.inventoryService) {
+        console.warn('InventoryService not available');
+        return false;
+    }
     // ONLY use InventoryService
     const success = this.gameServices.inventoryService.equipItem(agentId, slot, itemId);
     if (success) {
@@ -590,6 +604,11 @@ CyberOpsGame.prototype.equipItem = function(agentId, slot, itemId) {
 
 // Unequip item from agent
 CyberOpsGame.prototype.unequipItem = function(agentId, slot) {
+    // Check if service is available
+    if (!this.gameServices || !this.gameServices.inventoryService) {
+        console.warn('InventoryService not available');
+        return false;
+    }
     // ONLY use InventoryService
     const success = this.gameServices.inventoryService.unequipItem(agentId, slot);
     if (success) {
@@ -611,6 +630,11 @@ CyberOpsGame.prototype.unequipItem = function(agentId, slot) {
 
 // Sell item
 CyberOpsGame.prototype.sellItem = function(type, itemId) {
+    // Check if service is available
+    if (!this.gameServices || !this.gameServices.inventoryService) {
+        console.warn('InventoryService not available');
+        return { success: false, error: 'Service not available' };
+    }
     // ONLY use InventoryService
     const result = this.gameServices.inventoryService.sellItem(type, itemId);
 
@@ -629,7 +653,9 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
     this.credits += result.price;
 
     // Sync weapons back
-    this.weapons = this.gameServices.inventoryService.inventory.weapons;
+    if (this.gameServices && this.gameServices.inventoryService) {
+        this.weapons = this.gameServices.inventoryService.inventory.weapons;
+    }
 
     // Refresh UI
     this.refreshEquipmentUI();
@@ -662,7 +688,13 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
                     console.log('Credits before sell:', this.credits);
                     console.log('Sell price to ADD:', sellPrice);
 
-                    item.owned--;
+                    // Use InventoryService to decrement item count
+                    if (this.gameServices && this.gameServices.inventoryService) {
+                        this.gameServices.inventoryService.updateItemCount(type, itemId, -1);
+                    } else {
+                        // Fallback
+                        item.owned = Math.max(0, (item.owned || 0) - 1);
+                    }
                     const creditsBefore = this.credits;
 
                     // Safeguard: ensure sellPrice is positive
@@ -968,8 +1000,24 @@ CyberOpsGame.prototype.showShopDialog = function() {
 
 // Auto-optimize loadouts
 CyberOpsGame.prototype.optimizeLoadouts = function() {
-    // ONLY use InventoryService
+    // ONLY use InventoryService if available
+    if (!this.gameServices || !this.gameServices.inventoryService) {
+        console.warn('InventoryService not available');
+        return;
+    }
     const invService = this.gameServices.inventoryService;
+    const logger = window.Logger ? new window.Logger('optimizeLoadouts') : null;
+
+    // Ensure InventoryService has the current weapons data
+    if (this.weapons && this.weapons.length > 0) {
+        if (!invService.inventory.weapons || invService.inventory.weapons.length === 0) {
+            if (logger) logger.info('Syncing weapons to InventoryService before optimization');
+            invService.inventory.weapons = this.weapons.map(w => ({
+                ...w,
+                equipped: w.equipped || 0
+            }));
+        }
+    }
 
     // Clear all loadouts in InventoryService
     Object.keys(invService.agentLoadouts).forEach(agentId => {
@@ -996,13 +1044,20 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         }
     });
 
-    // Sync back
+    // Sync back - but NEVER overwrite with empty arrays
     this.agentLoadouts = invService.agentLoadouts;
-    this.weapons = invService.inventory.weapons;
+    // Only sync weapons if InventoryService has valid data
+    if (invService.inventory.weapons && invService.inventory.weapons.length > 0) {
+        this.weapons = invService.inventory.weapons;
+    }
 
-    // Build a pool of all available weapons
+    // Build a pool of all available weapons from InventoryService OR game state
     const weaponPool = [];
-    this.weapons.forEach(weapon => {
+    const weaponsToUse = (invService.inventory.weapons && invService.inventory.weapons.length > 0)
+        ? invService.inventory.weapons
+        : this.weapons;
+
+    weaponsToUse.forEach(weapon => {
         if (weapon.owned > 0) {
             for (let i = 0; i < weapon.owned; i++) {
                 weaponPool.push({ ...weapon });
@@ -1017,7 +1072,7 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
     this.activeAgents.forEach((agent, index) => {
         if (index < weaponPool.length) {
             // ONLY use InventoryService to equip
-            this.gameServices.inventoryService.equipItem(agent.id, 'weapon', weaponPool[index].id);
+            invService.equipItem(agent.id, 'weapon', weaponPool[index].id);
         }
     });
 
@@ -1049,7 +1104,7 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
     this.activeAgents.forEach((agent, index) => {
         // Assign armor if available
         if (index < armorPool.length) {
-            this.gameServices.inventoryService.equipItem(agent.id, 'armor', armorPool[index].id);
+            invService.equipItem(agent.id, 'armor', armorPool[index].id);
         }
 
         // Assign utility based on specialization or availability
@@ -1059,21 +1114,21 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         if (agent.specialization === 'hacker') {
             const hackKit = utilityPool.find(item => item.hackBonus && !item.assigned);
             if (hackKit) {
-                this.gameServices.inventoryService.equipItem(agent.id, 'utility', hackKit.id);
+                invService.equipItem(agent.id, 'utility', hackKit.id);
                 hackKit.assigned = true;
                 assigned = true;
             }
         } else if (agent.specialization === 'stealth') {
             const stealthSuit = utilityPool.find(item => item.stealthBonus && !item.assigned);
             if (stealthSuit) {
-                this.gameServices.inventoryService.equipItem(agent.id, 'utility', stealthSuit.id);
+                invService.equipItem(agent.id, 'utility', stealthSuit.id);
                 stealthSuit.assigned = true;
                 assigned = true;
             }
         } else if (agent.specialization === 'demolition') {
             const explosives = utilityPool.find(item => item.damage && !item.assigned);
             if (explosives) {
-                this.gameServices.inventoryService.equipItem(agent.id, 'utility', explosives.id);
+                invService.equipItem(agent.id, 'utility', explosives.id);
                 explosives.assigned = true;
                 assigned = true;
             }
@@ -1083,11 +1138,19 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         if (!assigned) {
             const anyUtility = utilityPool.find(item => !item.assigned);
             if (anyUtility) {
-                this.gameServices.inventoryService.equipItem(agent.id, 'utility', anyUtility.id);
+                invService.equipItem(agent.id, 'utility', anyUtility.id);
                 anyUtility.assigned = true;
             }
         }
     });
+
+    // Apply equipment to all active agents
+    this.activeAgents.forEach(agent => {
+        invService.applyAgentEquipment(agent);
+    });
+
+    // Sync loadouts back from InventoryService
+    this.agentLoadouts = invService.agentLoadouts;
 
     // Force complete UI refresh
     this.updateAgentList();
@@ -1127,6 +1190,12 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         }, 300);
     }
 
+    if (logger) {
+        const equipped = Object.keys(invService.agentLoadouts).filter(
+            id => invService.agentLoadouts[id].weapon
+        ).length;
+        logger.info(`Loadouts optimized! Equipped weapons to ${equipped} agents`);
+    }
     console.log('✅ Loadouts optimized successfully');
 };
 
@@ -1172,6 +1241,13 @@ CyberOpsGame.prototype.getItemById = function(type, itemId) {
 
 // Apply loadouts to agents for mission
 CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
+    // Check if service is available
+    if (!this.gameServices || !this.gameServices.inventoryService) {
+        console.warn('InventoryService not available');
+        return agents;
+    }
+    const inventoryService = this.gameServices.inventoryService;
+
     return agents.map(agent => {
         // Try multiple ID formats to find the loadout
         const loadoutId = agent.id || agent.name;
@@ -1180,46 +1256,17 @@ CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
                        this.agentLoadouts[agent.originalId];
 
         if (!loadout) {
-            console.log(`⚠️ No loadout found for agent: ${agent.name} (tried IDs: ${loadoutId}, ${agent.name}, ${agent.originalId})`);
+            console.log(`⚠️ No loadout found for agent: ${agent.name}`);
             return agent;
         }
 
         console.log(`✅ Applying loadout to ${agent.name}:`, loadout);
 
+        // Create a copy of the agent and apply equipment via InventoryService
         let modifiedAgent = { ...agent };
 
-        // Apply weapon
-        if (loadout.weapon) {
-            const weapon = this.getItemById('weapon', loadout.weapon);
-            if (weapon) {
-                // Store base damage before modification
-                modifiedAgent.baseDamage = modifiedAgent.damage || 0;
-                modifiedAgent.damage = (modifiedAgent.damage || 0) + weapon.damage;
-                modifiedAgent.weaponName = weapon.name;
-                modifiedAgent.weaponDamage = weapon.damage;
-            }
-        }
-
-        // Apply armor
-        if (loadout.armor) {
-            const armor = this.getItemById('armor', loadout.armor);
-            if (armor && armor.protection) {
-                modifiedAgent.protection = (modifiedAgent.protection || 0) + armor.protection;
-            }
-        }
-
-        // Apply utility
-        if (loadout.utility) {
-            const utility = this.getItemById('equipment', loadout.utility);
-            if (utility) {
-                if (utility.hackBonus) {
-                    modifiedAgent.hackBonus = (modifiedAgent.hackBonus || 0) + utility.hackBonus;
-                }
-                if (utility.stealthBonus) {
-                    modifiedAgent.stealthBonus = (modifiedAgent.stealthBonus || 0) + utility.stealthBonus;
-                }
-            }
-        }
+        // Let InventoryService handle the actual equipment application
+        inventoryService.applyAgentEquipment(modifiedAgent, loadout);
 
         return modifiedAgent;
     });

@@ -554,62 +554,29 @@ class RPGInventory {
     constructor(maxWeight = 100, maxSize = 20) {
         this.maxWeight = maxWeight;
         this.maxSize = maxSize;
+        this.owner = null; // Will be set later
+
+        // Delegate to InventoryService if available
+        this.inventoryService = window.GameServices?.inventoryService;
+
+        // Fallback storage if service not available
         this.items = [];
         this.credits = 0;
-        this.owner = null; // Will be set later
-        this.equipped = {}; // Equipment slots
-        this.currentWeight = 0; // Track current weight
+        this.equipped = {};
+        this.currentWeight = 0;
     }
 
     addItem(item, quantity = 1) {
-        // Check weight limit
-        this.currentWeight = this.getTotalWeight();
-        const itemWeight = item.weight || 1;
-        const maxWeight = this.maxWeight || (this.owner?.derivedStats?.carryWeight) || 100;
-
-        if (this.currentWeight + itemWeight * quantity > maxWeight) {
-            return false;
-        }
-
-        // Check for stackable items
-        if (item.stackable) {
-            const existingStack = this.items.find(i => i.id === item.id);
-            if (existingStack) {
-                existingStack.quantity += quantity;
-                return true;
-            }
-        }
-
-        // Check inventory size
-        if (this.items.length >= this.maxSize) {
-            return false;
-        }
-
-        // Add item
-        this.items.push({
+        // Always use InventoryService
+        return this.inventoryService.pickupItem({
             ...item,
-            quantity: quantity,
-            instanceId: `${item.id}_${Date.now()}`
+            quantity: quantity
         });
-
-        // Update current weight
-        this.currentWeight = this.getTotalWeight();
-
-        return true;
     }
 
     removeItem(item, quantity = 1) {
-        const index = this.items.findIndex(i =>
-            i.id === item.id || i.instanceId === item.instanceId
-        );
-
-        if (index === -1) return false;
-
-        if (this.items[index].quantity > quantity) {
-            this.items[index].quantity -= quantity;
-        } else {
-            this.items.splice(index, 1);
-        }
+        // Always use InventoryService
+        return this.inventoryService.consumeItem(item.id, quantity);
 
         return true;
     }

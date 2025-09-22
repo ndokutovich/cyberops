@@ -61,6 +61,12 @@ describe('Modal Dialog Tests', () => {
 
     // Test insufficient funds modal with mock data
     it('should show insufficient funds with item data', async () => {
+        // Check if dialogEngine is available
+        if (!game || !game.dialogEngine) {
+            console.error('DialogEngine not available');
+            throw new Error('DialogEngine not initialized');
+        }
+
         game.dialogEngine.closeAll();
         await sleep(50);
 
@@ -91,6 +97,12 @@ describe('Modal Dialog Tests', () => {
 
     // Test save/load/delete confirmation modals
     it('should show save/load/delete confirmations with slot data', async () => {
+        // Check if dialogEngine is available
+        if (!game || !game.dialogEngine) {
+            console.error('DialogEngine not available');
+            throw new Error('DialogEngine not initialized');
+        }
+
         const modalTests = [
             { state: 'save-confirm', parent: 'save-load' },
             { state: 'load-confirm', parent: 'save-load' },

@@ -635,8 +635,9 @@ CyberOpsGame.prototype.initMission = function() {
             // Ensure required properties exist
             agent.maxHealth = agent.maxHealth || agent.health;
             agent.protection = agent.protection || 0;
-            agent.hackBonus = agent.hackBonus || 0;
-            agent.stealthBonus = agent.stealthBonus || 0;
+            // Initialize bonuses through service if not set
+            if (!agent.hackBonus) agent.hackBonus = 0;
+            if (!agent.stealthBonus) agent.stealthBonus = 0;
 
             this.agents.push(agent);
         });
@@ -1311,7 +1312,8 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                         damage = this.calculateDamage(agent, enemy, 'grenade');
                     }
 
-                    enemy.health -= damage;
+                    // Use FormulaService to apply damage
+                    window.GameServices.formulaService.applyDamage(enemy, damage);
                     enemiesHit++;
 
                     if (enemy.health <= 0) {

@@ -138,6 +138,12 @@ describe('Full Coverage Dialog Tests', () => {
     });
 
     it('should test complete hiring flow with mock data', async () => {
+        // Check if dialogEngine is available
+        if (!game || !game.dialogEngine) {
+            console.error('DialogEngine not available');
+            throw new Error('DialogEngine not initialized');
+        }
+
         // Clear state
         game.dialogEngine.closeAll();
         await sleep(50);

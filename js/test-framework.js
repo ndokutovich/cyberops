@@ -23,7 +23,7 @@ class TestFramework {
             verbose: false,
             stopOnFailure: false,
             captureScreenshots: false,
-            timeout: 2000  // Reduced from 5000 to prevent long waits
+            timeout: 5000  // Default timeout, can be overridden per test
         };
     }
 
@@ -336,10 +336,68 @@ class TestFramework {
             console.log('🎉 All tests passed!');
         } else if (this.stats.failed > 0) {
             console.log('💔 Some tests failed');
+            this.printFailedTestsSummary();
         }
     }
 
+    // Print all failed tests grouped together for easy copy-paste
+    printFailedTestsSummary() {
+        console.log('\n' + '='.repeat(50));
+        console.log('❌ FAILED TESTS SUMMARY (for easy copy-paste)');
+        console.log('='.repeat(50));
+
+        const failedTests = [];
+        this.results.forEach(suite => {
+            suite.tests.forEach(test => {
+                if (test.status === 'failed') {
+                    failedTests.push({
+                        suite: suite.name,
+                        test: test.name,
+                        error: test.error
+                    });
+                }
+            });
+        });
+
+        if (failedTests.length === 0) {
+            return;
+        }
+
+        // Print in a compact format for easy copy-paste
+        console.log(`\nFailed: ${failedTests.length} tests\n`);
+
+        failedTests.forEach((failure, index) => {
+            console.log(`${index + 1}. [${failure.suite}] ${failure.test}`);
+            console.log(`   Error: ${failure.error}`);
+        });
+
+        console.log('\n' + '-'.repeat(50));
+        console.log('Copy-paste friendly format:');
+        console.log('-'.repeat(50));
+
+        // Ultra-compact format for pasting
+        failedTests.forEach(failure => {
+            console.log(`❌ ${failure.test}: ${failure.error}`);
+        });
+
+        console.log('='.repeat(50));
+    }
+
     generateHTMLReport() {
+        // Collect failed tests
+        const failedTests = [];
+        this.results.forEach(suite => {
+            suite.tests.forEach(test => {
+                if (test.status === 'failed') {
+                    failedTests.push({
+                        suite: suite.name,
+                        test: test.name,
+                        error: test.error
+                    });
+                }
+            });
+        });
+
         const html = `
         <!DOCTYPE html>
         <html>
@@ -356,6 +414,11 @@ class TestFramework {
                 .error { color: #f00; margin-left: 40px; font-size: 12px; }
                 .stats { border: 2px solid #0f0; padding: 10px; margin: 20px 0; }
                 .stats h2 { margin: 0 0 10px 0; }
+                .failed-summary { border: 2px solid #f00; padding: 10px; margin: 20px 0; background: #2a0000; }
+                .failed-summary h2 { color: #f00; margin: 0 0 10px 0; }
+                .failed-item { margin: 5px 0; color: #ff6666; }
+                .copy-section { background: #111; padding: 10px; margin: 10px 0; border: 1px dashed #666; }
+                .copy-section pre { margin: 0; color: #ccc; white-space: pre-wrap; }
             </style>
         </head>
         <body>
@@ -368,6 +431,21 @@ class TestFramework {
                 <div>⏭️ Skipped: ${this.stats.skipped}</div>
                 <div>⏱️ Duration: ${this.stats.duration.toFixed(2)}ms</div>
             </div>
+            ${failedTests.length > 0 ? `
+                <div class="failed-summary">
+                    <h2>❌ Failed Tests Summary (${failedTests.length})</h2>
+                    ${failedTests.map((failure, index) => `
+                        <div class="failed-item">
+                            ${index + 1}. [${failure.suite}] ${failure.test}
+                            <div style="margin-left: 20px; font-size: 12px;">Error: ${failure.error}</div>
+                        </div>
+                    `).join('')}
+                    <div class="copy-section">
+                        <strong>Copy-paste format:</strong>
+                        <pre>${failedTests.map(f => `❌ ${f.test}: ${f.error}`).join('\n')}</pre>
+                    </div>
+                </div>
+            ` : ''}
             ${this.results.map(suite => `
                 <div class="suite">
                     <div class="suite-title">📦 ${suite.name}</div>

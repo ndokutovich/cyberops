@@ -639,22 +639,18 @@ CyberOpsGame.prototype.update = function() {
                                 actualDamage = Math.max(1, actualDamage - agent.protection);
                             }
 
-                            if (agent.shield > 0) {
-                                agent.shield -= actualDamage;
+                            // Use FormulaService to apply damage properly
+                            const damageResult = window.GameServices.formulaService.applyDamage(agent, actualDamage);
+                            if (damageResult.isDead) {
+                                // Log agent death
+                                if (this.logDeath) this.logDeath(agent);
                             } else {
-                                agent.health -= actualDamage;
-                                if (agent.health <= 0) {
-                                    agent.alive = false;
-                                    // Log agent death
-                                    if (this.logDeath) this.logDeath(agent);
-                                } else {
-                                    // Log hit - use projectile owner or generic enemy
-                                    if (this.logCombatHit) {
-                                        const attacker = proj.owner ?
-                                            this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
-                                            { name: 'Enemy' };
-                                        this.logCombatHit(attacker, agent, actualDamage);
-                                    }
+                                // Log hit - use projectile owner or generic enemy
+                                if (this.logCombatHit) {
+                                    const attacker = proj.owner ?
+                                        this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
+                                        { name: 'Enemy' };
+                                    this.logCombatHit(attacker, agent, actualDamage);
                                 }
                             }
                             // Play hit sound
@@ -685,9 +681,9 @@ CyberOpsGame.prototype.update = function() {
                             if (closestAgent.shield > 0) {
                                 closestAgent.shield -= actualDamage;
                             } else {
-                                closestAgent.health -= actualDamage;
-                                if (closestAgent.health <= 0) {
-                                    closestAgent.alive = false;
+                                // Use FormulaService to apply damage
+                                const damageResult = window.GameServices.formulaService.applyDamage(closestAgent, actualDamage);
+                                if (damageResult.isDead) {
                                     // Log agent death
                                     if (this.logDeath) this.logDeath(closestAgent);
                                 } else {
@@ -720,9 +716,9 @@ CyberOpsGame.prototype.update = function() {
                                 );
                             }
 
-                            enemy.health -= actualDamage;
-                            if (enemy.health <= 0) {
-                                enemy.alive = false;
+                            // Use FormulaService to apply damage
+                            const damageResult = window.GameServices.formulaService.applyDamage(enemy, actualDamage);
+                            if (damageResult.isDead) {
                                 this.totalEnemiesDefeated++;
 
                                 console.log(`⚔️ ENEMY KILLED (alternate path)! Details:`, {
@@ -779,9 +775,9 @@ CyberOpsGame.prototype.update = function() {
                                 );
                             }
 
-                            closestEnemy.health -= actualDamage;
-                            if (closestEnemy.health <= 0) {
-                                closestEnemy.alive = false;
+                            // Use FormulaService to apply damage
+                            const damageResult = window.GameServices.formulaService.applyDamage(closestEnemy, actualDamage);
+                            if (damageResult.isDead) {
                                 this.totalEnemiesDefeated++;
                                 // Log enemy death
                                 if (this.logDeath) this.logDeath(closestEnemy);
@@ -799,7 +795,7 @@ CyberOpsGame.prototype.update = function() {
                 }
                 return false;
             }
-            
+
             proj.x += (dx / dist) * proj.speed;
             proj.y += (dy / dist) * proj.speed;
             return true;

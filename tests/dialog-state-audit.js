@@ -94,16 +94,22 @@ describe('Complete Dialog State Audit', () => {
     ];
 
     it('should test navigation to ALL simple states', async () => {
+        // Check if dialogEngine is available
+        if (!game || !game.dialogEngine) {
+            console.error('DialogEngine not available');
+            throw new Error('DialogEngine not initialized');
+        }
+
         const testedStates = [];
         const failedStates = [];
 
         for (const state of SIMPLE_STATES) {
             game.dialogEngine.closeAll();
-            await sleep(50);
+            await sleep(20);  // Reduced delay
 
             try {
                 game.dialogEngine.navigateTo(state);
-                await sleep(50);
+                await sleep(20);  // Reduced delay
 
                 if (game.dialogEngine.currentState === state) {
                     testedStates.push(state);
@@ -142,6 +148,16 @@ describe('Complete Dialog State Audit', () => {
     });
 
     it('should test all parent-child transitions', async () => {
+        // Check if dialogEngine is available
+        if (!game || !game.dialogEngine) {
+            console.error('DialogEngine not available');
+            throw new Error('DialogEngine not initialized');
+        }
+
+        // Ensure game has credits and research points for transition conditions
+        game.credits = 10000;  // Ensure hasCredits condition passes
+        game.researchPoints = 100;  // Ensure research-related conditions pass
+
         const parentChildTransitions = [
             { from: 'agent-management', to: 'hire-agents', name: 'Agent Management → Hire Agents' },
             { from: 'research-lab', to: 'tech-tree', name: 'Research Lab → Tech Tree' },
@@ -152,44 +168,65 @@ describe('Complete Dialog State Audit', () => {
         const results = [];
 
         for (const transition of parentChildTransitions) {
-            game.dialogEngine.closeAll();
-            await sleep(50);
+            try {
+                game.dialogEngine.closeAll();
+                await sleep(20);  // Reduced delay
 
-            // Navigate to parent
-            game.dialogEngine.navigateTo(transition.from);
-            await sleep(50);
+                // Navigate to parent
+                game.dialogEngine.navigateTo(transition.from);
+                await sleep(20);  // Reduced delay
 
-            const parentOk = game.dialogEngine.currentState === transition.from;
+                const parentOk = game.dialogEngine.currentState === transition.from;
 
-            // Navigate to child
-            game.dialogEngine.navigateTo(transition.to);
-            await sleep(50);
+                // Navigate to child
+                game.dialogEngine.navigateTo(transition.to);
+                await sleep(20);  // Reduced delay
 
-            const childOk = game.dialogEngine.currentState === transition.to;
+                const childOk = game.dialogEngine.currentState === transition.to;
 
-            // Check if stack properly increased
-            const stackOk = game.dialogEngine.stateStack.length === 2;
+                // Check if stack properly increased
+                const stackOk = game.dialogEngine.stateStack.length === 2;
 
-            results.push({
-                name: transition.name,
-                success: parentOk && childOk && stackOk,
-                parentOk,
-                childOk,
-                stackOk,
-                stackDepth: game.dialogEngine.stateStack.length
-            });
+                results.push({
+                    name: transition.name,
+                    success: parentOk && childOk && stackOk,
+                    parentOk,
+                    childOk,
+                    stackOk,
+                    stackDepth: game.dialogEngine.stateStack.length
+                });
+            } catch (error) {
+                console.error(`Error testing transition ${transition.name}:`, error);
+                results.push({
+                    name: transition.name,
+                    success: false,
+                    error: error.message
+                });
+            }
         }
 
         const failures = results.filter(r => !r.success);
 
         if (failures.length > 0) {
-            console.error('❌ Failed transitions:', failures);
+            console.error('❌ Failed transitions:');
+            failures.forEach(f => {
+                console.error(`  - ${f.name}: parent=${f.parentOk}, child=${f.childOk}, stack=${f.stackOk} (depth=${f.stackDepth})`);
+                if (f.error) {
+                    console.error(`    Error: ${f.error}`);
+                }
+            });
         }
 
         assertEqual(failures.length, 0, `${failures.length} transitions failed`);
     });
 
     it('should test back navigation from all states', async () => {
+        // Check if dialogEngine is available
+        if (!game || !game.dialogEngine) {
+            console.error('DialogEngine not available');
+            throw new Error('DialogEngine not initialized');
+        }
+
         const testCases = [
             { path: ['agent-management'], expectedBack: null },
             { path: ['agent-management', 'hire-agents'], expectedBack: 'agent-management' },
@@ -282,6 +319,12 @@ describe('Complete Dialog State Audit', () => {
     });
 
     it('should test state refresh without losing position', async () => {
+        // Check if dialogEngine is available
+        if (!game || !game.dialogEngine) {
+            console.error('DialogEngine not available');
+            throw new Error('DialogEngine not initialized');
+        }
+
         const refreshableStates = ['arsenal', 'character', 'agent-management', 'settings'];
         const results = [];
 

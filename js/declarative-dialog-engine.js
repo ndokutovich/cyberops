@@ -962,6 +962,7 @@ class DeclarativeDialogEngine {
         this.validatorRegistry.set('never', () => false);
         this.validatorRegistry.set('hasAgents', function() { return this.activeAgents?.length > 0; });
         this.validatorRegistry.set('hasCredits', function() { return this.credits > 0; });
+        this.validatorRegistry.set('hasResearchPoints', function() { return this.researchPoints > 0; });
         this.validatorRegistry.set('hasInitialized', function() { return this.initialized === true; });
     }
 

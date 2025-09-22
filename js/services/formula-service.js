@@ -4,6 +4,10 @@
  */
 class FormulaService {
     constructor() {
+        // Initialize logger
+        this.logger = window.getLogger ? window.getLogger('FormulaService') : null;
+        if (this.logger) this.logger.debug('FormulaService initialized');
+
         // Game constants
         this.constants = {
             // Damage constants
@@ -205,7 +209,11 @@ class FormulaService {
         // Apply armor reduction
         damage = Math.max(this.constants.MIN_DAMAGE, damage - targetArmor);
 
-        return Math.floor(damage);
+        const finalDamage = Math.floor(damage);
+        if (this.logger) {
+            this.logger.trace(`Damage calculated: base=${baseDamage}, weapon=${weaponBonus}, final=${finalDamage}`);
+        }
+        return finalDamage;
     }
 
     /**
@@ -632,6 +640,104 @@ class FormulaService {
     isWithinRange(x1, y1, x2, y2, range) {
         const distance = this.calculateDistance(x1, y1, x2, y2);
         return distance <= range;
+    }
+
+    /**
+     * Apply damage to an entity (handles shields, health, death)
+     * @param {Object} target - Target entity to damage
+     * @param {number} damage - Amount of damage to apply
+     * @returns {Object} Damage result {actualDamage, shieldDamage, healthDamage, isDead}
+     */
+    applyDamage(target, damage) {
+        let shieldDamage = 0;
+        let healthDamage = 0;
+        let remainingDamage = damage;
+
+        // Apply to shield first if available
+        if (target.shield > 0) {
+            shieldDamage = Math.min(target.shield, remainingDamage);
+            target.shield -= shieldDamage;
+            remainingDamage -= shieldDamage;
+        }
+
+        // Apply remaining damage to health
+        if (remainingDamage > 0) {
+            healthDamage = Math.min(target.health, remainingDamage);
+            target.health -= healthDamage;
+        }
+
+        // Check if entity died
+        const isDead = target.health <= 0;
+        if (isDead) {
+            target.alive = false;
+            target.health = 0;
+        }
+
+        if (this.logger) {
+            this.logger.debug(`Applied ${damage} damage to ${target.name || 'entity'}: shield -${shieldDamage}, health -${healthDamage}, isDead=${isDead}`);
+        }
+
+        return {
+            actualDamage: shieldDamage + healthDamage,
+            shieldDamage,
+            healthDamage,
+            isDead
+        };
+    }
+
+    /**
+     * Heal an entity
+     * @param {Object} target - Target entity to heal
+     * @param {number} amount - Amount to heal
+     * @returns {number} Actual amount healed
+     */
+    healEntity(target, amount) {
+        const maxHealth = target.maxHealth || 100;
+        const oldHealth = target.health;
+        target.health = Math.min(maxHealth, target.health + amount);
+        return target.health - oldHealth;
+    }
+
+    /**
+     * Apply stat modification to an entity (training, upgrades, etc)
+     * @param {Object} entity - Entity to modify
+     * @param {string} stat - Stat name to modify
+     * @param {number} value - Amount to add/modify
+     * @param {boolean} isPercentage - Whether value is a percentage
+     * @returns {Object} Modified stat info
+     */
+    modifyStat(entity, stat, value, isPercentage = false) {
+        const oldValue = entity[stat] || 0;
+        let newValue;
+
+        if (isPercentage) {
+            newValue = oldValue * (1 + value / 100);
+        } else {
+            newValue = oldValue + value;
+        }
+
+        // Apply stat-specific limits
+        switch (stat) {
+            case 'accuracy':
+                newValue = Math.min(Math.max(newValue, 0), 100);
+                break;
+            case 'health':
+                entity.maxHealth = (entity.maxHealth || 100) + value;
+                newValue = Math.min(newValue, entity.maxHealth);
+                break;
+            case 'speed':
+                newValue = Math.max(newValue, 1);
+                break;
+        }
+
+        entity[stat] = newValue;
+
+        return {
+            stat,
+            oldValue,
+            newValue,
+            change: newValue - oldValue
+        };
     }
 }
 

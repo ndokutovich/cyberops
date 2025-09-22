@@ -75,9 +75,11 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **engine-integration.js**: Bridge between content system and existing engine
 
 ### Service Layer (js/services/ directory)
+- **logger-service.js**: Centralized logging system with timestamp and source tracking
 - **game-services.js**: Service locator pattern for dependency injection
 - **formula-service.js**: Centralized damage and combat formulas
 - **equipment-service.js**: Equipment management and optimization
+- **inventory-service.js**: Centralized inventory and item management
 - **research-service.js**: Research tree progression
 - **rpg-service.js**: RPG system integration service
 
@@ -647,6 +649,7 @@ class GameServices {
         this.researchService = new ResearchService(this.formulaService);
         this.equipmentService = new EquipmentService(this.formulaService);
         this.rpgService = new RPGService(this.formulaService);
+        this.inventoryService = new InventoryService(this.formulaService, this.equipmentService);
     }
 }
 ```
@@ -671,6 +674,13 @@ class GameServices {
 - **Auto-Optimization**: Intelligent equipment distribution
 - **Equipment Effects**: Apply bonuses to agent stats
 - **Inventory Tracking**: Available vs equipped items
+
+#### InventoryService
+- **Item Management**: Centralized inventory for weapons, armor, utility items
+- **Equipment Tracking**: Tracks what each agent has equipped
+- **Pickup/Drop System**: Manages ground items and collectables
+- **Buy/Sell Operations**: Handles shop transactions
+- **Sync Operations**: Keeps equipment counts synchronized
 
 #### RPGService
 - **Character Progression**: XP, leveling, skill points
@@ -994,11 +1004,59 @@ game.dialogEngine.stateData = { selectedAgent: mockAgent };
 - Use safety checks for optional systems
 - Provide fallbacks for missing features
 
+### Logging System (REQUIRED for all new code)
+**IMPORTANT: console.log is DEPRECATED - Use Logger for ALL logging operations**
+
+The game uses a centralized logging system (logger-service.js) that provides:
+- Timestamp tracking (HH:mm:ss.SSS format)
+- Source class identification
+- Six log levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL
+- Color-coded console output for better visibility
+- Log history for debugging (last 1000 entries)
+
+#### Usage in Code:
+```javascript
+// Initialize logger in constructor
+constructor() {
+    this.logger = window.getLogger ? window.getLogger('ClassName') : null;
+    if (this.logger) this.logger.debug('ClassName initialized');
+}
+
+// Use appropriate log levels
+if (this.logger) this.logger.trace('Detailed diagnostic info');
+if (this.logger) this.logger.debug('Debug information');
+if (this.logger) this.logger.info('General information');
+if (this.logger) this.logger.warn('Warning message');
+if (this.logger) this.logger.error('Error occurred', errorDetails);
+if (this.logger) this.logger.fatal('Critical system failure');
+```
+
+#### Output Format:
+```
+[14:25:33.123] [FormulaService] [DEBUG] FormulaService initialized
+[14:25:33.456] [InventoryService] [INFO] 🔫 Weapon picked up: Plasma Rifle
+[14:25:33.890] [FormulaService] [WARN] No armor equipped for protection
+```
+
+#### Rules:
+1. **NEVER use console.log directly** - Only Logger class itself may use console methods
+2. **Always check if logger exists** before calling: `if (this.logger)`
+3. **Use appropriate log level**:
+   - TRACE: Very detailed info (loops, calculations)
+   - DEBUG: Development info (state changes, method calls)
+   - INFO: Important events (item pickup, level complete)
+   - WARN: Potential issues (missing items, fallback used)
+   - ERROR: Errors that can be recovered from
+   - FATAL: Critical errors requiring immediate attention
+4. **Include context** in log messages (entity names, values, states)
+5. **Keep emojis** for important user-facing events (pickups, achievements)
+
 ### Debugging
-- Console logging for major events with emojis for easy identification
+- Use Logger for all debugging output
 - Debug flags for pathfinding, vision cones, etc.
 - Comprehensive error messages with context
-- Check console for mission system initialization messages
+- Check logger output for service initialization and operations
+- Access log history: `Logger.getHistory({source: 'InventoryService', level: LogLevel.WARN})`
 
 ## Common Pitfalls to Avoid
 

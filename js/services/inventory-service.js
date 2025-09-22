@@ -7,6 +7,9 @@ class InventoryService {
         this.formulaService = formulaService;
         this.equipmentService = equipmentService;
 
+        // Initialize logger
+        this.logger = window.getLogger ? window.getLogger('InventoryService') : null;
+
         // Master inventory state
         this.inventory = {
             weapons: [],      // Array of {id, name, damage, range, cost, owned, equipped}
@@ -35,26 +38,48 @@ class InventoryService {
      * Initialize inventory from game state
      */
     initializeFromGame(game) {
+        if (this.logger) this.logger.info('Initializing from game state');
+
         // Import existing weapons
         if (game.weapons) {
             this.inventory.weapons = game.weapons.map(w => ({
                 ...w,
                 equipped: w.equipped || 0
             }));
+            if (this.logger) this.logger.debug(`Imported ${game.weapons.length} weapons`);
         }
 
         // Import existing equipment
         if (game.equipment) {
+            if (this.logger) this.logger.debug(`Processing ${game.equipment.length} equipment items`);
             game.equipment.forEach(item => {
-                const category = this.getItemCategory(item.type || item.slot);
+                let category = this.getItemCategory(item.type || item.slot);
+
+                // For generic 'equipment' type, categorize based on item properties
+                if (category === 'equipment') {
+                    if (item.protection || item.defense) {
+                        category = 'armor';
+                    } else if (item.damage && !item.range) {
+                        category = 'utility'; // Explosives
+                    } else {
+                        category = 'utility'; // Default for other equipment
+                    }
+                }
+
                 if (category && this.inventory[category]) {
                     this.inventory[category].push({
                         ...item,
                         owned: item.owned || 1,
                         equipped: item.equipped || 0
                     });
+                    if (this.logger) this.logger.debug(`Added ${item.name} to ${category}`);
                 }
             });
+
+            // Log final counts
+            if (this.logger) {
+                this.logger.info(`Equipment imported: ${this.inventory.armor.length} armor, ${this.inventory.utility.length} utility items`);
+            }
         }
 
         // Import agent loadouts
@@ -90,6 +115,11 @@ class InventoryService {
         if (typeStr.includes('consumable') || typeStr === 'stim' || typeStr === 'grenade') {
             return 'consumables';
         }
+        // Handle generic 'equipment' type - categorize based on item properties
+        if (typeStr === 'equipment') {
+            // This will be determined by the actual item properties in categorizeEquipment
+            return 'equipment';
+        }
         return null;
     }
 
@@ -105,7 +135,7 @@ class InventoryService {
         // Handle intel
         if (item.type === 'intel') {
             this.inventory.intel += (item.value || 1);
-            console.log(`📊 Intel collected: +${item.value || 1} (Total: ${this.inventory.intel})`);
+            if (this.logger) this.logger.info(`📊 Intel collected: +${item.value || 1} (Total: ${this.inventory.intel})`);
             return true;
         }
 
@@ -113,7 +143,7 @@ class InventoryService {
         if (item.type === 'credits' || item.type === 'money') {
             const value = item.value || 100;
             // Credits are managed by the game, just log
-            console.log(`💰 Credits collected: +${value}`);
+            if (this.logger) this.logger.info(`💰 Credits collected: +${value}`);
             return true;
         }
 
@@ -138,7 +168,7 @@ class InventoryService {
                 this.inventory.weapons.push(weaponEntry);
             }
 
-            console.log(`🔫 Weapon picked up: ${weaponEntry.name} (Owned: ${weaponEntry.owned})`);
+            if (this.logger) this.logger.info(`🔫 Weapon picked up: ${weaponEntry.name} (Owned: ${weaponEntry.owned})`);
 
             // Auto-equip if agent has no weapon
             if (!agent.weapon) {
@@ -174,7 +204,7 @@ class InventoryService {
                 this.inventory.armor.push(armorEntry);
             }
 
-            console.log(`🛡️ Armor picked up: ${armorEntry.name} (Owned: ${armorEntry.owned})`);
+            if (this.logger) this.logger.info(`🛡️ Armor picked up: ${armorEntry.name} (Owned: ${armorEntry.owned})`);
             return true;
         }
 
@@ -196,7 +226,7 @@ class InventoryService {
                 this.inventory.utility.push(utilityEntry);
             }
 
-            console.log(`🔧 Utility picked up: ${utilityEntry.name} (Owned: ${utilityEntry.owned})`);
+            if (this.logger) this.logger.info(`🔧 Utility picked up: ${utilityEntry.name} (Owned: ${utilityEntry.owned})`);
             return true;
         }
 
@@ -216,11 +246,11 @@ class InventoryService {
                 this.inventory.consumables.push(consumableEntry);
             }
 
-            console.log(`💊 Consumable picked up: ${consumableEntry.name} (Quantity: ${consumableEntry.quantity})`);
+            if (this.logger) this.logger.info(`💊 Consumable picked up: ${consumableEntry.name} (Quantity: ${consumableEntry.quantity})`);
             return true;
         }
 
-        console.log(`❓ Unknown item type: ${item.type}`);
+        if (this.logger) this.logger.warn(`❓ Unknown item type: ${item.type}`);
         return false;
     }
 
@@ -259,15 +289,17 @@ class InventoryService {
             (typeof i.id === 'number' && typeof itemId === 'string' && String(i.id) == itemId)
         );
         if (!item) {
-            console.log(`❌ Item not found: ${itemId} (type: ${typeof itemId})`);
-            console.log(`   Available items in ${category}:`, this.inventory[category].map(i => `${i.id} (${typeof i.id})`));
+            if (this.logger) {
+                this.logger.error(`❌ Item not found: ${itemId} (type: ${typeof itemId})`);
+                this.logger.debug(`   Available items in ${category}:`, this.inventory[category].map(i => `${i.id} (${typeof i.id})`));
+            }
             return false;
         }
 
         // Check if we have any unequipped items
         const availableCount = item.owned - item.equipped;
         if (availableCount <= 0) {
-            console.log(`❌ No unequipped ${item.name} available`);
+            if (this.logger) this.logger.warn(`❌ No unequipped ${item.name} available`);
             return false;
         }
 
@@ -275,8 +307,10 @@ class InventoryService {
         loadout[slot] = itemId;
         item.equipped = (item.equipped || 0) + 1;
 
-        console.log(`✅ Equipped ${item.name} to agent ${agentId} in ${slot} slot`);
-        console.log(`📊 ${item.name}: ${item.equipped}/${item.owned} equipped`);
+        if (this.logger) {
+            this.logger.info(`✅ Equipped ${item.name} to agent ${agentId} in ${slot} slot`);
+            this.logger.debug(`📊 ${item.name}: ${item.equipped}/${item.owned} equipped`);
+        }
 
         return true;
     }
@@ -294,7 +328,7 @@ class InventoryService {
         const itemId = loadout[slot];
 
         if (!itemId) {
-            console.log(`❌ No item equipped in ${slot} slot for agent ${agentId}`);
+            if (this.logger) this.logger.warn(`❌ No item equipped in ${slot} slot for agent ${agentId}`);
             return false;
         }
 
@@ -309,7 +343,7 @@ class InventoryService {
             (typeof i.id === 'number' && typeof itemId === 'string' && String(i.id) == itemId)
         );
         if (!item) {
-            console.log(`⚠️ Equipped item not found in inventory: ${itemId} (type: ${typeof itemId})`);
+            if (this.logger) this.logger.warn(`⚠️ Equipped item not found in inventory: ${itemId} (type: ${typeof itemId}`);
             loadout[slot] = null;
             return false;
         }
@@ -318,8 +352,10 @@ class InventoryService {
         loadout[slot] = null;
         item.equipped = Math.max(0, (item.equipped || 0) - 1);
 
-        console.log(`✅ Unequipped ${item.name} from agent ${agentId}`);
-        console.log(`📊 ${item.name}: ${item.equipped}/${item.owned} equipped`);
+        if (this.logger) {
+            this.logger.info(`✅ Unequipped ${item.name} from agent ${agentId}`);
+            this.logger.debug(`📊 ${item.name}: ${item.equipped}/${item.owned} equipped`);
+        }
 
         return true;
     }
@@ -334,12 +370,12 @@ class InventoryService {
         const consumable = this.inventory.consumables.find(c => c.id === itemId);
 
         if (!consumable || consumable.quantity <= 0) {
-            console.log(`❌ Consumable not available: ${itemId}`);
+            if (this.logger) this.logger.warn(`❌ Consumable not available: ${itemId}`);
             return null;
         }
 
         consumable.quantity--;
-        console.log(`💊 Used ${consumable.name} (Remaining: ${consumable.quantity})`);
+        if (this.logger) this.logger.info(`💊 Used ${consumable.name} (Remaining: ${consumable.quantity})`);
 
         return {
             success: true,
@@ -370,7 +406,7 @@ class InventoryService {
         if (existingItem) {
             // Already own this item, increment count
             existingItem.owned = (existingItem.owned || 0) + 1;
-            console.log(`🛒 Purchased another ${existingItem.name} (Total owned: ${existingItem.owned})`);
+            if (this.logger) this.logger.info(`🛒 Purchased another ${existingItem.name} (Total owned: ${existingItem.owned})`);
         } else {
             // New item type
             const newItem = {
@@ -394,7 +430,7 @@ class InventoryService {
             }
 
             items.push(newItem);
-            console.log(`🛒 Purchased new item: ${newItem.name}`);
+            if (this.logger) this.logger.info(`🛒 Purchased new item: ${newItem.name}`);
         }
 
         return {
@@ -435,8 +471,10 @@ class InventoryService {
         item.owned--;
         const sellPrice = item.cost ? Math.floor(item.cost * 0.6) : 100;
 
-        console.log(`💰 Sold ${item.name} for ${sellPrice} credits`);
-        console.log(`📊 ${item.name}: ${item.equipped}/${item.owned} equipped`);
+        if (this.logger) {
+            this.logger.info(`💰 Sold ${item.name} for ${sellPrice} credits`);
+            this.logger.debug(`📊 ${item.name}: ${item.equipped}/${item.owned} equipped`);
+        }
 
         return {
             success: true,
@@ -530,7 +568,7 @@ class InventoryService {
             }
         });
 
-        console.log('📊 Synced equipped counts from loadouts');
+        if (this.logger) this.logger.debug('📊 Synced equipped counts from loadouts');
     }
 
     /**
@@ -582,6 +620,29 @@ class InventoryService {
         }
 
         return agent;
+    }
+
+    /**
+     * Update item count (for buying/selling)
+     */
+    updateItemCount(type, itemId, change) {
+        let items;
+        if (type === 'weapon') {
+            items = this.inventory.weapons;
+        } else if (type === 'armor') {
+            items = this.inventory.armor;
+        } else if (type === 'utility' || type === 'equipment') {
+            items = this.inventory.utility;
+        }
+
+        if (items) {
+            const item = items.find(i => i.id === itemId);
+            if (item) {
+                item.owned = Math.max(0, (item.owned || 0) + change);
+                return true;
+            }
+        }
+        return false;
     }
 }
 
