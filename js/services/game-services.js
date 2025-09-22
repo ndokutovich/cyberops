@@ -59,8 +59,15 @@ class GameServices {
         let baseDamage = 20; // Default base damage
         let weaponBonus = 0;
 
-        // Check for real-time equipped weapon from loadout
-        if (window.game && window.game.agentLoadouts) {
+        // First check if attacker already has weapon data (from equipped weapon)
+        if (attacker.weapon && attacker.weapon.damage) {
+            weaponBonus = attacker.weapon.damage;
+            if (this.formulaService && this.formulaService.logger) {
+                this.formulaService.logger.debug(`⚔️ Using equipped weapon damage: ${weaponBonus} from ${attacker.weapon.type}`);
+            }
+        }
+        // Otherwise check for real-time equipped weapon from loadout
+        else if (window.game && window.game.agentLoadouts) {
             const agentId = attacker.originalId || attacker.id || attacker.name;
             const loadout = window.game.agentLoadouts[agentId];
 
@@ -69,6 +76,9 @@ class GameServices {
                 const equippedWeapon = window.game.weapons.find(w => w.id === loadout.weapon);
                 if (equippedWeapon) {
                     weaponBonus = equippedWeapon.damage || 0;
+                    if (this.formulaService && this.formulaService.logger) {
+                        this.formulaService.logger.debug(`🔫 Using loadout weapon damage: ${weaponBonus} from ${equippedWeapon.name}`);
+                    }
                 }
             }
         }

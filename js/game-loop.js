@@ -455,7 +455,10 @@ CyberOpsGame.prototype.update = function() {
                     if (!item.collected) {
                         // Check if quest is required and active
                         if (item.questRequired) {
-                            const questActive = this.activeQuests && this.activeQuests.some(q => q.id === item.questRequired);
+                            // Check both mission activeQuests (object) and NPC quests (array)
+                            const missionQuestActive = this.activeQuests && this.activeQuests[item.questRequired];
+                            const npcQuestActive = this.npcActiveQuests && this.npcActiveQuests.some(q => q.id === item.questRequired);
+                            const questActive = missionQuestActive || npcQuestActive;
                             if (!questActive) return; // Skip if quest not active
                         }
 
@@ -465,6 +468,14 @@ CyberOpsGame.prototype.update = function() {
                         );
                         if (dist < 1) {
                             item.collected = true;
+                            if (this.logger) {
+                                this.logger.debug(`📦 Pickup by agent:`, {
+                                    name: agent.name,
+                                    id: agent.id,
+                                    originalId: agent.originalId,
+                                    index: this.agents.indexOf(agent)
+                                });
+                            }
                             this.handleCollectablePickup(agent, item);
                             // Log item collection
                             if (this.logItemCollected) this.logItemCollected(agent, item);
@@ -1052,8 +1063,25 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
     const success = inventoryService.pickupItem(agent, item);
 
     if (success) {
-        // Sync inventory state back to game
-        this.weapons = inventoryService.inventory.weapons;
+        // DO NOT replace the entire weapons array! This was wiping out all weapons!
+        // The InventoryService maintains its own state, we don't need to sync back
+        // Only sync if InventoryService has MORE weapons than the game (new weapon added)
+        if (inventoryService.inventory.weapons.length > 0) {
+            // Update game's weapons array with new/updated items from InventoryService
+            // But preserve existing weapons that might not be in InventoryService
+            inventoryService.inventory.weapons.forEach(invWeapon => {
+                const existingWeapon = this.weapons.find(w => w.id === invWeapon.id);
+                if (!existingWeapon) {
+                    // New weapon, add it
+                    this.weapons.push({...invWeapon});
+                    if (this.logger) this.logger.debug(`📦 Added new weapon to game: ${invWeapon.name}`);
+                } else {
+                    // Update counts
+                    existingWeapon.owned = invWeapon.owned;
+                    existingWeapon.equipped = invWeapon.equipped;
+                }
+            });
+        }
 
         // Track collected weapons for mission rewards
         if (item.type === 'weapon' && item.weapon) {

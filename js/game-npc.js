@@ -253,10 +253,11 @@ NPC.prototype.giveQuest = function(quest, game) {
         quest.active = true;
 
         // Add to active quests for tracking
-        if (!game.activeQuests) {
-            game.activeQuests = [];
+        // Use separate array for NPC quests to avoid conflict with mission executor
+        if (!game.npcActiveQuests) {
+            game.npcActiveQuests = [];
         }
-        game.activeQuests.push(quest);
+        game.npcActiveQuests.push(quest);
 
         // Use introDialog if available, otherwise use description
         const questText = quest.introDialog || quest.description || `I have a task for you: ${quest.name}`;

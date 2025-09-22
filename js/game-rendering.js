@@ -277,7 +277,10 @@ CyberOpsGame.prototype.render = function() {
                     if (!item.collected) {
                         // Check if quest is required and active
                         if (item.questRequired && item.hidden) {
-                            const questActive = this.activeQuests && this.activeQuests.some(q => q.id === item.questRequired);
+                            // Check both mission activeQuests (object) and NPC quests (array)
+                            const missionQuestActive = this.activeQuests && this.activeQuests[item.questRequired];
+                            const npcQuestActive = this.npcActiveQuests && this.npcActiveQuests.some(q => q.id === item.questRequired);
+                            const questActive = missionQuestActive || npcQuestActive;
                             if (!questActive) return; // Don't render if quest not active
                         }
 

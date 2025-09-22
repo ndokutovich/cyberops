@@ -170,10 +170,35 @@ class InventoryService {
 
             if (this.logger) this.logger.info(`🔫 Weapon picked up: ${weaponEntry.name} (Owned: ${weaponEntry.owned})`);
 
-            // Auto-equip if agent has no weapon
-            if (!agent.weapon) {
-                const agentId = agent.originalId || agent.id || agent.name;
-                this.equipItem(agentId, 'weapon', item.weapon);
+            // Auto-equip ONLY if agent has no weapon equipped
+            // Use originalId for loadout management (this is the hub ID like "Alex 'Shadow' Chen")
+            const loadoutId = agent.originalId || agent.name || agent.id;
+
+            // Debug: log what ID we're using
+            if (this.logger) {
+                this.logger.debug(`🔍 Agent ID resolution for ${agent.name}:`, {
+                    originalId: agent.originalId,
+                    id: agent.id,
+                    name: agent.name,
+                    loadoutId: loadoutId
+                });
+            }
+
+            // Check if agent already has a weapon in their loadout
+            const currentLoadout = this.agentLoadouts[loadoutId];
+
+            if (!currentLoadout || !currentLoadout.weapon) {
+                // Ensure loadout exists
+                if (!this.agentLoadouts[loadoutId]) {
+                    this.agentLoadouts[loadoutId] = {
+                        weapon: null,
+                        armor: null,
+                        utility: null
+                    };
+                }
+
+                // Equip using the loadout ID (hub ID)
+                this.equipItem(loadoutId, 'weapon', item.weapon);
 
                 // Apply weapon to agent immediately
                 agent.weapon = {
@@ -181,6 +206,10 @@ class InventoryService {
                     damage: weaponEntry.damage,
                     range: weaponEntry.range
                 };
+
+                if (this.logger) this.logger.info(`⚔️ Auto-equipped ${weaponEntry.name} to ${agent.name} (no weapon equipped)`);
+            } else {
+                if (this.logger) this.logger.debug(`📦 Added ${weaponEntry.name} to inventory (${agent.name} already has ${currentLoadout.weapon} equipped)`);
             }
 
             return true;

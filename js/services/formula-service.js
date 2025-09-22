@@ -5,7 +5,7 @@
 class FormulaService {
     constructor() {
         // Initialize logger
-        this.logger = window.getLogger ? window.getLogger('FormulaService') : null;
+        this.logger = window.Logger ? new window.Logger('FormulaService') : null;
         if (this.logger) this.logger.debug('FormulaService initialized');
 
         // Game constants

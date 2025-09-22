@@ -232,6 +232,25 @@ CyberOpsGame.prototype.startMission = function() {
             this.saveToSlot('pre_mission_autosave', `Pre-Mission: ${missionName}`);
         }
 
+        // Initialize InventoryService with current weapons before mission starts
+        if (this.gameServices && this.gameServices.inventoryService) {
+            if (this.weapons && this.weapons.length > 0) {
+                // Ensure InventoryService has the current weapons
+                this.gameServices.inventoryService.inventory.weapons = this.weapons.map(w => ({
+                    ...w,
+                    owned: w.owned || 1,
+                    equipped: w.equipped || 0
+                }));
+                if (this.logger) this.logger.info(`📦 Synced ${this.weapons.length} weapons to InventoryService for mission`);
+            }
+            // Also sync equipment
+            if (this.equipment && this.equipment.length > 0) {
+                // Re-initialize to ensure all data is synced
+                this.gameServices.inventoryService.initializeFromGame(this);
+                if (this.logger) this.logger.info(`📦 Re-initialized InventoryService with game state`);
+            }
+        }
+
         document.getElementById('missionBriefing').style.display = 'none';
         const gameHUD = document.getElementById('gameHUD');
         gameHUD.style.display = 'block';
@@ -1209,17 +1228,38 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
         });
 
         if (nearest) {
+            // Calculate damage from weapon if equipped, otherwise use base damage
+            let damage = agent.damage || 10; // Base damage fallback
+
+            // Log comprehensive weapon info for debugging
+            if (this.logger) {
+                this.logger.info(`🔫 Weapon check for ${agent.name}:`, {
+                    hasWeapon: !!agent.weapon,
+                    weaponType: agent.weapon?.type || 'none',
+                    weaponDamage: agent.weapon?.damage || 0,
+                    baseDamage: agent.damage,
+                    finalDamage: agent.weapon?.damage || damage
+                });
+            }
+
+            if (agent.weapon && agent.weapon.damage) {
+                damage = agent.weapon.damage;
+                if (this.logger) this.logger.info(`🎯 ${agent.name} shooting with ${agent.weapon.type} (damage: ${damage})`);
+            } else {
+                if (this.logger) this.logger.warn(`⚠️ ${agent.name} shooting with base damage: ${damage} (no weapon equipped)`);
+            }
+
             this.projectiles.push({
                 x: agent.x,
                 y: agent.y,
                 targetX: nearest.x,
                 targetY: nearest.y,
                 targetEnemy: nearest, // Store the actual target
-                damage: agent.damage,
+                damage: damage,
                 speed: 0.5,
                 owner: agent.id,
                 shooter: agent, // Store shooter for RPG calculations
-                weaponType: 'rifle' // Default weapon type
+                weaponType: agent.weapon?.type || 'rifle' // Use actual weapon type if available
             });
 
             // Trigger recoil effect for shooting

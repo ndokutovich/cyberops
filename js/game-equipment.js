@@ -597,6 +597,24 @@ CyberOpsGame.prototype.equipItem = function(agentId, slot, itemId) {
             this.gameServices.inventoryService.applyAgentEquipment(agent);
         }
 
+        // If we're in a mission, also update the mission agent's weapon
+        if (this.currentScreen === 'game' && this.agents && slot === 'weapon') {
+            const missionAgent = this.agents.find(a =>
+                a.originalId === agentId || a.name === agentId
+            );
+            if (missionAgent && itemId) {
+                const weaponData = this.gameServices.inventoryService.inventory.weapons.find(w => w.id === itemId);
+                if (weaponData) {
+                    missionAgent.weapon = {
+                        type: itemId,
+                        damage: weaponData.damage,
+                        range: weaponData.range || 5
+                    };
+                    if (this.logger) this.logger.info(`⚔️ Updated mission agent ${missionAgent.name} weapon: ${weaponData.name} (damage: ${weaponData.damage})`);
+                }
+            }
+        }
+
         // Refresh UI
         this.refreshEquipmentUI();
     }
@@ -621,6 +639,17 @@ CyberOpsGame.prototype.unequipItem = function(agentId, slot) {
         );
         if (agent && slot === 'weapon') {
             agent.weapon = null; // Remove weapon from agent
+        }
+
+        // If we're in a mission, also update the mission agent's weapon
+        if (this.currentScreen === 'game' && this.agents && slot === 'weapon') {
+            const missionAgent = this.agents.find(a =>
+                a.originalId === agentId || a.name === agentId
+            );
+            if (missionAgent) {
+                missionAgent.weapon = null;
+                if (this.logger) this.logger.info(`🚫 Removed weapon from mission agent ${missionAgent.name}`);
+            }
         }
 
         // Refresh UI
@@ -1196,6 +1225,35 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         ).length;
         logger.info(`Loadouts optimized! Equipped weapons to ${equipped} agents`);
     }
+
+    // If we're in a mission, update the agents' weapon properties immediately
+    if (this.currentScreen === 'game' && this.agents) {
+        this.agents.forEach(agent => {
+            const loadoutId = agent.originalId || agent.name || agent.id;
+            const loadout = invService.agentLoadouts[loadoutId];
+
+            if (loadout && loadout.weapon) {
+                // Find the weapon details
+                const weaponData = invService.inventory.weapons.find(w => w.id === loadout.weapon);
+                if (weaponData) {
+                    // Update the agent's weapon property for damage calculation
+                    agent.weapon = {
+                        type: loadout.weapon,
+                        damage: weaponData.damage,
+                        range: weaponData.range || 5
+                    };
+                    if (this.logger) this.logger.info(`⚔️ Updated ${agent.name}'s weapon to ${weaponData.name} (damage: ${weaponData.damage})`);
+                } else {
+                    if (this.logger) this.logger.warn(`⚠️ Weapon ${loadout.weapon} not found in inventory`);
+                }
+            } else {
+                // No weapon equipped, clear it
+                agent.weapon = null;
+                if (this.logger) this.logger.debug(`🚫 ${agent.name} has no weapon equipped`);
+            }
+        });
+    }
+
     if (this.logger) this.logger.info('✅ Loadouts optimized successfully');
 };
 
@@ -1266,7 +1324,8 @@ CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
         let modifiedAgent = { ...agent };
 
         // Let InventoryService handle the actual equipment application
-        inventoryService.applyAgentEquipment(modifiedAgent, loadout);
+        // Note: applyAgentEquipment only takes the agent parameter, it looks up the loadout itself
+        inventoryService.applyAgentEquipment(modifiedAgent);
 
         return modifiedAgent;
     });

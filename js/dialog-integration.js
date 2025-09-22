@@ -716,6 +716,20 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             }
         }
 
+        // In mission context, populate activeAgents from mission agents
+        if (this.currentScreen === 'game' && this.agents && this.agents.length > 0) {
+            // Use mission agents but with their hub IDs for consistency
+            this.activeAgents = this.agents.map(agent => ({
+                id: agent.originalId || agent.name,  // Use hub ID for consistency
+                name: agent.name,
+                health: agent.health,
+                maxHealth: agent.maxHealth,
+                damage: agent.damage
+            }));
+            const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+            if (logger) logger.debug('📦 Populated activeAgents from mission agents:', this.activeAgents);
+        }
+
         // Auto-select first agent if none selected
         if (!this.selectedEquipmentAgent && this.activeAgents && this.activeAgents.length > 0) {
             // In game mode, try to use the currently selected agent
@@ -756,7 +770,11 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         if (this.selectedEquipmentAgent) {
             if (this.logger) this.logger.debug('Looking for agent with ID:', this.selectedEquipmentAgent);
-            if (this.logger) this.logger.debug('Available agents:', this.activeAgents.map(a => ({ id: a.id, name: a.name })));
+            if (this.logger) {
+                this.logger.debug('Available agents:', this.activeAgents.map(a => ({ id: a.id, name: a.name })));
+                this.logger.debug('Selected agent ID:', this.selectedEquipmentAgent);
+                this.logger.debug('All loadouts:', Object.keys(this.agentLoadouts || {}));
+            }
             const agent = this.activeAgents.find(a => String(a.id) === String(this.selectedEquipmentAgent));
             const loadout = this.agentLoadouts[this.selectedEquipmentAgent] || {};
 
@@ -2367,6 +2385,28 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         const weapon = game.weapons.find(w => w.id === parseInt(weaponId));
         if (agent && weapon) {
             agent.weaponEquipped = weapon;
+        }
+
+        // If we're in a mission, also update the mission agent's weapon property
+        if (game.currentScreen === 'game' && game.agents) {
+            // Try to find the mission agent using various ID formats
+            const missionAgent = game.agents.find(a =>
+                a.originalId === agentId ||
+                a.originalId === agent?.name ||
+                a.name === agentId ||
+                String(a.id) === String(agentId)
+            );
+
+            if (missionAgent && weapon) {
+                missionAgent.weapon = {
+                    type: weapon.id,
+                    damage: weapon.damage,
+                    range: weapon.range || 5
+                };
+                if (game.logger) game.logger.info(`⚔️ Equipped ${weapon.name} to ${missionAgent.name} (damage: ${weapon.damage})`);
+            } else {
+                if (game.logger) game.logger.debug(`⚠️ Could not find mission agent for ID: ${agentId}`);
+            }
         }
 
         // Refresh the current dialog
