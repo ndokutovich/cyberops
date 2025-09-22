@@ -227,66 +227,25 @@ CyberOpsGame.prototype.createNewSave = function() {
 }
 
 CyberOpsGame.prototype.saveToSlot = function(slotId, name) {
-    try {
-        const saveData = {
-            id: slotId,
-            name: name,
-            version: '2.0',
-            timestamp: new Date().toISOString(),
-            gameState: {
-                    currentMissionIndex: this.currentMissionIndex,
-                    completedMissions: [...this.completedMissions],
-                    totalCampaignTime: this.totalCampaignTime,
-                    totalEnemiesDefeated: this.totalEnemiesDefeated,
-                    currentScreen: this.currentScreen,
-                    // Hub resources - export from ResourceService if available
-                    resources: this.gameServices?.resourceService?.exportState() || null,
-                    // Fallback values for compatibility
-                    credits: this.credits,
-                    researchPoints: this.researchPoints,
-                    worldControl: this.worldControl,
-                    // Agent management - export from AgentService if available
-                    ...((this.gameServices?.agentService?.exportState()) || {
-                        availableAgents: JSON.parse(JSON.stringify(this.availableAgents)),
-                        activeAgents: JSON.parse(JSON.stringify(this.activeAgents)),
-                        fallenAgents: JSON.parse(JSON.stringify(this.fallenAgents || []))
-                    }),
-                    // Equipment and research
-                    weapons: JSON.parse(JSON.stringify(this.weapons)),
-                    equipment: JSON.parse(JSON.stringify(this.equipment)),
-                    completedResearch: this.completedResearch || [],
-                    // InventoryService state
-                    inventoryState: this.gameServices?.inventoryService?.exportState() || null,
-                    agentLoadouts: this.agentLoadouts || {}
-                }
-            };
-
-            // Save to specific slot
-            localStorage.setItem(`cyberops_save_${slotId}`, JSON.stringify(saveData));
-
-            // Also keep the legacy save for backward compatibility
-            localStorage.setItem('cyberops_savegame', JSON.stringify(saveData));
-
-            this.showHudDialog(
-                '✅ SAVED',
-                `Game saved as "${name}"<br><br>Missions: ${this.completedMissions.length}/${this.missions.length}<br>Credits: ${this.credits.toLocaleString()}`,
-                [{ text: 'OK', action: () => {
-                    this.closeDialog();
-                    this.refreshSaveList();
-                }}]
-            );
-
-            // Update menu to show load button
-            this.updateMenuState();
-
-        } catch (error) {
-            if (this.logger) this.logger.error('Failed to save game:', error);
-            this.showHudDialog(
-                '❌ SAVE ERROR',
-                'Failed to save game progress.<br><br>Please ensure you have sufficient storage space and try again.',
-                [{ text: 'OK', action: 'close' }]
-            );
-        }
+    // Use GameStateService ONLY - no fallback
+    const success = this.gameServices.gameStateService.saveGame(this, slotId, false);
+    if (success) {
+        this.showHudDialog(
+            '✅ SAVED',
+            `Game saved as "${name}"<br><br>Missions: ${this.completedMissions.length}/${this.missions.length}<br>Credits: ${this.credits.toLocaleString()}`,
+            [{ text: 'OK', action: () => {
+                this.closeDialog();
+                this.refreshSaveList();
+            }}]
+        );
+    } else {
+        this.showHudDialog(
+            '❌ SAVE ERROR',
+            'Failed to save game progress.',
+            [{ text: 'OK', action: 'close' }]
+        );
+    }
+    return success;
 }
 
 // Override/update existing save
@@ -415,27 +374,36 @@ CyberOpsGame.prototype.saveGame = function() {
 // Update the original loadGame to use the new system
 CyberOpsGame.prototype.loadGame = function() {
     this.clearDemosceneTimer();
-
-    // Check if there are any saves
-    const saves = this.getAllSaves();
-
-    // Also check for legacy save
-    const legacySave = localStorage.getItem('cyberops_savegame');
-
-    if (saves.length === 0 && !legacySave) {
-        this.showHudDialog(
-            '❌ NO SAVES FOUND',
-            'No saved games found.<br><br>Start a new campaign to begin playing.',
-            [{ text: 'OK', action: 'close' }]
-        );
-        return;
-    }
-
-    // Show save list in load mode
-    this.showSaveList('load');
+    // Use GameStateService directly
+    return this.gameServices.gameStateService.loadGame(this, 'quicksave');
 }
 
 CyberOpsGame.prototype.performLoadGame = function(saveData) {
+        // Use GameStateService ONLY - no fallback
+        const success = this.gameServices.gameStateService.applyGameState(this, saveData.gameState);
+        if (success) {
+            // Navigate to hub
+            this.changeScreen('hub');
+            this.showHudDialog(
+                '✅ GAME LOADED',
+                `Game loaded successfully!<br><br>Mission: ${this.currentMissionIndex + 1}/${this.missions.length}<br>Credits: ${this.credits.toLocaleString()}`,
+                [{ text: 'CONTINUE', action: 'close' }]
+            );
+        } else {
+            this.showHudDialog(
+                '❌ LOAD ERROR',
+                'Failed to load game state.',
+                [{ text: 'OK', action: 'close' }]
+            );
+        }
+        return success;
+}
+
+// REMOVED: Legacy load code completely removed
+// All loading now goes through GameStateService
+
+CyberOpsGame.prototype.performLoadGame_REMOVED = function() {
+        // Legacy code removed - use GameStateService
         try {
             // Restore game state
             this.currentMissionIndex = saveData.gameState.currentMissionIndex;

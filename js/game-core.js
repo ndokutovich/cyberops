@@ -40,15 +40,14 @@ class CyberOpsGame {
         this.fps = 0;
         this.frameCount = 0;
         this.lastFpsUpdate = Date.now();
-        this.currentMissionIndex = 0;
-        this.missionTimer = 0;
+        // Initialize services FIRST before any properties that use them
+        this.gameServices = window.GameServices;
+
+        this.currentMissionIndex = 0; // TODO: Move to MissionService
+        this.missionTimer = 0; // TODO: Move to MissionService
         this.selectedAgents = [];
-        this.completedMissions = [];
         this.totalCampaignTime = 0;
         this.totalEnemiesDefeated = 0;
-
-        // Initialize services
-        this.gameServices = window.GameServices;
 
         // Initialize services with default data if available
         if (this.gameServices) {
@@ -62,16 +61,14 @@ class CyberOpsGame {
             if (this.gameServices.agentService) {
                 this.gameServices.agentService.initialize([]);
             }
+            if (this.gameServices.gameStateService) {
+                // Initialize auto-save system
+                this.gameServices.gameStateService.initialize();
+            }
         }
 
-        // Hub Resources - will be loaded from campaign
-        // Initialize fallback properties first (before getters/setters)
-        this._credits = 0;
-        this._researchPoints = 0;
-        this._worldControl = 0;
-        this._availableAgents = [];
-        this._activeAgents = [];
-        this._fallenAgents = []; // Hall of Glory - agents who died in missions
+        // Hub Resources - ALL managed by services
+        // NO fallback properties - services are the single source of truth
         this.weapons = [];
         this.equipment = [];
         this.completedResearch = [];
@@ -472,14 +469,12 @@ CyberOpsGame.prototype.initializeServices = function() {
 // These delegate to the services when available, fallback to internal properties
 Object.defineProperty(CyberOpsGame.prototype, 'credits', {
     get: function() {
-        return this.gameServices?.resourceService?.get('credits') ?? this._credits;
+        if (!this.gameServices || !this.gameServices.resourceService) return 0;
+        return this.gameServices.resourceService.get('credits');
     },
     set: function(value) {
-        if (this.gameServices?.resourceService) {
-            this.gameServices.resourceService.set('credits', value, 'direct assignment');
-        } else {
-            this._credits = value;
-        }
+        if (!this.gameServices || !this.gameServices.resourceService) return;
+        this.gameServices.resourceService.set('credits', value, 'direct assignment');
     },
     enumerable: true,
     configurable: true
@@ -487,14 +482,12 @@ Object.defineProperty(CyberOpsGame.prototype, 'credits', {
 
 Object.defineProperty(CyberOpsGame.prototype, 'researchPoints', {
     get: function() {
-        return this.gameServices?.resourceService?.get('researchPoints') ?? this._researchPoints;
+        if (!this.gameServices || !this.gameServices.resourceService) return 0;
+        return this.gameServices.resourceService.get('researchPoints');
     },
     set: function(value) {
-        if (this.gameServices?.resourceService) {
-            this.gameServices.resourceService.set('researchPoints', value, 'direct assignment');
-        } else {
-            this._researchPoints = value;
-        }
+        if (!this.gameServices || !this.gameServices.resourceService) return;
+        this.gameServices.resourceService.set('researchPoints', value, 'direct assignment');
     },
     enumerable: true,
     configurable: true
@@ -502,14 +495,12 @@ Object.defineProperty(CyberOpsGame.prototype, 'researchPoints', {
 
 Object.defineProperty(CyberOpsGame.prototype, 'worldControl', {
     get: function() {
-        return this.gameServices?.resourceService?.get('worldControl') ?? this._worldControl;
+        if (!this.gameServices || !this.gameServices.resourceService) return 0;
+        return this.gameServices.resourceService.get('worldControl');
     },
     set: function(value) {
-        if (this.gameServices?.resourceService) {
-            this.gameServices.resourceService.set('worldControl', value, 'direct assignment');
-        } else {
-            this._worldControl = value;
-        }
+        if (!this.gameServices || !this.gameServices.resourceService) return;
+        this.gameServices.resourceService.set('worldControl', value, 'direct assignment');
     },
     enumerable: true,
     configurable: true
@@ -517,11 +508,13 @@ Object.defineProperty(CyberOpsGame.prototype, 'worldControl', {
 
 Object.defineProperty(CyberOpsGame.prototype, 'availableAgents', {
     get: function() {
-        return this.gameServices?.agentService?.getAvailableAgents() ?? this._availableAgents;
+        if (!this.gameServices || !this.gameServices.agentService) return [];
+        return this.gameServices.agentService.getAvailableAgents();
     },
     set: function(value) {
+        if (!this.gameServices || !this.gameServices.agentService) return;
         // For bulk assignment, reinitialize the service
-        if (this.gameServices?.agentService && Array.isArray(value)) {
+        if (Array.isArray(value)) {
             const allAgents = [];
             value.forEach(agent => {
                 allAgents.push({ ...agent, hired: false });
@@ -532,8 +525,6 @@ Object.defineProperty(CyberOpsGame.prototype, 'availableAgents', {
                 allAgents.push({ ...agent, hired: true });
             });
             this.gameServices.agentService.initialize(allAgents);
-        } else {
-            this._availableAgents = value;
         }
     },
     enumerable: true,
@@ -542,11 +533,13 @@ Object.defineProperty(CyberOpsGame.prototype, 'availableAgents', {
 
 Object.defineProperty(CyberOpsGame.prototype, 'activeAgents', {
     get: function() {
-        return this.gameServices?.agentService?.getActiveAgents() ?? this._activeAgents;
+        if (!this.gameServices || !this.gameServices.agentService) return [];
+        return this.gameServices.agentService.getActiveAgents();
     },
     set: function(value) {
+        if (!this.gameServices || !this.gameServices.agentService) return;
         // For bulk assignment, reinitialize the service
-        if (this.gameServices?.agentService && Array.isArray(value)) {
+        if (Array.isArray(value)) {
             const allAgents = [];
             // Add existing available agents
             const available = this.gameServices.agentService.getAvailableAgents();
@@ -558,8 +551,6 @@ Object.defineProperty(CyberOpsGame.prototype, 'activeAgents', {
                 allAgents.push({ ...agent, hired: true });
             });
             this.gameServices.agentService.initialize(allAgents);
-        } else {
-            this._activeAgents = value;
         }
     },
     enumerable: true,
@@ -568,11 +559,89 @@ Object.defineProperty(CyberOpsGame.prototype, 'activeAgents', {
 
 Object.defineProperty(CyberOpsGame.prototype, 'fallenAgents', {
     get: function() {
-        return this.gameServices?.agentService?.getFallenAgents() ?? this._fallenAgents;
+        if (!this.gameServices || !this.gameServices.agentService) return [];
+        return this.gameServices.agentService.getFallenAgents();
     },
     set: function(value) {
+        if (!this.gameServices || !this.gameServices.agentService) return;
         // Fallen agents are managed internally by the service
-        this._fallenAgents = value;
+        // Setting fallen agents requires re-initializing with proper state
+        if (value && Array.isArray(value)) {
+            const currentState = this.gameServices.agentService.exportState();
+            currentState.fallenAgents = value;
+            this.gameServices.agentService.importState(currentState);
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+// Mission-related compatibility properties
+Object.defineProperty(CyberOpsGame.prototype, 'completedMissions', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.missionService) return [];
+        return this.gameServices.missionService.completedMissions;
+    },
+    set: function(value) {
+        if (!this.gameServices || !this.gameServices.missionService) return;
+        this.gameServices.missionService.completedMissions = value;
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'missionTrackers', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.missionService) return {};
+        return this.gameServices.missionService.trackers;
+    },
+    set: function(value) {
+        if (!this.gameServices || !this.gameServices.missionService) return;
+        Object.assign(this.gameServices.missionService.trackers, value);
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'extractionEnabled', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.missionService) return false;
+        return this.gameServices.missionService.extractionEnabled;
+    },
+    set: function(value) {
+        if (!this.gameServices || !this.gameServices.missionService) return;
+        this.gameServices.missionService.extractionEnabled = value;
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'currentMissionDef', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.missionService) return null;
+        return this.gameServices.missionService.currentMission;
+    },
+    set: function(value) {
+        if (!this.gameServices || !this.gameServices.missionService) return;
+        this.gameServices.missionService.currentMission = value;
+    },
+    enumerable: true,
+    configurable: true
+});
+
+// Quest-related compatibility (NPCs still manage quest dialog)
+Object.defineProperty(CyberOpsGame.prototype, 'completedQuests', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.missionService) return new Set();
+        return this.gameServices.missionService.completedQuests;
+    },
+    set: function(value) {
+        if (!this.gameServices || !this.gameServices.missionService) return;
+        if (value instanceof Set) {
+            this.gameServices.missionService.completedQuests = value;
+        } else if (Array.isArray(value)) {
+            this.gameServices.missionService.completedQuests = new Set(value);
+        }
     },
     enumerable: true,
     configurable: true

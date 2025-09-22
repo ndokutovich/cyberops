@@ -45,7 +45,8 @@
       "Bash([ \"$file\" != \"js/test-framework.js\" ])",
       "Bash(then grep -l \"console\\.\\(log\\|warn\\|error\\)\" \"$file\")",
       "Bash(mv:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

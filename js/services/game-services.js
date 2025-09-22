@@ -12,11 +12,22 @@ class GameServices {
         this.resourceService = new ResourceService();
         this.agentService = new AgentService(this.resourceService);
 
+        // Mission service
+        this.missionService = new MissionService(this.resourceService, this.agentService);
+
         // Initialize dependent services
         this.researchService = new ResearchService(this.formulaService);
         this.equipmentService = new EquipmentService(this.formulaService);
         this.rpgService = new RPGService(this.formulaService);
         this.inventoryService = new InventoryService(this.formulaService, this.equipmentService);
+
+        // Game state service (needs most other services)
+        this.gameStateService = new GameStateService(
+            this.resourceService,
+            this.agentService,
+            this.inventoryService,
+            this.missionService
+        );
 
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
