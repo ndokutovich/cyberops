@@ -121,8 +121,14 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
                         agent.health = Math.max(0, agent.health - damage);
                     }
                     if (agent.health <= 0) {
-                        agent.alive = false;
-                        agent.health = 0;
+                        // Handle agent death via AgentService
+                        if (this.gameServices && this.gameServices.agentService) {
+                            this.gameServices.agentService.killAgent(agent.id || agent.name, proj.shooter?.name || 'enemy');
+                        } else {
+                            // Fallback
+                            agent.alive = false;
+                            agent.health = 0;
+                        }
 
                         // Handle agent death (could trigger respawn or game over)
                         if (this.onEntityDeath) {
@@ -949,12 +955,17 @@ CyberOpsGame.prototype.endMission = function(victory) {
 
             // Award mission rewards
             if (this.currentMission.rewards) {
-                this.credits += this.currentMission.rewards.credits || 0;
-                this.researchPoints += this.currentMission.rewards.researchPoints || 0;
-                this.worldControl += this.currentMission.rewards.worldControl || 0;
+                if (this.gameServices && this.gameServices.resourceService) {
+                    this.gameServices.resourceService.applyMissionRewards(this.currentMission.rewards);
+                } else {
+                    // Fallback
+                    this.credits += this.currentMission.rewards.credits || 0;
+                    this.researchPoints += this.currentMission.rewards.researchPoints || 0;
+                    this.worldControl += this.currentMission.rewards.worldControl || 0;
 
-                // Cap world control at 100%
-                if (this.worldControl > 100) this.worldControl = 100;
+                    // Cap world control at 100%
+                    if (this.worldControl > 100) this.worldControl = 100;
+                }
             }
         }
         
@@ -1054,7 +1065,11 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
 
     // Handle credits separately (managed by game)
     if (item.credits) {
-        this.credits = (this.credits || 0) + item.credits;
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.add('credits', item.credits, 'item pickup');
+        } else {
+            this.credits = (this.credits || 0) + item.credits;
+        }
         this.creditsThisMission = (this.creditsThisMission || 0) + item.credits;
         this.addNotification(`💰 +${item.credits} credits`);
     }
@@ -1179,7 +1194,11 @@ CyberOpsGame.prototype.handleCollectableEffects = function(agent, item) {
 
         // Apply effects
         if (effects.credits > 0) {
-            this.credits += effects.credits;
+            if (this.gameServices && this.gameServices.resourceService) {
+                this.gameServices.resourceService.add('credits', effects.credits, 'item pickup');
+            } else {
+                this.credits += effects.credits; // Fallback
+            }
             this.creditsThisMission = (this.creditsThisMission || 0) + effects.credits;
         }
         if (effects.health > 0) {
@@ -1189,7 +1208,11 @@ CyberOpsGame.prototype.handleCollectableEffects = function(agent, item) {
             agent.protection = (agent.protection || 0) + effects.armor;
         }
         if (effects.researchPoints > 0) {
-            this.researchPoints += effects.researchPoints;
+            if (this.gameServices && this.gameServices.resourceService) {
+                this.gameServices.resourceService.add('researchPoints', effects.researchPoints, 'item pickup');
+            } else {
+                this.researchPoints += effects.researchPoints; // Fallback
+            }
             this.researchPointsThisMission = (this.researchPointsThisMission || 0) + effects.researchPoints;
 
             // Track intel statistics if this was an intel item

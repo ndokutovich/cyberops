@@ -384,8 +384,12 @@ CyberOpsGame.prototype.startResearch = function(projectId) {
             return;
         }
         
-        // Complete research
-        this.researchPoints -= project.cost;
+        // Complete research - spend research points via service
+        if (this.gameServices && this.gameServices.resourceService) {
+            this.gameServices.resourceService.spend('researchPoints', project.cost, `research: ${project.name}`);
+        } else {
+            this.researchPoints -= project.cost; // Fallback
+        }
         this.completedResearch.push(projectId);
         
         // Apply research benefits
@@ -482,9 +486,15 @@ CyberOpsGame.prototype.getStealthDetectionRange = function(agent) {
     // Fix missing medical healing call after mission completion
 CyberOpsGame.prototype.completeMissionRewards = function(victory) {
         if (victory && this.currentMission.rewards) {
-            this.credits += this.currentMission.rewards.credits || 0;
-            this.researchPoints += this.currentMission.rewards.researchPoints || 0;
-            this.worldControl += this.currentMission.rewards.worldControl || 0;
+            // Apply mission rewards via ResourceService
+            if (this.gameServices && this.gameServices.resourceService) {
+                this.gameServices.resourceService.applyMissionRewards(this.currentMission.rewards);
+            } else {
+                // Fallback
+                this.credits += this.currentMission.rewards.credits || 0;
+                this.researchPoints += this.currentMission.rewards.researchPoints || 0;
+                this.worldControl += this.currentMission.rewards.worldControl || 0;
+            }
             
             // Apply medical healing if researched
             this.applyMedicalHealing();
@@ -701,12 +711,23 @@ CyberOpsGame.prototype.showHiringDialog = function() {
     
 CyberOpsGame.prototype.hireAgent = function(agentId) {
         const agent = this.availableAgents.find(a => a.id === agentId);
-        if (!agent || agent.hired || this.credits < agent.cost) return;
-        
-        // Deduct credits and hire agent
-        this.credits -= agent.cost;
-        agent.hired = true;
-        this.activeAgents.push(agent);
+        const currentCredits = this.gameServices?.resourceService?.get('credits') || this.credits;
+        if (!agent || agent.hired || currentCredits < agent.cost) return;
+
+        // Deduct credits via AgentService if available, otherwise use ResourceService
+        if (this.gameServices && this.gameServices.agentService) {
+            const success = this.gameServices.agentService.hireAgent(agentId);
+            if (!success) return;
+        } else {
+            // Fallback to manual handling
+            if (this.gameServices && this.gameServices.resourceService) {
+                this.gameServices.resourceService.spend('credits', agent.cost, `hired ${agent.name}`);
+            } else {
+                this.credits -= agent.cost;
+            }
+            agent.hired = true;
+            this.activeAgents.push(agent);
+        }
         
         this.showHudDialog(
             '✅ AGENT HIRED',

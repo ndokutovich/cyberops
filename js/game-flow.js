@@ -20,9 +20,15 @@ CyberOpsGame.prototype.startCampaign = function() {
         this.completedMissions = [];
 
         // Initialize game state for new campaign
-        this.credits = this.startingCredits || 10000;
-        this.researchPoints = this.startingResearchPoints || 100;
-        this.worldControl = 0;
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('credits', this.startingCredits || 10000, 'new campaign');
+            this.gameServices.resourceService.set('researchPoints', this.startingResearchPoints || 100, 'new campaign');
+            this.gameServices.resourceService.set('worldControl', 0, 'new campaign');
+        } else {
+            this.credits = this.startingCredits || 10000;
+            this.researchPoints = this.startingResearchPoints || 100;
+            this.worldControl = 0;
+        }
 
         // Assign 4 random agents from available pool if not already assigned
         if (!this.activeAgents || this.activeAgents.length === 0) {

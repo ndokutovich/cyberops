@@ -50,13 +50,28 @@ class CyberOpsGame {
         // Initialize services
         this.gameServices = window.GameServices;
 
+        // Initialize services with default data if available
+        if (this.gameServices) {
+            if (this.gameServices.resourceService) {
+                this.gameServices.resourceService.initialize({
+                    credits: 10000,
+                    researchPoints: 0,
+                    worldControl: 0
+                });
+            }
+            if (this.gameServices.agentService) {
+                this.gameServices.agentService.initialize([]);
+            }
+        }
+
         // Hub Resources - will be loaded from campaign
-        this.credits = 0;
-        this.researchPoints = 0;
-        this.worldControl = 0;
-        this.availableAgents = [];
-        this.activeAgents = [];
-        this.fallenAgents = []; // Hall of Glory - agents who died in missions
+        // Initialize fallback properties first (before getters/setters)
+        this._credits = 0;
+        this._researchPoints = 0;
+        this._worldControl = 0;
+        this._availableAgents = [];
+        this._activeAgents = [];
+        this._fallenAgents = []; // Hall of Glory - agents who died in missions
         this.weapons = [];
         this.equipment = [];
         this.completedResearch = [];
@@ -182,6 +197,9 @@ class CyberOpsGame {
         }
 
         if (logger) logger.info('✅ All systems initialized');
+
+        // Initialize services with default data
+        this.initializeServices();
 
         // Initialize equipment system
         if (logger) logger.debug('🔧 Initializing equipment system...');
@@ -404,3 +422,158 @@ CyberOpsGame.prototype.setupCanvas = function() {
             this.canvas.height = window.innerHeight;
         });
 }
+
+// Initialize services with game data
+CyberOpsGame.prototype.initializeServices = function() {
+    if (!this.gameServices) {
+        if (this.logger) this.logger.error('❌ GameServices not available during initialization');
+        return;
+    }
+
+    // Initialize ResourceService with current values
+    this.gameServices.resourceService.initialize({
+        credits: this._credits || 10000,
+        researchPoints: this._researchPoints || 0,
+        worldControl: this._worldControl || 0
+    });
+
+    // Initialize AgentService with campaign agents (if loaded)
+    if (this._availableAgents || this._activeAgents) {
+        const campaignAgents = [];
+
+        // Add available agents
+        if (this._availableAgents) {
+            this._availableAgents.forEach(agent => {
+                campaignAgents.push({ ...agent, hired: false });
+            });
+        }
+
+        // Add active agents
+        if (this._activeAgents) {
+            this._activeAgents.forEach(agent => {
+                campaignAgents.push({ ...agent, hired: true });
+            });
+        }
+
+        // Add fallen agents
+        if (this._fallenAgents) {
+            this._fallenAgents.forEach(agent => {
+                campaignAgents.push({ ...agent, hired: true, alive: false });
+            });
+        }
+
+        this.gameServices.agentService.initialize(campaignAgents);
+    }
+
+    if (this.logger) this.logger.info('✅ Services initialized with game data');
+}
+
+// Define compatibility layer properties for backward compatibility
+// These delegate to the services when available, fallback to internal properties
+Object.defineProperty(CyberOpsGame.prototype, 'credits', {
+    get: function() {
+        return this.gameServices?.resourceService?.get('credits') ?? this._credits;
+    },
+    set: function(value) {
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('credits', value, 'direct assignment');
+        } else {
+            this._credits = value;
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'researchPoints', {
+    get: function() {
+        return this.gameServices?.resourceService?.get('researchPoints') ?? this._researchPoints;
+    },
+    set: function(value) {
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('researchPoints', value, 'direct assignment');
+        } else {
+            this._researchPoints = value;
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'worldControl', {
+    get: function() {
+        return this.gameServices?.resourceService?.get('worldControl') ?? this._worldControl;
+    },
+    set: function(value) {
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('worldControl', value, 'direct assignment');
+        } else {
+            this._worldControl = value;
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'availableAgents', {
+    get: function() {
+        return this.gameServices?.agentService?.getAvailableAgents() ?? this._availableAgents;
+    },
+    set: function(value) {
+        // For bulk assignment, reinitialize the service
+        if (this.gameServices?.agentService && Array.isArray(value)) {
+            const allAgents = [];
+            value.forEach(agent => {
+                allAgents.push({ ...agent, hired: false });
+            });
+            // Add existing active agents
+            const active = this.gameServices.agentService.getActiveAgents();
+            active.forEach(agent => {
+                allAgents.push({ ...agent, hired: true });
+            });
+            this.gameServices.agentService.initialize(allAgents);
+        } else {
+            this._availableAgents = value;
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'activeAgents', {
+    get: function() {
+        return this.gameServices?.agentService?.getActiveAgents() ?? this._activeAgents;
+    },
+    set: function(value) {
+        // For bulk assignment, reinitialize the service
+        if (this.gameServices?.agentService && Array.isArray(value)) {
+            const allAgents = [];
+            // Add existing available agents
+            const available = this.gameServices.agentService.getAvailableAgents();
+            available.forEach(agent => {
+                allAgents.push({ ...agent, hired: false });
+            });
+            // Add new active agents
+            value.forEach(agent => {
+                allAgents.push({ ...agent, hired: true });
+            });
+            this.gameServices.agentService.initialize(allAgents);
+        } else {
+            this._activeAgents = value;
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'fallenAgents', {
+    get: function() {
+        return this.gameServices?.agentService?.getFallenAgents() ?? this._fallenAgents;
+    },
+    set: function(value) {
+        // Fallen agents are managed internally by the service
+        this._fallenAgents = value;
+    },
+    enumerable: true,
+    configurable: true
+});

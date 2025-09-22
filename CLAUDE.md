@@ -76,6 +76,8 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 
 ### Service Layer (js/services/ directory)
 - **logger-service.js**: Centralized logging system with timestamp and source tracking
+- **resource-service.js**: Centralized resource management (credits, research points, world control)
+- **agent-service.js**: Complete agent lifecycle management (hire, kill, revive, damage, selection)
 - **game-services.js**: Service locator pattern for dependency injection
 - **formula-service.js**: Centralized damage and combat formulas
 - **equipment-service.js**: Equipment management and optimization
@@ -645,7 +647,12 @@ The game uses a **Service Locator** pattern via `GameServices` class to manage d
 ```javascript
 class GameServices {
     constructor() {
+        // Core services
         this.formulaService = new FormulaService();
+        this.resourceService = new ResourceService();
+        this.agentService = new AgentService(this.resourceService);
+
+        // Dependent services
         this.researchService = new ResearchService(this.formulaService);
         this.equipmentService = new EquipmentService(this.formulaService);
         this.rpgService = new RPGService(this.formulaService);
@@ -668,6 +675,21 @@ class GameServices {
 - **Combat Mechanics**: Hit chance, dodge, armor penetration
 - **Stat Modifiers**: Equipment bonuses, skill effects
 - **Shared Logic**: Used by all other services for consistent calculations
+
+#### ResourceService
+- **Resource Management**: Credits, research points, world control, intel
+- **Transaction Support**: Atomic multi-resource operations with rollback
+- **Validation**: Constraints and affordability checks
+- **History Tracking**: Complete audit trail of resource changes
+- **Event System**: Notifies listeners for UI updates
+
+#### AgentService
+- **Agent Lifecycle**: Hire, kill, revive, damage, heal agents
+- **Collection Management**: Available, active, and fallen agent tracking
+- **Fast Lookups**: Find agents by ID, originalId, or name
+- **Selection System**: Track selected agents for missions
+- **Event Notifications**: Updates for hire, death, revival events
+- **State Persistence**: Export/import for save system
 
 #### EquipmentService
 - **Loadout Management**: Agent equipment assignments
@@ -702,16 +724,26 @@ this.gameServices = new GameServices();
 // 2. Services available globally
 window.GameServices = this.gameServices;
 
-// 3. RPG service syncs with existing systems
-this.gameServices.rpgService.syncEquipment(this);
+// 3. Initialize with game data
+this.gameServices.resourceService.initialize({
+    credits: 10000,
+    researchPoints: 0,
+    worldControl: 0
+});
+this.gameServices.agentService.initialize(campaignAgents);
 
-// 4. Combat uses formula service
-const damage = this.gameServices.formulaService.calculateDamage(
-    attacker.damage,
-    weapon.damage,
-    attacker.damageBonus,
-    target.protection
-);
+// 4. Use services for operations
+// Resources
+this.gameServices.resourceService.spend('credits', 1000, 'hire agent');
+this.gameServices.resourceService.add('credits', 500, 'mission reward');
+
+// Agents
+this.gameServices.agentService.hireAgent('agent_001');
+this.gameServices.agentService.damageAgent('agent_002', 25, 'enemy attack');
+
+// Compatibility layer - legacy code still works
+this.credits -= 100;  // Automatically uses ResourceService
+this.activeAgents;    // Automatically uses AgentService
 ```
 
 ### Key Integration Points
@@ -735,8 +767,36 @@ const damage = this.gameServices.formulaService.calculateDamage(
 
 - **Never bypass GameServices**: Always use service methods, not direct manipulation
 - **Formula consistency**: All damage/stat calculations MUST go through FormulaService
-- **Service initialization order**: FormulaService first, then dependent services
-- **Backward compatibility**: Services enhance but don't break existing systems
+- **Resource operations**: All credit/research point changes MUST go through ResourceService
+- **Agent operations**: All agent management MUST go through AgentService
+- **Service initialization order**: Core services first (Formula, Resource), then dependent services
+- **Backward compatibility**: Services enhance but don't break existing systems - compatibility layer ensures legacy code works
+
+### Compatibility Layer
+
+The game implements a transparent compatibility layer that allows legacy code to work unchanged while using the new service architecture:
+
+```javascript
+// These properties automatically delegate to services:
+Object.defineProperty(CyberOpsGame.prototype, 'credits', {
+    get: function() { return this.gameServices?.resourceService?.get('credits') ?? this._credits; },
+    set: function(val) {
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('credits', val, 'direct assignment');
+        } else {
+            this._credits = val; // Fallback
+        }
+    }
+});
+
+// Similarly for: researchPoints, worldControl, availableAgents, activeAgents, fallenAgents
+```
+
+This means:
+- `game.credits -= 100` automatically uses ResourceService
+- `game.activeAgents` automatically returns from AgentService
+- All existing code continues to work without modification
+- New code can use services directly for enhanced features
 
 ### Formula and RPG Integration Example
 

@@ -649,11 +649,19 @@ CyberOpsGame.prototype.updateObjectiveDisplay = function() {
 // Give rewards to player
 CyberOpsGame.prototype.giveRewards = function(rewards) {
     if (rewards.credits) {
-        this.credits = (this.credits || 0) + rewards.credits;
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.add('credits', rewards.credits, 'mission reward');
+        } else {
+            this.credits = (this.credits || 0) + rewards.credits;
+        }
         this.addNotification(`💰 +${rewards.credits} credits`);
     }
     if (rewards.researchPoints) {
-        this.researchPoints = (this.researchPoints || 0) + rewards.researchPoints;
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.add('researchPoints', rewards.researchPoints, 'mission reward');
+        } else {
+            this.researchPoints = (this.researchPoints || 0) + rewards.researchPoints;
+        }
         this.addNotification(`🔬 +${rewards.researchPoints} research points`);
     }
     if (rewards.experience) {

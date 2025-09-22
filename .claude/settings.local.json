@@ -43,7 +43,9 @@
       "Bash(for file in js/*.js)",
       "Bash(do if [ \"$file\" != \"js/logger-service.js\" ])",
       "Bash([ \"$file\" != \"js/test-framework.js\" ])",
-      "Bash(then grep -l \"console\\.\\(log\\|warn\\|error\\)\" \"$file\")"
+      "Bash(then grep -l \"console\\.\\(log\\|warn\\|error\\)\" \"$file\")",
+      "Bash(mv:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

@@ -257,6 +257,18 @@
     <!-- Load Three.js properly -->
     <script src="lib/three-loader.js" type="module"></script>
 
+    <!-- Game Services (SOLID Architecture) -->
+    <script src="js/services/logger-service.js"></script>
+    <script src="js/services/formula-service.js"></script>
+    <script src="js/services/resource-service.js"></script>
+    <script src="js/services/agent-service.js"></script>
+    <script src="js/services/research-service.js"></script>
+    <script src="js/services/equipment-service.js"></script>
+    <script src="js/services/inventory-service.js"></script>
+    <script src="js/services/keybinding-service.js"></script>
+    <script src="js/services/rpg-service.js"></script>
+    <script src="js/services/game-services.js"></script>
+
     <!-- Game files in dependency order -->
     <script src="js/game-mission-constants.js"></script>
     <script src="js/campaign-system.js"></script>
@@ -320,6 +332,7 @@
     <script src="tests/complete-dialog-tests.js"></script>
     <script src="tests/screen-layer-tests.js"></script>
     <script src="tests/game-integration-tests.js"></script>
+    <script src="tests/service-integration-tests.js"></script>
     <script src="tests/test-summary.js"></script>
     <script src="tests/test-diagnostic.js"></script>
 
@@ -642,6 +655,45 @@
                 <div>📈 Pass Rate: ${passRate}%</div>
                 <div>⏱️ Duration: ${stats.duration.toFixed(2)}ms</div>
             `;
+
+            // Print the summary to console (which gets logged to output)
+            testFramework.printSummary();
+
+            // Also print the failed tests summary if there are failures
+            if (stats.failed > 0) {
+                testFramework.printFailedTestsSummary();
+
+                // Also add failed tests to the HTML summary
+                const failedTests = [];
+                testFramework.results.forEach(suite => {
+                    suite.tests.forEach(test => {
+                        if (test.status === 'failed') {
+                            failedTests.push({
+                                suite: suite.name,
+                                test: test.name,
+                                error: test.error || 'Unknown error'
+                            });
+                        }
+                    });
+                });
+
+                if (failedTests.length > 0) {
+                    summaryContent.innerHTML += `
+                        <hr style="margin: 20px 0; border-color: #ff0000;">
+                        <div style="color: #ff0000; font-weight: bold; margin-bottom: 10px;">
+                            ❌ Failed Tests (${failedTests.length}):
+                        </div>
+                        ${failedTests.map((f, i) => `
+                            <div style="margin: 5px 0; color: #ff6666;">
+                                ${i + 1}. [${f.suite}] ${f.test}
+                                <div style="margin-left: 20px; font-size: 0.9em; color: #ff9999;">
+                                    ${f.error}
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+                }
+            }
         }
 
         function exportResults(format) {

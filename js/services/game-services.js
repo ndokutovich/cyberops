@@ -4,8 +4,15 @@
  */
 class GameServices {
     constructor() {
-        // Initialize services with dependency injection
+        // Logger instance
+        this.logger = window.Logger ? new window.Logger('GameServices') : null;
+
+        // Initialize core services first
         this.formulaService = new FormulaService();
+        this.resourceService = new ResourceService();
+        this.agentService = new AgentService(this.resourceService);
+
+        // Initialize dependent services
         this.researchService = new ResearchService(this.formulaService);
         this.equipmentService = new EquipmentService(this.formulaService);
         this.rpgService = new RPGService(this.formulaService);
@@ -15,6 +22,8 @@ class GameServices {
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
         this.applyAllModifiers = this.applyAllModifiers.bind(this);
         this.calculateAttackDamage = this.calculateAttackDamage.bind(this);
+
+        if (this.logger) this.logger.debug('GameServices initialized with all services');
     }
 
     /**

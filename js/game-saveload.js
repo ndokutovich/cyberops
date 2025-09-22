@@ -239,13 +239,18 @@ CyberOpsGame.prototype.saveToSlot = function(slotId, name) {
                     totalCampaignTime: this.totalCampaignTime,
                     totalEnemiesDefeated: this.totalEnemiesDefeated,
                     currentScreen: this.currentScreen,
-                    // Hub resources
+                    // Hub resources - export from ResourceService if available
+                    resources: this.gameServices?.resourceService?.exportState() || null,
+                    // Fallback values for compatibility
                     credits: this.credits,
                     researchPoints: this.researchPoints,
                     worldControl: this.worldControl,
-                    // Agent management
-                    availableAgents: JSON.parse(JSON.stringify(this.availableAgents)),
-                    activeAgents: JSON.parse(JSON.stringify(this.activeAgents)),
+                    // Agent management - export from AgentService if available
+                    ...((this.gameServices?.agentService?.exportState()) || {
+                        availableAgents: JSON.parse(JSON.stringify(this.availableAgents)),
+                        activeAgents: JSON.parse(JSON.stringify(this.activeAgents)),
+                        fallenAgents: JSON.parse(JSON.stringify(this.fallenAgents || []))
+                    }),
                     // Equipment and research
                     weapons: JSON.parse(JSON.stringify(this.weapons)),
                     equipment: JSON.parse(JSON.stringify(this.equipment)),
@@ -440,11 +445,30 @@ CyberOpsGame.prototype.performLoadGame = function(saveData) {
 
             // Restore hub data (if available)
             if (saveData.gameState.credits !== undefined) {
-                this.credits = saveData.gameState.credits;
-                this.researchPoints = saveData.gameState.researchPoints;
-                this.worldControl = saveData.gameState.worldControl;
-                this.availableAgents = saveData.gameState.availableAgents;
-                this.activeAgents = saveData.gameState.activeAgents;
+                // Import via services if available, otherwise use fallback assignment
+                if (this.gameServices?.resourceService && saveData.gameState.resources) {
+                    this.gameServices.resourceService.importState(saveData.gameState.resources);
+                } else {
+                    // Fallback for older saves or when services not available
+                    this.credits = saveData.gameState.credits;
+                    this.researchPoints = saveData.gameState.researchPoints;
+                    this.worldControl = saveData.gameState.worldControl;
+                }
+
+                // Import agent data via AgentService if available
+                if (this.gameServices?.agentService && (saveData.gameState.availableAgents || saveData.gameState.activeAgents)) {
+                    this.gameServices.agentService.importState({
+                        availableAgents: saveData.gameState.availableAgents,
+                        activeAgents: saveData.gameState.activeAgents,
+                        fallenAgents: saveData.gameState.fallenAgents || []
+                    });
+                } else {
+                    // Fallback for older saves
+                    this.availableAgents = saveData.gameState.availableAgents;
+                    this.activeAgents = saveData.gameState.activeAgents;
+                    this.fallenAgents = saveData.gameState.fallenAgents || [];
+                }
+
                 this.weapons = saveData.gameState.weapons;
                 this.equipment = saveData.gameState.equipment;
                 this.completedResearch = saveData.gameState.completedResearch || [];
