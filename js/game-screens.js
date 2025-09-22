@@ -1,6 +1,11 @@
 // Screen Management - Simplified to use declarative dialog system
 
 CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
+
+    // Initialize logger if needed
+    if (!this.logger && window.Logger) {
+        this.logger = new window.Logger('GameScreens');
+    }
     // Preserve agent RPG states before transitioning
     if (this.agents && this.activeAgents) {
         this.agents.forEach(agent => {
@@ -11,7 +16,7 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
                 );
                 if (activeAgent) {
                     activeAgent.rpgEntity = agent.rpgEntity;
-                    console.log(`💾 Preserved RPG state for ${agent.name}: Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience}`);
+                    if (this.logger) this.logger.debug(`💾 Preserved RPG state for ${agent.name}: Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience}`);
                 }
             }
         });
@@ -21,7 +26,7 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
     if (window.screenManager) {
         window.screenManager.navigateTo(victory ? 'victory' : 'defeat');
     } else {
-        console.error('Screen manager not available for intermission');
+        if (this.logger) this.logger.error('Screen manager not available for intermission');
     }
 }
 
@@ -161,7 +166,7 @@ CyberOpsGame.prototype.applyMedicalHealing = function() {
         }
     });
 
-    console.log('⚕️ All surviving agents healed to full health');
+    if (this.logger) this.logger.debug('⚕️ All surviving agents healed to full health');
 }
 
 // Main menu navigation
@@ -176,7 +181,7 @@ CyberOpsGame.prototype.showInitialScreen = function() {
     if (window.screenManager) {
         window.screenManager.navigateTo('splash');
     } else {
-        console.error('Screen manager not available for initial screen');
+        if (this.logger) this.logger.error('Screen manager not available for initial screen');
     }
 }
 
@@ -185,7 +190,7 @@ CyberOpsGame.prototype.showSplashScreen = function() {
     if (window.screenManager) {
         window.screenManager.navigateTo('splash');
     } else {
-        console.error('Screen manager not available for splash screen');
+        if (this.logger) this.logger.error('Screen manager not available for splash screen');
     }
 }
 
@@ -194,7 +199,7 @@ CyberOpsGame.prototype.showMainMenu = function() {
     if (window.screenManager) {
         window.screenManager.navigateTo('main-menu');
     } else {
-        console.error('Screen manager not available for main menu');
+        if (this.logger) this.logger.error('Screen manager not available for main menu');
     }
 }
 
@@ -203,7 +208,7 @@ CyberOpsGame.prototype.showCredits = function() {
     if (window.screenManager) {
         window.screenManager.navigateTo('credits');
     } else {
-        console.error('Screen manager not available for credits');
+        if (this.logger) this.logger.error('Screen manager not available for credits');
     }
 }
 
@@ -212,7 +217,7 @@ CyberOpsGame.prototype.showGameOver = function() {
     if (window.screenManager) {
         window.screenManager.navigateTo('defeat');
     } else {
-        console.error('Screen manager not available for game over');
+        if (this.logger) this.logger.error('Screen manager not available for game over');
     }
 }
 
@@ -221,7 +226,7 @@ CyberOpsGame.prototype.showGameComplete = function() {
     if (window.screenManager) {
         window.screenManager.navigateTo('victory');
     } else {
-        console.error('Screen manager not available for campaign complete');
+        if (this.logger) this.logger.error('Screen manager not available for campaign complete');
     }
 }
 
@@ -230,7 +235,7 @@ CyberOpsGame.prototype.showTutorial = function() {
     if (this.dialogEngine) {
         this.dialogEngine.navigateTo('tutorial');
     } else {
-        console.error('Dialog engine not available for tutorial');
+        if (this.logger) this.logger.error('Dialog engine not available for tutorial');
     }
 }
 
@@ -239,7 +244,7 @@ CyberOpsGame.prototype.showWorldMap = function() {
     if (this.dialogEngine) {
         this.dialogEngine.navigateTo('world-map');
     } else {
-        console.error('Dialog engine not available for world map');
+        if (this.logger) this.logger.error('Dialog engine not available for world map');
     }
 }
 
@@ -248,6 +253,6 @@ CyberOpsGame.prototype.showTerminalHack = function(terminal) {
     if (this.dialogEngine) {
         this.dialogEngine.navigateTo('terminal-hack', { terminal: terminal });
     } else {
-        console.error('Dialog engine not available for terminal hack');
+        if (this.logger) this.logger.error('Dialog engine not available for terminal hack');
     }
 }

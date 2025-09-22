@@ -1,5 +1,10 @@
     // Game Loop
 CyberOpsGame.prototype.gameLoop = function() {
+
+    // Initialize logger if needed
+    if (!this.logger && window.Logger) {
+        this.logger = new window.Logger('GameLoop');
+    }
         // Skip game loop in test mode to avoid DOM errors
         if (this.testMode) {
             return;
@@ -153,7 +158,7 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
                     enemy.health = Math.max(0, enemy.health - damage);
                     if (enemy.health <= 0) {
                         enemy.alive = false;
-                        console.log(`⚔️ ENEMY KILLED! Details:`, {
+                        if (this.logger) this.logger.debug(`⚔️ ENEMY KILLED! Details:`, {
                             enemyType: enemy.type,
                             enemyHasRPG: !!enemy.rpgEntity,
                             shooterName: proj.shooter?.name || 'unknown',
@@ -170,10 +175,10 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
 
                         // Grant XP if RPG system is active
                         if (this.onEntityDeath) {
-                            console.log(`📞 Calling onEntityDeath...`);
+                            if (this.logger) this.logger.debug(`📞 Calling onEntityDeath...`);
                             this.onEntityDeath(enemy, proj.shooter);
                         } else {
-                            console.error(`❌ onEntityDeath method not found!`);
+                            if (this.logger) this.logger.error(`❌ onEntityDeath method not found!`);
                         }
                     }
 
@@ -371,14 +376,14 @@ CyberOpsGame.prototype.update = function() {
                     this.agentWaypoints[agent.id] = waypoints;
 
                     if (agent.selected) {
-                        console.log(`✅ ${agent.name} reached waypoint, ${waypoints.length} remaining`);
+                        if (this.logger) this.logger.info(`✅ ${agent.name} reached waypoint, ${waypoints.length} remaining`);
                     }
 
                     // If there are more waypoints, update target to next one
                     if (waypoints.length > 0) {
                         agent.targetX = waypoints[0].x;
                         agent.targetY = waypoints[0].y;
-                        console.log(`📍 Moving to next waypoint: (${waypoints[0].x.toFixed(1)}, ${waypoints[0].y.toFixed(1)})`);
+                        if (this.logger) this.logger.debug(`📍 Moving to next waypoint: (${waypoints[0].x.toFixed(1)}, ${waypoints[0].y.toFixed(1)})`);
                     }
                 }
             }
@@ -721,7 +726,7 @@ CyberOpsGame.prototype.update = function() {
                             if (damageResult.isDead) {
                                 this.totalEnemiesDefeated++;
 
-                                console.log(`⚔️ ENEMY KILLED (alternate path)! Details:`, {
+                                if (this.logger) this.logger.debug(`⚔️ ENEMY KILLED (alternate path)! Details:`, {
                                     enemyType: enemy.type,
                                     enemyHasRPG: !!enemy.rpgEntity,
                                     shooterFromProj: proj.shooter?.name || proj.agent?.name || 'unknown',
@@ -736,7 +741,7 @@ CyberOpsGame.prototype.update = function() {
                                 // Grant XP for kills!
                                 const killer = proj.shooter || proj.agent || null;
                                 if (this.onEntityDeath && killer) {
-                                    console.log(`📞 Calling onEntityDeath from alternate path...`);
+                                    if (this.logger) this.logger.debug(`📞 Calling onEntityDeath from alternate path...`);
                                     this.onEntityDeath(enemy, killer);
                                 }
 
@@ -862,20 +867,20 @@ CyberOpsGame.prototype.endMission = function(victory) {
         if (this.musicSystem && victory) {
             this.playVictoryMusic();
         }
-        console.log('🎵 Music continues after mission end');
+        if (this.logger) this.logger.debug('🎵 Music continues after mission end');
 
         this.isPaused = true;
 
         // Switch to tactical view before showing end dialog
         if (this.is3DMode) {
-            console.log('📐 Switching to tactical view for mission end');
+            if (this.logger) this.logger.debug('📐 Switching to tactical view for mission end');
             this.cameraMode = 'tactical';
             this.disable3DMode();
         }
 
         // Release pointer lock so player can interact with dialogs
         if (document.pointerLockElement) {
-            console.log('🔓 Releasing pointer lock for mission end dialog');
+            if (this.logger) this.logger.debug('🔓 Releasing pointer lock for mission end dialog');
             document.exitPointerLock();
         }
 
@@ -906,8 +911,8 @@ CyberOpsGame.prototype.endMission = function(victory) {
         });
 
         if (fallenThisMission.length > 0) {
-            console.log(`⚰️ Agents fallen in battle: ${fallenThisMission.join(', ')}`);
-            console.log(`📜 Added to Hall of Glory. Active agents remaining: ${this.activeAgents.length}`);
+            if (this.logger) this.logger.debug(`⚰️ Agents fallen in battle: ${fallenThisMission.join(', ')}`);
+            if (this.logger) this.logger.debug(`📜 Added to Hall of Glory. Active agents remaining: ${this.activeAgents.length}`);
         }
 
         // Update campaign statistics and rewards
@@ -918,14 +923,14 @@ CyberOpsGame.prototype.endMission = function(victory) {
 
             // Add to completed missions
             if (!this.completedMissions.includes(this.currentMission.id)) {
-                console.log('📊 Adding mission to completed list:', {
+                if (this.logger) this.logger.info('📊 Adding mission to completed list:', {
                     missionId: this.currentMission.id,
                     currentIndex: this.currentMissionIndex,
                     completedBefore: [...this.completedMissions],
                     allMissionIds: this.missions.map(m => m.id)
                 });
                 this.completedMissions.push(this.currentMission.id);
-                console.log('📊 Completed missions after:', [...this.completedMissions]);
+                if (this.logger) this.logger.info('📊 Completed missions after:', [...this.completedMissions]);
 
                 // Generate 2 new agents available for hire after each completed mission
                 this.generateNewAgentsForHire();
@@ -955,7 +960,7 @@ CyberOpsGame.prototype.unlockIntelReport = function() {
     // Intel reports must be loaded from campaign
     const intelReports = this.campaignIntelReports;
     if (!intelReports || intelReports.length === 0) {
-        console.warn('⚠️ No intel reports loaded from campaign');
+        if (this.logger) this.logger.warn('⚠️ No intel reports loaded from campaign');
         return;
     }
 
@@ -964,7 +969,7 @@ CyberOpsGame.prototype.unlockIntelReport = function() {
         if (this.totalIntelCollected >= report.threshold) {
             if (!this.unlockedIntelReports.find(r => r.id === report.id)) {
                 this.unlockedIntelReports.push(report);
-                console.log(`🔓 NEW INTEL REPORT UNLOCKED: ${report.title}`);
+                if (this.logger) this.logger.debug(`🔓 NEW INTEL REPORT UNLOCKED: ${report.title}`);
             }
         }
     });
@@ -983,7 +988,7 @@ CyberOpsGame.prototype.generateFinalWords = function(agentName) {
 CyberOpsGame.prototype.generateNewAgentsForHire = function() {
     // Use agent generation from campaign if available
     if (!this.agentGeneration) {
-        console.warn('⚠️ No agent generation config loaded from campaign');
+        if (this.logger) this.logger.warn('⚠️ No agent generation config loaded from campaign');
         return;
     }
 
@@ -1010,7 +1015,7 @@ CyberOpsGame.prototype.generateNewAgentsForHire = function() {
         };
 
         this.availableAgents.push(newAgent);
-        console.log(`🆕 New agent available for hire: ${newAgent.name} (${newAgent.specialization})`);
+        if (this.logger) this.logger.debug(`🆕 New agent available for hire: ${newAgent.name} (${newAgent.specialization})`);
     }
 
     // Log event
@@ -1032,7 +1037,7 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
     // ONLY use InventoryService - no fallback
     const inventoryService = this.gameServices.inventoryService;
     if (!inventoryService) {
-        console.error('❌ InventoryService is required!');
+        if (this.logger) this.logger.error('❌ InventoryService is required!');
         return;
     }
 
@@ -1061,7 +1066,7 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
             });
 
             this.addNotification(`🔫 Picked up: ${item.name || item.weapon}`);
-            console.log(`🎯 Agent ${agent.name} picked up ${item.name || item.weapon} (damage: ${item.weaponDamage || item.damage || 10})`);
+            if (this.logger) this.logger.debug(`🎯 Agent ${agent.name} picked up ${item.name || item.weapon} (damage: ${item.weaponDamage || item.damage || 10})`);
 
             // Check if auto-equipped
             const agentId = agent.originalId || agent.id || agent.name;
@@ -1081,7 +1086,7 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
                 const missionId = this.currentMission.id;
                 if (!this.intelByMission) this.intelByMission = {};
                 this.intelByMission[missionId] = (this.intelByMission[missionId] || 0) + (item.value || 1);
-                console.log(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
+                if (this.logger) this.logger.debug(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
             }
 
             // Unlock intel reports
@@ -1117,13 +1122,13 @@ CyberOpsGame.prototype.handleCollectableEffects = function(agent, item) {
                 const missionId = this.currentMission.id;
                 if (!this.intelByMission) this.intelByMission = {};
                 this.intelByMission[missionId] = (this.intelByMission[missionId] || 0) + 1;
-                console.log(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
+                if (this.logger) this.logger.debug(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
             }
 
             // Unlock intel reports based on collection
             if (this.unlockIntelReport) this.unlockIntelReport();
 
-            console.log(`📊 Total Intel: ${this.totalIntelCollected} documents`);
+            if (this.logger) this.logger.debug(`📊 Total Intel: ${this.totalIntelCollected} documents`);
         }
     }
 
@@ -1169,14 +1174,14 @@ CyberOpsGame.prototype.handleCollectableEffects = function(agent, item) {
                     const missionId = this.currentMission.id;
                     if (!this.intelByMission) this.intelByMission = {};
                     this.intelByMission[missionId] = (this.intelByMission[missionId] || 0) + 1;
-                    console.log(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
+                    if (this.logger) this.logger.debug(`📁 Intel tracked for Mission ${missionId}: ${this.intelByMission[missionId]}`);
                 }
 
                 // Unlock intel reports based on collection
                 this.unlockIntelReport();
 
-                console.log(`📊 Total Intel: ${this.totalIntelCollected} documents`);
-                console.log(`📋 Intel this mission: ${this.intelThisMission}`);
+                if (this.logger) this.logger.debug(`📊 Total Intel: ${this.totalIntelCollected} documents`);
+                if (this.logger) this.logger.debug(`📋 Intel this mission: ${this.intelThisMission}`);
             }
         }
         if (effects.ammo > 0) {
@@ -1194,14 +1199,14 @@ CyberOpsGame.prototype.handleCollectableEffects = function(agent, item) {
 
         // Show message
         if (effects.message) {
-            console.log(effects.message);
+            if (this.logger) this.logger.debug(effects.message);
         }
 
         return;
     }
 
     // Collectables removed - all rewards come from mission completion
-    console.warn('⚠️ Old collectable system called but no longer supported');
+    if (this.logger) this.logger.warn('⚠️ Old collectable system called but no longer supported');
 
     // Visual feedback
     this.effects.push({
@@ -1246,7 +1251,7 @@ CyberOpsGame.prototype.setGameSpeed = function(speed) {
         this.targetGameSpeed = speed;
         this.lastSpeedChangeTime = Date.now();
         this.speedIndicatorFadeTime = 3000; // Show indicator for 3 seconds
-        console.log(`⚡ Game speed changed to ${speed}x`);
+        if (this.logger) this.logger.debug(`⚡ Game speed changed to ${speed}x`);
     }
 };
 
@@ -1287,12 +1292,12 @@ CyberOpsGame.prototype.checkAutoSlowdown = function() {
         // Slow down to 1x when enemies are near
         this.gameSpeed = 1;
         this.targetGameSpeed = 1;
-        console.log('⚠️ Enemy detected - slowing to 1x speed');
+        if (this.logger) this.logger.debug('⚠️ Enemy detected - slowing to 1x speed');
         this.speedIndicatorFadeTime = 2000;
     } else if (!enemyNearby && this.targetGameSpeed > 1 && this.gameSpeed === 1) {
         // Speed back up when enemies are gone
         this.gameSpeed = this.targetGameSpeed;
-        console.log(`✅ Area clear - resuming ${this.gameSpeed}x speed`);
+        if (this.logger) this.logger.info(`✅ Area clear - resuming ${this.gameSpeed}x speed`);
         this.speedIndicatorFadeTime = 2000;
     }
 };

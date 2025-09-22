@@ -3,7 +3,12 @@
 
 // Override the existing mission loading to use the new system
 CyberOpsGame.prototype.initMissions = function() {
-    console.log('🎮 Initializing comprehensive mission system...');
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameMissionIntegration') : null;
+    }
+    if (this.logger) this.logger.debug('🎮 Initializing comprehensive mission system...');
 
     // Initialize mission and quest systems
     this.initMissionSystem();
@@ -14,7 +19,7 @@ CyberOpsGame.prototype.initMissions = function() {
         this.missions = [];
     }
 
-    console.log(`📋 Mission system initialized`);
+    if (this.logger) this.logger.info(`📋 Mission system initialized`);
 };
 
 // Override the hackNearestTerminal function to use the new system
@@ -102,12 +107,12 @@ CyberOpsGame.prototype.initMissionUpdated = function() {
     const mission = this.missions && this.missions[this.currentMissionIndex];
     // Use _campaignData if available (has full mission data including NPCs)
     this.currentMissionDef = mission?._campaignData || mission;
-    console.log('🎯 Setting currentMissionDef for mission', this.currentMissionIndex, ':', this.currentMissionDef);
+    if (this.logger) this.logger.debug('🎯 Setting currentMissionDef for mission', this.currentMissionIndex, ':', this.currentMissionDef);
     this.initMissionFromDefinition();
 
     // Spawn NPCs now that mission definition is loaded
     if (this.spawnNPCs) {
-        console.log('🎮 Spawning NPCs for mission after definition loaded...');
+        if (this.logger) this.logger.info('🎮 Spawning NPCs for mission after definition loaded...');
         this.spawnNPCs();
     }
 
@@ -122,11 +127,11 @@ CyberOpsGame.prototype.initMissionUpdated = function() {
 
 // Save original and replace
 if (!CyberOpsGame.prototype.initMissionOriginal) {
-    console.log('🔄 Replacing initMission with updated version');
+    if (this.logger) this.logger.debug('🔄 Replacing initMission with updated version');
     CyberOpsGame.prototype.initMissionOriginal = CyberOpsGame.prototype.initMission;
     CyberOpsGame.prototype.initMission = CyberOpsGame.prototype.initMissionUpdated;
 } else {
-    console.log('⚠️ initMission already replaced');
+    if (this.logger) this.logger.debug('⚠️ initMission already replaced');
 }
 
 // Update the game loop to check objectives
@@ -223,7 +228,7 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
         // Update legacy counter
         this.hackedTerminals = this.missionTrackers.terminalsHacked;
 
-        console.log(`🖥️ Terminal hacked! Total: ${this.hackedTerminals}`);
+        if (this.logger) this.logger.debug(`🖥️ Terminal hacked! Total: ${this.hackedTerminals}`);
 
         // Log the hacking event
         if (this.logEvent) {
@@ -266,4 +271,4 @@ CyberOpsGame.prototype.onEnemyDeath = function(enemy) {
 // The missions are already loaded from game-core.js and we want to preserve them
 // unless explicitly using the new campaign system
 
-console.log('✅ Mission system integration loaded');
+if (this.logger) this.logger.info('✅ Mission system integration loaded');

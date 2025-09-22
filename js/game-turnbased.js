@@ -3,6 +3,11 @@
 
 // Turn-based mode initialization
 CyberOpsGame.prototype.initTurnBasedMode = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameTurnbased') : null;
+    }
     // Core turn-based properties
     this.turnBasedMode = false;
     this.gridSnapMovement = true; // Snap to tile centers
@@ -47,7 +52,7 @@ CyberOpsGame.prototype.initTurnBasedMode = function() {
     this.moveAnimationQueue = [];     // Tiles to animate through
     this.pathConfirmMode = false;     // Waiting for path confirmation
 
-    console.log('🎯 Turn-based mode initialized');
+    if (this.logger) this.logger.info('🎯 Turn-based mode initialized');
     if (this.logEvent) {
         this.logEvent('Turn-based mode activated', 'combat', true);
     }
@@ -57,9 +62,9 @@ CyberOpsGame.prototype.initTurnBasedMode = function() {
 CyberOpsGame.prototype.toggleTurnBasedMode = function() {
     this.turnBasedMode = !this.turnBasedMode;
 
-    console.log('═══════════════════════════════════════════');
-    console.log(`🎮 TURN-BASED MODE: ${this.turnBasedMode ? '▶️ ACTIVATING' : '⏹️ DEACTIVATING'}`);
-    console.log('═══════════════════════════════════════════');
+    if (this.logger) this.logger.debug('═══════════════════════════════════════════');
+    if (this.logger) this.logger.debug(`🎮 TURN-BASED MODE: ${this.turnBasedMode ? '▶️ ACTIVATING' : '⏹️ DEACTIVATING'}`);
+    if (this.logger) this.logger.debug('═══════════════════════════════════════════');
 
     if (this.turnBasedMode) {
         this.enterTurnBasedMode();
@@ -76,7 +81,7 @@ CyberOpsGame.prototype.toggleTurnBasedMode = function() {
 // Toggle grid snap movement
 CyberOpsGame.prototype.toggleGridSnap = function() {
     this.gridSnapMovement = !this.gridSnapMovement;
-    console.log(`📐 Grid snap: ${this.gridSnapMovement ? 'ON' : 'OFF'}`);
+    if (this.logger) this.logger.debug(`📐 Grid snap: ${this.gridSnapMovement ? 'ON' : 'OFF'}`);
 };
 
 // Enter turn-based mode
@@ -134,7 +139,7 @@ CyberOpsGame.prototype.exitTurnBasedMode = function() {
         this.logEvent('Turn-based mode: OFF', 'system');
     }
 
-    console.log('✅ TBM: Turn-based mode deactivated');
+    if (this.logger) this.logger.info('✅ TBM: Turn-based mode deactivated');
     if (this.logEvent) {
         this.logEvent('Turn-based mode deactivated', 'system');
     }
@@ -206,8 +211,8 @@ CyberOpsGame.prototype.buildTurnQueue = function() {
         if (this.logEvent) this.logEvent(msg, 'combat', true);
     }
 
-    console.log(`📋 TBM Queue: ${allUnits.length} units | Round ${this.turnRound}`);
-    console.log('📋 Turn order:', allUnits.map(u =>
+    if (this.logger) this.logger.debug(`📋 TBM Queue: ${allUnits.length} units | Round ${this.turnRound}`);
+    if (this.logger) this.logger.debug('📋 Turn order:', allUnits.map(u =>
         `${u.unit.name || u.type} (Initiative: ${u.initiative}, AP: ${u.ap})`
     ).join(' → '));
 };
@@ -277,17 +282,17 @@ CyberOpsGame.prototype.startTurn = function(index) {
         // Select the current unit
         turnData.unit.selected = true;
         this._selectedAgent = turnData.unit;
-        console.log(`🎯 Auto-selected: ${turnData.unit.name}`);
+        if (this.logger) this.logger.debug(`🎯 Auto-selected: ${turnData.unit.name}`);
 
         // Add visual notification and log
         const turnMsg = `${turnData.unit.name}'s turn (${turnData.ap} AP)`;
         if (this.logEvent) this.logEvent(turnMsg, 'combat');
     }
 
-    console.log('───────────────────────────────────────────');
-    console.log(`🎮 TURN ${this.currentTurnIndex + 1}/${this.turnQueue.length}: ${turnData.unit.name || turnData.type}`);
-    console.log(`   Team: ${turnData.team} | AP: ${turnData.ap}/${turnData.maxAp}`);
-    console.log('───────────────────────────────────────────');
+    if (this.logger) this.logger.debug('───────────────────────────────────────────');
+    if (this.logger) this.logger.debug(`🎮 TURN ${this.currentTurnIndex + 1}/${this.turnQueue.length}: ${turnData.unit.name || turnData.type}`);
+    if (this.logger) this.logger.debug(`   Team: ${turnData.team} | AP: ${turnData.ap}/${turnData.maxAp}`);
+    if (this.logger) this.logger.debug('───────────────────────────────────────────');
 };
 
 // End current turn
@@ -295,8 +300,8 @@ CyberOpsGame.prototype.endTurn = function() {
     const current = this.turnQueue[this.currentTurnIndex];
     if (current) {
         current.hasActed = true;
-        console.log(`✅ TBM: Turn ended for ${current.unit.name || current.type}`);
-        console.log(`   Final AP: ${current.ap}/${current.maxAp}`);
+        if (this.logger) this.logger.info(`✅ TBM: Turn ended for ${current.unit.name || current.type}`);
+        if (this.logger) this.logger.debug(`   Final AP: ${current.ap}/${current.maxAp}`);
     }
 
     // Move to next unit
@@ -429,7 +434,7 @@ CyberOpsGame.prototype.handleTurnBasedMovement = function(targetX, targetY) {
     // Check if clicking on the movement marker (confirming movement)
     if (this.pendingMovement && this.movementMarker) {
         const markerDist = Math.abs(tileX - this.movementMarker.x) + Math.abs(tileY - this.movementMarker.y);
-        console.log('🎯 TBM: Checking marker click', {
+        if (this.logger) this.logger.debug('🎯 TBM: Checking marker click', {
             clickPos: { x: tileX, y: tileY },
             markerPos: this.movementMarker,
             distance: markerDist,
@@ -438,20 +443,20 @@ CyberOpsGame.prototype.handleTurnBasedMovement = function(targetX, targetY) {
 
         if (markerDist <= 1) {
             // Confirm and execute the pending movement
-            console.log('✅ TBM: Confirming movement to marker');
+            if (this.logger) this.logger.info('✅ TBM: Confirming movement to marker');
             this.executePendingMovement();
             return true;
         }
     }
 
     // Otherwise, create a new movement preview
-    console.log(`📍 TBM: Planning movement to (${tileX}, ${tileY})`);
+    if (this.logger) this.logger.debug(`📍 TBM: Planning movement to (${tileX}, ${tileY})`);
 
     // Calculate path using A* or similar
     const path = this.calculatePathToTarget(unit, tileX, tileY);
 
     if (!path || path.length === 0) {
-        console.log('❌ TBM: No valid path to target');
+        if (this.logger) this.logger.debug('❌ TBM: No valid path to target');
         if (this.addNotification) {
             this.addNotification('No valid path!');
         }
@@ -492,7 +497,7 @@ CyberOpsGame.prototype.handleTurnBasedMovement = function(targetX, targetY) {
         }
     }
 
-    console.log(`📍 TBM: Path preview created - ${turnsNeeded} turn(s), ${apCost} AP this turn`);
+    if (this.logger) this.logger.debug(`📍 TBM: Path preview created - ${turnsNeeded} turn(s), ${apCost} AP this turn`);
     return true;
 };
 
@@ -549,7 +554,7 @@ CyberOpsGame.prototype.getTurnColor = function(turnNumber) {
 // Execute the confirmed movement
 CyberOpsGame.prototype.executePendingMovement = function() {
     if (!this.pendingMovement) {
-        console.log('❌ TBM: No pending movement to execute');
+        if (this.logger) this.logger.debug('❌ TBM: No pending movement to execute');
         return;
     }
 
@@ -557,7 +562,7 @@ CyberOpsGame.prototype.executePendingMovement = function() {
     const turnData = this.currentTurnUnit;  // Use currentTurnUnit directly
     const unit = movement.unit;
 
-    console.log('🚀 TBM: Executing pending movement', {
+    if (this.logger) this.logger.debug('🚀 TBM: Executing pending movement', {
         unit: unit.name,
         segments: movement.segments.length,
         firstSegmentTiles: movement.segments[0]?.tiles.length
@@ -566,7 +571,7 @@ CyberOpsGame.prototype.executePendingMovement = function() {
     // Get this turn's segment
     const currentSegment = movement.segments[0];
     if (!currentSegment) {
-        console.log('❌ TBM: No current segment found');
+        if (this.logger) this.logger.debug('❌ TBM: No current segment found');
         return;
     }
 
@@ -577,7 +582,7 @@ CyberOpsGame.prototype.executePendingMovement = function() {
     // Start animation
     this.animateTurnBasedMovement(unit, () => {
         // Movement complete callback
-        console.log('✅ TBM: Movement animation complete');
+        if (this.logger) this.logger.info('✅ TBM: Movement animation complete');
 
         // Clear pending movement FIRST to stop rendering old path
         this.pendingMovement = null;
@@ -595,7 +600,7 @@ CyberOpsGame.prototype.executePendingMovement = function() {
 
         // Log movement
         const moveMsg = `${unit.name || 'Unit'} moved (Cost: ${currentSegment.cost} AP, Remaining: ${turnData.ap}/${turnData.maxAp} AP)`;
-        console.log(`🚶 TBM Movement Complete: ${moveMsg}`);
+        if (this.logger) this.logger.debug(`🚶 TBM Movement Complete: ${moveMsg}`);
         if (this.logEvent) this.logEvent(moveMsg, 'movement');
 
         // Movement cost already logged above in the main movement message
@@ -609,21 +614,21 @@ CyberOpsGame.prototype.executePendingMovement = function() {
 
 // Animate movement along path
 CyberOpsGame.prototype.animateTurnBasedMovement = function(unit, onComplete) {
-    console.log('🎬 TBM: animateTurnBasedMovement called', {
+    if (this.logger) this.logger.debug('🎬 TBM: animateTurnBasedMovement called', {
         unit: unit.name,
         queueLength: this.moveAnimationQueue?.length,
         currentPos: { x: unit.x, y: unit.y }
     });
 
     if (!this.moveAnimationQueue || this.moveAnimationQueue.length === 0) {
-        console.log('✅ TBM: Animation queue empty, movement complete');
+        if (this.logger) this.logger.info('✅ TBM: Animation queue empty, movement complete');
         if (onComplete) onComplete();
         return;
     }
 
     // Get next tile in path
     const nextTile = this.moveAnimationQueue[0];
-    console.log('🎯 TBM: Moving to next tile', nextTile);
+    if (this.logger) this.logger.debug('🎯 TBM: Moving to next tile', nextTile);
 
     // Set target for smooth animation
     unit.targetX = nextTile.x;
@@ -656,7 +661,7 @@ CyberOpsGame.prototype.animateTurnBasedMovement = function(unit, onComplete) {
 
 // Calculate path to target using A* (without smoothing for turn-based)
 CyberOpsGame.prototype.calculatePathToTarget = function(unit, targetX, targetY) {
-    console.log('📐 TBM: Calculating path', {
+    if (this.logger) this.logger.debug('📐 TBM: Calculating path', {
         from: { x: Math.round(unit.x), y: Math.round(unit.y) },
         to: { x: targetX, y: targetY },
         hasFindPath: !!this.findPathTurnBased
@@ -668,11 +673,11 @@ CyberOpsGame.prototype.calculatePathToTarget = function(unit, targetX, targetY) 
             Math.round(unit.x), Math.round(unit.y),
             targetX, targetY
         );
-        console.log('📐 TBM: Path found via A*', { length: path?.length });
+        if (this.logger) this.logger.debug('📐 TBM: Path found via A*', { length: path?.length });
         return path;
     }
 
-    console.log('⚠️ TBM: Using fallback linear path');
+    if (this.logger) this.logger.debug('⚠️ TBM: Using fallback linear path');
     // Simple line path as fallback
     const path = [];
     const dx = targetX - Math.round(unit.x);
@@ -712,7 +717,7 @@ CyberOpsGame.prototype.executeAITurn = function(turnData) {
         if (distance < 200 && turnData.ap >= this.actionCosts.shoot) {
             // TODO: Implement enemy shooting in turn-based mode
             // For now, just consume AP without shooting
-            console.log(`🎯 Enemy would shoot at ${nearestAgent.name} (not implemented)`);
+            if (this.logger) this.logger.debug(`🎯 Enemy would shoot at ${nearestAgent.name} (not implemented)`);
             apUsed += this.actionCosts.shoot;
             turnData.ap -= this.actionCosts.shoot;
             this.updateTurnBasedAPDisplay();
@@ -823,4 +828,4 @@ CyberOpsGame.prototype.calculatePath = function(startX, startY, endX, endY) {
     return path;
 };
 
-console.log('🎯 Turn-based mode system loaded');
+if (this.logger) this.logger.info('🎯 Turn-based mode system loaded');

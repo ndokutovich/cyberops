@@ -11,9 +11,9 @@ CyberOpsGame.prototype.updateMenuState = function() {
 }
 
 CyberOpsGame.prototype.startCampaign = function() {
-        console.log('🚀 startCampaign() called - checking missions before showing hub...');
-        console.log('- this.missions exists:', !!this.missions);
-        console.log('- this.missions length:', this.missions ? this.missions.length : 'UNDEFINED');
+        if (this.logger) this.logger.debug('🚀 startCampaign() called - checking missions before showing hub...');
+        if (this.logger) this.logger.debug('- this.missions exists:', !!this.missions);
+        if (this.logger) this.logger.debug('- this.missions length:', this.missions ? this.missions.length : 'UNDEFINED');
 
         this.clearDemosceneTimer(); // Clear timer when user takes action
         this.currentMissionIndex = 0;
@@ -36,7 +36,7 @@ CyberOpsGame.prototype.startCampaign = function() {
 
         // EMERGENCY CHECK: Make sure missions are initialized before showing hub
         if (!this.missions || this.missions.length === 0) {
-            console.error('🚨 EMERGENCY in startCampaign: missions not initialized! Calling initializeHub...');
+            if (this.logger) this.logger.error('🚨 EMERGENCY in startCampaign: missions not initialized! Calling initializeHub...');
             this.initializeHub();
         }
 
@@ -69,7 +69,7 @@ CyberOpsGame.prototype.selectMission = function() {
             // Show mission select dialog
             this.dialogEngine.navigateTo('mission-select-hub');
         } else {
-            console.error('Dialog engine not available for mission selection');
+            if (this.logger) this.logger.error('Dialog engine not available for mission selection');
         }
 }
 
@@ -82,10 +82,10 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
         window.screenManager.navigateTo('mission-briefing', { selectedMission: mission });
         return;
     }
-    console.error('Dialog engine not available for mission briefing');
+    if (this.logger) this.logger.error('Dialog engine not available for mission briefing');
 
         // Continue main theme music during briefing (don't change music yet)
-        console.log('🎵 Mission briefing - keeping main theme music playing');
+        if (this.logger) this.logger.debug('🎵 Mission briefing - keeping main theme music playing');
         // Music will only change when mission actually starts
 
         const objList = document.getElementById('objectivesList');
@@ -124,7 +124,7 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
 
         // Show warning if not enough agents are hired for the mission
         if (availableAgentsForMission.length < maxAgentsForMission) {
-            console.log(`⚠️ Only ${availableAgentsForMission.length} agents available, but mission allows ${maxAgentsForMission}`);
+            if (this.logger) this.logger.debug(`⚠️ Only ${availableAgentsForMission.length} agents available, but mission allows ${maxAgentsForMission}`);
         }
 
         availableAgentsForMission.forEach((agent, idx) => {
@@ -194,22 +194,22 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
 
 CyberOpsGame.prototype.startMission = function() {
         // Debug agent state
-        console.log('🔍 startMission called:');
-        console.log('  - this.selectedAgents:', this.selectedAgents?.length || 0);
-        console.log('  - this.activeAgents:', this.activeAgents?.length || 0);
-        console.log('  - this.activeAgents[0]:', this.activeAgents?.[0]);
+        if (this.logger) this.logger.debug('🔍 startMission called:');
+        if (this.logger) this.logger.debug('  - this.selectedAgents:', this.selectedAgents?.length || 0);
+        if (this.logger) this.logger.debug('  - this.activeAgents:', this.activeAgents?.length || 0);
+        if (this.logger) this.logger.debug('  - this.activeAgents[0]:', this.activeAgents?.[0]);
 
         // Auto-select agents if none selected
         if (this.selectedAgents.length === 0) {
-            console.log('⚠️ No agents selected, auto-selecting available agents');
+            if (this.logger) this.logger.debug('⚠️ No agents selected, auto-selecting available agents');
 
             // Auto-select up to 4 active agents
             const maxAgents = 4;
             // Active agents might not have 'alive' property yet, default to true
             const availableAgents = this.activeAgents.filter(a => a.alive !== false);
 
-            console.log(`🔍 Checking activeAgents:`, this.activeAgents?.length || 0, 'agents');
-            console.log(`🔍 Available agents after filter:`, availableAgents.length, 'agents');
+            if (this.logger) this.logger.debug(`🔍 Checking activeAgents:`, this.activeAgents?.length || 0, 'agents');
+            if (this.logger) this.logger.debug(`🔍 Available agents after filter:`, availableAgents.length, 'agents');
 
             if (availableAgents.length === 0) {
                 this.showHudDialog(
@@ -222,12 +222,12 @@ CyberOpsGame.prototype.startMission = function() {
 
             // Auto-select agents
             this.selectedAgents = availableAgents.slice(0, Math.min(maxAgents, availableAgents.length));
-            console.log('✅ Auto-selected agents:', this.selectedAgents.map(a => a.name));
+            if (this.logger) this.logger.info('✅ Auto-selected agents:', this.selectedAgents.map(a => a.name));
         }
 
         // Auto-save before mission if enabled
         if (this.autoSaveEnabled) {
-            console.log('🔄 Creating pre-mission autosave...');
+            if (this.logger) this.logger.debug('🔄 Creating pre-mission autosave...');
             const missionName = this.currentMission ? this.currentMission.title : 'Unknown Mission';
             this.saveToSlot('pre_mission_autosave', `Pre-Mission: ${missionName}`);
         }
@@ -254,7 +254,7 @@ CyberOpsGame.prototype.startMission = function() {
         }
 
         // Stop ALL existing music before starting mission
-        console.log('🎵 Stopping all music for mission start');
+        if (this.logger) this.logger.debug('🎵 Stopping all music for mission start');
 
         // Stop screen music system (handles all non-mission music)
         if (this.stopScreenMusic) {
@@ -294,15 +294,20 @@ CyberOpsGame.prototype.startMission = function() {
                 };
             }
 
-            console.log('🎵 Loading mission music configuration');
+            if (this.logger) this.logger.debug('🎵 Loading mission music configuration');
             this.loadMissionMusic(this.currentMissionDef);
         }
 }
 
 CyberOpsGame.prototype.initMission = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameFlow') : null;
+    }
         // CRITICAL: Ensure 3D mode is off at mission start
         if (this.is3DMode) {
-            console.log('🔄 Resetting to 2D mode for mission start');
+            if (this.logger) this.logger.debug('🔄 Resetting to 2D mode for mission start');
             this.cleanup3D();
         }
 
@@ -322,10 +327,10 @@ CyberOpsGame.prototype.initMission = function() {
 
         // Initialize NPC system (NPCs will be spawned after mission definition is loaded)
         if (this.initNPCSystem) {
-            console.log('🎮 Initializing NPC system...');
+            if (this.logger) this.logger.debug('🎮 Initializing NPC system...');
             this.initNPCSystem();
         } else {
-            console.warn('⚠️ NPC system not loaded - initNPCSystem not found');
+            if (this.logger) this.logger.warn('⚠️ NPC system not loaded - initNPCSystem not found');
         }
 
         // Reset mission tracking
@@ -355,11 +360,11 @@ CyberOpsGame.prototype.initMission = function() {
         if (!this.keyboardInitialized) {
             this.initKeyboardHandler();
             this.keyboardInitialized = true;
-            console.log('⌨️ Keyboard handler initialized');
+            if (this.logger) this.logger.info('⌨️ Keyboard handler initialized');
         }
 
         // CRITICAL: Full 3D mode reset to prevent movement state carryover
-        console.log('🔄 Resetting 3D mode state for new mission');
+        if (this.logger) this.logger.debug('🔄 Resetting 3D mode state for new mission');
 
         // Reset 3D world creation flag for new mission
         this.world3DCreated = false;
@@ -394,32 +399,32 @@ CyberOpsGame.prototype.initMission = function() {
         if (typeof this.currentMission.map === 'object') {
             if (this.currentMission.map.embedded && this.loadMapFromEmbeddedTiles) {
                 // Mission has embedded tiles (new format) - load them directly
-                console.log('🗺️ Loading embedded tiles from mission');
+                if (this.logger) this.logger.debug('🗺️ Loading embedded tiles from mission');
                 this.map = this.loadMapFromEmbeddedTiles(this.currentMission.map);
-                console.log(`📍 Loaded embedded map: ${this.currentMission.map.type} (${this.map.width}x${this.map.height})`);
+                if (this.logger) this.logger.info(`📍 Loaded embedded map: ${this.currentMission.map.type} (${this.map.width}x${this.map.height})`);
             } else if (this.currentMission.map.generation && this.generateMapFromEmbeddedDefinition) {
                 // Mission has generation rules (old format) - generate from rules
-                console.log('🗺️ Generating map from rules');
+                if (this.logger) this.logger.debug('🗺️ Generating map from rules');
                 this.map = this.generateMapFromEmbeddedDefinition(this.currentMission.map);
-                console.log(`📍 Generated map: ${this.currentMission.map.type} (${this.map.width}x${this.map.height})`);
+                if (this.logger) this.logger.debug(`📍 Generated map: ${this.currentMission.map.type} (${this.map.width}x${this.map.height})`);
             } else {
                 // No embedded map available - this should never happen in new architecture
-                console.error('❌ Mission has no embedded map! All missions must have embedded maps.');
+                if (this.logger) this.logger.error('❌ Mission has no embedded map! All missions must have embedded maps.');
                 throw new Error('Mission missing embedded map data');
             }
         } else {
             // Legacy string map type - this should never happen in new architecture
-            console.error('❌ Mission using legacy string map type! All missions must have embedded maps.');
+            if (this.logger) this.logger.error('❌ Mission using legacy string map type! All missions must have embedded maps.');
             throw new Error('Mission using legacy map format');
         }
 
         // DEBUG: Check if map was modified right after assignment
-        console.log('🔍 IMMEDIATE CHECK - Map loaded:');
-        console.log('  tile[6][6]:', this.map.tiles[6][6], '(should be 0)');
-        console.log('  tile[3][3]:', this.map.tiles[3][3]);
+        if (this.logger) this.logger.info('🔍 IMMEDIATE CHECK - Map loaded:');
+        if (this.logger) this.logger.debug('  tile[6][6]:', this.map.tiles[6][6], '(should be 0)');
+        if (this.logger) this.logger.debug('  tile[3][3]:', this.map.tiles[3][3]);
 
         // MAP TRACE 5: After map assignment - Check ALL rooms
-        console.log('🔍 MAP TRACE 5 - After map assignment, checking ALL rooms:');
+        if (this.logger) this.logger.debug('🔍 MAP TRACE 5 - After map assignment, checking ALL rooms:');
 
         // Check each room position
         const roomPositions = [
@@ -439,7 +444,7 @@ CyberOpsGame.prototype.initMission = function() {
                     }
                     if (dy < 2) sample += '|';
                 }
-                console.log(`  Room ${idx+1} at (${room.x},${room.y}): ${sample}`);
+                if (this.logger) this.logger.debug(`  Room ${idx+1} at (${room.x},${room.y}): ${sample}`);
             }
         });
 
@@ -457,9 +462,9 @@ CyberOpsGame.prototype.initMission = function() {
              this.currentMissionIndex < 3 ? 5 : 6);
 
         // Debug agent availability
-        console.log('📊 Agent availability check:');
-        console.log('  - this.activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
-        console.log('  - this.selectedAgents:', this.selectedAgents ? this.selectedAgents.length : 'undefined');
+        if (this.logger) this.logger.debug('📊 Agent availability check:');
+        if (this.logger) this.logger.debug('  - this.activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
+        if (this.logger) this.logger.debug('  - this.selectedAgents:', this.selectedAgents ? this.selectedAgents.length : 'undefined');
 
         // Use all hired agents up to the mission limit
         const availableForMission = this.activeAgents ? this.activeAgents.slice(0, maxAgentsForMission) : [];
@@ -467,15 +472,15 @@ CyberOpsGame.prototype.initMission = function() {
         // If we have selectedAgents, prioritize them, otherwise use all available
         let baseAgents;
         if (this.selectedAgents && this.selectedAgents.length > 0) {
-            console.log('📝 Selected agents structure:', this.selectedAgents);
-            console.log('  First selected agent:', this.selectedAgents[0]);
+            if (this.logger) this.logger.debug('📝 Selected agents structure:', this.selectedAgents);
+            if (this.logger) this.logger.debug('  First selected agent:', this.selectedAgents[0]);
 
             // Add selected agents first
             baseAgents = this.selectedAgents.map(selectedAgent => {
                 // selectedAgent might be just an ID number OR a full agent object
                 const isJustId = typeof selectedAgent === 'number';
                 const agentInfo = isJustId ? `ID ${selectedAgent}` : (selectedAgent.name || selectedAgent.id || 'unknown');
-                console.log('  Mapping selected agent:', agentInfo, '(type:', typeof selectedAgent, ')');
+                if (this.logger) this.logger.debug('  Mapping selected agent:', agentInfo, '(type:', typeof selectedAgent, ')');
 
                 if (this.activeAgents && this.activeAgents.length > 0) {
                     // Try to match by different criteria depending on what we have
@@ -493,10 +498,10 @@ CyberOpsGame.prototype.initMission = function() {
                     }
 
                     if (found) {
-                        console.log('    ✅ Found match in activeAgents:', found.name);
+                        if (this.logger) this.logger.info('    ✅ Found match in activeAgents:', found.name);
                         return found;
                     } else {
-                        console.log('    ⚠️ No match found, using selectedAgent as-is');
+                        if (this.logger) this.logger.debug('    ⚠️ No match found, using selectedAgent as-is');
                         return isJustId ? null : selectedAgent;
                     }
                 }
@@ -514,15 +519,15 @@ CyberOpsGame.prototype.initMission = function() {
 
         // Safety check: if no agents available, log error
         if (!baseAgents || baseAgents.length === 0) {
-            console.error('❌ No agents available for mission!');
-            console.log('  - activeAgents:', this.activeAgents);
-            console.log('  - selectedAgents:', this.selectedAgents);
+            if (this.logger) this.logger.error('❌ No agents available for mission!');
+            if (this.logger) this.logger.debug('  - activeAgents:', this.activeAgents);
+            if (this.logger) this.logger.debug('  - selectedAgents:', this.selectedAgents);
             // Don't continue with empty agents array
             return;
         }
 
-        console.log(`🎯 Mission ${this.currentMissionIndex + 1}: Deploying ${baseAgents.length} agents (max: ${maxAgentsForMission})`);
-        console.log('  - Agent names:', baseAgents.map(a => a.name || 'unnamed'));
+        if (this.logger) this.logger.debug(`🎯 Mission ${this.currentMissionIndex + 1}: Deploying ${baseAgents.length} agents (max: ${maxAgentsForMission})`);
+        if (this.logger) this.logger.debug('  - Agent names:', baseAgents.map(a => a.name || 'unnamed'));
 
         // Apply loadouts if equipment system is initialized
         let agentsWithLoadouts = baseAgents;
@@ -532,7 +537,7 @@ CyberOpsGame.prototype.initMission = function() {
 
         // Sync equipment with RPG system for mission
         if (this.syncEquipmentWithRPG) {
-            console.log('🔄 Syncing equipment for mission start');
+            if (this.logger) this.logger.debug('🔄 Syncing equipment for mission start');
             this.syncEquipmentWithRPG();
         }
 
@@ -553,14 +558,14 @@ CyberOpsGame.prototype.initMission = function() {
 
         // Safety check for modifiedAgents
         if (!modifiedAgents || modifiedAgents.length === 0) {
-            console.error('❌ No modified agents available!');
+            if (this.logger) this.logger.error('❌ No modified agents available!');
             return;
         }
 
         // Add mission-specific properties to each agent
         modifiedAgents.forEach((agent, idx) => {
             // Debug agent data
-            console.log(`🔍 Processing agent ${idx}:`, {
+            if (this.logger) this.logger.debug(`🔍 Processing agent ${idx}:`, {
                 name: agent.name,
                 id: agent.id,
                 specialization: agent.specialization
@@ -580,7 +585,7 @@ CyberOpsGame.prototype.initMission = function() {
             agent.y = spawn.y + Math.floor(idx / 2);
             agent.targetX = spawn.x + idx % 2;
             agent.targetY = spawn.y + Math.floor(idx / 2);
-            console.log(`🎯 Agent ${idx+1} (${agent.name}) placed at (${agent.x}, ${agent.y})`);
+            if (this.logger) this.logger.debug(`🎯 Agent ${idx+1} (${agent.name}) placed at (${agent.x}, ${agent.y})`);
             agent.selected = idx === 0;
             agent.alive = true;
             agent.cooldowns = [0, 0, 0, 0, 0];
@@ -596,7 +601,7 @@ CyberOpsGame.prototype.initMission = function() {
                 '#8888ff'   // Light Blue - Agent 6
             ];
             agent.color = agentColors[idx % agentColors.length];
-            console.log(`🎨 Agent ${idx + 1}: ${agent.name} assigned color: ${agent.color}`);
+            if (this.logger) this.logger.debug(`🎨 Agent ${idx + 1}: ${agent.name} assigned color: ${agent.color}`);
 
             // Initialize RPG entity for agent if not already present
             // IMPORTANT: Check if this agent already has a persistent RPG entity
@@ -607,13 +612,13 @@ CyberOpsGame.prototype.initMission = function() {
             if (persistentAgent?.rpgEntity) {
                 // Preserve existing RPG entity with all XP and stats
                 agent.rpgEntity = persistentAgent.rpgEntity;
-                console.log(`📊 Preserved RPG entity for agent: ${agent.name} (Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience})`);
+                if (this.logger) this.logger.debug(`📊 Preserved RPG entity for agent: ${agent.name} (Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience})`);
             } else if (!agent.rpgEntity) {
                 const rpgManager = this.rpgManager || window.GameServices?.rpgService?.rpgManager;
                 if (rpgManager) {
                     const rpgAgent = rpgManager.createRPGAgent(agent, agent.class || 'soldier');
                     agent.rpgEntity = rpgAgent;
-                    console.log(`📊 Created new RPG entity for agent: ${agent.name}`);
+                    if (this.logger) this.logger.debug(`📊 Created new RPG entity for agent: ${agent.name}`);
                 } else {
                     // Create a basic RPG entity fallback
                     agent.rpgEntity = {
@@ -623,7 +628,7 @@ CyberOpsGame.prototype.initMission = function() {
                         unspentStatPoints: 0,
                         unspentSkillPoints: 0
                     };
-                    console.warn(`⚠️ Created fallback RPG entity for agent: ${agent.name}`);
+                    if (this.logger) this.logger.warn(`⚠️ Created fallback RPG entity for agent: ${agent.name}`);
                 }
             }
 
@@ -653,13 +658,13 @@ CyberOpsGame.prototype.initMission = function() {
                 // Also set selectedAgent (without underscore) for compatibility
                 this.selectedAgent = firstAgent;
 
-                console.log('🎯 Auto-selected first agent for better UX:', firstAgent.name || firstAgent.id);
-                console.log('👥 Available agents:', this.agents.map(a => a.name || a.id));
-                console.log('✅ Selected agent stored as:', this._selectedAgent?.name || this._selectedAgent?.id);
-                console.log('✅ Press E to switch camera modes, Tab to change agents');
+                if (this.logger) this.logger.debug('🎯 Auto-selected first agent for better UX:', firstAgent.name || firstAgent.id);
+                if (this.logger) this.logger.debug('👥 Available agents:', this.agents.map(a => a.name || a.id));
+                if (this.logger) this.logger.info('✅ Selected agent stored as:', this._selectedAgent?.name || this._selectedAgent?.id);
+                if (this.logger) this.logger.info('✅ Press E to switch camera modes, Tab to change agents');
 
             // CRITICAL: Center camera on agents when mission starts to prevent NaN camera positions
-            console.log('🎥 Before camera centering - cameraX:', this.cameraX, 'cameraY:', this.cameraY);
+            if (this.logger) this.logger.debug('🎥 Before camera centering - cameraX:', this.cameraX, 'cameraY:', this.cameraY);
 
             // Calculate center point of all agents
             if (this.agents && this.agents.length > 0) {
@@ -674,7 +679,7 @@ CyberOpsGame.prototype.initMission = function() {
                 this.cameraX = Math.floor(totalX / this.agents.length - this.canvas.width / (2 * this.tileWidth));
                 this.cameraY = Math.floor(totalY / this.agents.length - this.canvas.height / (2 * this.tileHeight));
 
-                console.log('🎥 Manual camera centering completed - agents average pos:', {
+                if (this.logger) this.logger.info('🎥 Manual camera centering completed - agents average pos:', {
                     avgX: totalX / this.agents.length,
                     avgY: totalY / this.agents.length,
                     cameraX: this.cameraX,
@@ -682,9 +687,9 @@ CyberOpsGame.prototype.initMission = function() {
                 });
             }
 
-            console.log('🎥 After camera centering - cameraX:', this.cameraX, 'cameraY:', this.cameraY);
+            if (this.logger) this.logger.debug('🎥 After camera centering - cameraX:', this.cameraX, 'cameraY:', this.cameraY);
         } else {
-            console.log('⚠️ No agents available to select!');
+            if (this.logger) this.logger.debug('⚠️ No agents available to select!');
         }
 
         // Spawn enemies with enhanced variety and positioning
@@ -704,7 +709,7 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
     // Enemy types must be loaded from campaign
     const enemyTypes = this.campaignEnemyTypes;
     if (!enemyTypes || enemyTypes.length === 0) {
-        console.error('⚠️ No enemy types loaded from campaign! Cannot spawn enemies.');
+        if (this.logger) this.logger.error('⚠️ No enemy types loaded from campaign! Cannot spawn enemies.');
         return;
     }
 
@@ -717,7 +722,7 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
     const bonusEnemies = Math.floor(this.currentMissionIndex * 2); // +2 enemies per mission
     const totalEnemies = baseEnemies + bonusEnemies;
 
-    console.log(`📊 Spawning ${totalEnemies} enemies (base: ${baseEnemies}, bonus: ${bonusEnemies})`);
+    if (this.logger) this.logger.debug(`📊 Spawning ${totalEnemies} enemies (base: ${baseEnemies}, bonus: ${bonusEnemies})`);
 
     // Determine enemy composition based on mission
     let enemyComposition = [];
@@ -750,14 +755,14 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
 
     // Get strategic positions based on map
     const strategicPositions = this.getStrategicEnemyPositions(totalEnemies);
-    console.log(`📍 Strategic positions for enemies:`, strategicPositions);
-    console.log(`📍 Map enemySpawns:`, this.map.enemySpawns);
+    if (this.logger) this.logger.debug(`📍 Strategic positions for enemies:`, strategicPositions);
+    if (this.logger) this.logger.debug(`📍 Map enemySpawns:`, this.map.enemySpawns);
 
     // Spawn enemies
     enemyComposition.forEach((enemyTypeName, i) => {
         const enemyTemplate = enemyTypes.find(t => t.type === enemyTypeName) || enemyTypes[0];
         const position = strategicPositions[i] || { x: 10 + Math.random() * 20, y: 10 + Math.random() * 20 };
-        console.log(`🎯 Spawning enemy ${i} (${enemyTypeName}) at:`, position);
+        if (this.logger) this.logger.debug(`🎯 Spawning enemy ${i} (${enemyTypeName}) at:`, position);
 
         const enemy = {
             id: 'enemy_' + i,
@@ -787,9 +792,9 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
             const rpgEnemy = rpgManager.createRPGEnemy(enemy, enemyTypeName);
             enemy.rpgEntity = rpgEnemy;
             enemy.level = rpgEnemy.level || 1;
-            console.log(`   📊 Added RPG entity to enemy - Level ${enemy.level}`);
+            if (this.logger) this.logger.debug(`   📊 Added RPG entity to enemy - Level ${enemy.level}`);
         } else {
-            console.warn(`   ⚠️ Could not add RPG entity to enemy:`, {
+            if (this.logger) this.logger.warn(`   ⚠️ Could not add RPG entity to enemy:`, {
                 hasRPGManager: !!this.rpgManager,
                 hasGameServicesRPG: !!window.GameServices?.rpgService?.rpgManager,
                 hasRPGEnemyClass: !!window.RPGEnemy
@@ -803,10 +808,10 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
         }
 
         this.enemies.push(enemy);
-        console.log(`✅ Enemy ${i} created: ${enemyTypeName} at exact position (${enemy.x}, ${enemy.y}) with health ${enemy.health}`);
+        if (this.logger) this.logger.info(`✅ Enemy ${i} created: ${enemyTypeName} at exact position (${enemy.x}, ${enemy.y}) with health ${enemy.health}`);
     });
 
-    console.log(`⚔️ Enemy composition for mission ${this.currentMissionIndex + 1}:`,
+    if (this.logger) this.logger.debug(`⚔️ Enemy composition for mission ${this.currentMissionIndex + 1}:`,
         enemyComposition.reduce((acc, type) => {
             acc[type] = (acc[type] || 0) + 1;
             return acc;
@@ -814,9 +819,9 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
     );
 
     // Verify all enemy positions
-    console.log(`📍 FINAL ENEMY POSITIONS CHECK:`);
+    if (this.logger) this.logger.debug(`📍 FINAL ENEMY POSITIONS CHECK:`);
     this.enemies.forEach((enemy, idx) => {
-        console.log(`  Enemy ${idx}: ${enemy.type} at (${enemy.x}, ${enemy.y}) - alive: ${enemy.alive}`);
+        if (this.logger) this.logger.debug(`  Enemy ${idx}: ${enemy.type} at (${enemy.x}, ${enemy.y}) - alive: ${enemy.alive}`);
     });
 };
 
@@ -828,7 +833,7 @@ CyberOpsGame.prototype.getStrategicEnemyPositions = function(count) {
 
     // First, try to use predefined enemy spawn points from the map
     if (this.map.enemySpawns && this.map.enemySpawns.length > 0) {
-        console.log(`📍 Using ${this.map.enemySpawns.length} predefined enemy spawn points`);
+        if (this.logger) this.logger.debug(`📍 Using ${this.map.enemySpawns.length} predefined enemy spawn points`);
 
         // Use all predefined spawns first
         for (let i = 0; i < Math.min(count, this.map.enemySpawns.length); i++) {
@@ -836,9 +841,9 @@ CyberOpsGame.prototype.getStrategicEnemyPositions = function(count) {
             // Check if spawn point is walkable
             const tileValue = this.map.tiles[spawn.y] && this.map.tiles[spawn.y][spawn.x];
             if (tileValue === 1) {
-                console.log(`⚠️ WARNING: Enemy spawn ${i} at (${spawn.x}, ${spawn.y}) is in a WALL (tile=1)!`);
+                if (this.logger) this.logger.warn(`⚠️ WARNING: Enemy spawn ${i} at (${spawn.x}, ${spawn.y}) is in a WALL (tile=1)!`);
             } else {
-                console.log(`✅ Enemy spawn ${i} at (${spawn.x}, ${spawn.y}) is walkable (tile=${tileValue})`);
+                if (this.logger) this.logger.info(`✅ Enemy spawn ${i} at (${spawn.x}, ${spawn.y}) is walkable (tile=${tileValue})`);
             }
             positions.push({
                 x: spawn.x,
@@ -991,24 +996,24 @@ CyberOpsGame.prototype.updateSquadHealth = function() {
             bar.addEventListener('click', (e) => {
                 e.stopPropagation(); // Prevent event bubbling
                 e.preventDefault(); // Prevent default behavior
-                console.log(`🖱️ Health bar CLICK event for ${agent.name}, alive: ${agent.alive}`);
+                if (this.logger) this.logger.debug(`🖱️ Health bar CLICK event for ${agent.name}, alive: ${agent.alive}`);
 
                 if (agent.alive) {
                     // Directly call selectAgent
                     this.selectAgent(agent);
-                    console.log(`🎯 Selected ${agent.name} via health bar click`);
+                    if (this.logger) this.logger.debug(`🎯 Selected ${agent.name} via health bar click`);
                 }
             });
 
             // Also handle mousedown as backup
             bar.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
-                console.log(`🖱️ Health bar MOUSEDOWN for ${agent.name}, alive: ${agent.alive}`);
+                if (this.logger) this.logger.debug(`🖱️ Health bar MOUSEDOWN for ${agent.name}, alive: ${agent.alive}`);
 
                 // Try selecting on mousedown as well
                 if (agent.alive) {
                     this.selectAgent(agent);
-                    console.log(`🎯 Selected ${agent.name} via health bar mousedown`);
+                    if (this.logger) this.logger.debug(`🎯 Selected ${agent.name} via health bar mousedown`);
                 }
             });
 
@@ -1330,7 +1335,7 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                             this.missionTrackers.enemiesEliminated++;
                         }
 
-                        console.log(`💥 Grenade killed enemy at (${enemy.x}, ${enemy.y})`);
+                        if (this.logger) this.logger.debug(`💥 Grenade killed enemy at (${enemy.x}, ${enemy.y})`);
 
                         if (this.logEvent) {
                             this.logEvent(`Grenade eliminated enemy!`, 'combat');
@@ -1338,7 +1343,7 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
 
                         // Grant XP for grenade kills!
                         if (this.onEntityDeath) {
-                            console.log(`🎯 Granting XP for grenade kill`);
+                            if (this.logger) this.logger.debug(`🎯 Granting XP for grenade kill`);
                             this.onEntityDeath(enemy, agent);
                         }
                     } else {
@@ -1378,11 +1383,11 @@ CyberOpsGame.prototype.initializeFogOfWar = function() {
 CyberOpsGame.prototype.toggleFogOfWar = function() {
     this.fogEnabled = !this.fogEnabled;
     this.addNotification(this.fogEnabled ? '🌫️ Fog of War enabled' : '👁️ Fog of War disabled');
-    console.log('🌫️ Fog of War:', this.fogEnabled ? 'ENABLED' : 'DISABLED');
+    if (this.logger) this.logger.debug('🌫️ Fog of War:', this.fogEnabled ? 'ENABLED' : 'DISABLED');
 
     // Check specific tiles
     if (this.map && this.map.tiles) {
-        console.log('🔍 Checking specific tile values:');
+        if (this.logger) this.logger.debug('🔍 Checking specific tile values:');
         const tilesToCheck = [
             {x: 40, y: 50},
             {x: 30, y: 30},
@@ -1395,7 +1400,7 @@ CyberOpsGame.prototype.toggleFogOfWar = function() {
         ];
         tilesToCheck.forEach(pos => {
             const tileValue = this.map.tiles[pos.y][pos.x];
-            console.log(`  Tile[${pos.y}][${pos.x}] = ${tileValue} (${tileValue === 0 ? 'walkable' : 'wall'})`);
+            if (this.logger) this.logger.debug(`  Tile[${pos.y}][${pos.x}] = ${tileValue} (${tileValue === 0 ? 'walkable' : 'wall'})`);
         });
     }
 
@@ -1440,32 +1445,32 @@ CyberOpsGame.prototype.toggleFogOfWar = function() {
             mapSample.fullMap.push(row);
         }
 
-        console.log('=== MAP STRUCTURE DEBUG ===');
-        console.log('Map size:', mapSample.width, 'x', mapSample.height);
-        console.log('First room area (5,5 to 15,15):');
+        if (this.logger) this.logger.debug('=== MAP STRUCTURE DEBUG ===');
+        if (this.logger) this.logger.debug('Map size:', mapSample.width, 'x', mapSample.height);
+        if (this.logger) this.logger.debug('First room area (5,5 to 15,15):');
         Object.entries(mapSample.roomArea).forEach(([key, val]) => {
-            console.log(`  ${key}: ${val}`);
+            if (this.logger) this.logger.debug(`  ${key}: ${val}`);
         });
-        console.log('Corridor area at y=25:');
+        if (this.logger) this.logger.debug('Corridor area at y=25:');
         Object.entries(mapSample.corridorArea).forEach(([key, val]) => {
-            console.log(`  ${key}: ${val}`);
+            if (this.logger) this.logger.debug(`  ${key}: ${val}`);
         });
-        console.log('Full map (0,0 to 30,20) - "." = walkable, "#" = wall:');
+        if (this.logger) this.logger.debug('Full map (0,0 to 30,20) - "." = walkable, "#" = wall:');
         mapSample.fullMap.forEach((row, index) => {
-            console.log(`Row ${index.toString().padStart(2, '0')}: ${row}`);
+            if (this.logger) this.logger.debug(`Row ${index.toString().padStart(2, '0')}: ${row}`);
         });
 
         // Also log as JSON for easy copy
-        console.log('JSON for analysis:', JSON.stringify(mapSample));
+        if (this.logger) this.logger.debug('JSON for analysis:', JSON.stringify(mapSample));
 
         // Show a visual map of the center area
-        console.log('\n🗺️ Visual map of center area (35,35) to (55,55):');
+        if (this.logger) this.logger.debug('\n🗺️ Visual map of center area (35,35) to (55,55):');
         for (let y = 35; y <= 55; y++) {
             let row = '';
             for (let x = 35; x <= 55; x++) {
                 row += this.map.tiles[y][x] === 0 ? '.' : '#';
             }
-            console.log(`Row ${y}: ${row}`);
+            if (this.logger) this.logger.debug(`Row ${y}: ${row}`);
         }
     }
 
@@ -1638,17 +1643,17 @@ CyberOpsGame.prototype.playSound = function(soundName, volume = 0.5) {
 
                     if (playPromise !== undefined) {
                         playPromise.catch(err => {
-                            console.log(`Audio playback failed for ${soundName}: ${err.message}`);
+                            if (this.logger) this.logger.error(`Audio playback failed for ${soundName}: ${err.message}`);
                             this.playSynthSound(soundName, volume);
                         });
                     }
                     return;
                 } catch (err) {
-                    console.log(`Error cloning/playing ${soundName}: ${err.message}`);
+                    if (this.logger) this.logger.error(`Error cloning/playing ${soundName}: ${err.message}`);
                 }
             } else {
                 // Audio not ready, check if it has a source that failed to load
-                console.log(`Audio element ${soundName} not ready (readyState: ${audioElement.readyState})`);
+                if (this.logger) this.logger.debug(`Audio element ${soundName} not ready (readyState: ${audioElement.readyState})`);
 
                 // Try to reload it
                 audioElement.load();
@@ -1658,7 +1663,7 @@ CyberOpsGame.prototype.playSound = function(soundName, volume = 0.5) {
                 return;
             }
         } else {
-            console.log(`No audio element found for ${soundName}`);
+            if (this.logger) this.logger.debug(`No audio element found for ${soundName}`);
         }
 
         // Fall back to synthesized sounds
@@ -1785,7 +1790,7 @@ CyberOpsGame.prototype.playSynthSound = function(soundName, volume = 0.5) {
                 osc.stop(now + 0.2);
             }
         } catch (e) {
-            console.log('Synth sound failed:', soundName, e);
+            if (this.logger) this.logger.error('Synth sound failed:', soundName, e);
         }
 }
 
@@ -1816,7 +1821,7 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
                     this.missionTrackers.terminalsHacked = (this.missionTrackers.terminalsHacked || 0) + 1;
                 }
 
-                console.log(`🖥️ Terminal hacked! Total: ${this.hackedTerminals}`);
+                if (this.logger) this.logger.debug(`🖥️ Terminal hacked! Total: ${this.hackedTerminals}`);
 
                 // Log the hacking event
                 if (this.logEvent) {
@@ -1866,7 +1871,7 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
                                 }
                             }
 
-                            console.log(`🔓 Door at (${door.x}, ${door.y}) unlocked by terminal ${terminal.id}`);
+                            if (this.logger) this.logger.debug(`🔓 Door at (${door.x}, ${door.y}) unlocked by terminal ${terminal.id}`);
                             this.addNotification(`🔓 Door at [${door.x}, ${door.y}] is now open!`);
                         }
                     });
@@ -2034,13 +2039,13 @@ CyberOpsGame.prototype.resumeLevelMusic = function() {
     if (this.missionAudio) {
         Object.values(this.missionAudio).forEach(audio => {
             if (audio && audio.paused && audio.dataset?.wasPlaying === 'true') {
-                audio.play().catch(e => console.warn('Could not resume audio:', e));
+                audio.play().catch(e => { if (this.logger) this.logger.warn('Could not resume audio:', e); });
                 delete audio.dataset.wasPlaying;
             }
         });
     }
     if (this.currentMusic && this.currentMusic.paused) {
-        this.currentMusic.play().catch(e => console.warn('Could not resume music:', e));
+        this.currentMusic.play().catch(e => { if (this.logger) this.logger.warn('Could not resume music:', e); });
     }
 }
 
@@ -2069,7 +2074,7 @@ CyberOpsGame.prototype.togglePause = function() {
 
             // Release pointer lock when pausing in 3D mode
             if (document.pointerLockElement) {
-                console.log('🔓 Releasing pointer lock for pause menu');
+                if (this.logger) this.logger.debug('🔓 Releasing pointer lock for pause menu');
                 document.exitPointerLock();
             }
 
@@ -2169,14 +2174,14 @@ CyberOpsGame.prototype.performReturnToHub = function() {
                     );
                     if (activeAgent) {
                         activeAgent.rpgEntity = agent.rpgEntity;
-                        console.log(`💾 Preserved RPG state for ${agent.name}: Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience}`);
+                        if (this.logger) this.logger.debug(`💾 Preserved RPG state for ${agent.name}: Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience}`);
                     }
                 }
             });
         }
 
         // Keep level music playing in the hub for atmosphere
-        console.log('🎵 Keeping level music playing in hub');
+        if (this.logger) this.logger.debug('🎵 Keeping level music playing in hub');
 
         // Hide game elements
         document.getElementById('gameHUD').style.display = 'none';

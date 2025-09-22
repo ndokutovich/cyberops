@@ -6,11 +6,11 @@
 
 // Character Sheet UI - Now uses declarative dialog system when available
 CyberOpsGame.prototype.showCharacterSheet = function(agentIdOrName) {
-    console.log('showCharacterSheet called with:', agentIdOrName);
+    if (this.logger) this.logger.debug('showCharacterSheet called with:', agentIdOrName);
 
     // Use declarative dialog system if available
     if (this.dialogEngine && this.dialogEngine.navigateTo) {
-        console.log('📊 Using declarative dialog system for character sheet');
+        if (this.logger) this.logger.debug('📊 Using declarative dialog system for character sheet');
 
         // Store the selected agent for the dialog generator
         if (agentIdOrName) {
@@ -27,7 +27,7 @@ CyberOpsGame.prototype.showCharacterSheet = function(agentIdOrName) {
     }
 
     // Fallback to original implementation
-    console.log('📊 Fallback to original character sheet implementation');
+    if (this.logger) this.logger.debug('📊 Fallback to original character sheet implementation');
 
     // Find agent by ID or name
     let agent;
@@ -45,17 +45,17 @@ CyberOpsGame.prototype.showCharacterSheet = function(agentIdOrName) {
     }
 
     if (!agent) {
-        console.warn('Agent not found:', agentIdOrName);
+        if (this.logger) this.logger.warn('Agent not found:', agentIdOrName);
         return;
     }
 
     // Initialize RPG entity if not present
     if (!agent.rpgEntity) {
-        console.log('Creating RPG entity for agent:', agent.name);
+        if (this.logger) this.logger.debug('Creating RPG entity for agent:', agent.name);
         if (this.rpgManager) {
             agent.rpgEntity = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
         } else {
-            console.warn('RPG manager not initialized');
+            if (this.logger) this.logger.warn('RPG manager not initialized');
             return;
         }
     }
@@ -158,7 +158,7 @@ CyberOpsGame.prototype.showCharacterSheet = function(agentIdOrName) {
 CyberOpsGame.prototype.renderStatList = function(stats) {
     if (!stats) return '<div>No stats available</div>';
 
-    console.log('Rendering stats:', stats);
+    if (this.logger) this.logger.debug('Rendering stats:', stats);
 
     return Object.entries(stats).map(([stat, value]) => {
         // Handle different stat value formats
@@ -177,7 +177,7 @@ CyberOpsGame.prototype.renderStatList = function(stats) {
         } else if (typeof value === 'number') {
             statValue = value;
         } else {
-            console.warn(`Stat ${stat} has non-numeric value:`, value);
+            if (this.logger) this.logger.warn(`Stat ${stat} has non-numeric value:`, value);
             statValue = 10; // Default fallback
         }
 
@@ -251,18 +251,18 @@ CyberOpsGame.prototype.calculateXPPercent = function(rpgEntity) {
 
     const percent = (xpIntoCurrentLevel / xpNeededForLevel) * 100;
 
-    console.log(`📊 XP Progress: ${currentXP}/${nextRequired} = ${percent.toFixed(1)}% (Level ${currentLevel})`);
+    if (this.logger) this.logger.debug(`📊 XP Progress: ${currentXP}/${nextRequired} = ${percent.toFixed(1)}% (Level ${currentLevel})`);
 
     return Math.min(100, Math.max(0, percent));
 };
 
 // Inventory UI - Always use hub equipment system
 CyberOpsGame.prototype.showInventory = function(agentIdOrName) {
-    console.log('showInventory called with:', agentIdOrName);
+    if (this.logger) this.logger.debug('showInventory called with:', agentIdOrName);
 
     // Always use the hub equipment management UI for consistency
     if (this.showEquipmentManagement) {
-        console.log('📦 Opening unified equipment management UI');
+        if (this.logger) this.logger.debug('📦 Opening unified equipment management UI');
 
         // If we have a specific agent selected in game, pre-select them
         if (agentIdOrName && this.currentScreen === 'game') {
@@ -288,13 +288,13 @@ CyberOpsGame.prototype.showInventory = function(agentIdOrName) {
         a.originalId === agentIdOrName
     );
     if (!agent) {
-        console.warn('Agent not found:', agentIdOrName);
+        if (this.logger) this.logger.warn('Agent not found:', agentIdOrName);
         return;
     }
 
     // Ensure agent has RPG entity with derived stats
     if (!agent.rpgEntity) {
-        console.log('Creating RPG entity for inventory owner');
+        if (this.logger) this.logger.debug('Creating RPG entity for inventory owner');
         if (this.rpgManager) {
             agent.rpgEntity = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
         }
@@ -303,7 +303,7 @@ CyberOpsGame.prototype.showInventory = function(agentIdOrName) {
     // Get or create inventory
     let inventory = this.inventoryManager?.getInventory(agentIdOrName);
     if (!inventory && this.inventoryManager) {
-        console.log('Creating inventory for agent:', agent.name);
+        if (this.logger) this.logger.debug('Creating inventory for agent:', agent.name);
         // Use carry weight from derived stats or default
         const carryWeight = agent.rpgEntity?.derivedStats?.carryWeight || 100;
         inventory = this.inventoryManager.createInventory(agentIdOrName, carryWeight);
@@ -317,7 +317,7 @@ CyberOpsGame.prototype.showInventory = function(agentIdOrName) {
     }
 
     if (!inventory) {
-        console.warn('Could not create inventory');
+        if (this.logger) this.logger.warn('Could not create inventory');
         return;
     }
 
@@ -344,7 +344,7 @@ CyberOpsGame.prototype.showInventory = function(agentIdOrName) {
     // Sync current loadout if it exists - check by original ID for mission agents
     const loadoutId = agent.originalId || agent.name || agentIdOrName;
     const loadout = this.agentLoadouts?.[loadoutId] || {};
-    console.log(`📦 Getting loadout for ${loadoutId}:`, loadout);
+    if (this.logger) this.logger.debug(`📦 Getting loadout for ${loadoutId}:`, loadout);
 
     dialog.innerHTML = `
         <div class="dialog-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -908,12 +908,17 @@ CyberOpsGame.prototype.buyItem = function(itemId, quantity) {
 CyberOpsGame.prototype.setupRPGKeyboardShortcuts = function() {
     // RPG keyboard shortcuts are now handled in game-keyboard.js
     // This function is kept for compatibility but no longer needed
-    console.log('🎮 RPG keyboard shortcuts already configured in game-keyboard.js');
+    if (this.logger) this.logger.debug('🎮 RPG keyboard shortcuts already configured in game-keyboard.js');
 };
 
 // Initialize RPG UI when game starts
 const _originalInitRPG = CyberOpsGame.prototype.initRPGSystem;
 CyberOpsGame.prototype.initRPGSystem = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameRpgUi') : null;
+    }
     // Call original
     if (_originalInitRPG) {
         _originalInitRPG.call(this);
@@ -1059,4 +1064,4 @@ CyberOpsGame.prototype.useItem = function(agentId, itemId) {
     }
 };
 
-console.log('🎮 RPG UI System loaded');
+if (this.logger) this.logger.info('🎮 RPG UI System loaded');

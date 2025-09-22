@@ -3,17 +3,23 @@
  * Handles neutral NPCs, dialog interactions, and quest management
  */
 
-console.log('🚀 Loading NPC system file...');
+const npcLogger = window.Logger ? new window.Logger('NPCSystem') : null;
+if (npcLogger) npcLogger.debug('🚀 Loading NPC system file...');
 
 // Initialize NPC system
 CyberOpsGame.prototype.initNPCSystem = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameNpc') : null;
+    }
     this.npcs = [];
     this.dialogQueue = [];
     this.quests = {};
     this.completedQuests = new Set();
     this.npcInteractionRange = 3; // Distance for interaction (same as hack/bomb)
 
-    console.log('💬 NPC System initialized');
+    if (this.logger) this.logger.info('💬 NPC System initialized');
 };
 
 // NPC constructor function (not ES6 class)
@@ -467,7 +473,7 @@ CyberOpsGame.prototype.findValidSpawnPosition = function(desiredX, desiredY) {
                 testY >= 1 && testY < mapHeight - 1) {
                 // Check if position is not a wall
                 if (!this.isWall || !this.isWall(Math.floor(testX), Math.floor(testY))) {
-                    console.log(`📍 Adjusted NPC spawn from (${desiredX},${desiredY}) to (${testX},${testY})`);
+                    if (this.logger) this.logger.debug(`📍 Adjusted NPC spawn from (${desiredX},${desiredY}) to (${testX},${testY})`);
                     return { x: testX, y: testY };
                 }
             }
@@ -498,11 +504,11 @@ CyberOpsGame.prototype.spawnNPCs = function() {
         this.npcs.push(npc);
     }
 
-    console.log(`👥 Spawned ${this.npcs.length} NPCs for mission ${this.currentMissionIndex + 1}`);
+    if (this.logger) this.logger.debug(`👥 Spawned ${this.npcs.length} NPCs for mission ${this.currentMissionIndex + 1}`);
 
     // Debug: Log NPC positions
     this.npcs.forEach(npc => {
-        console.log(`  - ${npc.name} at (${npc.x}, ${npc.y}) - ${npc.sprite}`);
+        if (this.logger) this.logger.debug(`  - ${npc.name} at (${npc.x}, ${npc.y}) - ${npc.sprite}`);
     });
 };
 
@@ -513,7 +519,7 @@ CyberOpsGame.prototype.createNPCFromDefinition = function(npcDef) {
     const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES && window.CAMPAIGN_NPC_TEMPLATES[campaignId];
 
     if (!npcTemplates || !npcTemplates[npcDef.id]) {
-        console.warn(`No NPC template found for: ${npcDef.id} in campaign: ${campaignId}`);
+        if (this.logger) this.logger.warn(`No NPC template found for: ${npcDef.id} in campaign: ${campaignId}`);
         return null;
     }
 
@@ -550,7 +556,7 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
 
     // Only use NPCs from mission definition
     if (this.currentMissionDef && this.currentMissionDef.npcs) {
-        console.log('📋 Loading NPCs from mission definition');
+        if (this.logger) this.logger.debug('📋 Loading NPCs from mission definition');
         this.currentMissionDef.npcs.forEach(npcDef => {
             const npcConfig = this.createNPCFromDefinition(npcDef);
             if (npcConfig) {
@@ -566,15 +572,15 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
 // Check for nearby NPCs that can be interacted with
 CyberOpsGame.prototype.getNearbyNPC = function(agent) {
     if (!this.npcs) {
-        console.log('    ❌ No NPCs array');
+        if (this.logger) this.logger.debug('    ❌ No NPCs array');
         return null;
     }
 
-    console.log(`    Checking ${this.npcs.length} NPCs, range: ${this.npcInteractionRange}`);
+    if (this.logger) this.logger.debug(`    Checking ${this.npcs.length} NPCs, range: ${this.npcInteractionRange}`);
 
     for (let npc of this.npcs) {
         if (!npc.alive) {
-            console.log(`    - ${npc.name}: dead`);
+            if (this.logger) this.logger.debug(`    - ${npc.name}: dead`);
             continue;
         }
 
@@ -583,15 +589,15 @@ CyberOpsGame.prototype.getNearbyNPC = function(agent) {
             Math.pow(npc.y - agent.y, 2)
         );
 
-        console.log(`    - ${npc.name} at (${npc.x.toFixed(1)}, ${npc.y.toFixed(1)}): distance = ${dist.toFixed(2)}`);
+        if (this.logger) this.logger.debug(`    - ${npc.name} at (${npc.x.toFixed(1)}, ${npc.y.toFixed(1)}): distance = ${dist.toFixed(2)}`);
 
         if (dist <= this.npcInteractionRange) {
-            console.log(`    ✓ NPC in range!`);
+            if (this.logger) this.logger.debug(`    ✓ NPC in range!`);
             return npc;
         }
     }
 
-    console.log('    ❌ No NPC in range');
+    if (this.logger) this.logger.debug('    ❌ No NPC in range');
     return null;
 };
 
@@ -599,7 +605,7 @@ CyberOpsGame.prototype.getNearbyNPC = function(agent) {
 CyberOpsGame.prototype.interactWithNPC = function(agent, npc) {
     if (!npc || !npc.alive) return;
 
-    console.log(`💬 Agent interacting with NPC: ${npc.name}`);
+    if (this.logger) this.logger.debug(`💬 Agent interacting with NPC: ${npc.name}`);
 
     // Face the NPC
     const dx = npc.x - agent.x;
@@ -611,9 +617,9 @@ CyberOpsGame.prototype.interactWithNPC = function(agent, npc) {
     const dialog = npc.getNextDialog(this);
 
     // Debug: Check what dialog was returned
-    console.log('Dialog returned from getNextDialog:', dialog);
+    if (this.logger) this.logger.debug('Dialog returned from getNextDialog:', dialog);
     if (!dialog.text) {
-        console.warn('⚠️ Dialog has no text! Dialog object:', dialog);
+        if (this.logger) this.logger.warn('⚠️ Dialog has no text! Dialog object:', dialog);
     }
 
     // Add context-sensitive options based on nearby objects
@@ -777,7 +783,7 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
 
     // Modal engine is required
     if (!window.modalEngine) {
-        console.error('Modal engine not available!');
+        if (this.logger) this.logger.error('Modal engine not available!');
         return;
     }
         // Close any existing NPC dialog before showing new one
@@ -895,7 +901,7 @@ CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
 
 // Show mission progress screen (uses same comprehensive system as completion modal)
 CyberOpsGame.prototype.showMissionList = function() {
-    console.log('📜 Showing mission progress');
+    if (this.logger) this.logger.debug('📜 Showing mission progress');
 
     // Gather comprehensive mission data (same as completion modal)
     const missionSummary = this.gatherMissionSummary ? this.gatherMissionSummary(false) : {
@@ -1417,4 +1423,4 @@ CyberOpsGame.prototype.resumeGame = function() {
     }
 };
 
-console.log('💬 NPC System loaded successfully');
+if (this.logger) this.logger.info('💬 NPC System loaded successfully');

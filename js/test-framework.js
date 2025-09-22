@@ -93,19 +93,19 @@ class TestFramework {
     async run(suiteFilter = null) {
         // Prevent concurrent runs
         if (this.isRunning) {
-            console.warn('⚠️ Tests are already running, skipping duplicate run');
+            if (logger) logger.warn('⚠️ Tests are already running, skipping duplicate run');
             return this.results;
         }
 
         // Prevent infinite loops
         this.executionCount++;
         if (this.executionCount > this.maxExecutions) {
-            console.error('❌ Test execution limit reached - possible infinite loop detected');
+            if (logger) logger.error('❌ Test execution limit reached - possible infinite loop detected');
             return this.results;
         }
 
         this.isRunning = true;
-        console.log(`🧪 Starting test run ${this.executionCount}...`);
+        if (logger) logger.debug(`🧪 Starting test run ${this.executionCount}...`);
         const startTime = performance.now();
         this.results = [];
         this.stats = { total: 0, passed: 0, failed: 0, skipped: 0, duration: 0 };
@@ -142,7 +142,7 @@ class TestFramework {
             try {
                 await this.runWithTimeout(suite.beforeAll());
             } catch (error) {
-                console.error('beforeAll failed:', error);
+                if (logger) logger.error('beforeAll failed:', error);
                 return result;
             }
         }
@@ -153,7 +153,7 @@ class TestFramework {
                 result.tests.push({ name: test.name, status: 'skipped' });
                 result.skipped++;
                 this.stats.skipped++;
-                console.log(`⏭️  ${test.name} (skipped)`);
+                if (logger) logger.debug(`⏭️  ${test.name} (skipped)`);
                 continue;
             }
 
@@ -162,7 +162,7 @@ class TestFramework {
                 try {
                     await this.runWithTimeout(suite.beforeEach());
                 } catch (error) {
-                    console.error('beforeEach failed:', error);
+                    if (logger) logger.error('beforeEach failed:', error);
                 }
             }
 
@@ -173,13 +173,13 @@ class TestFramework {
             if (testResult.status === 'passed') {
                 result.passed++;
                 this.stats.passed++;
-                console.log(`✅ ${test.name}`);
+                if (logger) logger.info(`✅ ${test.name}`);
             } else {
                 result.failed++;
                 this.stats.failed++;
-                console.error(`❌ ${test.name}`);
+                if (logger) logger.error(`❌ ${test.name}`);
                 if (testResult.error) {
-                    console.error('   ', testResult.error);
+                    if (logger) logger.error('   ', testResult.error);
                 }
                 if (this.config.stopOnFailure) {
                     break;
@@ -191,7 +191,7 @@ class TestFramework {
                 try {
                     await this.runWithTimeout(suite.afterEach());
                 } catch (error) {
-                    console.error('afterEach failed:', error);
+                    if (logger) logger.error('afterEach failed:', error);
                 }
             }
 
@@ -203,7 +203,7 @@ class TestFramework {
             try {
                 await this.runWithTimeout(suite.afterAll());
             } catch (error) {
-                console.error('afterAll failed:', error);
+                if (logger) logger.error('afterAll failed:', error);
             }
         }
 
@@ -322,29 +322,29 @@ class TestFramework {
 
     // Reporting
     printSummary() {
-        console.log('\n' + '='.repeat(50));
-        console.log('📊 Test Summary');
-        console.log('='.repeat(50));
-        console.log(`Total:   ${this.stats.total}`);
-        console.log(`✅ Passed: ${this.stats.passed}`);
-        console.log(`❌ Failed: ${this.stats.failed}`);
-        console.log(`⏭️  Skipped: ${this.stats.skipped}`);
-        console.log(`⏱️  Duration: ${this.stats.duration.toFixed(2)}ms`);
-        console.log('='.repeat(50));
+        if (logger) logger.debug('\n' + '='.repeat(50));
+        if (logger) logger.debug('📊 Test Summary');
+        if (logger) logger.debug('='.repeat(50));
+        if (logger) logger.debug(`Total:   ${this.stats.total}`);
+        if (logger) logger.info(`✅ Passed: ${this.stats.passed}`);
+        if (logger) logger.error(`❌ Failed: ${this.stats.failed}`);
+        if (logger) logger.debug(`⏭️  Skipped: ${this.stats.skipped}`);
+        if (logger) logger.debug(`⏱️  Duration: ${this.stats.duration.toFixed(2)}ms`);
+        if (logger) logger.debug('='.repeat(50));
 
         if (this.stats.failed === 0 && this.stats.passed > 0) {
-            console.log('🎉 All tests passed!');
+            if (logger) logger.debug('🎉 All tests passed!');
         } else if (this.stats.failed > 0) {
-            console.log('💔 Some tests failed');
+            if (logger) logger.error('💔 Some tests failed');
             this.printFailedTestsSummary();
         }
     }
 
     // Print all failed tests grouped together for easy copy-paste
     printFailedTestsSummary() {
-        console.log('\n' + '='.repeat(50));
-        console.log('❌ FAILED TESTS SUMMARY (for easy copy-paste)');
-        console.log('='.repeat(50));
+        if (logger) logger.debug('\n' + '='.repeat(50));
+        if (logger) logger.error('❌ FAILED TESTS SUMMARY (for easy copy-paste)');
+        if (logger) logger.debug('='.repeat(50));
 
         const failedTests = [];
         this.results.forEach(suite => {
@@ -364,23 +364,23 @@ class TestFramework {
         }
 
         // Print in a compact format for easy copy-paste
-        console.log(`\nFailed: ${failedTests.length} tests\n`);
+        if (logger) logger.error(`\nFailed: ${failedTests.length} tests\n`);
 
         failedTests.forEach((failure, index) => {
-            console.log(`${index + 1}. [${failure.suite}] ${failure.test}`);
-            console.log(`   Error: ${failure.error}`);
+            if (logger) logger.debug(`${index + 1}. [${failure.suite}] ${failure.test}`);
+            if (logger) logger.error(`   Error: ${failure.error}`);
         });
 
-        console.log('\n' + '-'.repeat(50));
-        console.log('Copy-paste friendly format:');
-        console.log('-'.repeat(50));
+        if (logger) logger.debug('\n' + '-'.repeat(50));
+        if (logger) logger.debug('Copy-paste friendly format:');
+        if (logger) logger.debug('-'.repeat(50));
 
         // Ultra-compact format for pasting
         failedTests.forEach(failure => {
-            console.log(`❌ ${failure.test}: ${failure.error}`);
+            if (logger) logger.error(`❌ ${failure.test}: ${failure.error}`);
         });
 
-        console.log('='.repeat(50));
+        if (logger) logger.debug('='.repeat(50));
     }
 
     generateHTMLReport() {

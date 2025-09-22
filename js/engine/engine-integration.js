@@ -32,7 +32,7 @@ CyberOpsGame.prototype.onCampaignLoaded = function() {
 CyberOpsGame.prototype.updateUIStrings = function() {
     if (!window.ContentLoader) return;
 
-    console.log('📝 Updating UI strings from campaign...');
+    if (this.logger) this.logger.debug('📝 Updating UI strings from campaign...');
 
     // Update menu buttons
     const menuButtons = {
@@ -72,7 +72,7 @@ CyberOpsGame.prototype.applyCampaignTheme = function() {
     const campaign = window.ContentLoader?.currentCampaign;
     if (!campaign?.ui) return;
 
-    console.log('🎨 Applying campaign theme:', campaign.ui.theme);
+    if (this.logger) this.logger.debug('🎨 Applying campaign theme:', campaign.ui.theme);
 
     // Apply color scheme
     const root = document.documentElement;
@@ -100,7 +100,7 @@ CyberOpsGame.prototype.initializeFormulas = function() {
     const combat = window.ContentLoader?.getContent('combat');
     if (!combat || !this.gameServices?.formulaService) return;
 
-    console.log('⚔️ Initializing campaign formulas...');
+    if (this.logger) this.logger.debug('⚔️ Initializing campaign formulas...');
 
     // Override formula service with campaign settings
     const formulaService = this.gameServices.formulaService;
@@ -252,7 +252,7 @@ CyberOpsGame.prototype.checkMilestones = function(category, data) {
  * Handle milestone completion
  */
 CyberOpsGame.prototype.onMilestoneComplete = function(milestone) {
-    console.log('🏆 Milestone complete:', milestone.name);
+    if (this.logger) this.logger.debug('🏆 Milestone complete:', milestone.name);
 
     // Show notification
     const message = window.ContentLoader.getString('messages.milestoneComplete', { milestone: milestone.name });
@@ -274,4 +274,4 @@ CyberOpsGame.prototype.onMilestoneComplete = function(milestone) {
     }
 };
 
-console.log('✅ Engine integration loaded - campaigns can now override all content');
+if (this.logger) this.logger.info('✅ Engine integration loaded - campaigns can now override all content');

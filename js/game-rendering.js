@@ -1,5 +1,10 @@
     // 2D Background Effects
 CyberOpsGame.prototype.init2DBackgroundEffects = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameRendering') : null;
+    }
         // Initialize background particles for 2D mode
         this.bgParticles2D = [];
         const particleCount = 50;
@@ -331,7 +336,7 @@ CyberOpsGame.prototype.render = function() {
 
                         // Debug: Log once per second
                         if (!this.lastWaypointLog || Date.now() - this.lastWaypointLog > 1000) {
-                            console.log(`📍 P pressed - Showing ${waypoints.length} waypoints for ${agent.name}`);
+                            if (this.logger) this.logger.debug(`📍 P pressed - Showing ${waypoints.length} waypoints for ${agent.name}`);
                             this.lastWaypointLog = Date.now();
                         }
 
@@ -522,13 +527,13 @@ CyberOpsGame.prototype.renderMap = function() {
 
         // Debug log once per toggle (commented out to reduce spam)
         // if (this._lastFogState !== this.fogEnabled) {
-        //     console.log('RenderMap - fogEnabled:', this.fogEnabled);
+        //     if (this.logger) this.logger.debug('RenderMap - fogEnabled:', this.fogEnabled);
         //     this._lastFogState = this.fogEnabled;
         // }
 
         // Safety check for map tiles
         if (!this.map.tiles || this.map.tiles.length === 0) {
-            console.error('❌ Map tiles not initialized in renderMap!', {
+            if (this.logger) this.logger.error('❌ Map tiles not initialized in renderMap!', {
                 map: this.map,
                 hasTiles: !!this.map.tiles,
                 tilesLength: this.map.tiles ? this.map.tiles.length : 0
@@ -539,7 +544,7 @@ CyberOpsGame.prototype.renderMap = function() {
         for (let y = 0; y < this.map.height; y++) {
             for (let x = 0; x < this.map.width; x++) {
                 if (!this.map.tiles[y]) {
-                    console.error(`❌ Map tiles row ${y} is undefined!`);
+                    if (this.logger) this.logger.error(`❌ Map tiles row ${y} is undefined!`);
                     continue;
                 }
                 const tile = this.map.tiles[y][x];

@@ -67,7 +67,7 @@ class KeybindingService {
         // Check for conflicts
         const existingAction = this.getActionByKey(defaultKey);
         if (existingAction && existingAction !== action) {
-            console.warn(`⚠️ Key conflict: ${defaultKey} is already bound to ${existingAction}`);
+            if (logger) logger.warn(`⚠️ Key conflict: ${defaultKey} is already bound to ${existingAction}`);
             return false;
         }
 
@@ -112,14 +112,14 @@ class KeybindingService {
     updateBinding(action, newKey) {
         // Check if action exists
         if (!this.bindings.has(action)) {
-            console.error(`Action ${action} not found`);
+            if (logger) logger.error(`Action ${action} not found`);
             return false;
         }
 
         // Check for conflicts
         const existingAction = this.getActionByKey(newKey);
         if (existingAction && existingAction !== action) {
-            console.warn(`Cannot bind ${newKey} to ${action}: already used by ${existingAction}`);
+            if (logger) logger.warn(`Cannot bind ${newKey} to ${action}: already used by ${existingAction}`);
             return false;
         }
 
@@ -186,7 +186,7 @@ class KeybindingService {
                     }
                 }
             } catch (e) {
-                console.error('Failed to load custom keybindings:', e);
+                if (logger) logger.error('Failed to load custom keybindings:', e);
             }
         }
     }

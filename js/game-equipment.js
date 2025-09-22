@@ -25,9 +25,9 @@ CyberOpsGame.prototype.initializeEquipmentSystem = function() {
 
     // Initialize InventoryService if available
     if (this.gameServices && this.gameServices.inventoryService) {
-        console.log('🎒 Initializing InventoryService...');
+        if (this.logger) this.logger.debug('🎒 Initializing InventoryService...');
         this.gameServices.inventoryService.initializeFromGame(this);
-        console.log('✅ InventoryService initialized');
+        if (this.logger) this.logger.info('✅ InventoryService initialized');
     }
 
     // Add global handler for equipment dialog close buttons (fallback)
@@ -35,7 +35,7 @@ CyberOpsGame.prototype.initializeEquipmentSystem = function() {
         if (e.target.closest('#equipmentDialog .dialog-close') ||
             (e.target.textContent === '[X]' && e.target.closest('#equipmentDialog')) ||
             (e.target.textContent === 'CLOSE' && e.target.closest('#equipmentDialog'))) {
-            console.log('🔒 Equipment close button clicked via delegation');
+            if (this.logger) this.logger.debug('🔒 Equipment close button clicked via delegation');
             this.closeEquipmentDialog();
         }
     });
@@ -45,7 +45,7 @@ CyberOpsGame.prototype.initializeEquipmentSystem = function() {
 CyberOpsGame.prototype.showEquipmentManagement = function() {
     // If declarative dialog system is available, use it
     if (this.dialogEngine) {
-        console.log('🔫 Redirecting to declarative Arsenal dialog');
+        if (this.logger) this.logger.debug('🔫 Redirecting to declarative Arsenal dialog');
         this.dialogEngine.navigateTo('arsenal');
         return;
     }
@@ -65,7 +65,7 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
             // Otherwise select the first active agent
             this.selectedEquipmentAgent = this.activeAgents[0].id;
         }
-        console.log('Auto-selected agent for equipment:', this.selectedEquipmentAgent);
+        if (this.logger) this.logger.debug('Auto-selected agent for equipment:', this.selectedEquipmentAgent);
         needsRefresh = true; // Mark that we need to refresh UI
     }
 
@@ -92,7 +92,7 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
             closeButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('🔒 Close button clicked');
+                if (this.logger) this.logger.debug('🔒 Close button clicked');
                 this.closeEquipmentDialog();
             });
         }
@@ -102,7 +102,7 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
             closeBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('🔒 CLOSE button clicked');
+                if (this.logger) this.logger.debug('🔒 CLOSE button clicked');
                 this.closeEquipmentDialog();
             });
         }
@@ -183,7 +183,7 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
         // Also call with delay in case DOM needs time
         setTimeout(() => {
             if (!document.getElementById('inventoryList').innerHTML.includes('WEAPONS')) {
-                console.log('📦 Inventory was empty, populating now...');
+                if (this.logger) this.logger.debug('📦 Inventory was empty, populating now...');
                 this.showWeaponInventory();
             }
         }, 50);
@@ -192,7 +192,7 @@ CyberOpsGame.prototype.showEquipmentManagement = function() {
 
 // Close equipment dialog
 CyberOpsGame.prototype.closeEquipmentDialog = function() {
-    console.log('🔒 Closing equipment dialog...');
+    if (this.logger) this.logger.debug('🔒 Closing equipment dialog...');
 
     const dialog = document.getElementById('equipmentDialog');
     if (dialog) {
@@ -229,7 +229,7 @@ CyberOpsGame.prototype.refreshEquipmentUI = function() {
         const dialogEngine = this.dialogEngine || window.dialogEngine || window.declarativeDialogEngine;
         if (dialogEngine && dialogEngine.navigateTo) {
             dialogEngine.navigateTo('arsenal');
-            console.log('Arsenal UI refreshed via navigation');
+            if (this.logger) this.logger.debug('Arsenal UI refreshed via navigation');
             return;
         }
     }
@@ -250,7 +250,7 @@ CyberOpsGame.prototype.updateInventoryDisplay = function() {
     // This function updates the weapon inventory display
     // Since we handle inventory in the shop tab, this can be a placeholder
     // or we can add a quick inventory summary here if needed
-    console.log('Inventory updated:', {
+    if (this.logger) this.logger.debug('Inventory updated:', {
         weapons: this.weapons.filter(w => w.owned > 0).length,
         totalWeapons: this.weapons.reduce((sum, w) => sum + (w.owned || 0), 0)
     });
@@ -427,10 +427,10 @@ CyberOpsGame.prototype.updateStatsPreview = function(agentId) {
 
 // Show weapon inventory
 CyberOpsGame.prototype.showWeaponInventory = function() {
-    console.log('🔫 showWeaponInventory called');
+    if (this.logger) this.logger.debug('🔫 showWeaponInventory called');
     const inventoryEl = document.getElementById('inventoryList');
     if (!inventoryEl) {
-        console.error('inventoryList element not found!');
+        if (this.logger) this.logger.error('inventoryList element not found!');
         return;
     }
 
@@ -440,8 +440,8 @@ CyberOpsGame.prototype.showWeaponInventory = function() {
         this.gameServices.inventoryService.syncEquippedCounts();
     }
 
-    console.log('   Weapons available:', this.weapons?.length || 0);
-    console.log('   Selected agent:', this.selectedEquipmentAgent);
+    if (this.logger) this.logger.debug('   Weapons available:', this.weapons?.length || 0);
+    if (this.logger) this.logger.debug('   Selected agent:', this.selectedEquipmentAgent);
 
     inventoryEl.innerHTML = '<h4 style="color: #ffa500; margin-bottom: 10px;">🔫 WEAPONS</h4>';
 
@@ -580,7 +580,7 @@ CyberOpsGame.prototype.getAvailableCount = function(type, itemId) {
 CyberOpsGame.prototype.equipItem = function(agentId, slot, itemId) {
     // Check if service is available
     if (!this.gameServices || !this.gameServices.inventoryService) {
-        console.warn('InventoryService not available');
+        if (this.logger) this.logger.warn('InventoryService not available');
         return false;
     }
     // ONLY use InventoryService
@@ -606,7 +606,7 @@ CyberOpsGame.prototype.equipItem = function(agentId, slot, itemId) {
 CyberOpsGame.prototype.unequipItem = function(agentId, slot) {
     // Check if service is available
     if (!this.gameServices || !this.gameServices.inventoryService) {
-        console.warn('InventoryService not available');
+        if (this.logger) this.logger.warn('InventoryService not available');
         return false;
     }
     // ONLY use InventoryService
@@ -632,7 +632,7 @@ CyberOpsGame.prototype.unequipItem = function(agentId, slot) {
 CyberOpsGame.prototype.sellItem = function(type, itemId) {
     // Check if service is available
     if (!this.gameServices || !this.gameServices.inventoryService) {
-        console.warn('InventoryService not available');
+        if (this.logger) this.logger.warn('InventoryService not available');
         return { success: false, error: 'Service not available' };
     }
     // ONLY use InventoryService
@@ -660,16 +660,16 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
     // Refresh UI
     this.refreshEquipmentUI();
 
-    console.log(`✅ Sold item for ${result.price} credits`);
+    if (this.logger) this.logger.info(`✅ Sold item for ${result.price} credits`);
 
-    console.log('=== SELL PRICE DEBUG ===');
-    console.log('Item cost:', item.cost, 'type:', typeof item.cost);
-    console.log('Calculated sell price:', sellPrice, 'type:', typeof sellPrice);
-    console.log('Credits before:', this.credits, 'type:', typeof this.credits);
+    if (this.logger) this.logger.debug('=== SELL PRICE DEBUG ===');
+    if (this.logger) this.logger.debug('Item cost:', item.cost, 'type:', typeof item.cost);
+    if (this.logger) this.logger.debug('Calculated sell price:', sellPrice, 'type:', typeof sellPrice);
+    if (this.logger) this.logger.debug('Credits before:', this.credits, 'type:', typeof this.credits);
 
     // Type safety check
     if (typeof sellPrice !== 'number' || isNaN(sellPrice)) {
-        console.error('ERROR: Sell price is not a valid number!', sellPrice);
+        if (this.logger) this.logger.error('ERROR: Sell price is not a valid number!', sellPrice);
         return;
     }
 
@@ -682,11 +682,11 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
             {
                 text: 'SELL',
                 action: () => {
-                    console.log('=== EXECUTING SELL ===');
-                    console.log('Selling item:', item.name);
-                    console.log('Item count before:', item.owned);
-                    console.log('Credits before sell:', this.credits);
-                    console.log('Sell price to ADD:', sellPrice);
+                    if (this.logger) this.logger.debug('=== EXECUTING SELL ===');
+                    if (this.logger) this.logger.debug('Selling item:', item.name);
+                    if (this.logger) this.logger.debug('Item count before:', item.owned);
+                    if (this.logger) this.logger.debug('Credits before sell:', this.credits);
+                    if (this.logger) this.logger.debug('Sell price to ADD:', sellPrice);
 
                     // Use InventoryService to decrement item count
                     if (this.gameServices && this.gameServices.inventoryService) {
@@ -700,83 +700,83 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
                     // Safeguard: ensure sellPrice is positive
                     const finalSellPrice = Math.max(0, sellPrice);
                     if (finalSellPrice <= 0) {
-                        console.error('WARNING: Sell price is not positive!', sellPrice);
+                        if (this.logger) this.logger.error('WARNING: Sell price is not positive!', sellPrice);
                     }
 
                     // Add credits from sale
                     this.credits = creditsBefore + finalSellPrice;
 
-                    console.log('Item count after:', item.owned);
-                    console.log('Credits after sell:', this.credits);
-                    console.log('Change in credits:', this.credits - creditsBefore);
-                    console.log('Expected change:', finalSellPrice);
-                    console.log('Formula used: credits = ', creditsBefore, ' + ', finalSellPrice, ' = ', this.credits);
+                    if (this.logger) this.logger.debug('Item count after:', item.owned);
+                    if (this.logger) this.logger.debug('Credits after sell:', this.credits);
+                    if (this.logger) this.logger.debug('Change in credits:', this.credits - creditsBefore);
+                    if (this.logger) this.logger.debug('Expected change:', finalSellPrice);
+                    if (this.logger) this.logger.debug('Formula used: credits = ', creditsBefore, ' + ', finalSellPrice, ' = ', this.credits);
 
                     // Store reference to game instance and current mode
                     const game = this;
                     const wasInSellMode = game.currentInventoryMode === 'sell';
                     const currentTab = game.currentInventoryTab;
 
-                    console.log('Pre-sell state: mode=', game.currentInventoryMode, 'tab=', currentTab);
+                    if (this.logger) this.logger.debug('Pre-sell state: mode=', game.currentInventoryMode, 'tab=', currentTab);
 
                     // We need to wait for the confirmation modal to close
                     // Then refresh the arsenal dialog that's underneath
                     setTimeout(() => {
-                        console.log('=== SELL REFRESH DEBUG ===');
-                        console.log('1. Refreshing Arsenal after sell...');
-                        console.log('2. Current mode:', game.currentInventoryMode);
-                        console.log('3. Should be in sell mode:', wasInSellMode);
+                        if (this.logger) this.logger.debug('=== SELL REFRESH DEBUG ===');
+                        if (this.logger) this.logger.debug('1. Refreshing Arsenal after sell...');
+                        if (this.logger) this.logger.debug('2. Current mode:', game.currentInventoryMode);
+                        if (this.logger) this.logger.debug('3. Should be in sell mode:', wasInSellMode);
 
                         // Ensure we stay in sell mode
                         if (wasInSellMode) {
                             game.currentInventoryMode = 'sell';
                             game.currentInventoryTab = currentTab || 'weapons';
-                            console.log('4. Restored sell mode and tab');
+                            if (this.logger) this.logger.debug('4. Restored sell mode and tab');
                         }
 
                         const arsenalDialog = document.getElementById('dialog-arsenal');
-                        console.log('5. Arsenal dialog found?', !!arsenalDialog);
+                        if (this.logger) this.logger.debug('5. Arsenal dialog found?', !!arsenalDialog);
 
                         if (arsenalDialog) {
                             const contentEl = arsenalDialog.querySelector('.dialog-content');
-                            console.log('6. Content element found?', !!contentEl);
+                            if (this.logger) this.logger.debug('6. Content element found?', !!contentEl);
 
                             if (contentEl) {
                                 // The simplest approach - just navigate to arsenal again
                                 // This will regenerate the content with the updated data
-                                console.log('7. Refreshing Arsenal by re-navigating...');
+                                if (this.logger) this.logger.debug('7. Refreshing Arsenal by re-navigating...');
 
                                 const dialogEngine = game.dialogEngine || window.dialogEngine || window.declarativeDialogEngine;
                                 if (dialogEngine && dialogEngine.navigateTo) {
-                                    console.log('8. Current inventory mode:', game.currentInventoryMode);
+                                    if (this.logger) this.logger.debug('8. Current inventory mode:', game.currentInventoryMode);
                                     // Navigate to arsenal which will regenerate with current data
                                     dialogEngine.navigateTo('arsenal');
-                                    console.log('9. ✅ Arsenal refreshed via navigation');
+                                    if (this.logger) this.logger.info('9. ✅ Arsenal refreshed via navigation');
 
                                     // Verify the update
                                     setTimeout(() => {
                                         const newContent = document.getElementById('dialog-arsenal');
                                         if (newContent) {
                                             const itemShown = newContent.innerHTML.includes(item.name);
-                                            console.log('10. Item still shown after refresh?', itemShown);
+                                            if (this.logger) this.logger.debug('10. Item still shown after refresh?', itemShown);
                                             if (itemShown) {
                                                 const regex = new RegExp(`Available: (\\d+)`);
                                                 const matches = newContent.innerHTML.match(new RegExp(regex, 'g'));
-                                                console.log('11. Available counts found:', matches);
+                                                if (this.logger) this.logger.debug('11. Available counts found:', matches);
                                             }
                                         }
                                     }, 100);
                                 } else {
-                                    console.log('ERROR: Dialog engine or navigateTo not found');
+                                    if (this.logger) this.logger.error('ERROR: Dialog engine or navigateTo not found');
                                 }
                             } else {
-                                console.log('ERROR: Missing components', { contentEl: !!contentEl, dialogEngine: !!(game.dialogEngine || window.dialogEngine) });
+                                if (this.logger) this.logger.error('ERROR: Missing components', { contentEl: !!contentEl, dialogEngine: !!(game.dialogEngine || window.dialogEngine) });
                             }
                         } else {
-                            console.log('Arsenal dialog not in DOM - trying fallback refresh');
+                            if (this.logger) this.logger.debug('Arsenal dialog not in DOM - trying fallback refresh');
                             game.refreshEquipmentUI();
                         }
-                        console.log('=== END DEBUG ===');
+                        if (this.logger) this.logger.debug('=== END DEBUG ===');
                     }, 200); // Slightly longer delay to ensure modal fully closes
                 }
             },
@@ -807,7 +807,7 @@ CyberOpsGame.prototype.buyItem = function(type, itemId) {
     }
 
     if (!itemData) {
-        console.error('Item not found for type:', type, 'id:', itemId);
+        if (this.logger) this.logger.error('Item not found for type:', type, 'id:', itemId);
         return;
     }
 
@@ -1002,7 +1002,7 @@ CyberOpsGame.prototype.showShopDialog = function() {
 CyberOpsGame.prototype.optimizeLoadouts = function() {
     // ONLY use InventoryService if available
     if (!this.gameServices || !this.gameServices.inventoryService) {
-        console.warn('InventoryService not available');
+        if (this.logger) this.logger.warn('InventoryService not available');
         return;
     }
     const invService = this.gameServices.inventoryService;
@@ -1196,7 +1196,7 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         ).length;
         logger.info(`Loadouts optimized! Equipped weapons to ${equipped} agents`);
     }
-    console.log('✅ Loadouts optimized successfully');
+    if (this.logger) this.logger.info('✅ Loadouts optimized successfully');
 };
 
 // Save loadouts
@@ -1243,7 +1243,7 @@ CyberOpsGame.prototype.getItemById = function(type, itemId) {
 CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
     // Check if service is available
     if (!this.gameServices || !this.gameServices.inventoryService) {
-        console.warn('InventoryService not available');
+        if (this.logger) this.logger.warn('InventoryService not available');
         return agents;
     }
     const inventoryService = this.gameServices.inventoryService;
@@ -1256,11 +1256,11 @@ CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
                        this.agentLoadouts[agent.originalId];
 
         if (!loadout) {
-            console.log(`⚠️ No loadout found for agent: ${agent.name}`);
+            if (this.logger) this.logger.debug(`⚠️ No loadout found for agent: ${agent.name}`);
             return agent;
         }
 
-        console.log(`✅ Applying loadout to ${agent.name}:`, loadout);
+        if (this.logger) this.logger.info(`✅ Applying loadout to ${agent.name}:`, loadout);
 
         // Create a copy of the agent and apply equipment via InventoryService
         let modifiedAgent = { ...agent };
@@ -1277,7 +1277,7 @@ CyberOpsGame.prototype.showShopInterface = function() {
     // Check if we're in declarative dialog mode
     if (this.dialogEngine && this.dialogEngine.currentState) {
         // Open shop as a separate HUD dialog
-        console.log('🛒 Opening Shop interface as HUD dialog');
+        if (this.logger) this.logger.debug('🛒 Opening Shop interface as HUD dialog');
         this.showShopDialog();
         return;
     }
@@ -1285,7 +1285,7 @@ CyberOpsGame.prototype.showShopInterface = function() {
     // Original implementation for old equipment dialog
     const inventoryEl = document.getElementById('inventoryList');
     if (!inventoryEl) {
-        console.error('inventoryList element not found');
+        if (this.logger) this.logger.error('inventoryList element not found');
         return;
     }
     inventoryEl.innerHTML = '<h4 style="color: #2e7d32; margin-bottom: 10px;">🛒 SHOP - BUY ITEMS</h4>';
@@ -1360,7 +1360,7 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
     // ONLY use InventoryService - no fallback
     const inventoryService = this.gameServices?.inventoryService;
     if (!inventoryService) {
-        console.error('❌ InventoryService is required!');
+        if (this.logger) this.logger.error('❌ InventoryService is required!');
         return;
     }
 
@@ -1384,7 +1384,7 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
     }
 
     if (!itemData) {
-        console.error('Item not found for type:', type, 'id:', itemId);
+        if (this.logger) this.logger.error('Item not found for type:', type, 'id:', itemId);
         return;
     }
 
@@ -1411,7 +1411,7 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
             ];
         }
 
-        console.log(`✅ Purchased ${itemData.name} for ${itemData.cost} credits`);
+        if (this.logger) this.logger.info(`✅ Purchased ${itemData.name} for ${itemData.cost} credits`);
     }
 
     // Refresh UI - simply re-navigate to arsenal
@@ -1420,7 +1420,7 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
         const dialogEngine = this.dialogEngine || window.dialogEngine || window.declarativeDialogEngine;
         if (dialogEngine && dialogEngine.navigateTo) {
             dialogEngine.navigateTo('arsenal');
-            console.log('✅ Arsenal UI refreshed after buy');
+            if (this.logger) this.logger.info('✅ Arsenal UI refreshed after buy');
         }
     } else {
         // Original refresh for old UI
@@ -1429,7 +1429,7 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
     }
 
     // Show confirmation
-    console.log(`Purchased ${itemData.name} for ${itemData.cost} credits`);
+    if (this.logger) this.logger.debug(`Purchased ${itemData.name} for ${itemData.cost} credits`);
 };
 
 // Show sell interface
@@ -1437,7 +1437,7 @@ CyberOpsGame.prototype.showSellInterface = function() {
     // Check if we're in declarative dialog mode
     if (this.dialogEngine && this.dialogEngine.currentState) {
         // Open sell interface as a separate HUD dialog
-        console.log('💰 Opening Sell interface as HUD dialog');
+        if (this.logger) this.logger.debug('💰 Opening Sell interface as HUD dialog');
         this.showSellDialog();
         return;
     }
@@ -1445,7 +1445,7 @@ CyberOpsGame.prototype.showSellInterface = function() {
     // Original implementation for old equipment dialog
     const inventoryEl = document.getElementById('inventoryList');
     if (!inventoryEl) {
-        console.error('inventoryList element not found');
+        if (this.logger) this.logger.error('inventoryList element not found');
         return;
     }
     inventoryEl.innerHTML = '<h4 style="color: #8b4513; margin-bottom: 10px;">💰 SELL ITEMS</h4>';

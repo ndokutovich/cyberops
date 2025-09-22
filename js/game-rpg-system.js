@@ -6,6 +6,9 @@
 // Base Pawn class - all entities inherit from this
 class RPGPawn {
     constructor(config = {}) {
+        // Initialize logger
+        this.logger = window.Logger ? new window.Logger('RPGPawn') : null;
+
         this.id = config.id || `pawn_${Date.now()}_${Math.random()}`;
         this.name = config.name || "Unknown";
         this.level = config.level || 1;
@@ -552,6 +555,9 @@ class RPGPawn {
 // Inventory system
 class RPGInventory {
     constructor(maxWeight = 100, maxSize = 20) {
+        // Initialize logger
+        this.logger = window.Logger ? new window.Logger('RPGInventory') : null;
+
         this.maxWeight = maxWeight;
         this.maxSize = maxSize;
         this.owner = null; // Will be set later
@@ -665,6 +671,8 @@ class RPGInventory {
 class RPGAgent extends RPGPawn {
     constructor(config) {
         super(config);
+        // Override logger with specific class name
+        this.logger = window.Logger ? new window.Logger('RPGAgent') : null;
 
         this.type = 'agent';
         this.team = 'player';
@@ -702,6 +710,8 @@ class RPGAgent extends RPGPawn {
 class RPGEnemy extends RPGPawn {
     constructor(config) {
         super(config);
+        // Override logger with specific class name
+        this.logger = window.Logger ? new window.Logger('RPGEnemy') : null;
 
         this.type = config.enemyType || 'guard';
         this.team = 'enemy';
@@ -783,6 +793,8 @@ class RPGEnemy extends RPGPawn {
 class RPGNPC extends RPGPawn {
     constructor(config) {
         super(config);
+        // Override logger with specific class name
+        this.logger = window.Logger ? new window.Logger('RPGNPC') : null;
 
         this.type = 'npc';
         this.team = 'neutral';

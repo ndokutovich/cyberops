@@ -6,12 +6,17 @@
 
 // Integration adapter for CyberOpsGame
 CyberOpsGame.prototype.initializeDeclarativeDialogs = function() {
-    console.log('🎮 Initializing Declarative Dialog System');
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+    }
+    if (this.logger) this.logger.debug('🎮 Initializing Declarative Dialog System');
 
     // Get the engine
     const engine = window.declarativeDialogEngine;
     if (!engine) {
-        console.error('Declarative Dialog Engine not found!');
+        if (this.logger) this.logger.error('Declarative Dialog Engine not found!');
         return;
     }
 
@@ -32,7 +37,7 @@ CyberOpsGame.prototype.initializeDeclarativeDialogs = function() {
     // Store reference
     this.dialogEngine = engine;
 
-    console.log('✅ Declarative Dialog System ready');
+    if (this.logger) this.logger.info('✅ Declarative Dialog System ready');
 };
 
 // Register content generators
@@ -529,7 +534,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         const currentXP = rpg.experience || 0;
         const nextLevelXP = this.rpgManager?.experienceTable?.[rpg.level + 1] || 1000;
 
-        console.log(`🎨 XP Bar Display: ${currentXP}/${nextLevelXP} XP = ${xpPercent.toFixed(1)}% width`);
+        if (this.logger) this.logger.debug(`🎨 XP Bar Display: ${currentXP}/${nextLevelXP} XP = ${xpPercent.toFixed(1)}% width`);
 
         html += `
             <div class="xp-panel" style="margin-top: 20px;">
@@ -734,7 +739,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         html += '<div style="flex: 1; min-width: 250px; display: flex; flex-direction: column; padding: 5px;">';
 
         const arsenalClickAction = `(function() {
-            console.log('Agent clicked:', '{{agentId}}');
+            if (this.logger) this.logger.debug('Agent clicked:', '{{agentId}}');
             game.selectedEquipmentAgent = '{{agentId}}';
             game.dialogEngine.navigateTo('arsenal');
         })()`;
@@ -750,13 +755,13 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         `;
 
         if (this.selectedEquipmentAgent) {
-            console.log('Looking for agent with ID:', this.selectedEquipmentAgent);
-            console.log('Available agents:', this.activeAgents.map(a => ({ id: a.id, name: a.name })));
+            if (this.logger) this.logger.debug('Looking for agent with ID:', this.selectedEquipmentAgent);
+            if (this.logger) this.logger.debug('Available agents:', this.activeAgents.map(a => ({ id: a.id, name: a.name })));
             const agent = this.activeAgents.find(a => String(a.id) === String(this.selectedEquipmentAgent));
             const loadout = this.agentLoadouts[this.selectedEquipmentAgent] || {};
 
             if (agent) {
-                console.log('Found agent:', agent.name);
+                if (this.logger) this.logger.debug('Found agent:', agent.name);
                 html += `
                     <div style="background: rgba(0,255,255,0.05); padding: 15px; border-radius: 8px; flex: 1; overflow-y: auto;">
                         <h4 style="color: #fff; margin-bottom: 15px;">${agent.name}'s Loadout</h4>
@@ -895,7 +900,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
                 html += '</div></div></div>';
             } else {
-                console.log('Agent not found with ID:', this.selectedEquipmentAgent);
+                if (this.logger) this.logger.warn('Agent not found with ID:', this.selectedEquipmentAgent);
                 html += '<div style="color: #ff0000; text-align: center; padding: 20px;">Error: Agent not found!</div>';
             }
         } else {
@@ -1490,7 +1495,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         // Initialize equipment system if needed
         if (!this.agentLoadouts) {
-            console.log('📦 Initializing equipment system in loadouts dialog...');
+            if (this.logger) this.logger.debug('📦 Initializing equipment system in loadouts dialog...');
             this.initializeEquipmentSystem();
         }
 
@@ -1504,7 +1509,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                         utility: null,
                         special: null
                     };
-                    console.log(`📦 Created loadout for ${agent.name} (ID: ${agent.id})`);
+                    if (this.logger) this.logger.debug(`📦 Created loadout for ${agent.name} (ID: ${agent.id})`);
                 }
             });
         }
@@ -1531,13 +1536,13 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 </div>
             `;
 
-            console.log('📦 Displaying loadouts for agents:', this.activeAgents.map(a => `${a.name} (ID: ${a.id})`));
-            console.log('📦 Current agentLoadouts:', this.agentLoadouts);
+            if (this.logger) this.logger.debug('📦 Displaying loadouts for agents:', this.activeAgents.map(a => `${a.name} (ID: ${a.id})`));
+            if (this.logger) this.logger.debug('📦 Current agentLoadouts:', this.agentLoadouts);
 
             html += '<div style="max-height: 300px; overflow-y: auto;">';
             this.activeAgents.forEach(agent => {
                 const loadout = this.agentLoadouts[agent.id] || {};
-                console.log(`📦 Agent ${agent.name} (ID: ${agent.id}) loadout:`, loadout);
+                if (this.logger) this.logger.debug(`📦 Agent ${agent.name} (ID: ${agent.id}) loadout:`, loadout);
 
                 // Calculate equipped items count
                 let equippedCount = 0;
@@ -2148,19 +2153,19 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
     engine.registerAction('confirmHire', function(context) {
         const selectedAgent = this.stateData.selectedAgent;
 
-        console.log('confirmHire action called');
-        console.log('Selected agent from state:', selectedAgent);
+        if (this.logger) this.logger.debug('confirmHire action called');
+        if (this.logger) this.logger.debug('Selected agent from state:', selectedAgent);
 
         if (!selectedAgent) {
-            console.error('No agent selected for hire confirmation');
+            if (this.logger) this.logger.error('No agent selected for hire confirmation');
             this.back();
             return;
         }
 
         const agent = game.availableAgents.find(a => a.id === selectedAgent.id);
 
-        console.log('Found agent in availableAgents:', agent);
-        console.log('Agent details:', {
+        if (this.logger) this.logger.debug('Found agent in availableAgents:', agent);
+        if (this.logger) this.logger.debug('Agent details:', {
             id: agent?.id,
             name: agent?.name,
             hired: agent?.hired,
@@ -2182,17 +2187,17 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
                     utility: null,
                     special: null
                 };
-                console.log(`Initialized loadout for ${agent.name}`);
+                if (this.logger) this.logger.info(`Initialized loadout for ${agent.name}`);
             }
 
             game.updateHubStats();
 
-            console.log(`✅ Hired ${agent.name} for ${agent.cost} credits`);
+            if (this.logger) this.logger.info(`✅ Hired ${agent.name} for ${agent.cost} credits`);
 
             // Navigate directly back to hire-agents (this will close the confirmation)
             this.navigateTo('hire-agents', null, true); // Force refresh to show updated list
         } else {
-            console.error('Cannot hire agent - condition failed:', {
+            if (this.logger) this.logger.error('Cannot hire agent - condition failed:', {
                 agent: agent,
                 agentExists: !!agent,
                 isHired: agent?.hired,
@@ -2328,7 +2333,7 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         // The agentId parameter might be "1 3" where 1 is the ID we want
         const actualAgentId = String(agentId).split(' ')[0];
 
-        console.log('🔧 showEquipmentForAgent called with:', agentId, '→ using ID:', actualAgentId);
+        if (this.logger) this.logger.debug('🔧 showEquipmentForAgent called with:', agentId, '→ using ID:', actualAgentId);
 
         // Initialize equipment system if needed
         if (!game.agentLoadouts) {
@@ -2479,4 +2484,4 @@ CyberOpsGame.prototype.initGame = function() {
 };
 
 // Declarative dialogs are always enabled
-console.log('✨ Declarative Dialog System loaded and active');
+if (this.logger) this.logger.info('✨ Declarative Dialog System loaded and active');

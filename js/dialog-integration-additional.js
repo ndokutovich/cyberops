@@ -7,9 +7,10 @@
 (function() {
     // Wait for dialog engine
     function registerAdditionalIntegrations() {
+    const logger = window.Logger ? new window.Logger('DialogIntegrationAdditional') : null;
         const engine = window.declarativeDialogEngine;
         if (!engine) {
-            console.warn('Dialog engine not ready for additional integrations');
+            if (this.logger) this.logger.warn('Dialog engine not ready for additional integrations');
             return;
         }
 
@@ -46,7 +47,7 @@
             // Use the game's generateWorldMapContent if available - it returns complete HTML
             if (game && game.generateWorldMapContent) {
                 const htmlContent = game.generateWorldMapContent();
-                console.log('📍 World map generator returning HTML content');
+                if (logger) logger.debug('📍 World map generator returning HTML content');
                 return htmlContent;
             }
 
@@ -353,7 +354,7 @@
             };
         }
 
-        console.log('✅ Additional dialog integrations registered');
+        if (logger) logger.info('✅ Additional dialog integrations registered');
     }
 
     // Register when dialog engine is ready

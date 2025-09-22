@@ -5,6 +5,11 @@
 
 // Initialize team command system
 CyberOpsGame.prototype.initTeamCommands = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameTeamcommands') : null;
+    }
     this.teamMode = 'hold'; // Default mode: hold (changed from follow)
     this.patrolPoints = {}; // Store patrol points for each agent
     this.holdPositions = {}; // Store hold positions for each agent

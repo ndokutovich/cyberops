@@ -1,6 +1,8 @@
 // Campaign System
 // Hierarchical structure: Campaign → Act → Mission
 
+const campaignLogger = window.Logger ? new window.Logger('CampaignSystem') : null;
+
 const CampaignSystem = {
     campaigns: {},
     campaignContent: {}, // Store content for each campaign
@@ -11,7 +13,7 @@ const CampaignSystem = {
 
     // Initialize the campaign system
     async init() {
-        console.log('🎮 Initializing Campaign System...');
+        if (campaignLogger) campaignLogger.debug('🎮 Initializing Campaign System...');
 
         // Load campaign structure
         await this.loadCampaigns();
@@ -28,7 +30,7 @@ const CampaignSystem = {
         try {
             await this.loadCampaignIndex();
         } catch (e) {
-            console.log('No campaign index found, using hardcoded campaigns...');
+            if (campaignLogger) campaignLogger.debug('No campaign index found, using hardcoded campaigns...');
             // Don't scan for files - use known campaign structure
             this.loadHardcodedCampaigns();
         }
@@ -42,7 +44,7 @@ const CampaignSystem = {
 
             window.REGISTER_CAMPAIGNS = (campaigns) => {
                 this.campaigns = campaigns;
-                console.log(`✅ Loaded ${Object.keys(campaigns).length} campaigns from index`);
+                if (campaignLogger) campaignLogger.info(`✅ Loaded ${Object.keys(campaigns).length} campaigns from index`);
             };
 
             script.onload = () => {
@@ -86,7 +88,7 @@ const CampaignSystem = {
             }
         };
 
-        console.log('✅ Loaded hardcoded campaign structure');
+        if (campaignLogger) campaignLogger.info('✅ Loaded hardcoded campaign structure');
     },
 
     // Scan for campaign directories (DEPRECATED - causes 404 errors)
@@ -198,7 +200,7 @@ const CampaignSystem = {
     async loadMission(campaignId, actId, missionId) {
         const filename = `${campaignId}-${actId}-${missionId}`;
         const actFolder = `act${parseInt(actId)}`;
-        console.log(`📋 Loading mission: ${filename}`);
+        if (campaignLogger) campaignLogger.debug(`📋 Loading mission: ${filename}`);
 
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -240,7 +242,7 @@ const CampaignSystem = {
             window.CAMPAIGN_MISSIONS = {};
         }
         window.CAMPAIGN_MISSIONS[missionId] = missionData;
-        console.log(`✅ Registered mission: ${missionId}`);
+        if (campaignLogger) campaignLogger.info(`✅ Registered mission: ${missionId}`);
     },
 
     // Get campaign by ID
@@ -400,7 +402,7 @@ const CampaignSystem = {
     // Register campaign content (agents, weapons, enemies, etc.)
     registerCampaignContent(campaignId, content) {
         this.campaignContent[campaignId] = content;
-        console.log(`✅ Registered content for campaign: ${campaignId}`);
+        if (campaignLogger) campaignLogger.info(`✅ Registered content for campaign: ${campaignId}`);
     },
 
     // Get campaign content

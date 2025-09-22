@@ -7,9 +7,10 @@
 (function() {
     // Wait for dialog engine to be available
     function registerModalIntegrations() {
+    const logger = window.Logger ? new window.Logger('DialogIntegrationModals') : null;
         const engine = window.declarativeDialogEngine;
         if (!engine) {
-            console.warn('Dialog engine not ready for modal integrations');
+            if (this.logger) this.logger.warn('Dialog engine not ready for modal integrations');
             return;
         }
 
@@ -28,7 +29,7 @@
                 pauseButton.textContent = '⏸';
             }
 
-            console.log('🎵 Keeping level music playing in hub');
+            if (logger) logger.debug('🎵 Keeping level music playing in hub');
 
             // Hide game elements
             const gameHUD = document.getElementById('gameHUD');
@@ -46,7 +47,7 @@
         engine.registerAction('confirmSave', function() {
             const slotData = this.stateData.saveSlot;
             if (!slotData) {
-                console.error('No save slot data provided');
+                if (logger) logger.error('No save slot data provided');
                 return;
             }
 
@@ -66,7 +67,7 @@
         engine.registerAction('confirmLoad', function() {
             const slotData = this.stateData.saveSlot;
             if (!slotData || !slotData.slotName) {
-                console.error('Cannot load from empty slot');
+                if (logger) logger.error('Cannot load from empty slot');
                 return;
             }
 
@@ -81,7 +82,7 @@
         engine.registerAction('confirmDelete', function() {
             const slotData = this.stateData.saveSlot;
             if (!slotData) {
-                console.error('No save slot data provided');
+                if (logger) logger.error('No save slot data provided');
                 return;
             }
 
@@ -124,7 +125,7 @@
             this.navigateTo('confirm-surrender');
         };
 
-        console.log('✅ Modal dialog integrations registered');
+        if (logger) logger.info('✅ Modal dialog integrations registered');
     }
 
     // Function to apply wrappers after game is ready
@@ -146,7 +147,7 @@
                 }
             };
             game._returnToHubFromMissionWrapped = true;
-            console.log('✅ Wrapped returnToHubFromMission');
+            if (logger) logger.info('✅ Wrapped returnToHubFromMission');
         }
 
         // Replace insufficient funds dialog in equipment
@@ -165,7 +166,7 @@
                 }
             };
             game._showInsufficientFundsWrapped = true;
-            console.log('✅ Wrapped showInsufficientFundsDialog');
+            if (logger) logger.info('✅ Wrapped showInsufficientFundsDialog');
         }
 
         return true;

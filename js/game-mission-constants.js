@@ -123,7 +123,7 @@ const OBJECTIVE_HANDLERS = {
                 }
 
                 interactionHandled = true;
-                console.log(`✅ Interaction completed: ${targetType} - ${targetId}`);
+                if (logger) logger.info(`✅ Interaction completed: ${targetType} - ${targetId}`);
             }
         });
 

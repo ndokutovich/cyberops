@@ -35,7 +35,7 @@ class ScreenManager {
             document.body.appendChild(this.screenContainer);
         }
 
-        console.log('📺 Screen Manager initialized');
+        if (logger) logger.info('📺 Screen Manager initialized');
     }
 
     /**
@@ -49,11 +49,11 @@ class ScreenManager {
      * Navigate to a screen
      */
     navigateTo(screenId, params = {}) {
-        console.log(`📺 Navigating to screen: ${screenId}`);
+        if (logger) logger.debug(`📺 Navigating to screen: ${screenId}`);
 
         const screenConfig = this.screenRegistry.get(screenId);
         if (!screenConfig) {
-            console.error(`Screen not found: ${screenId}`);
+            if (logger) logger.error(`Screen not found: ${screenId}`);
             return;
         }
 
@@ -359,7 +359,7 @@ class ScreenManager {
         if (action) {
             action();
         } else {
-            console.warn(`Unknown action: ${actionName}`);
+            if (logger) logger.warn(`Unknown action: ${actionName}`);
         }
     }
 }
@@ -367,4 +367,5 @@ class ScreenManager {
 // Create global instance
 window.screenManager = new ScreenManager();
 
-console.log('📺 Screen Manager loaded');
+const logger = window.Logger ? new window.Logger('ScreenManager') : null;
+if (logger) logger.info('📺 Screen Manager loaded');

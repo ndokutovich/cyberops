@@ -2,7 +2,8 @@
 // Loads campaign missions without requiring CyberOpsGame
 
 async function loadCampaignIndex() {
-    console.log('📚 Loading campaign index for editor...');
+    const logger = window.Logger ? new window.Logger('CampaignLoaderEditor') : null;
+    if (logger) logger.debug('📚 Loading campaign index for editor...');
 
     try {
         // Define available campaigns
@@ -12,7 +13,7 @@ async function loadCampaignIndex() {
 
         // Load all mission files
         for (const campaign of campaigns) {
-            console.log(`Loading campaign: ${campaign.name}`);
+            if (logger) logger.debug(`Loading campaign: ${campaign.name}`);
 
             // Load Act 1 missions
             const act1Missions = [
@@ -37,9 +38,9 @@ async function loadCampaignIndex() {
             }
         }
 
-        console.log('✅ All campaigns loaded:', Object.keys(window.CAMPAIGN_MISSIONS || {}));
+        if (logger) logger.info('✅ All campaigns loaded:', Object.keys(window.CAMPAIGN_MISSIONS || {}));
     } catch (error) {
-        console.error('Failed to load campaigns:', error);
+        if (logger) logger.error('Failed to load campaigns:', error);
     }
 }
 
@@ -48,11 +49,11 @@ async function loadMissionFile(path) {
         const script = document.createElement('script');
         script.src = path;
         script.onload = () => {
-            console.log('Loaded mission:', path);
+            if (logger) logger.info('Loaded mission:', path);
             resolve();
         };
         script.onerror = () => {
-            console.error('Failed to load mission:', path);
+            if (logger) logger.error('Failed to load mission:', path);
             reject(new Error(`Failed to load ${path}`));
         };
         document.head.appendChild(script);

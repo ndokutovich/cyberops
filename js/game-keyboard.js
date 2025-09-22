@@ -5,52 +5,57 @@
 
 // Handle interaction key (H) - Check for NPCs first, then use hack ability
 CyberOpsGame.prototype.handleInteractionKey = function() {
-    console.log('🔑 H key pressed - handleInteractionKey called');
+    if (this.logger) this.logger.debug('🔑 H key pressed - handleInteractionKey called');
 
     if (this.currentScreen !== 'game') {
-        console.log('  ❌ Not in game screen');
+        if (this.logger) this.logger.debug('  ❌ Not in game screen');
         return;
     }
 
     // Check if there's a dialog active
     if (this.dialogActive) {
-        console.log('  ❌ Dialog already active');
+        if (this.logger) this.logger.debug('  ❌ Dialog already active');
         return; // Don't do anything if dialog is open
     }
 
     // Get the selected agent (or first agent)
     const agent = this.agents.find(a => a.selected && a.alive) || this.agents[0];
     if (!agent) {
-        console.log('  ❌ No agent available');
+        if (this.logger) this.logger.debug('  ❌ No agent available');
         return; // No agent available
     }
 
-    console.log(`  ✓ Agent found: ${agent.name} at (${agent.x.toFixed(1)}, ${agent.y.toFixed(1)})`);
+    if (this.logger) this.logger.debug(`  ✓ Agent found: ${agent.name} at (${agent.x.toFixed(1)}, ${agent.y.toFixed(1)})`);
 
     // Check for nearby NPC (only if NPC system is loaded)
     if (this.getNearbyNPC && this.interactWithNPC) {
-        console.log('  ✓ NPC functions loaded, checking for nearby NPCs...');
+        if (this.logger) this.logger.info('  ✓ NPC functions loaded, checking for nearby NPCs...');
         const nearbyNPC = this.getNearbyNPC(agent);
         if (nearbyNPC) {
             // Interact with NPC
-            console.log(`  💬 Found NPC: ${nearbyNPC.name} - initiating interaction`);
+            if (this.logger) this.logger.debug(`  💬 Found NPC: ${nearbyNPC.name} - initiating interaction`);
             this.interactWithNPC(agent, nearbyNPC);
             return;
         } else {
-            console.log('  ⚠️ No NPC nearby');
+            if (this.logger) this.logger.debug('  ⚠️ No NPC nearby');
         }
     } else {
-        console.log('  ⚠️ NPC functions not loaded');
+        if (this.logger) this.logger.info('  ⚠️ NPC functions not loaded');
     }
 
     // No NPC nearby or NPC system not loaded, use hack ability (ability 3)
-    console.log('  🔧 Using hack ability instead');
+    if (this.logger) this.logger.debug('  🔧 Using hack ability instead');
     this.useAbilityForAllSelected(3);
 };
 
 // Initialize keyboard system
 CyberOpsGame.prototype.initKeyboardHandler = function() {
-    console.log('🎮 initKeyboardHandler STARTING...');
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameKeyboard') : null;
+    }
+    if (this.logger) this.logger.debug('🎮 initKeyboardHandler STARTING...');
 
     try {
         // Actual keyboard mappings - declarative config
@@ -66,19 +71,19 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         // Agent Control
         'Tab': () => this.cycleAgents(),
         'T': () => {
-            console.log('T key handler called - selectAllSquad');
+            if (this.logger) this.logger.debug('T key handler called - selectAllSquad');
             if (this.selectAllSquad) {
                 this.selectAllSquad();
             } else {
-                console.warn('selectAllSquad function not found!');
+                if (this.logger) this.logger.warn('selectAllSquad function not found!');
             }
         },
         't': () => {
-            console.log('t key handler called - selectAllSquad');
+            if (this.logger) this.logger.debug('t key handler called - selectAllSquad');
             if (this.selectAllSquad) {
                 this.selectAllSquad();
             } else {
-                console.warn('selectAllSquad function not found!');
+                if (this.logger) this.logger.warn('selectAllSquad function not found!');
             }
         },
 
@@ -94,7 +99,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
 
         // RPG System - Use existing character sheet
         'C': () => {
-            console.log('📊 Opening character sheet...');
+            if (this.logger) this.logger.debug('📊 Opening character sheet...');
 
             // Determine which agent to show
             let agentToShow = null;
@@ -111,11 +116,11 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
                 // Use the existing showCharacterSheet function
                 this.showCharacterSheet(agentToShow.id || agentToShow.name || agentToShow);
             } else {
-                console.warn('No agent available for character sheet');
+                if (this.logger) this.logger.warn('No agent available for character sheet');
             }
         },
         'c': () => {
-            console.log('📊 Opening character sheet...');
+            if (this.logger) this.logger.debug('📊 Opening character sheet...');
 
             // Determine which agent to show
             let agentToShow = null;
@@ -132,26 +137,26 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
                 // Use the existing showCharacterSheet function
                 this.showCharacterSheet(agentToShow.id || agentToShow.name || agentToShow);
             } else {
-                console.warn('No agent available for character sheet');
+                if (this.logger) this.logger.warn('No agent available for character sheet');
             }
         },
         'I': () => {
             if (this.currentScreen === 'game' && this._selectedAgent) {
-                console.log('🎒 Opening inventory for:', this._selectedAgent.name);
+                if (this.logger) this.logger.debug('🎒 Opening inventory for:', this._selectedAgent.name);
                 if (this.showInventory) {
                     this.showInventory(this._selectedAgent.id || this._selectedAgent.name);
                 } else {
-                    console.warn('showInventory function not found');
+                    if (this.logger) this.logger.warn('showInventory function not found');
                 }
             }
         },
         'i': () => {
             if (this.currentScreen === 'game' && this._selectedAgent) {
-                console.log('🎒 Opening inventory for:', this._selectedAgent.name);
+                if (this.logger) this.logger.debug('🎒 Opening inventory for:', this._selectedAgent.name);
                 if (this.showInventory) {
                     this.showInventory(this._selectedAgent.id || this._selectedAgent.name);
                 } else {
-                    console.warn('showInventory function not found');
+                    if (this.logger) this.logger.warn('showInventory function not found');
                 }
             }
         },
@@ -232,7 +237,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
     this.keys3D = { W: false, A: false, S: false, D: false };
 
     // Setup event listeners inline (setupKeyboardListeners might not be available yet)
-    console.log('🎮 Setting up keyboard listeners...');
+    if (this.logger) this.logger.debug('🎮 Setting up keyboard listeners...');
 
     // Note: Keyboard layout language can affect key detection
     // If keys aren't working, check your keyboard layout is set to English
@@ -292,12 +297,12 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         }
     });
 
-    console.log('✅ Keyboard handler initialized with', Object.keys(this.keyBindings).length, 'key bindings');
+    if (this.logger) this.logger.info('✅ Keyboard handler initialized with', Object.keys(this.keyBindings).length, 'key bindings');
 
     } catch (error) {
-        console.error('❌ CRITICAL ERROR in initKeyboardHandler:', error);
-        console.error('Stack trace:', error.stack);
-        console.error('Error details:', error.message);
+        if (this.logger) this.logger.error('❌ CRITICAL ERROR in initKeyboardHandler:', error);
+        if (this.logger) this.logger.error('Stack trace:', error.stack);
+        if (this.logger) this.logger.error('Error details:', error.message);
     }
 };
 
@@ -341,21 +346,21 @@ CyberOpsGame.prototype.cycleAgents = function() {
 
 CyberOpsGame.prototype.toggle3DMode = function() {
     // RESTORED ORIGINAL FUNCTIONALITY - Cycles through tactical/third/first modes
-    console.log('🔑 E key detected! Checking conditions...');
-    console.log('  - currentScreen:', this.currentScreen);
-    console.log('  - _selectedAgent exists:', !!this._selectedAgent);
-    console.log('  - _selectedAgent details:', this._selectedAgent ? this._selectedAgent.name : 'none');
-    console.log('  - 3D system available:', !!this.scene3D);
+    if (this.logger) this.logger.debug('🔑 E key detected! Checking conditions...');
+    if (this.logger) this.logger.debug('  - currentScreen:', this.currentScreen);
+    if (this.logger) this.logger.debug('  - _selectedAgent exists:', !!this._selectedAgent);
+    if (this.logger) this.logger.debug('  - _selectedAgent details:', this._selectedAgent ? this._selectedAgent.name : 'none');
+    if (this.logger) this.logger.debug('  - 3D system available:', !!this.scene3D);
 
     // Only works in game screen
     if (this.currentScreen !== 'game') {
-        console.log('⚠️ Cannot toggle 3D mode - not in game screen');
+        if (this.logger) this.logger.debug('⚠️ Cannot toggle 3D mode - not in game screen');
         return;
     }
 
     // Initialize 3D system if needed
     if (!this.scene3D) {
-        console.log('🎮 Initializing 3D system first...');
+        if (this.logger) this.logger.debug('🎮 Initializing 3D system first...');
         this.init3D();
     }
 
@@ -365,33 +370,33 @@ CyberOpsGame.prototype.toggle3DMode = function() {
         if (firstAlive) {
             this._selectedAgent = firstAlive;
             firstAlive.selected = true;
-            console.log('🎯 Auto-selected first alive agent for E key:', firstAlive.name);
+            if (this.logger) this.logger.debug('🎯 Auto-selected first alive agent for E key:', firstAlive.name);
         }
     }
 
     if (this._selectedAgent && this.scene3D) {
-        console.log('✅ All conditions met! Switching camera mode...');
+        if (this.logger) this.logger.info('✅ All conditions met! Switching camera mode...');
         this.switchCameraMode();
     } else {
-        console.log('❌ Conditions not met for camera switch:');
-        if (!this._selectedAgent) console.log('  - No agent selected');
-        if (!this.scene3D) console.log('  - 3D system not available');
+        if (this.logger) this.logger.debug('❌ Conditions not met for camera switch:');
+        if (!this._selectedAgent) if (this.logger) this.logger.debug('  - No agent selected');
+        if (!this.scene3D) if (this.logger) this.logger.debug('  - 3D system not available');
     }
 };
 
 CyberOpsGame.prototype.toggleSquadFollowing = function() {
     this.squadFollowing = this.squadFollowing !== false ? false : true;
-    console.log('👥 Squad Following:', this.squadFollowing ? 'ON' : 'OFF');
+    if (this.logger) this.logger.debug('👥 Squad Following:', this.squadFollowing ? 'ON' : 'OFF');
 };
 
 CyberOpsGame.prototype.togglePathVisualization = function() {
     this.showPaths = !this.showPaths;
-    console.log('🛤️ Path visualization:', this.showPaths ? 'ON' : 'OFF');
+    if (this.logger) this.logger.debug('🛤️ Path visualization:', this.showPaths ? 'ON' : 'OFF');
 };
 
 CyberOpsGame.prototype.togglePathfinding = function() {
     this.usePathfinding = !this.usePathfinding;
-    console.log('🧭 Pathfinding:', this.usePathfinding ? 'ON' : 'OFF');
+    if (this.logger) this.logger.debug('🧭 Pathfinding:', this.usePathfinding ? 'ON' : 'OFF');
 
     // Clear existing paths when toggling
     this.agents.forEach(agent => {
@@ -402,7 +407,7 @@ CyberOpsGame.prototype.togglePathfinding = function() {
 
 CyberOpsGame.prototype.toggleHotkeyHelp = function() {
     this.showHotkeyHelp = !this.showHotkeyHelp;
-    console.log('❓ Hotkey help:', this.showHotkeyHelp ? 'SHOWN' : 'HIDDEN');
+    if (this.logger) this.logger.debug('❓ Hotkey help:', this.showHotkeyHelp ? 'SHOWN' : 'HIDDEN');
 };
 
 // Get current key bindings for display

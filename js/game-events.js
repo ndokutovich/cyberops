@@ -21,7 +21,7 @@ CyberOpsGame.prototype.selectAllSquad = function() {
         // Update selected agent reference to first alive agent
         this._selectedAgent = this.agents.find(a => a.alive);
 
-        console.log(`👥 SQUAD SELECT: Selected all ${selectedCount} alive agents`);
+        if (this.logger) this.logger.debug(`👥 SQUAD SELECT: Selected all ${selectedCount} alive agents`);
         this.updateSquadHealth();
         this.updateCooldownDisplay();
 
@@ -83,6 +83,11 @@ CyberOpsGame.prototype.showSquadSelectionEffect = function() {
 }
 
 CyberOpsGame.prototype.setupEventListeners = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameEvents') : null;
+    }
         // Touch Events
         this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
         this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
@@ -103,13 +108,13 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         // Initialize new centralized keyboard handler
         if (!this.keyboardInitialized) {
             if (this.initKeyboardHandler) {
-                console.log('🎮 Found initKeyboardHandler, calling it...');
+                if (this.logger) this.logger.debug('🎮 Found initKeyboardHandler, calling it...');
                 this.initKeyboardHandler();
                 this.keyboardInitialized = true;
-                console.log('⌨️ Keyboard handler initialized in setupEventListeners');
+                if (this.logger) this.logger.info('⌨️ Keyboard handler initialized in setupEventListeners');
             } else {
-                console.error('❌ CRITICAL: initKeyboardHandler function NOT FOUND!');
-                console.error('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this)).filter(m => m.includes('Keyboard')));
+                if (this.logger) this.logger.error('❌ CRITICAL: initKeyboardHandler function NOT FOUND!');
+                if (this.logger) this.logger.error('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this)).filter(m => m.includes('Keyboard')));
             }
         }
 
@@ -119,7 +124,7 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         document.addEventListener('keydown', (e) => {
             // Select All Squad - 'T' key for Team
             if (e.code === 'KeyT' && this.currentScreen === 'game') {
-                console.log('🎮 Team Select: Selecting all squad members');
+                if (this.logger) this.logger.debug('🎮 Team Select: Selecting all squad members');
                 this.selectAllSquad();
                 e.preventDefault();
                 return;
@@ -135,7 +140,7 @@ CyberOpsGame.prototype.setupEventListeners = function() {
 
                     // F - Fire/Shoot (ALL selected agents shoot)
                     if (e.code === 'KeyF') {
-                        console.log(`🔫 Team Shoot! ${selectedAgents.length} agents firing`);
+                        if (this.logger) this.logger.debug(`🔫 Team Shoot! ${selectedAgents.length} agents firing`);
                         selectedAgents.forEach(agent => {
                             if (!agent.cooldowns[1] || agent.cooldowns[1] <= 0) {
                                 this.shootNearestEnemy(agent);
@@ -147,7 +152,7 @@ CyberOpsGame.prototype.setupEventListeners = function() {
 
                     // G - Grenade (ALL selected agents throw grenades)
                     else if (e.code === 'KeyG') {
-                        console.log(`💣 Team Grenades! ${selectedAgents.length} agents throwing`);
+                        if (this.logger) this.logger.debug(`💣 Team Grenades! ${selectedAgents.length} agents throwing`);
                         selectedAgents.forEach(agent => {
                             if (!agent.cooldowns[2] || agent.cooldowns[2] <= 0) {
                                 this.throwGrenade(agent);
@@ -159,7 +164,7 @@ CyberOpsGame.prototype.setupEventListeners = function() {
 
                     // H - Hack/Interact (only first agent hacks to avoid duplicates)
                     else if (e.code === 'KeyH') {
-                        console.log('💻 Hack hotkey pressed');
+                        if (this.logger) this.logger.debug('💻 Hack hotkey pressed');
                         const hacker = selectedAgents[0];
                         if (!hacker.cooldowns[3] || hacker.cooldowns[3] <= 0) {
                             // Use generic action system for all interactions
@@ -172,13 +177,13 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                                 actionTriggered = true;
                             }
                         } else {
-                            console.log('⏳ Hack on cooldown:', hacker.cooldowns[3]);
+                            if (this.logger) this.logger.debug('⏳ Hack on cooldown:', hacker.cooldowns[3]);
                         }
                     }
 
                     // V - Shield (ALL selected agents activate shields)
                     else if (e.code === 'KeyV') {
-                        console.log(`🛡️ Team Shields! ${selectedAgents.length} agents shielding`);
+                        if (this.logger) this.logger.debug(`🛡️ Team Shields! ${selectedAgents.length} agents shielding`);
                         selectedAgents.forEach(agent => {
                             if (!agent.cooldowns[4] || agent.cooldowns[4] <= 0) {
                                 this.activateShield(agent);
@@ -207,10 +212,10 @@ CyberOpsGame.prototype.setupEventListeners = function() {
                         // Cycle through agents
                         const currentIndex = this._selectedAgent ? aliveAgents.indexOf(this._selectedAgent) : -1;
                         const nextIndex = (currentIndex + 1) % aliveAgents.length;
-                        console.log('🔧 SETTING _selectedAgent via Tab to:', aliveAgents[nextIndex].name);
+                        if (this.logger) this.logger.debug('🔧 SETTING _selectedAgent via Tab to:', aliveAgents[nextIndex].name);
                         this._selectedAgent = aliveAgents[nextIndex]; // Direct assignment
-                        console.log('🔄 Agent selected with Tab:', this._selectedAgent.name);
-                        console.log('💡 Now press E to switch camera modes!');
+                        if (this.logger) this.logger.debug('🔄 Agent selected with Tab:', this._selectedAgent.name);
+                        if (this.logger) this.logger.debug('💡 Now press E to switch camera modes!');
                     }
                 }
                 return;
@@ -362,7 +367,7 @@ CyberOpsGame.prototype.handleMouseDown = function(e) {
         this.isDragging = false;
 
         // Simplified mousedown - just track mouse state
-        console.log('🖱️ Mouse down detected! Screen:', this.currentScreen);
+        if (this.logger) this.logger.debug('🖱️ Mouse down detected! Screen:', this.currentScreen);
         // All selection and movement logic moved to handleTap in mouseup
 }
 
@@ -407,7 +412,7 @@ CyberOpsGame.prototype.handleMouseUp = function(e) {
                 // SIMPLIFIED: Just use handleTap for everything!
                 // Pass the shift key state for waypoint support
                 this.handleTap(e.clientX, e.clientY, e.shiftKey);
-                console.log('🖱️ Mouse UP: Using single handleTap for both selection and movement');
+                if (this.logger) this.logger.debug('🖱️ Mouse UP: Using single handleTap for both selection and movement');
             }
         }
         this.mouseDown = false;
@@ -425,7 +430,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
 
         // Handle 3D mode shooting
         if (this.is3DMode) {
-            console.log('🎯 3D Mode click - shooting!');
+            if (this.logger) this.logger.debug('🎯 3D Mode click - shooting!');
             this.mouseClicked = true;  // Trigger shooting in handle3DShooting
             return;
         }
@@ -444,7 +449,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                 const agent = this.agents[barIndex];
                 if (agent && agent.alive) {
                     this.selectAgent(agent);
-                    console.log(`✅ Agent selected via HUD: ${agent.name}`);
+                    if (this.logger) this.logger.info(`✅ Agent selected via HUD: ${agent.name}`);
                     return;
                 }
             }
@@ -455,7 +460,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
         const canvasX = x - rect2.left;
         const canvasY = y - rect2.top;
 
-        console.log('🎯 SIMPLIFIED TAP: Checking for agent selection at canvas coords:', canvasX, canvasY);
+        if (this.logger) this.logger.debug('🎯 SIMPLIFIED TAP: Checking for agent selection at canvas coords:', canvasX, canvasY);
 
         // PRECISE AGENT SHAPE DETECTION (instead of distance)
         let selectedAgent = null;
@@ -482,7 +487,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
 
                 const distance = Math.sqrt((canvasX - screenPos.x) ** 2 + (canvasY - screenPos.y) ** 2);
 
-                console.log(`🔍 Agent ${agent.name}:`, {
+                if (this.logger) this.logger.debug(`🔍 Agent ${agent.name}:`, {
                     distance: Math.round(distance),
                     bounds: { left: Math.round(left), right: Math.round(right),
                              top: Math.round(top), bottom: Math.round(bottom) },
@@ -493,7 +498,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                 // If click is within sprite bounds, this agent is selected
                 if (isInBounds) {
                     selectedAgent = agent;
-                    console.log(`🎯 PRECISE HIT: ${agent.name} sprite bounds!`);
+                    if (this.logger) this.logger.debug(`🎯 PRECISE HIT: ${agent.name} sprite bounds!`);
                     break; // First hit wins (prevents overlapping selections)
                 }
             }
@@ -507,7 +512,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                     if (this.logEvent) {
                         this.logEvent(`Can't select ${selectedAgent.name} - it's ${this.currentTurnUnit.unit.name}'s turn!`, 'warning');
                     }
-                    console.log(`❌ TB MODE: Cannot select ${selectedAgent.name} during ${this.currentTurnUnit.unit.name}'s turn`);
+                    if (this.logger) this.logger.debug(`❌ TB MODE: Cannot select ${selectedAgent.name} during ${this.currentTurnUnit.unit.name}'s turn`);
                     return;
                 }
             }
@@ -519,7 +524,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
             selectedAgent.selected = true;
             this._selectedAgent = selectedAgent;
 
-            console.log(`✅ TAP SELECTED: ${selectedAgent.name} (precise sprite hit)`);
+            if (this.logger) this.logger.info(`✅ TAP SELECTED: ${selectedAgent.name} (precise sprite hit)`);
             return; // Don't move if we selected an agent
         }
 
@@ -582,7 +587,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                     if (shiftKey) {
                         // Add waypoint
                         this.agentWaypoints[agent.id].push({ x: worldPos.x, y: worldPos.y });
-                        console.log(`📍 Added waypoint for ${agent.name}: Point #${this.agentWaypoints[agent.id].length}`);
+                        if (this.logger) this.logger.debug(`📍 Added waypoint for ${agent.name}: Point #${this.agentWaypoints[agent.id].length}`);
 
                         // If this is the first waypoint and agent isn't moving, start movement
                         if (this.agentWaypoints[agent.id].length === 1) {
@@ -594,7 +599,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                                 // Agent is stationary, set target to first waypoint
                                 agent.targetX = worldPos.x;
                                 agent.targetY = worldPos.y;
-                                console.log(`🏃 Starting ${agent.name} movement to first waypoint`);
+                                if (this.logger) this.logger.debug(`🏃 Starting ${agent.name} movement to first waypoint`);
                             }
                         }
                     } else {
@@ -610,7 +615,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                             if (targetChanged) {
                                 agent.targetX = worldPos.x;
                                 agent.targetY = worldPos.y;
-                                console.log(`🚶 TAP MOVEMENT: Moving ${agent.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
+                                if (this.logger) this.logger.debug(`🚶 TAP MOVEMENT: Moving ${agent.name} to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})`);
 
                                 // Show coordinates in notification if in debug/pathfinding mode
                                 if (this.showPaths || this.usePathfinding || this.debugMode) {
@@ -621,7 +626,7 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                                     }
                                 }
                             } else {
-                                console.log(`🔄 Agent already heading to this location`);
+                                if (this.logger) this.logger.debug(`🔄 Agent already heading to this location`);
                             }
                         } else {
                             // Squad movement in formation
@@ -670,12 +675,12 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                 // Could play a movement/click sound here if we had one
                 // this.playSound('move', 0.05);
             } else {
-                console.log(`🚫 Cannot move to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}) - obstacle detected`);
+                if (this.logger) this.logger.debug(`🚫 Cannot move to (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)}) - obstacle detected`);
                 // Could show a different indicator for invalid moves
                 this.showBlockedIndicator(x, y);
             }
         } else {
-            console.log(`❌ No agent selected for movement`);
+            if (this.logger) this.logger.debug(`❌ No agent selected for movement`);
         }
 }
 

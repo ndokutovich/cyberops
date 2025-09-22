@@ -7,6 +7,7 @@
 // Example 1: Simple Confirmation Dialog
 // ============================================
 function showConfirmDialog() {
+    const logger = window.Logger ? new window.Logger('ModalExamples') : null;
     window.modalEngine.show({
         type: 'standard',
         title: '⚠️ CONFIRM ACTION',
@@ -16,7 +17,7 @@ function showConfirmDialog() {
                 text: 'CONFIRM',
                 primary: true,
                 action: () => {
-                    console.log('Confirmed!');
+                    if (logger) logger.debug('Confirmed!');
                     // Your confirmation logic here
                 }
             },
@@ -63,21 +64,21 @@ function showNPCConversation() {
             {
                 text: 'What information do you have?',
                 action: () => {
-                    console.log('Asking for information...');
+                    if (logger) logger.debug('Asking for information...');
                     showNPCFollowup();
                 }
             },
             {
                 text: 'How much will it cost?',
                 action: () => {
-                    console.log('Asking about price...');
+                    if (logger) logger.debug('Asking about price...');
                     showPriceDialog();
                 }
             },
             {
                 text: 'Not interested.',
                 action: () => {
-                    console.log('Declining offer...');
+                    if (logger) logger.debug('Declining offer...');
                 }
             }
         ]
@@ -128,8 +129,8 @@ function showEquipmentDialog() {
             }
         ],
         buttons: [
-            { text: 'SAVE LOADOUT', action: () => console.log('Saving loadout...') },
-            { text: 'AUTO-OPTIMIZE', primary: true, action: () => console.log('Optimizing...') },
+            { text: 'SAVE LOADOUT', action: () => if (logger) logger.debug('Saving loadout...') },
+            { text: 'AUTO-OPTIMIZE', primary: true, action: () => if (logger) logger.debug('Optimizing...') },
             { text: 'CLOSE', action: 'close' }
         ]
     });
@@ -168,7 +169,7 @@ function showSaveGameList() {
                     type: 'load',
                     label: 'LOAD',
                     handler: (item) => {
-                        console.log('Loading save:', item.title);
+                        if (logger) logger.debug('Loading save:', item.title);
                         window.modalEngine.closeAll();
                     }
                 },
@@ -176,7 +177,7 @@ function showSaveGameList() {
                     type: 'delete',
                     label: 'DELETE',
                     handler: (item) => {
-                        console.log('Deleting save:', item.title);
+                        if (logger) logger.debug('Deleting save:', item.title);
                         // Update the list after deletion
                     }
                 }
@@ -259,7 +260,7 @@ function showMultiStepDialog() {
                         updateStep();
                     } else {
                         modal.close();
-                        console.log('Mission briefing complete!');
+                        if (logger) logger.debug('Mission briefing complete!');
                     }
                 },
                 closeAfter: false
@@ -331,7 +332,7 @@ function showErrorDialog(errorMessage) {
             </div>
         `,
         buttons: [
-            { text: 'REPORT', action: () => console.log('Reporting error...') },
+            { text: 'REPORT', action: () => if (logger) logger.error('Reporting error...') },
             { text: 'DISMISS', action: 'close' }
         ]
     });
@@ -363,7 +364,7 @@ function startNPCQuestDialog() {
             },
             {
                 text: 'I\'ll pass.',
-                action: () => console.log('Quest declined')
+                action: () => if (logger) logger.debug('Quest declined')
             }
         ]
     });
@@ -379,13 +380,13 @@ function showQuestDetails(npc) {
             {
                 text: 'I\'ll take the job.',
                 action: () => {
-                    console.log('Quest accepted!');
+                    if (logger) logger.debug('Quest accepted!');
                     // Add quest to player's quest log
                 }
             },
             {
                 text: 'Too risky for me.',
-                action: () => console.log('Quest declined')
+                action: () => if (logger) logger.debug('Quest declined')
             }
         ]
     });
@@ -404,7 +405,7 @@ function showPaymentDialog(npc) {
             },
             {
                 text: 'Not enough for the risk.',
-                action: () => console.log('Negotiating price...')
+                action: () => if (logger) logger.debug('Negotiating price...')
             }
         ]
     });
@@ -431,8 +432,8 @@ function showNPCFollowup() {
         name: 'CIPHER',
         text: 'The corporation is planning something big. I have the blueprints to their new facility.',
         choices: [
-            { text: 'I\'ll buy the blueprints.', action: () => console.log('Purchasing...') },
-            { text: 'Maybe later.', action: () => console.log('Postponing...') }
+            { text: 'I\'ll buy the blueprints.', action: () => if (logger) logger.debug('Purchasing...') },
+            { text: 'Maybe later.', action: () => if (logger) logger.debug('Postponing...') }
         ]
     });
 }
@@ -445,8 +446,8 @@ function showPriceDialog() {
         name: 'CIPHER',
         text: '5000 credits. Non-negotiable. This information could save your life.',
         choices: [
-            { text: 'Deal.', action: () => console.log('Transaction complete') },
-            { text: 'Too expensive.', action: () => console.log('Declining offer') }
+            { text: 'Deal.', action: () => if (logger) logger.debug('Transaction complete') },
+            { text: 'Too expensive.', action: () => if (logger) logger.debug('Declining offer') }
         ]
     });
 }

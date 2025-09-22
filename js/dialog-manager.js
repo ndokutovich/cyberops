@@ -317,19 +317,19 @@ class DialogManager {
     open(dialogId, options = {}) {
         const config = this.configs[dialogId];
         if (!config) {
-            console.error(`Dialog configuration not found: ${dialogId}`);
+            if (logger) logger.error(`Dialog configuration not found: ${dialogId}`);
             return false;
         }
 
         // Check depth
         if (this.stack.length >= this.maxDepth) {
-            console.error(`Cannot open dialog: Max depth (${this.maxDepth}) reached`);
+            if (logger) logger.error(`Cannot open dialog: Max depth (${this.maxDepth}) reached`);
             return false;
         }
 
         // Check for circular reference
         if (this.stack.find(d => d.id === dialogId)) {
-            console.error(`Circular reference detected: ${dialogId}`);
+            if (logger) logger.error(`Circular reference detected: ${dialogId}`);
             return false;
         }
 
@@ -337,7 +337,7 @@ class DialogManager {
         if (config.level > 1 && this.stack.length > 0) {
             const expectedParent = this.stack[this.stack.length - 1].id;
             if (config.parent !== expectedParent) {
-                console.error(`Invalid parent: Expected ${config.parent}, got ${expectedParent}`);
+                if (logger) logger.error(`Invalid parent: Expected ${config.parent}, got ${expectedParent}`);
                 return false;
             }
         }
@@ -462,7 +462,7 @@ class DialogManager {
             dialog.modal = modal;
         } else {
             // Fallback rendering without modal engine
-            console.warn('Modal engine not available, falling back to basic rendering');
+            if (logger) logger.warn('Modal engine not available, falling back to basic rendering');
         }
     }
 

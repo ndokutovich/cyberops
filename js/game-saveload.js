@@ -14,7 +14,7 @@ CyberOpsGame.prototype.showSaveList = function(mode = 'save') {
 
     // Safety check for test mode
     if (!dialog) {
-        console.warn('saveListDialog not found - likely in test mode');
+        if (this.logger) this.logger.warn('saveListDialog not found - likely in test mode');
         return;
     }
 
@@ -210,7 +210,7 @@ CyberOpsGame.prototype.getAllSaves = function() {
                 saveData.id = key.replace('cyberops_save_', '');
                 saves.push(saveData);
             } catch (e) {
-                console.error('Invalid save data:', key);
+                if (this.logger) this.logger.error('Invalid save data:', key);
             }
         }
     }
@@ -275,7 +275,7 @@ CyberOpsGame.prototype.saveToSlot = function(slotId, name) {
             this.updateMenuState();
 
         } catch (error) {
-            console.error('Failed to save game:', error);
+            if (this.logger) this.logger.error('Failed to save game:', error);
             this.showHudDialog(
                 '❌ SAVE ERROR',
                 'Failed to save game progress.<br><br>Please ensure you have sufficient storage space and try again.',
@@ -331,6 +331,11 @@ CyberOpsGame.prototype.renameSave = function(slotId) {
 
 // Load specific save slot
 CyberOpsGame.prototype.loadSaveSlot = function(slotId) {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameSaveload') : null;
+    }
     try {
         const saveData = JSON.parse(localStorage.getItem(`cyberops_save_${slotId}`));
         if (!saveData) {
@@ -355,7 +360,7 @@ CyberOpsGame.prototype.loadSaveSlot = function(slotId) {
             ]
         );
     } catch (error) {
-        console.error('Failed to load save:', error);
+        if (this.logger) this.logger.error('Failed to load save:', error);
         this.showHudDialog(
             '❌ LOAD ERROR',
             'Failed to load save file.',
@@ -384,7 +389,7 @@ CyberOpsGame.prototype.quickLoad = function() {
         if (saves.length > 0) {
             this.loadSaveSlot(saves[0].id);
         } else {
-            console.warn('No saves available for quick load');
+            if (this.logger) this.logger.warn('No saves available for quick load');
             if (this.showHudDialog) {
                 this.showHudDialog(
                     '⚠️ No Saves Found',
@@ -495,7 +500,7 @@ CyberOpsGame.prototype.performLoadGame = function(saveData) {
             );
 
         } catch (error) {
-            console.error('Failed to perform load:', error);
+            if (this.logger) this.logger.error('Failed to perform load:', error);
             this.showHudDialog(
                 '❌ LOAD ERROR',
                 'An error occurred while loading the game.<br><br>Please try again or start a new campaign.',
@@ -509,7 +514,7 @@ CyberOpsGame.prototype.hasSavedGame = function() {
             const savedData = localStorage.getItem('cyberops_savegame');
             return savedData !== null;
         } catch (error) {
-            console.error('Error checking save game:', error);
+            if (this.logger) this.logger.error('Error checking save game:', error);
             return false;
         }
 }
@@ -548,7 +553,7 @@ CyberOpsGame.prototype.saveAndExit = function() {
 
                 localStorage.setItem('cyberops_savegame', JSON.stringify(saveData));
             } catch (error) {
-                console.error('Failed to save before exit:', error);
+                if (this.logger) this.logger.error('Failed to save before exit:', error);
             }
         }
 
@@ -563,7 +568,7 @@ CyberOpsGame.prototype.performExit = function() {
 }
 
 CyberOpsGame.prototype.returnToInitialScreen = function() {
-        console.log('Returning to initial screen');
+        if (this.logger) this.logger.debug('Returning to initial screen');
 
         // Stop all music
         if (this.stopScreenMusic) {
@@ -601,7 +606,7 @@ CyberOpsGame.prototype.returnToInitialScreen = function() {
         const initialScreen = document.getElementById('initialScreen');
         initialScreen.style.display = 'flex';
 
-        console.log('Returned to initial screen - fresh start ready');
+        if (this.logger) this.logger.debug('Returned to initial screen - fresh start ready');
 }
 
 CyberOpsGame.prototype.checkForSavedGame = function() {

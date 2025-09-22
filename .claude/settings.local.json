@@ -39,7 +39,11 @@
       "Bash(do if [ ! -f \"js/$file.js\" ])",
       "Bash(then echo \"MISSING: js/$file.js\")",
       "Bash(fi)",
-      "Bash(echo \"Exit code: $?\")"
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(for file in js/*.js)",
+      "Bash(do if [ \"$file\" != \"js/logger-service.js\" ])",
+      "Bash([ \"$file\" != \"js/test-framework.js\" ])",
+      "Bash(then grep -l \"console\\.\\(log\\|warn\\|error\\)\" \"$file\")"
     ],
     "deny": [],
     "ask": []

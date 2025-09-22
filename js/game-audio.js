@@ -4,11 +4,16 @@
 // - game-music-system.js for missions
 
 CyberOpsGame.prototype.initializeAudio = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameAudio') : null;
+    }
     // Initialize audio variables - DON'T create AudioContext yet!
     this.audioContext = null;
     this.audioEnabled = false; // Start with audio disabled
 
-    console.log('Audio system initialized, waiting for user interaction...');
+    if (this.logger) this.logger.info('Audio system initialized, waiting for user interaction...');
 }
 
 // Setup audio on first user interaction
@@ -39,16 +44,16 @@ CyberOpsGame.prototype.enableAudioImmediately = function() {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.audioEnabled = true;
 
-        console.log('Audio enabled from session storage');
-        console.log('Audio context state:', this.audioContext.state);
+        if (this.logger) this.logger.debug('Audio enabled from session storage');
+        if (this.logger) this.logger.debug('Audio context state:', this.audioContext.state);
 
         // Try to resume immediately, but setup fallback for user interaction
         if (this.audioContext.state === 'suspended') {
             this.audioContext.resume().then(() => {
-                console.log('Audio context resumed successfully from session');
+                if (this.logger) this.logger.info('Audio context resumed successfully from session');
                 this.startAppropriateMusic();
             }).catch(() => {
-                console.log('Audio resume failed, setting up one-time interaction handler');
+                if (this.logger) this.logger.error('Audio resume failed, setting up one-time interaction handler');
                 this.setupOneTimeResume();
             });
         } else {
@@ -56,7 +61,7 @@ CyberOpsGame.prototype.enableAudioImmediately = function() {
         }
 
     } catch (error) {
-        console.warn('Failed to create AudioContext from session:', error);
+        if (this.logger) this.logger.warn('Failed to create AudioContext from session:', error);
         this.audioEnabled = false;
     }
 }
@@ -78,7 +83,7 @@ CyberOpsGame.prototype.setupOneTimeResume = function() {
     const resumeHandler = () => {
         if (this.audioContext && this.audioContext.state === 'suspended') {
             this.audioContext.resume().then(() => {
-                console.log('Audio context resumed on user interaction');
+                if (this.logger) this.logger.debug('Audio context resumed on user interaction');
                 this.startAppropriateMusic();
             });
         }
@@ -92,7 +97,7 @@ CyberOpsGame.prototype.setupOneTimeResume = function() {
 
 CyberOpsGame.prototype.enableAudio = function() {
     if (this.audioEnabled) {
-        console.log('Audio already enabled');
+        if (this.logger) this.logger.debug('Audio already enabled');
         return;
     }
 
@@ -103,13 +108,13 @@ CyberOpsGame.prototype.enableAudio = function() {
         // Store audio enabled state
         sessionStorage.setItem('audioEnabled', 'true');
 
-        console.log('Audio context created successfully');
-        console.log('Audio context state:', this.audioContext.state);
+        if (this.logger) this.logger.info('Audio context created successfully');
+        if (this.logger) this.logger.debug('Audio context state:', this.audioContext.state);
 
         // Resume if suspended
         if (this.audioContext.state === 'suspended') {
             this.audioContext.resume().then(() => {
-                console.log('Audio context resumed');
+                if (this.logger) this.logger.debug('Audio context resumed');
 
                 // Start the appropriate music
                 this.startAppropriateMusic();
@@ -120,7 +125,7 @@ CyberOpsGame.prototype.enableAudio = function() {
         }
 
     } catch (error) {
-        console.error('Failed to create AudioContext:', error);
+        if (this.logger) this.logger.error('Failed to create AudioContext:', error);
         this.audioEnabled = false;
     }
 }
@@ -180,14 +185,14 @@ CyberOpsGame.prototype.playConfiguredSound = function(config, volume, soundType)
     tryPlayFile(config.file).catch(() => {
         // Try fallback file (MP3) if specified
         if (config.fallback) {
-            console.log(`Primary SFX not found: ${config.file}, trying fallback: ${config.fallback}`);
+            if (this.logger) this.logger.warn(`Primary SFX not found: ${config.file}, trying fallback: ${config.fallback}`);
             tryPlayFile(config.fallback).catch(() => {
                 // Both files failed - stay silent
-                console.log(`No audio files found for: ${soundType}, staying silent`);
+                if (this.logger) this.logger.debug(`No audio files found for: ${soundType}, staying silent`);
             });
         } else {
             // No fallback file - stay silent
-            console.log(`SFX file not found: ${config.file}, no fallback available for: ${soundType}`);
+            if (this.logger) this.logger.warn(`SFX file not found: ${config.file}, no fallback available for: ${soundType}`);
         }
     });
 }

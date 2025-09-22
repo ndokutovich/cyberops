@@ -2,7 +2,7 @@
 // Manages screen shake, freeze frames, particles, and other visual effects
 
 CyberOpsGame.prototype.initVisualEffects = function() {
-    console.log('🎨 Initializing visual effects system...');
+    if (this.logger) this.logger.debug('🎨 Initializing visual effects system...');
 
     // Initialize effect state
     this.visualEffects = {
@@ -41,7 +41,7 @@ CyberOpsGame.prototype.initVisualEffects = function() {
     this.freezeEffectsEnabled = localStorage.getItem('cyberops_freeze') !== 'false';
     this.particlesEnabled = localStorage.getItem('cyberops_particles') !== 'false';
 
-    console.log('✅ Visual effects system initialized');
+    if (this.logger) this.logger.info('✅ Visual effects system initialized');
 };
 
 // Trigger an effect from config

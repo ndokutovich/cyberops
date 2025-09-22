@@ -1,39 +1,44 @@
     // 3D SYSTEM IMPLEMENTATION
     
 CyberOpsGame.prototype.init3D = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('Game3d') : null;
+    }
         // Initialize selected action for 3D mode
         this.selectedAction3D = 1; // Default to Shoot (index 1)
-        console.log('🎮 init3D() FUNCTION ENTERED!');
-        console.log('- window.THREE:', !!window.THREE);
-        console.log('- typeof THREE:', typeof THREE);
-        console.log('- THREE available globally:', typeof window.THREE);
+        if (this.logger) this.logger.debug('🎮 init3D() FUNCTION ENTERED!');
+        if (this.logger) this.logger.debug('- window.THREE:', !!window.THREE);
+        if (this.logger) this.logger.debug('- typeof THREE:', typeof THREE);
+        if (this.logger) this.logger.debug('- THREE available globally:', typeof window.THREE);
         
         if (!window.THREE) {
-            console.warn('❌ Three.js not loaded, 3D features disabled');
-            console.log('📋 Available globals:', Object.keys(window).filter(k => k.includes('THREE') || k.includes('three')));
+            if (this.logger) this.logger.warn('❌ Three.js not loaded, 3D features disabled');
+            if (this.logger) this.logger.debug('📋 Available globals:', Object.keys(window).filter(k => k.includes('THREE') || k.includes('three')));
             
             // Try delayed initialization (Three.js might load later)
-            console.log('🔄 Attempting delayed 3D initialization...');
+            if (this.logger) this.logger.debug('🔄 Attempting delayed 3D initialization...');
             setTimeout(() => {
-                console.log('🕐 Delayed check - window.THREE:', !!window.THREE);
+                if (this.logger) this.logger.debug('🕐 Delayed check - window.THREE:', !!window.THREE);
                 if (window.THREE) {
-                    console.log('🎉 Three.js now available! Retrying initialization...');
+                    if (this.logger) this.logger.debug('🎉 Three.js now available! Retrying initialization...');
                     this.init3D();
                 } else {
-                    console.error('💥 Three.js still not available after delay');
+                    if (this.logger) this.logger.error('💥 Three.js still not available after delay');
                 }
             }, 2000);
             return;
         }
         
-        console.log('🎮 Initializing 3D system...', 'THREE version:', THREE.REVISION);
+        if (this.logger) this.logger.debug('🎮 Initializing 3D system...', 'THREE version:', THREE.REVISION);
         
         // Get 3D container
         this.container3D = document.getElementById('game3DContainer');
-        console.log('- 3D container found:', !!this.container3D);
+        if (this.logger) this.logger.debug('- 3D container found:', !!this.container3D);
         
         if (!this.container3D) {
-            console.error('❌ 3D container not found!');
+            if (this.logger) this.logger.error('❌ 3D container not found!');
             return;
         }
         
@@ -70,7 +75,7 @@ CyberOpsGame.prototype.init3D = function() {
         this.canvas3D.style.width = '100%';
         this.canvas3D.style.height = '100%';
         this.canvas3D.style.zIndex = '1';
-        console.log('📐 3D Canvas created:', {
+        if (this.logger) this.logger.debug('📐 3D Canvas created:', {
             width: this.canvas3D.width,
             height: this.canvas3D.height,
             parent: this.canvas3D.parentElement?.id,
@@ -106,7 +111,7 @@ CyberOpsGame.prototype.init3D = function() {
         
         // Initialize 3D HUD
         this.gameHUD3D = document.getElementById('game3DHUD');
-        console.log('- 3D HUD found:', !!this.gameHUD3D);
+        if (this.logger) this.logger.debug('- 3D HUD found:', !!this.gameHUD3D);
 
         // Initialize other 3D components
         this.world3D = {
@@ -117,8 +122,8 @@ CyberOpsGame.prototype.init3D = function() {
             extraction: null
         };
 
-        console.log('✅ 3D system initialized successfully');
-        console.log('📊 3D System Components:', {
+        if (this.logger) this.logger.info('✅ 3D system initialized successfully');
+        if (this.logger) this.logger.debug('📊 3D System Components:', {
             scene3D: !!this.scene3D,
             renderer3D: !!this.renderer3D,
             camera3D: !!this.camera3D,
@@ -132,14 +137,14 @@ CyberOpsGame.prototype.init3D = function() {
 }
     
 CyberOpsGame.prototype.switchCameraMode = function() {
-        console.log('🎬 switchCameraMode called!');
-        console.log('  - scene3D exists:', !!this.scene3D);
-        console.log('  - selectedAgent exists:', !!this._selectedAgent);
+        if (this.logger) this.logger.debug('🎬 switchCameraMode called!');
+        if (this.logger) this.logger.debug('  - scene3D exists:', !!this.scene3D);
+        if (this.logger) this.logger.debug('  - selectedAgent exists:', !!this._selectedAgent);
         
         if (!this.scene3D || !this._selectedAgent) {
-            console.log('❌ Cannot switch camera mode:');
-            if (!this.scene3D) console.log('  - No 3D scene');
-            if (!this._selectedAgent) console.log('  - No selected agent');
+            if (this.logger) this.logger.debug('❌ Cannot switch camera mode:');
+            if (!this.scene3D) if (this.logger) this.logger.debug('  - No 3D scene');
+            if (!this._selectedAgent) if (this.logger) this.logger.debug('  - No selected agent');
             return;
         }
         
@@ -149,7 +154,7 @@ CyberOpsGame.prototype.switchCameraMode = function() {
         const oldMode = this.cameraMode;
         this.cameraMode = modes[nextIndex];
 
-        console.log('🎬 Camera mode switched:', oldMode, '→', this.cameraMode);
+        if (this.logger) this.logger.debug('🎬 Camera mode switched:', oldMode, '→', this.cameraMode);
         
         // Ensure we have an agent selected for 3D modes
         if ((this.cameraMode === 'third' || this.cameraMode === 'first' || this.cameraMode === 'isometric') && !this._selectedAgent) {
@@ -160,7 +165,7 @@ CyberOpsGame.prototype.switchCameraMode = function() {
                 this.agents.forEach(a => a.selected = false);
                 this._selectedAgent = aliveAgent;
                 aliveAgent.selected = true;
-                console.log('🎯 Auto-selected agent for 3D mode:', aliveAgent.name);
+                if (this.logger) this.logger.debug('🎯 Auto-selected agent for 3D mode:', aliveAgent.name);
             }
         }
 
@@ -193,14 +198,14 @@ CyberOpsGame.prototype.switchCameraMode = function() {
 }
     
 CyberOpsGame.prototype.enable3DMode = function() {
-        console.log('🚀 enable3DMode() called!');
+        if (this.logger) this.logger.debug('🚀 enable3DMode() called!');
 
         if (!this.scene3D) {
-            console.log('❌ Cannot enable 3D mode - no scene3D');
+            if (this.logger) this.logger.debug('❌ Cannot enable 3D mode - no scene3D');
             return;
         }
 
-        console.log('🎮 Enabling 3D mode...', 'Camera mode:', this.cameraMode);
+        if (this.logger) this.logger.debug('🎮 Enabling 3D mode...', 'Camera mode:', this.cameraMode);
 
         this.is3DMode = true;
         this.canvas.style.display = 'none';
@@ -209,7 +214,7 @@ CyberOpsGame.prototype.enable3DMode = function() {
         this.hud3D.style.display = 'block';
 
         // Debug: Check container dimensions
-        console.log('📐 Container3D dimensions:', {
+        if (this.logger) this.logger.debug('📐 Container3D dimensions:', {
             width: this.container3D.offsetWidth,
             height: this.container3D.offsetHeight,
             display: this.container3D.style.display,
@@ -254,7 +259,7 @@ CyberOpsGame.prototype.enable3DMode = function() {
                 const agentZ = (this._selectedAgent.y - this.map.tiles.length / 2) * 2;
                 this.camera3D.position.set(agentX, 1.6, agentZ);
             }
-            console.log('📷 Camera positioned at:', this.camera3D.position);
+            if (this.logger) this.logger.debug('📷 Camera positioned at:', this.camera3D.position);
         }
 
         // Update 3D HUD with current agent info
@@ -269,20 +274,20 @@ CyberOpsGame.prototype.enable3DMode = function() {
             this.animateBackgroundEffects();
         }
 
-        console.log('✅ 3D mode enabled');
+        if (this.logger) this.logger.info('✅ 3D mode enabled');
 }
     
 CyberOpsGame.prototype.cleanup3D = function() {
-        console.log('🧹 Cleaning up 3D mode...');
+        if (this.logger) this.logger.debug('🧹 Cleaning up 3D mode...');
         this.disable3DMode();
 };
 
 CyberOpsGame.prototype.disable3DMode = function() {
-        console.log('🎮 Disabling 3D mode...', 'Camera mode:', this.cameraMode);
+        if (this.logger) this.logger.debug('🎮 Disabling 3D mode...', 'Camera mode:', this.cameraMode);
 
         // Release pointer lock when switching back to tactical view
         if (document.pointerLockElement) {
-            console.log('🔓 Releasing pointer lock for tactical mode');
+            if (this.logger) this.logger.debug('🔓 Releasing pointer lock for tactical mode');
             document.exitPointerLock();
         }
 
@@ -309,7 +314,7 @@ CyberOpsGame.prototype.disable3DMode = function() {
         // Remove crosshair
         this.removeCrosshair();
 
-        console.log('✅ 3D mode disabled');
+        if (this.logger) this.logger.info('✅ 3D mode disabled');
 }
     
 CyberOpsGame.prototype.addCrosshair = function() {
@@ -393,7 +398,7 @@ CyberOpsGame.prototype.removeCrosshair = function() {
 
 CyberOpsGame.prototype.create3DWorld = function() {
         if (!this.scene3D || !this.map || !this.map.tiles) {
-            console.log('❌ Cannot create 3D world - missing components:', {
+            if (this.logger) this.logger.warn('❌ Cannot create 3D world - missing components:', {
                 scene3D: !!this.scene3D,
                 map: !!this.map,
                 tiles: !!(this.map && this.map.tiles)
@@ -401,7 +406,7 @@ CyberOpsGame.prototype.create3DWorld = function() {
             return;
         }
 
-        console.log('🌍 Creating 3D world from 2D map...');
+        if (this.logger) this.logger.debug('🌍 Creating 3D world from 2D map...');
         
         // Clear existing 3D objects
         Object.values(this.world3D).forEach(array => {
@@ -434,7 +439,7 @@ CyberOpsGame.prototype.create3DWorld = function() {
         // Create extraction point
         this.createExtractionPoint3D();
 
-        console.log('✅ 3D world created');
+        if (this.logger) this.logger.info('✅ 3D world created');
 }
     
 CyberOpsGame.prototype.createBackgroundEffects = function(mapWidth, mapHeight) {
@@ -636,7 +641,7 @@ CyberOpsGame.prototype.createGround = function() {
             }
         }
 
-        console.log(`🧱 Created ${this.world3D.walls.length} walls from map tiles`);
+        if (this.logger) this.logger.debug(`🧱 Created ${this.world3D.walls.length} walls from map tiles`);
 }
     
 CyberOpsGame.prototype.createWalls = function() {
@@ -745,7 +750,7 @@ CyberOpsGame.prototype.createNPCs3D = function() {
         });
     }
 
-    console.log(`👥 Created ${this.world3D.npcs ? this.world3D.npcs.length : 0} NPC meshes in 3D`);
+    if (this.logger) this.logger.debug(`👥 Created ${this.world3D.npcs ? this.world3D.npcs.length : 0} NPC meshes in 3D`);
 };
 
 CyberOpsGame.prototype.createEnemies3D = function() {
@@ -775,7 +780,7 @@ CyberOpsGame.prototype.createEnemies3D = function() {
             this.world3D.enemies.push(enemyMesh);
         });
 
-        console.log(`🎯 Created ${this.world3D.enemies.length} enemy meshes for ${this.enemies.length} enemies`);
+        if (this.logger) this.logger.debug(`🎯 Created ${this.world3D.enemies.length} enemy meshes for ${this.enemies.length} enemies`);
 }
     
 CyberOpsGame.prototype.createObjectives3D = function() {
@@ -895,7 +900,7 @@ CyberOpsGame.prototype.createObjectives3D = function() {
             });
         }
 
-        console.log('📦 Created 3D objectives:', {
+        if (this.logger) this.logger.debug('📦 Created 3D objectives:', {
             terminals: this.world3D.terminals.length,
             explosiveTargets: this.world3D.explosiveTargets.length,
             targets: this.world3D.targets.length,
@@ -1013,7 +1018,7 @@ CyberOpsGame.prototype.createExtractionPoint3D = function() {
         sprite.scale.set(4, 1, 1);
         extractionGroup.add(sprite);
 
-        console.log('🚁 Extraction point created at:', this.map.extraction);
+        if (this.logger) this.logger.debug('🚁 Extraction point created at:', this.map.extraction);
 }
 
 CyberOpsGame.prototype.animateExtractionPoint = function() {
@@ -1167,9 +1172,9 @@ CyberOpsGame.prototype.handleIsometricClick = function(event) {
                 // Set agent target position
                 this._selectedAgent.targetX = targetX;
                 this._selectedAgent.targetY = targetY;
-                console.log(`🎯 Isometric click-to-move: (${targetX.toFixed(1)}, ${targetY.toFixed(1)})`);
+                if (this.logger) this.logger.debug(`🎯 Isometric click-to-move: (${targetX.toFixed(1)}, ${targetY.toFixed(1)})`);
             } else {
-                console.log('🚫 Cannot move to that location - obstacle detected');
+                if (this.logger) this.logger.debug('🚫 Cannot move to that location - obstacle detected');
             }
         }
 }
@@ -1197,11 +1202,11 @@ CyberOpsGame.prototype.setupPointerLock = function() {
                         try {
                             await this.canvas3D.requestPointerLock();
                         } catch (err) {
-                            console.log('Pointer lock failed:', err);
+                            if (this.logger) this.logger.error('Pointer lock failed:', err);
                         }
                     } else {
                         // Subsequent clicks in FPS/TPS - shoot!
-                        console.log('🔫 3D canvas clicked - shooting!');
+                        if (this.logger) this.logger.debug('🔫 3D canvas clicked - shooting!');
                         this.mouseClicked = true;
                     }
                 }
@@ -1211,10 +1216,10 @@ CyberOpsGame.prototype.setupPointerLock = function() {
         // Handle pointer lock change
         document.addEventListener('pointerlockchange', () => {
             if (document.pointerLockElement === this.canvas3D) {
-                console.log('🔒 Pointer locked');
+                if (this.logger) this.logger.debug('🔒 Pointer locked');
                 this.canvas3D.style.cursor = 'none';
             } else {
-                console.log('🔓 Pointer unlocked');
+                if (this.logger) this.logger.debug('🔓 Pointer unlocked');
                 this.canvas3D.style.cursor = 'crosshair';
             }
         });
@@ -1256,7 +1261,7 @@ CyberOpsGame.prototype.update3D = function() {
 
         // Check if selected agent died and auto-select another
         if (this._selectedAgent && !this._selectedAgent.alive) {
-            console.log('💀 Selected agent died, finding new agent...');
+            if (this.logger) this.logger.debug('💀 Selected agent died, finding new agent...');
 
             // Find another alive agent
             const aliveAgent = this.agents.find(agent => agent.alive);
@@ -1265,10 +1270,10 @@ CyberOpsGame.prototype.update3D = function() {
                 this.agents.forEach(a => a.selected = false);
                 this._selectedAgent = aliveAgent;
                 aliveAgent.selected = true;
-                console.log('🎯 Auto-selected new agent:', aliveAgent.name);
+                if (this.logger) this.logger.debug('🎯 Auto-selected new agent:', aliveAgent.name);
                 this.update3DHUD();
             } else {
-                console.log('☠️ No alive agents remaining');
+                if (this.logger) this.logger.debug('☠️ No alive agents remaining');
                 this._selectedAgent = null;
                 // Could switch back to tactical view or show game over
                 return;
@@ -1461,7 +1466,7 @@ CyberOpsGame.prototype.cycleAction3D = function() {
         this.updateAction3DDisplay();
 
         const actionNames = ['Move', 'Shoot', 'Grenade', 'Hack', 'Shield'];
-        console.log(`🔄 Switched to action: ${actionNames[this.selectedAction3D]}`);
+        if (this.logger) this.logger.debug(`🔄 Switched to action: ${actionNames[this.selectedAction3D]}`);
 }
 
 CyberOpsGame.prototype.updateAction3DDisplay = function() {
@@ -1492,26 +1497,26 @@ CyberOpsGame.prototype.handle3DShooting = function() {
                 case 0: // Move
                     // In 2D mode, action 0 does nothing (movement is by clicking)
                     // In 3D mode, we could set a waypoint but for consistency, do nothing
-                    console.log('👆 Move action selected - use WASD to move');
+                    if (this.logger) this.logger.debug('👆 Move action selected - use WASD to move');
                     break;
 
                 case 1: // Shoot
-                    console.log('💥 Shooting nearest enemy!');
+                    if (this.logger) this.logger.debug('💥 Shooting nearest enemy!');
                     this.execute3DShooting();
                     break;
 
                 case 2: // Grenade
-                    console.log('💣 Throwing grenade at target position!');
+                    if (this.logger) this.logger.debug('💣 Throwing grenade at target position!');
                     this.execute3DGrenade();
                     break;
 
                 case 3: // Hack
-                    console.log('💻 Executing context action!');
+                    if (this.logger) this.logger.debug('💻 Executing context action!');
                     this.execute3DHack();
                     break;
 
                 case 4: // Shield
-                    console.log('🛡️ Activating shield!');
+                    if (this.logger) this.logger.debug('🛡️ Activating shield!');
                     this.execute3DShield();
                     break;
             }
@@ -1523,7 +1528,7 @@ CyberOpsGame.prototype.execute3DShooting = function() {
 
         // Check cooldown
         if (this._selectedAgent.cooldowns[1] > 0) {
-            console.log('⏰ Shoot on cooldown!');
+            if (this.logger) this.logger.debug('⏰ Shoot on cooldown!');
             return;
         }
 
@@ -1543,7 +1548,7 @@ CyberOpsGame.prototype.execute3DGrenade = function() {
 
         // Check cooldown
         if (this._selectedAgent.cooldowns[2] > 0) {
-            console.log('⏰ Grenade on cooldown!');
+            if (this.logger) this.logger.debug('⏰ Grenade on cooldown!');
             return;
         }
 
@@ -1559,7 +1564,7 @@ CyberOpsGame.prototype.execute3DGrenade = function() {
         this._selectedAgent.cooldowns[2] = 180;
         this.update3DCooldowns();
 
-        console.log(`💣 Grenade thrown at agent's target position`);
+        if (this.logger) this.logger.debug(`💣 Grenade thrown at agent's target position`);
 }
 
 CyberOpsGame.prototype.create3DGrenadeEffect = function(x, z) {
@@ -1628,7 +1633,7 @@ CyberOpsGame.prototype.execute3DHack = function() {
 
         // Check cooldown
         if (this._selectedAgent.cooldowns[3] > 0) {
-            console.log('⏰ Hack on cooldown!');
+            if (this.logger) this.logger.debug('⏰ Hack on cooldown!');
             return;
         }
 
@@ -1712,7 +1717,7 @@ CyberOpsGame.prototype.execute3DShield = function() {
 
         // Check cooldown
         if (this._selectedAgent.cooldowns[4] > 0) {
-            console.log('⏰ Shield on cooldown!');
+            if (this.logger) this.logger.debug('⏰ Shield on cooldown!');
             return;
         }
 
@@ -1726,7 +1731,7 @@ CyberOpsGame.prototype.execute3DShield = function() {
         this._selectedAgent.cooldowns[4] = 300;
         this.update3DCooldowns();
 
-        console.log('🛡️ Shield activated for 3 seconds');
+        if (this.logger) this.logger.debug('🛡️ Shield activated for 3 seconds');
 }
 
 CyberOpsGame.prototype.create3DShieldEffect = function(agent) {
@@ -1924,7 +1929,7 @@ CyberOpsGame.prototype.sync3DTo2D = function() {
 
 CyberOpsGame.prototype.render3D = function() {
         if (!this.renderer3D || !this.scene3D || !this.camera3D) {
-            console.warn('❌ render3D early return - missing:', {
+            if (this.logger) this.logger.warn('❌ render3D early return - missing:', {
                 renderer: !!this.renderer3D,
                 scene: !!this.scene3D,
                 camera: !!this.camera3D
@@ -1989,7 +1994,7 @@ CyberOpsGame.prototype.render3D = function() {
             if (!this.lastRenderDebug || Date.now() - this.lastRenderDebug > 1000) {
                 this.lastRenderDebug = Date.now();
                 const visibleCount = this.scene3D.children.filter(c => c.visible).length;
-                console.log('🎨 Rendering 3D:', {
+                if (this.logger) this.logger.debug('🎨 Rendering 3D:', {
                     sceneChildren: this.scene3D.children.length,
                     visibleChildren: visibleCount,
                     cameraPos: this.camera3D.position,
@@ -2005,7 +2010,7 @@ CyberOpsGame.prototype.render3D = function() {
                 this.camera3D.position.z = originalZ;
             }
         } else {
-            console.log('❌ Cannot render 3D - missing components:', {
+            if (this.logger) this.logger.warn('❌ Cannot render 3D - missing components:', {
                 renderer: !!this.renderer3D,
                 scene: !!this.scene3D,
                 camera: !!this.camera3D

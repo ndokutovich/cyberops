@@ -1,5 +1,10 @@
 // Select agent for RPG character sheet
 CyberOpsGame.prototype.selectRPGAgent = function(agentId) {
+
+    // Initialize logger if needed
+    if (!this.logger && window.Logger) {
+        this.logger = new window.Logger('GameUtils');
+    }
     const agent = this.activeAgents.find(a => a.id === parseInt(agentId));
     if (agent) {
         this.selectedRPGAgent = agent;
@@ -22,7 +27,7 @@ Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
         const oldValue = this._selectedAgent;
         this._selectedAgent = value;
 
-        console.log('🎯 selectedAgent SETTER called:', {
+        if (this.logger) this.logger.debug('🎯 selectedAgent SETTER called:', {
             from: oldValue ? oldValue.name : 'none',
             to: value ? value.name : 'none',
             stack: new Error().stack.split('\n')[1] // Show where it was called from
@@ -30,14 +35,14 @@ Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
 
         // CRITICAL: Track when selection is being cleared
         if (value === null && oldValue !== null) {
-            console.error('🚨 SELECTION BEING CLEARED!', {
+            if (this.logger) this.logger.error('🚨 SELECTION BEING CLEARED!', {
                 previousAgent: oldValue.name,
                 callStack: new Error().stack
             });
 
             // PROTECTION: Prevent accidental clearing during normal gameplay
             if (this.selectionProtection && this.currentScreen === 'game') {
-                console.warn('🛡️ SELECTION PROTECTION: Preventing clear during gameplay!');
+                if (this.logger) this.logger.warn('🛡️ SELECTION PROTECTION: Preventing clear during gameplay!');
                 // Don't actually clear - keep the old value
                 this._selectedAgent = oldValue;
                 return;

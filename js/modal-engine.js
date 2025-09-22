@@ -981,6 +981,11 @@ window.modalEngine = new ModalEngine();
 
 // Compatibility layer for existing game functions
 CyberOpsGame.prototype.showModalDialog = function(config) {
+
+    // Initialize logger if needed
+    if (!this.logger && window.Logger) {
+        this.logger = new window.Logger('ModalEngine');
+    }
     return window.modalEngine.show(config);
 };
 

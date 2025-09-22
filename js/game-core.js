@@ -1,6 +1,7 @@
 // Game Engine - Core Constructor and Initialization
 class CyberOpsGame {
     constructor() {
+        this.logger = window.Logger ? new window.Logger("CyberOpsGame") : null;
         // Constants - will be loaded from campaign
         this.MUSIC_MENU_START_TIME = 10.6; // Default, overridden by campaign
         this.DEMOSCENE_IDLE_TIMEOUT = 15000; // Default, overridden by campaign
@@ -69,7 +70,7 @@ class CyberOpsGame {
 
         // EARLY INITIALIZE: Initialize missions immediately in constructor
         this.missions = [];
-        console.log('🏗️ Early missions array initialized');
+        if (logger) logger.info('🏗️ Early missions array initialized');
 
         // Isometric Settings - will be overridden by campaign
         this.tileWidth = 64; // Default, overridden by campaign
@@ -77,7 +78,7 @@ class CyberOpsGame {
         this.cameraX = 0;
         this.cameraY = 0;
         this.zoom = 1;
-        console.log('🎥 Camera initialized:', { cameraX: this.cameraX, cameraY: this.cameraY, tileWidth: this.tileWidth, tileHeight: this.tileHeight });
+        if (logger) logger.info('🎥 Camera initialized:', { cameraX: this.cameraX, cameraY: this.cameraY, tileWidth: this.tileWidth, tileHeight: this.tileHeight });
 
         // Input State
         this.touches = {};
@@ -115,11 +116,11 @@ class CyberOpsGame {
 
         // Track selectedAgent changes
         this._selectedAgent = null;
-        console.log('🏗️ Constructor: _selectedAgent initialized as null');
+        if (logger) logger.info('🏗️ Constructor: _selectedAgent initialized as null');
 
         // CRITICAL: Add protection against accidental clearing
         this.selectionProtection = true;
-        console.log('🔧 selectionProtection set to:', this.selectionProtection);
+        if (logger) logger.debug('🔧 selectionProtection set to:', this.selectionProtection);
 
         // Visual effects will be initialized by visual effects system
 
@@ -156,68 +157,68 @@ class CyberOpsGame {
         this.initPathCache();
 
         // NOW CALL THE INITIALIZATION FUNCTIONS IN THE CONSTRUCTOR
-        console.log('🔧 Initializing game systems...');
+        if (logger) logger.debug('🔧 Initializing game systems...');
 
         // Initialize hub first (agents, equipment, etc.)
-        console.log('🏢 Setting up hub...');
+        if (logger) logger.debug('🏢 Setting up hub...');
         this.initializeHub();
 
         // Initialize mission system (required)
-        console.log('🆕 Initializing mission system...');
+        if (logger) logger.debug('🆕 Initializing mission system...');
         if (this.initMissions) {
             this.initMissions();
         }
 
         // Initialize screen music system
-        console.log('🎵 Initializing screen music system...');
+        if (logger) logger.debug('🎵 Initializing screen music system...');
         if (this.initScreenMusicSystem) {
             this.initScreenMusicSystem();
         }
 
         // Initialize visual effects system
-        console.log('🎨 Initializing visual effects system...');
+        if (logger) logger.debug('🎨 Initializing visual effects system...');
         if (this.initVisualEffects) {
             this.initVisualEffects();
         }
 
-        console.log('✅ All systems initialized');
+        if (logger) logger.info('✅ All systems initialized');
 
         // Initialize equipment system
-        console.log('🔧 Initializing equipment system...');
+        if (logger) logger.debug('🔧 Initializing equipment system...');
         if (this.initializeEquipmentSystem) {
             this.initializeEquipmentSystem();
-            console.log('✅ Equipment system initialized');
+            if (logger) logger.info('✅ Equipment system initialized');
         }
 
         // Initialize 3D system - check if Three.js is loaded
-        console.log('🔍 Checking Three.js availability...');
-        console.log('- window.THREE exists:', !!window.THREE);
-        console.log('- typeof THREE:', typeof THREE);
+        if (logger) logger.debug('🔍 Checking Three.js availability...');
+        if (logger) logger.debug('- window.THREE exists:', !!window.THREE);
+        if (logger) logger.debug('- typeof THREE:', typeof THREE);
 
         try {
-            console.log('🚀 About to call init3D()...');
+            if (logger) logger.debug('🚀 About to call init3D()...');
             this.init3D();
-            console.log('✅ init3D() call completed');
+            if (logger) logger.info('✅ init3D() call completed');
         } catch (error) {
-            console.error('💥 ERROR in init3D():', error);
-            console.error('Stack trace:', error.stack);
+            if (logger) logger.error('💥 ERROR in init3D():', error);
+            if (logger) logger.error('Stack trace:', error.stack);
         }
 
-        console.log('🏗️ Constructor completed - checking key data:');
-        console.log('- missions:', this.missions ? this.missions.length : 'undefined');
-        console.log('- activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
-        console.log('- completedMissions:', this.completedMissions ? this.completedMissions.length : 'undefined');
+        if (logger) logger.info('🏗️ Constructor completed - checking key data:');
+        if (logger) logger.debug('- missions:', this.missions ? this.missions.length : 'undefined');
+        if (logger) logger.debug('- activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
+        if (logger) logger.info('- completedMissions:', this.completedMissions ? this.completedMissions.length : 'undefined');
 
         // CRITICAL CHECK: Make sure missions are really defined
         if (!this.missions) {
-            console.error('🚨 CRITICAL ERROR: Constructor finished but this.missions is STILL undefined!');
-            console.log('🔧 Force calling initializeHub() again as emergency fix...');
+            if (logger) logger.error('🚨 CRITICAL ERROR: Constructor finished but this.missions is STILL undefined!');
+            if (logger) logger.debug('🔧 Force calling initializeHub() again as emergency fix...');
             this.initializeHub();
         }
     }
 
     initializeCanvasAndState() {
-        console.log('🎨 Initializing canvas and game state');
+        if (logger) logger.debug('🎨 Initializing canvas and game state');
 
         // Isometric Settings - already set above
         // this.tileWidth and this.tileHeight already initialized
@@ -254,44 +255,44 @@ class CyberOpsGame {
             setTimeout(() => this.resizeCanvas(), 100);
         });
 
-        console.log('✅ Canvas and game state initialized');
+        if (logger) logger.info('✅ Canvas and game state initialized');
     }
 
     initializeAudio() {
         // Audio initialization now handled by game-audio.js and music systems
-        console.log('🎵 Audio initialization delegated to modular systems');
+        if (logger) logger.debug('🎵 Audio initialization delegated to modular systems');
     }
 } // Close the CyberOpsGame class
 
 CyberOpsGame.prototype.loadMissionData = function() {
-        console.log('📋 Loading mission data... (stub - missions loaded in initializeHub)');
+        if (this.logger) this.logger.info('📋 Loading mission data... (stub - missions loaded in initializeHub)');
 
         // Missions are now loaded in initializeHub() to ensure proper initialization order
         // This avoids conflicts between loadMissionData and initializeHub
 }
 
 CyberOpsGame.prototype.initializeHub = function() {
-        console.log('🏢 Initializing Syndicate Hub...');
+        if (this.logger) this.logger.debug('🏢 Initializing Syndicate Hub...');
 
         // Agents must be loaded from campaign
         if (!this.availableAgents || this.availableAgents.length === 0) {
-            console.warn('⚠️ No agents loaded from campaign! Campaign content required.');
+            if (this.logger) this.logger.warn('⚠️ No agents loaded from campaign! Campaign content required.');
             this.availableAgents = [];
             this.activeAgents = [];
         }
 
-        console.log('✅ Active agents:', this.activeAgents.length, 'agents hired');
-        console.log('🎯 Active agents:', this.activeAgents.map(a => a.name));
+        if (this.logger) this.logger.info('✅ Active agents:', this.activeAgents.length, 'agents hired');
+        if (this.logger) this.logger.debug('🎯 Active agents:', this.activeAgents.map(a => a.name));
 
         // Weapons must be loaded from campaign
         if (!this.weapons || this.weapons.length === 0) {
-            console.warn('⚠️ No weapons loaded from campaign! Campaign content required.');
+            if (this.logger) this.logger.warn('⚠️ No weapons loaded from campaign! Campaign content required.');
             this.weapons = [];
         }
 
         // Equipment must be loaded from campaign
         if (!this.equipment || this.equipment.length === 0) {
-            console.warn('⚠️ No equipment loaded from campaign! Campaign content required.');
+            if (this.logger) this.logger.warn('⚠️ No equipment loaded from campaign! Campaign content required.');
             this.equipment = [];
         }
 
@@ -299,10 +300,10 @@ CyberOpsGame.prototype.initializeHub = function() {
         // Initialize empty array here, will be populated by campaign-integration.js
         if (!this.missions || this.missions.length === 0) {
             this.missions = [];
-            console.log('📋 Missions array initialized, waiting for campaign system to populate');
+            if (this.logger) this.logger.info('📋 Missions array initialized, waiting for campaign system to populate');
         }
 
-        console.log('🏢 Hub initialized successfully:', {
+        if (this.logger) this.logger.info('🏢 Hub initialized successfully:', {
             availableAgents: this.availableAgents.length,
             activeAgents: this.activeAgents.length,
             weapons: this.weapons.length,
@@ -310,7 +311,7 @@ CyberOpsGame.prototype.initializeHub = function() {
             missions: this.missions.length
         });
 
-        console.log('✅ MISSIONS CHECK: this.missions is now', this.missions ? 'DEFINED' : 'STILL UNDEFINED');
+        if (this.logger) this.logger.info('✅ MISSIONS CHECK: this.missions is now', this.missions ? 'DEFINED' : 'STILL UNDEFINED');
 }
 
 CyberOpsGame.prototype.init = function() {
@@ -320,9 +321,9 @@ CyberOpsGame.prototype.init = function() {
         // Initialize RPG system
         if (this.initRPGSystem) {
             this.initRPGSystem();
-            console.log('✅ RPG system initialized in core');
+            if (this.logger) this.logger.info('✅ RPG system initialized in core');
         } else {
-            console.warn('⚠️ RPG system not found during initialization');
+            if (this.logger) this.logger.warn('⚠️ RPG system not found during initialization');
         }
 
         // Initialize turn-based mode system
@@ -351,7 +352,7 @@ CyberOpsGame.prototype.init = function() {
 
             // Set up button click handler
             resetButton.onclick = () => {
-                console.log('🚀 START EXPERIENCE clicked - enabling audio and starting game');
+                if (this.logger) this.logger.debug('🚀 START EXPERIENCE clicked - enabling audio and starting game');
 
                 // Enable audio context on user interaction
                 this.enableAudio();
@@ -361,15 +362,15 @@ CyberOpsGame.prototype.init = function() {
 
                 // Start the ScreenManager flow with splash screen
                 if (window.screenManager) {
-                    console.log('📺 Navigating to splash screen');
+                    if (this.logger) this.logger.debug('📺 Navigating to splash screen');
                     window.screenManager.navigateTo('splash');
                 } else {
-                    console.error('Screen manager not available!');
+                    if (this.logger) this.logger.error('Screen manager not available!');
                 }
             };
         } else {
             // Fallback if initial screen not found
-            console.warn('⚠️ Initial screen not found, starting directly with splash');
+            if (this.logger) this.logger.warn('⚠️ Initial screen not found, starting directly with splash');
             setTimeout(() => {
                 if (window.screenManager) {
                     window.screenManager.navigateTo('splash');
@@ -380,7 +381,7 @@ CyberOpsGame.prototype.init = function() {
         // Add debug info for game state
         setInterval(() => {
             if (this.currentScreen === 'game') {
-                console.log('🎮 Game state check - Selected agent:', this._selectedAgent ? this._selectedAgent.name : 'none',
+                if (this.logger) this.logger.debug('🎮 Game state check - Selected agent:', this._selectedAgent ? this._selectedAgent.name : 'none',
                            'Screen:', this.currentScreen, 'Total agents:', this.agents?.length || 0, 'Alive agents:',
                            this.agents?.filter(a => a.alive).length || 0);
             }

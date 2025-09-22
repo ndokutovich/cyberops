@@ -1,5 +1,10 @@
     // HUD Dialog System - Now using Modal Engine
 CyberOpsGame.prototype.showHudDialog = function(title, message, buttons) {
+
+    // Initialize logger if needed
+    if (!this.logger && window.Logger) {
+        this.logger = new window.Logger('GameDialogs');
+    }
     // Use new modal engine if available
     if (window.modalEngine) {
         // Don't close all modals for confirmation dialogs - allow stacking
@@ -59,21 +64,21 @@ CyberOpsGame.prototype.showHudDialog = function(title, message, buttons) {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Dialog button clicked:', btn.text);
+            if (this.logger) this.logger.debug('Dialog button clicked:', btn.text);
 
             if (btn.action === 'close') {
-                console.log('Closing dialog...');
+                if (this.logger) this.logger.debug('Closing dialog...');
                 gameInstance.closeDialog();
             } else if (typeof btn.action === 'function') {
-                console.log('Executing action function...');
+                if (this.logger) this.logger.debug('Executing action function...');
                 try {
                     // Just call the function - arrow functions will maintain their context
                     btn.action();
                 } catch (err) {
-                    console.error('Error executing dialog action:', err);
+                    if (this.logger) this.logger.error('Error executing dialog action:', err);
                 }
             } else {
-                console.log('Unknown action type:', btn.action);
+                if (this.logger) this.logger.debug('Unknown action type:', btn.action);
             }
         });
 

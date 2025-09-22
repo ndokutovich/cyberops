@@ -93,7 +93,7 @@ class RPGService {
             const critChance = attackerRPG.derivedStats?.critChance || 5;
             if (Math.random() * 100 < critChance) {
                 finalDamage *= 2;
-                console.log('   💥 CRITICAL HIT!');
+                if (logger) logger.error('   💥 CRITICAL HIT!');
             }
         }
 
@@ -106,7 +106,7 @@ class RPGService {
             // Check dodge
             const dodgeChance = targetRPG.derivedStats?.dodge || 0;
             if (Math.random() * 100 < dodgeChance) {
-                console.log('   ⚡ DODGED!');
+                if (logger) logger.debug('   ⚡ DODGED!');
                 return 0;
             }
         }
@@ -212,7 +212,7 @@ class RPGService {
 
             if (loadout && inventory) {
                 inventory.clearEquipment();
-                console.log(`📦 Syncing loadout for ${agent.name}:`, loadout);
+                if (logger) logger.debug(`📦 Syncing loadout for ${agent.name}:`, loadout);
 
                 // Sync equipped weapon
                 if (loadout.weapon) {
@@ -230,7 +230,7 @@ class RPGService {
                             };
                             inventory.items.push(itemToAdd);
                             inventory.equipped.primary = itemToAdd;
-                            console.log(`   ✅ Equipped ${weapon.name} on ${agent.name}`);
+                            if (logger) logger.info(`   ✅ Equipped ${weapon.name} on ${agent.name}`);
                         }
                     }
                 }
@@ -251,7 +251,7 @@ class RPGService {
                             };
                             inventory.items.push(itemToAdd);
                             inventory.equipped.armor = itemToAdd;
-                            console.log(`   ✅ Equipped ${armor.name} on ${agent.name}`);
+                            if (logger) logger.info(`   ✅ Equipped ${armor.name} on ${agent.name}`);
                         }
                     }
                 }
@@ -271,12 +271,12 @@ class RPGService {
                                 quantity: 1
                             };
                             inventory.items.push(itemToAdd);
-                            console.log(`   ✅ Added ${utility.name} to ${agent.name}'s inventory`);
+                            if (logger) logger.info(`   ✅ Added ${utility.name} to ${agent.name}'s inventory`);
                         }
                     }
                 }
 
-                console.log(`📦 Final inventory for ${agent.name}:`, {
+                if (logger) logger.debug(`📦 Final inventory for ${agent.name}:`, {
                     items: inventory.items.length,
                     equipped: Object.keys(inventory.equipped)
                 });
@@ -340,7 +340,7 @@ class RPGService {
             this.rpgManager.loadConfig(rpgConfig);
             this.rpgConfig = rpgConfig;
         } else {
-            console.error('❌ No RPG config found in campaign!');
+            if (logger) logger.error('❌ No RPG config found in campaign!');
         }
     }
 

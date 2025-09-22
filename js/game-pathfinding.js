@@ -2,6 +2,11 @@
 
 // Initialize pathfinding cache
 CyberOpsGame.prototype.initPathCache = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GamePathfinding') : null;
+    }
     this.pathCache = new Map();
     this.pathCacheTimeout = 5000; // Cache paths for 5 seconds
     this.maxPathCacheSize = 50; // Limit cache size
@@ -285,7 +290,7 @@ CyberOpsGame.prototype.moveAgentWithPathfinding = function(agent) {
 
                 if (agent.selected) {
                     const agentIdentifier = agent.name || agent.id || 'unknown';
-                    console.log(`📍 Path calculated for ${agentIdentifier}: ${agent.path.length} waypoints`);
+                    if (this.logger) this.logger.debug(`📍 Path calculated for ${agentIdentifier}: ${agent.path.length} waypoints`);
                 }
             }
         }
@@ -303,7 +308,7 @@ CyberOpsGame.prototype.moveAgentWithPathfinding = function(agent) {
         // Safety check for waypoint
         if (!waypoint) {
             const agentName = agent.name || agent.id || 'unknown agent';
-            console.error(`❌ Invalid waypoint for ${agentName} at index ${agent.currentPathIndex}`);
+            if (this.logger) this.logger.error(`❌ Invalid waypoint for ${agentName} at index ${agent.currentPathIndex}`);
             agent.path = null;
             return;
         }
@@ -342,12 +347,12 @@ CyberOpsGame.prototype.moveAgentWithPathfinding = function(agent) {
                 agent.facingAngle = Math.atan2(dy, dx);
             } else {
                 const agentName = agent.name || agent.id || 'unknown agent';
-                console.error(`❌ Invalid movement for ${agentName}: dist=${dist}, dx=${dx}, dy=${dy}`);
+                if (this.logger) this.logger.error(`❌ Invalid movement for ${agentName}: dist=${dist}, dx=${dx}, dy=${dy}`);
             }
         }
     } catch (error) {
         const agentName = agent.name || agent.id || 'unknown agent';
-        console.error(`❌ Pathfinding error for ${agentName}:`, error);
+        if (this.logger) this.logger.error(`❌ Pathfinding error for ${agentName}:`, error);
         // Reset to safe state
         agent.path = null;
         agent.targetX = agent.x;

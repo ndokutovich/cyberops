@@ -1,25 +1,26 @@
 // Initialize game (wait for Three.js if needed)
-console.log('🚀 Starting CyberOps Game initialization...');
+const initLogger = window.Logger ? new window.Logger('GameInit') : null;
+if (initLogger) initLogger.debug('🚀 Starting CyberOps Game initialization...');
 
 // Create game instance and make it globally available
 const game = new CyberOpsGame();
 window.game = game; // Make game globally available for Three.js loader
-console.log('📦 Game instance created');
+if (initLogger) initLogger.debug('📦 Game instance created');
 
 // Initialize declarative dialogs
 if (game.initializeDeclarativeDialogs) {
     game.initializeDeclarativeDialogs();
-    console.log('💬 Dialog system initialized');
+    if (initLogger) initLogger.info('💬 Dialog system initialized');
 }
 
 // Initialize game
 game.init();
-console.log('✅ Game initialized successfully');
+if (initLogger) initLogger.info('✅ Game initialized successfully');
 
 // Check for Three.js after a delay (modules load asynchronously)
 setTimeout(() => {
     if (window.THREE && !game.scene3D) {
-        console.log('🎮 Three.js now available, initializing 3D system...');
+        if (initLogger) initLogger.debug('🎮 Three.js now available, initializing 3D system...');
         game.init3D();
     }
 }, 100);

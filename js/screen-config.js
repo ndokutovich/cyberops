@@ -346,5 +346,6 @@ if (window.screenManager) {
     Object.entries(SCREEN_CONFIG).forEach(([id, config]) => {
         window.screenManager.registerScreen(id, config);
     });
-    console.log('📺 Registered', Object.keys(SCREEN_CONFIG).length, 'screens');
+    const logger = window.Logger ? new window.Logger('ScreenConfig') : null;
+    if (logger) logger.debug('📺 Registered', Object.keys(SCREEN_CONFIG).length, 'screens');
 }

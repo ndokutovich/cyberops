@@ -21,7 +21,7 @@ CyberOpsGame.prototype.getRPGConfig = function() {
 
 // Integration layer for existing agent/enemy/NPC systems
 CyberOpsGame.prototype.initRPGSystem = function() {
-    console.log('🎮 Initializing RPG System...');
+    if (this.logger) this.logger.debug('🎮 Initializing RPG System...');
 
     // Store original functions
     this._originalCreateAgent = this.createAgent;
@@ -65,7 +65,7 @@ CyberOpsGame.prototype.initRPGSystem = function() {
     if (rpgConfig) {
         this.rpgManager.loadConfig(rpgConfig);
     } else {
-        console.error('❌ No RPG config found in campaign!');
+        if (this.logger) this.logger.error('❌ No RPG config found in campaign!');
     }
 
     // Sync existing hub equipment with RPG system
@@ -74,12 +74,13 @@ CyberOpsGame.prototype.initRPGSystem = function() {
     // Initialize existing entities with RPG stats
     this.upgradeExistingEntities();
 
-    console.log('✅ RPG System initialized');
+    if (this.logger) this.logger.info('✅ RPG System initialized');
 };
 
 // RPG Manager - Central management of RPG mechanics
 class RPGManager {
     constructor() {
+        this.logger = window.Logger ? new window.Logger("CyberOpsGame") : null;
         this.config = null;
         this.entities = new Map(); // Track all RPG entities
         this.experienceTable = [];
@@ -110,8 +111,8 @@ class RPGManager {
 
     createRPGAgent(baseAgent, classType = 'soldier') {
         // Direct implementation - don't call RPGService to avoid recursion
-        console.log(`\n🎮 Creating RPG Agent: ${baseAgent.name}`);
-        console.log(`   Class: ${classType}`);
+        if (this.logger) this.logger.debug(`\n🎮 Creating RPG Agent: ${baseAgent.name}`);
+        if (this.logger) this.logger.debug(`   Class: ${classType}`);
 
         const classConfig = this.config?.classes?.[classType] || {};
         const rpgAgent = new RPGAgent({
@@ -124,7 +125,7 @@ class RPGManager {
             perks: []
         });
 
-        console.log(`   Initial Stats:`, rpgAgent.stats);
+        if (this.logger) this.logger.debug(`   Initial Stats:`, rpgAgent.stats);
 
         // Copy existing agent properties
         Object.keys(baseAgent).forEach(key => {
@@ -137,9 +138,9 @@ class RPGManager {
         const derived = this.calculateDerivedStats(rpgAgent);
         rpgAgent.derivedStats = derived;
 
-        console.log(`   Derived Stats Summary:`);
-        console.log(`   - Max Health: ${derived.maxHealth}`);
-        console.log(`   - Max AP: ${derived.maxAP}`);
+        if (this.logger) this.logger.debug(`   Derived Stats Summary:`);
+        if (this.logger) this.logger.debug(`   - Max Health: ${derived.maxHealth}`);
+        if (this.logger) this.logger.debug(`   - Max AP: ${derived.maxAP}`);
 
         // Register entity
         this.entities.set(baseAgent.id || baseAgent.name, rpgAgent);
@@ -273,13 +274,13 @@ class RPGManager {
         const requiredXP = this.experienceTable[currentLevel + 1];
         const progressPercent = ((entity.experience / requiredXP) * 100).toFixed(1);
 
-        console.log(`\n📈 XP GAIN:`);
-        console.log(`   ${entity.name} gained ${amount} XP`);
-        console.log(`   XP Progress: ${oldXP} → ${entity.experience} / ${requiredXP} (${progressPercent}%)`);
+        if (this.logger) this.logger.debug(`\n📈 XP GAIN:`);
+        if (this.logger) this.logger.debug(`   ${entity.name} gained ${amount} XP`);
+        if (this.logger) this.logger.debug(`   XP Progress: ${oldXP} → ${entity.experience} / ${requiredXP} (${progressPercent}%)`);
 
         // Check for level up
         if (entity.experience >= requiredXP) {
-            console.log(`   🎉 LEVEL UP TRIGGERED!`);
+            if (this.logger) this.logger.debug(`   🎉 LEVEL UP TRIGGERED!`);
             this.levelUp(entity);
         }
 
@@ -290,9 +291,9 @@ class RPGManager {
         const oldLevel = entity.level || 1;
         entity.level = oldLevel + 1;
 
-        console.log(`\n🎊 LEVEL UP!`);
-        console.log(`   ${entity.name}: Level ${oldLevel} → ${entity.level}`);
-        console.log(`   Class: ${entity.class || 'Soldier'}`);
+        if (this.logger) this.logger.debug(`\n🎊 LEVEL UP!`);
+        if (this.logger) this.logger.debug(`   ${entity.name}: Level ${oldLevel} → ${entity.level}`);
+        if (this.logger) this.logger.debug(`   Class: ${entity.class || 'Soldier'}`);
 
         // Award stat points based on class
         const classConfig = this.config?.classes?.[entity.class];
@@ -302,26 +303,26 @@ class RPGManager {
         entity.unspentStatPoints = (entity.unspentStatPoints || 0) + statPoints;
         entity.unspentSkillPoints = (entity.unspentSkillPoints || 0) + skillPoints;
 
-        console.log(`   Rewards:`);
-        console.log(`   +${statPoints} Stat Points (Total unspent: ${entity.unspentStatPoints})`);
-        console.log(`   +${skillPoints} Skill Points (Total unspent: ${entity.unspentSkillPoints})`);
+        if (this.logger) this.logger.debug(`   Rewards:`);
+        if (this.logger) this.logger.debug(`   +${statPoints} Stat Points (Total unspent: ${entity.unspentStatPoints})`);
+        if (this.logger) this.logger.debug(`   +${skillPoints} Skill Points (Total unspent: ${entity.unspentSkillPoints})`);
 
         // Check for new perks
         const availablePerks = this.getAvailablePerks(entity);
         if (availablePerks.length > 0 && entity.level % 3 === 0) {
             entity.unspentPerkPoints = (entity.unspentPerkPoints || 0) + 1;
-            console.log(`   +1 Perk Point! (Total unspent: ${entity.unspentPerkPoints})`);
+            if (this.logger) this.logger.debug(`   +1 Perk Point! (Total unspent: ${entity.unspentPerkPoints})`);
         }
 
         // Heal on level up
         const derivedStats = this.calculateDerivedStats(entity);
         const oldHealth = entity.health || 100;
         entity.health = derivedStats.maxHealth;
-        console.log(`   Health restored: ${oldHealth} → ${entity.health}`);
+        if (this.logger) this.logger.debug(`   Health restored: ${oldHealth} → ${entity.health}`);
 
-        console.log(`   Available perks: ${availablePerks.length}`);
+        if (this.logger) this.logger.debug(`   Available perks: ${availablePerks.length}`);
         if (availablePerks.length > 0) {
-            console.log(`   Perks you can choose:`, availablePerks.map(p => p.name));
+            if (this.logger) this.logger.debug(`   Perks you can choose:`, availablePerks.map(p => p.name));
         }
 
         // Notify
@@ -627,24 +628,24 @@ CyberOpsGame.prototype.upgradeExistingEntities = function() {
 
 // Sync existing hub equipment with RPG inventory system
 CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
-    console.log('🔄 Syncing hub equipment with RPG inventory...');
-    console.log('   Weapons in game:', this.weapons?.length || 0, 'items');
-    console.log('   Equipment in game:', this.equipment?.length || 0, 'items');
+    if (this.logger) this.logger.debug('🔄 Syncing hub equipment with RPG inventory...');
+    if (this.logger) this.logger.debug('   Weapons in game:', this.weapons?.length || 0, 'items');
+    if (this.logger) this.logger.debug('   Equipment in game:', this.equipment?.length || 0, 'items');
     if (this.weapons && this.weapons.length > 0) {
-        console.log('   First weapon:', this.weapons[0].name, 'owned:', this.weapons[0].owned);
+        if (this.logger) this.logger.debug('   First weapon:', this.weapons[0].name, 'owned:', this.weapons[0].owned);
     }
 
     // Use GameServices if available
     if (window.GameServices && window.GameServices.rpgService) {
         window.GameServices.rpgService.syncEquipment(this);
-        console.log('✅ Equipment sync complete via GameServices');
+        if (this.logger) this.logger.info('✅ Equipment sync complete via GameServices');
         return;
     }
 
     // Fallback to local sync
     // Ensure systems are initialized
     if (!this.inventoryManager || !this.rpgManager) {
-        console.warn('⚠️ RPG systems not initialized, skipping sync');
+        if (this.logger) this.logger.warn('⚠️ RPG systems not initialized, skipping sync');
         return;
     }
 
@@ -674,7 +675,7 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                     rpgConfig.items.weapons[rpgWeapon.id] = rpgWeapon;
                 }
 
-                console.log(`   ✅ Synced weapon: ${weapon.name} (x${weapon.owned})`);
+                if (this.logger) this.logger.info(`   ✅ Synced weapon: ${weapon.name} (x${weapon.owned})`);
             }
         });
     }
@@ -710,7 +711,7 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                     rpgConfig.items[itemType][rpgItem.id] = rpgItem;
                 }
 
-                console.log(`   ✅ Synced ${itemType}: ${item.name} (x${item.owned})`);
+                if (this.logger) this.logger.info(`   ✅ Synced ${itemType}: ${item.name} (x${item.owned})`);
             }
         });
     }
@@ -753,7 +754,7 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                             }
                         }
                         inventory.equipItem(rpgWeaponId, 'primary');
-                        console.log(`   ✅ Equipped ${weapon.name} on ${agent.name}`);
+                        if (this.logger) this.logger.info(`   ✅ Equipped ${weapon.name} on ${agent.name}`);
                     }
                 }
 
@@ -775,7 +776,7 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                             }
                         }
                         inventory.equipItem(rpgArmorId, 'armor');
-                        console.log(`   ✅ Equipped ${armor.name} on ${agent.name}`);
+                        if (this.logger) this.logger.info(`   ✅ Equipped ${armor.name} on ${agent.name}`);
                     }
                 }
 
@@ -788,7 +789,7 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
                         const rpgUtility = rpgConfig?.items?.consumables?.[rpgUtilityId];
                         if (rpgUtility && !inventory.items.find(i => i.id === rpgUtilityId)) {
                             inventory.addItem(rpgUtility, 1);
-                            console.log(`   ✅ Added ${utility.name} to ${agent.name}'s inventory`);
+                            if (this.logger) this.logger.info(`   ✅ Added ${utility.name} to ${agent.name}'s inventory`);
                         }
                     }
                 }
@@ -796,14 +797,14 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
         });
     }
 
-    console.log('✅ Equipment sync complete');
+    if (this.logger) this.logger.info('✅ Equipment sync complete');
 };
 
 // Enhanced combat calculation using RPG stats
 CyberOpsGame.prototype.calculateDamage = function(attacker, target, weaponType = 'rifle') {
     // ALWAYS use GameServices - NO FALLBACKS
     if (!window.GameServices || !window.GameServices.calculateAttackDamage) {
-        console.error('⚠️ CRITICAL: GameServices not available! No damage calculation possible.');
+        if (this.logger) this.logger.error('⚠️ CRITICAL: GameServices not available! No damage calculation possible.');
         return 0; // No damage if service not available
     }
 
@@ -814,7 +815,7 @@ CyberOpsGame.prototype.calculateDamage = function(attacker, target, weaponType =
 
 // Handle entity death with XP rewards
 CyberOpsGame.prototype.onEntityDeath = function(entity, killer) {
-    console.log('💀 onEntityDeath called:', {
+    if (this.logger) this.logger.debug('💀 onEntityDeath called:', {
         entity: entity?.type || entity?.name || 'unknown',
         entityHasRPG: !!entity?.rpgEntity,
         killer: killer?.name || 'unknown',
@@ -824,7 +825,7 @@ CyberOpsGame.prototype.onEntityDeath = function(entity, killer) {
     // Grant XP to killer
     if (killer && killer.rpgEntity && entity.rpgEntity) {
         const xpReward = this.calculateXPReward(entity);
-        console.log(`🎯 Granting ${xpReward} XP to ${killer.name}`);
+        if (this.logger) this.logger.debug(`🎯 Granting ${xpReward} XP to ${killer.name}`);
         this.rpgManager.grantExperience(killer.rpgEntity, xpReward);
 
         // Show XP gain notification
@@ -862,9 +863,9 @@ CyberOpsGame.prototype.onEntityDeath = function(entity, killer) {
         }
     } else {
         // Debug why XP wasn't granted
-        if (!killer) console.warn('No killer for entity death');
-        if (!killer?.rpgEntity) console.warn('Killer has no rpgEntity:', killer);
-        if (!entity?.rpgEntity) console.warn('Dead entity has no rpgEntity:', entity);
+        if (!killer) if (this.logger) this.logger.warn('No killer for entity death');
+        if (!killer?.rpgEntity) if (this.logger) this.logger.warn('Killer has no rpgEntity:', killer);
+        if (!entity?.rpgEntity) if (this.logger) this.logger.warn('Dead entity has no rpgEntity:', entity);
     }
 
     // Drop loot
@@ -1048,4 +1049,4 @@ CyberOpsGame.prototype.updateGame = function(deltaTime) {
     }
 };
 
-console.log('🎮 RPG Integration loaded');
+if (this.logger) this.logger.info('🎮 RPG Integration loaded');

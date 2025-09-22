@@ -7,9 +7,10 @@
 (function() {
     // Wait for dialog engine to be available
     function registerScreenIntegrations() {
+    const logger = window.Logger ? new window.Logger('from') : null;
         const engine = window.declarativeDialogEngine;
         if (!engine) {
-            console.warn('Dialog engine not ready for screen integrations');
+            if (this.logger) this.logger.warn('Dialog engine not ready for screen integrations');
             return;
         }
 
@@ -320,7 +321,7 @@
         engine.registerAction('initializeHubScreen', function() {
             // CRITICAL: Disable 3D mode if active
             if (game && game.is3DMode) {
-                console.log('🔄 Disabling 3D mode when entering Hub');
+                if (logger) logger.debug('🔄 Disabling 3D mode when entering Hub');
                 if (game.cleanup3D) game.cleanup3D();
             }
 
@@ -352,18 +353,18 @@
 
                 // Stop mission music and cleanup music system
                 if (game.musicSystem && game.cleanupMusicSystem) {
-                    console.log('🛑 Stopping mission music when returning to hub');
+                    if (logger) logger.debug('🛑 Stopping mission music when returning to hub');
                     game.cleanupMusicSystem();
                 }
 
                 // Handle music transition based on where we're coming from
                 if (game.transitionScreenMusic && previousScreen && previousScreen !== 'game') {
                     // Use transition system if coming from another screen (not from mission)
-                    console.log(`🎵 Transitioning music from ${previousScreen} to hub`);
+                    if (logger) logger.debug(`🎵 Transitioning music from ${previousScreen} to hub`);
                     game.transitionScreenMusic(previousScreen, 'hub');
                 } else if (game.loadScreenMusic) {
                     // Direct load if no previous screen or coming from mission
-                    console.log('🎵 Loading hub music');
+                    if (logger) logger.debug('🎵 Loading hub music');
                     game.loadScreenMusic('hub');
                 }
 
@@ -412,7 +413,7 @@
         // Replace showSyndicateHub with declarative version (optional - hub is complex)
         // For now, we'll keep the original hub implementation since it's deeply integrated
 
-        console.log('✅ Screen dialog integrations registered');
+        if (logger) logger.info('✅ Screen dialog integrations registered');
     }
 
     // Register when dialog engine is ready

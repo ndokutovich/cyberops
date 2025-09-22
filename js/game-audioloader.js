@@ -4,6 +4,11 @@
  */
 
 CyberOpsGame.prototype.initAudioLoader = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameAudioloader') : null;
+    }
     // Cache for loaded audio buffers
     this.audioCache = new Map();
 
@@ -23,7 +28,7 @@ CyberOpsGame.prototype.detectAudioSupport = function() {
         ogg: audio.canPlayType('audio/ogg') !== ''
     };
 
-    console.log('Audio format support:', this.audioSupport);
+    if (this.logger) this.logger.debug('Audio format support:', this.audioSupport);
 };
 
 // Load audio file with format fallback
@@ -45,17 +50,17 @@ CyberOpsGame.prototype.loadAudioFile = async function(baseName, baseFolder = '')
         try {
             const audio = await this.tryLoadAudio(url);
             if (audio) {
-                console.log(`Successfully loaded ${baseName}${format}`);
+                if (this.logger) this.logger.info(`Successfully loaded ${baseName}${format}`);
                 this.audioCache.set(baseName, audio);
                 return audio;
             }
         } catch (err) {
-            console.log(`Failed to load ${url}, trying next format...`);
+            if (this.logger) this.logger.error(`Failed to load ${url}, trying next format...`);
         }
     }
 
     // All formats failed
-    console.warn(`Could not load audio file ${baseName} in any format`);
+    if (this.logger) this.logger.warn(`Could not load audio file ${baseName} in any format`);
     return null;
 };
 
@@ -110,16 +115,16 @@ CyberOpsGame.prototype.loadAudioBuffer = async function(baseName, baseFolder = '
             if (response.ok) {
                 const arrayBuffer = await response.arrayBuffer();
                 const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-                console.log(`Successfully loaded buffer for ${baseName}${format}`);
+                if (this.logger) this.logger.info(`Successfully loaded buffer for ${baseName}${format}`);
                 this.audioCache.set(cacheKey, audioBuffer);
                 return audioBuffer;
             }
         } catch (err) {
-            console.log(`Failed to load buffer from ${url}, trying next format...`);
+            if (this.logger) this.logger.error(`Failed to load buffer from ${url}, trying next format...`);
         }
     }
 
-    console.warn(`Could not load audio buffer for ${baseName} in any format`);
+    if (this.logger) this.logger.warn(`Could not load audio buffer for ${baseName} in any format`);
     return null;
 };
 
@@ -152,7 +157,7 @@ CyberOpsGame.prototype.playSoundEnhanced = async function(soundName, volume = 0.
             await audio.play();
             return;
         } catch (err) {
-            console.log(`HTML audio failed for ${soundName}`);
+            if (this.logger) this.logger.error(`HTML audio failed for ${soundName}`);
         }
     }
 
@@ -166,7 +171,7 @@ CyberOpsGame.prototype.playSoundEnhanced = async function(soundName, volume = 0.
             return;
         }
     } catch (err) {
-        console.log(`Dynamic load failed for ${soundName}`);
+        if (this.logger) this.logger.error(`Dynamic load failed for ${soundName}`);
     }
 
     // Priority 3: Try Web Audio API buffer
@@ -178,12 +183,12 @@ CyberOpsGame.prototype.playSoundEnhanced = async function(soundName, volume = 0.
                 return;
             }
         } catch (err) {
-            console.log(`Buffer load failed for ${soundName}`);
+            if (this.logger) this.logger.error(`Buffer load failed for ${soundName}`);
         }
     }
 
     // Priority 4: Fall back to synthesized sound
-    console.log(`All audio methods failed for ${soundName}, using synthesized`);
+    if (this.logger) this.logger.error(`All audio methods failed for ${soundName}, using synthesized`);
     this.playSynthSound(soundName, volume);
 };
 
@@ -191,7 +196,7 @@ CyberOpsGame.prototype.playSoundEnhanced = async function(soundName, volume = 0.
 CyberOpsGame.prototype.preloadSounds = async function() {
     const sounds = ['shoot', 'explosion', 'hit', 'hack', 'shield'];
 
-    console.log('Preloading sound effects...');
+    if (this.logger) this.logger.debug('Preloading sound effects...');
 
     for (const sound of sounds) {
         // Try to preload as audio buffer for best performance
@@ -205,7 +210,7 @@ CyberOpsGame.prototype.preloadSounds = async function() {
         }
     }
 
-    console.log('Sound preloading complete');
+    if (this.logger) this.logger.debug('Sound preloading complete');
 };
 
 // Initialize audio loader on game start
@@ -224,7 +229,7 @@ if (typeof window !== 'undefined') {
         // Preload sounds after a short delay
         setTimeout(() => {
             this.preloadSounds().catch(err => {
-                console.warn('Sound preloading failed:', err);
+                if (this.logger) this.logger.warn('Sound preloading failed:', err);
             });
         }, 1000);
     };

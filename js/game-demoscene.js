@@ -1,30 +1,30 @@
     // Demoscene Attract Mode System
 CyberOpsGame.prototype.startDemosceneIdleTimer = function() {
-        console.log('🎬 startDemosceneIdleTimer() called:');
-        console.log('- currentScreen:', this.currentScreen);
-        console.log('- demosceneActive:', this.demosceneActive);
-        console.log('- DEMOSCENE_IDLE_TIMEOUT:', this.DEMOSCENE_IDLE_TIMEOUT);
+        if (this.logger) this.logger.debug('🎬 startDemosceneIdleTimer() called:');
+        if (this.logger) this.logger.debug('- currentScreen:', this.currentScreen);
+        if (this.logger) this.logger.debug('- demosceneActive:', this.demosceneActive);
+        if (this.logger) this.logger.debug('- DEMOSCENE_IDLE_TIMEOUT:', this.DEMOSCENE_IDLE_TIMEOUT);
         
         // Clear existing timer
         this.clearDemosceneTimer();
         
         if (this.currentScreen === 'menu' && !this.demosceneActive) {
-            console.log('✅ Starting demoscene idle timer (' + this.DEMOSCENE_IDLE_TIMEOUT + ' ms)');
+            if (this.logger) this.logger.info('✅ Starting demoscene idle timer (' + this.DEMOSCENE_IDLE_TIMEOUT + ' ms)');
             this.demosceneTimer = setTimeout(() => {
-                console.log('⏰ Demoscene timer fired! Checking conditions...');
-                console.log('- currentScreen at timeout:', this.currentScreen);
-                console.log('- demosceneActive at timeout:', this.demosceneActive);
+                if (this.logger) this.logger.debug('⏰ Demoscene timer fired! Checking conditions...');
+                if (this.logger) this.logger.debug('- currentScreen at timeout:', this.currentScreen);
+                if (this.logger) this.logger.debug('- demosceneActive at timeout:', this.demosceneActive);
                 if (this.currentScreen === 'menu' && !this.demosceneActive) {
-                    console.log('🎬 Starting demoscene!');
+                    if (this.logger) this.logger.debug('🎬 Starting demoscene!');
                     this.showDemoscene();
                 } else {
-                    console.log('❌ Demoscene conditions not met at timeout');
+                    if (this.logger) this.logger.debug('❌ Demoscene conditions not met at timeout');
                 }
             }, this.DEMOSCENE_IDLE_TIMEOUT);
         } else {
-            console.log('❌ Not starting demoscene timer - conditions not met');
-            console.log('  - currentScreen === "menu":', this.currentScreen === 'menu');
-            console.log('  - !demosceneActive:', !this.demosceneActive);
+            if (this.logger) this.logger.debug('❌ Not starting demoscene timer - conditions not met');
+            if (this.logger) this.logger.debug('  - currentScreen === "menu":', this.currentScreen === 'menu');
+            if (this.logger) this.logger.debug('  - !demosceneActive:', !this.demosceneActive);
         }
 }
     
@@ -38,7 +38,7 @@ CyberOpsGame.prototype.clearDemosceneTimer = function() {
 CyberOpsGame.prototype.showDemoscene = function() {
         if (this.currentScreen !== 'menu') return;
         
-        console.log('Starting demoscene attract mode');
+        if (this.logger) this.logger.debug('Starting demoscene attract mode');
         this.demosceneActive = true;
         this.currentScreen = 'demoscene';
         
@@ -57,6 +57,11 @@ CyberOpsGame.prototype.showDemoscene = function() {
 }
     
 CyberOpsGame.prototype.setupDemosceneInterrupt = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameDemoscene') : null;
+    }
         const demosceneScreen = document.getElementById('demoscene');
         
         const interruptHandler = (event) => {
@@ -77,7 +82,7 @@ CyberOpsGame.prototype.setupDemosceneInterrupt = function() {
 CyberOpsGame.prototype.interruptDemoscene = function() {
         if (!this.demosceneActive) return;
         
-        console.log('Demoscene interrupted, returning to main menu');
+        if (this.logger) this.logger.debug('Demoscene interrupted, returning to main menu');
         this.demosceneActive = false;
         this.currentScreen = 'menu';
         

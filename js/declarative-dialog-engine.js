@@ -6,6 +6,9 @@
 
 class DeclarativeDialogEngine {
     constructor() {
+
+        // Initialize logger
+        this.logger = window.Logger ? new window.Logger('DialogEngine') : null;
         this.config = null;
         this.currentState = null;
         this.stateStack = [];
@@ -30,7 +33,7 @@ class DeclarativeDialogEngine {
      * Initialize with configuration
      */
     initialize(config) {
-        console.log('🚀 Initializing Declarative Dialog Engine');
+        if (this.logger) this.logger.debug('🚀 Initializing Declarative Dialog Engine');
 
         // Validate configuration
         if (!this.validateConfig(config)) {
@@ -48,7 +51,7 @@ class DeclarativeDialogEngine {
         this.initializeSounds();
         this.initializeAnimations();
 
-        console.log('✅ Dialog Engine initialized with', Object.keys(config.states).length, 'states');
+        if (this.logger) this.logger.info('✅ Dialog Engine initialized with', Object.keys(config.states).length, 'states');
     }
 
     /**
@@ -56,20 +59,20 @@ class DeclarativeDialogEngine {
      */
     validateConfig(config) {
         if (!config || !config.states) {
-            console.error('Config must have states object');
+            if (this.logger) this.logger.error('Config must have states object');
             return false;
         }
 
         // Validate each state
         for (const [stateId, state] of Object.entries(config.states)) {
             if (!state.type || !state.level) {
-                console.error(`State ${stateId} missing required fields`);
+                if (this.logger) this.logger.error(`State ${stateId} missing required fields`);
                 return false;
             }
 
             // Validate parent relationships
             if (state.parent && !config.states[state.parent] && state.parent !== 'hub' && state.parent !== 'game') {
-                console.error(`State ${stateId} has invalid parent: ${state.parent}`);
+                if (this.logger) this.logger.error(`State ${stateId} has invalid parent: ${state.parent}`);
                 return false;
             }
         }
@@ -84,7 +87,7 @@ class DeclarativeDialogEngine {
         const state = this.config.states[stateId];
 
         if (!state) {
-            console.error(`State not found: ${stateId}`);
+            if (this.logger) this.logger.error(`State not found: ${stateId}`);
             return false;
         }
 
@@ -92,14 +95,14 @@ class DeclarativeDialogEngine {
         const isRefresh = this.currentState === stateId;
 
         if (isRefresh) {
-            console.log(`🔄 Refreshing state: ${stateId}`);
+            if (this.logger) this.logger.debug(`🔄 Refreshing state: ${stateId}`);
         } else {
-            console.log(`➡️ Navigating from ${this.currentState} to ${stateId}`);
+            if (this.logger) this.logger.debug(`➡️ Navigating from ${this.currentState} to ${stateId}`);
         }
 
         // Check if transition is allowed
         if (!this.canTransition(this.currentState, stateId)) {
-            console.warn(`Transition not allowed: ${this.currentState} -> ${stateId}`);
+            if (this.logger) this.logger.warn(`Transition not allowed: ${this.currentState} -> ${stateId}`);
             return false;
         }
 
@@ -163,7 +166,7 @@ class DeclarativeDialogEngine {
             if (toState.parent === fromId) return true;
 
             // Default allow for now (less strict validation)
-            console.log(`Allowing transition: ${fromId} -> ${toId} (no specific rule)`);
+            if (this.logger) this.logger.debug(`Allowing transition: ${fromId} -> ${toId} (no specific rule)`);
             return true;
         }
 
@@ -240,16 +243,16 @@ class DeclarativeDialogEngine {
 
         // Apply styles
         if (layout.styles) {
-            console.log('🎨 Applying styles to dialog:', stateId, layout.styles);
+            if (this.logger) this.logger.debug('🎨 Applying styles to dialog:', stateId, layout.styles);
             Object.assign(dialogEl.style, layout.styles);
-            console.log('🎨 Dialog element actual width after styles:', dialogEl.style.width);
+            if (this.logger) this.logger.debug('🎨 Dialog element actual width after styles:', dialogEl.style.width);
         } else {
-            console.log('⚠️ No styles found for layout:', state.layout);
+            if (this.logger) this.logger.debug('⚠️ No styles found for layout:', state.layout);
         }
 
         // Force Arsenal dialog to be wide
         if (stateId === 'arsenal') {
-            console.log('🔫 Forcing Arsenal dialog to 1200px width');
+            if (this.logger) this.logger.debug('🔫 Forcing Arsenal dialog to 1200px width');
             dialogEl.style.width = '1200px';
             dialogEl.style.maxWidth = '1200px';
             dialogEl.style.minWidth = '1100px';
@@ -258,7 +261,7 @@ class DeclarativeDialogEngine {
             setTimeout(() => {
                 const contentEl = dialogEl.querySelector('.dialog-content');
                 if (contentEl) {
-                    console.log('🔫 Forcing dialog-content to full width');
+                    if (this.logger) this.logger.debug('🔫 Forcing dialog-content to full width');
                     contentEl.style.width = '100%';
                     contentEl.style.maxWidth = '100%';
                     contentEl.style.minWidth = '1100px';
@@ -334,9 +337,9 @@ class DeclarativeDialogEngine {
 
         // Apply filter
         if (config.filter) {
-            console.log(`Applying filter: ${config.filter}`);
-            console.log(`Items before filter: ${items.length} agents`);
-            items.forEach(item => console.log(`  - ${item.name}: hired=${item.hired}`));
+            if (this.logger) this.logger.debug(`Applying filter: ${config.filter}`);
+            if (this.logger) this.logger.debug(`Items before filter: ${items.length} agents`);
+            items.forEach(item => { if (this.logger) this.logger.debug(`  - ${item.name}: hired=${item.hired}`); });
 
             // Handle arrow function syntax
             if (config.filter.includes('=>')) {
@@ -349,15 +352,15 @@ class DeclarativeDialogEngine {
                 items = items.filter(filterFn);
             }
 
-            console.log(`Items after filter: ${items.length} agents`);
-            items.forEach(item => console.log(`  - ${item.name}: hired=${item.hired}`));
+            if (this.logger) this.logger.debug(`Items after filter: ${items.length} agents`);
+            items.forEach(item => { if (this.logger) this.logger.debug(`  - ${item.name}: hired=${item.hired}`); });
         }
 
         // Add computed properties for hire-agents
         if (config.source === 'availableAgents') {
             items = items.map(agent => {
                 const canAfford = game.credits >= (agent.cost || 0);
-                console.log(`Agent ${agent.name}: cost=${agent.cost}, credits=${game.credits}, affordable=${canAfford}`);
+                if (this.logger) this.logger.debug(`Agent ${agent.name}: cost=${agent.cost}, credits=${game.credits}, affordable=${canAfford}`);
                 return {
                     ...agent,
                     affordable: canAfford,
@@ -492,7 +495,7 @@ class DeclarativeDialogEngine {
      * Handle action execution
      */
     handleAction(actionString, context) {
-        console.log('🎮 Handling action:', actionString);
+        if (this.logger) this.logger.debug('🎮 Handling action:', actionString);
 
         // Parse action string (e.g., "navigate:view-squad" or "execute:hire:42")
         const parts = actionString.split(':');
@@ -541,7 +544,7 @@ class DeclarativeDialogEngine {
         if (handler) {
             handler.call(this, actionParam, context);
         } else {
-            console.error('Unknown action type:', actionType);
+            if (this.logger) this.logger.error('Unknown action type:', actionType);
         }
     }
 
@@ -842,7 +845,7 @@ class DeclarativeDialogEngine {
             // Fallback to audio element
             const audio = new Audio(`sounds/${sound.file}`);
             audio.volume = sound.volume || 0.5;
-            audio.play().catch(e => console.log('Sound play failed:', e));
+            audio.play().catch(e => { if (this.logger) this.logger.error('Sound play failed:', e); });
         }
     }
 
@@ -882,7 +885,7 @@ class DeclarativeDialogEngine {
                 const game = window.game;
                 const agentId = parseInt(context.agent);
                 const agent = game.availableAgents?.find(a => a.id === agentId);
-                console.log('Navigate to hire-confirm: agentId=', agentId, 'found agent=', agent);
+                if (this.logger) this.logger.debug('Navigate to hire-confirm: agentId=', agentId, 'found agent=', agent);
                 if (agent) {
                     // Store only the original agent, not the enhanced version
                     this.stateData.selectedAgent = {
@@ -895,7 +898,7 @@ class DeclarativeDialogEngine {
                         skills: agent.skills,
                         hired: agent.hired
                     };
-                    console.log('Stored selectedAgent:', this.stateData.selectedAgent);
+                    if (this.logger) this.logger.debug('Stored selectedAgent:', this.stateData.selectedAgent);
                 }
             }
             this.navigateTo(target, context);
@@ -1020,11 +1023,11 @@ class DeclarativeDialogEngine {
      * Hot reload configuration
      */
     reloadConfig(newConfig) {
-        console.log('🔄 Hot reloading dialog configuration');
+        if (this.logger) this.logger.debug('🔄 Hot reloading dialog configuration');
 
         // Validate new config
         if (!this.validateConfig(newConfig)) {
-            console.error('Invalid configuration, reload aborted');
+            if (this.logger) this.logger.error('Invalid configuration, reload aborted');
             return false;
         }
 
@@ -1050,7 +1053,7 @@ class DeclarativeDialogEngine {
             }
         }
 
-        console.log('✅ Configuration reloaded successfully');
+        if (this.logger) this.logger.info('✅ Configuration reloaded successfully');
         return true;
     }
 

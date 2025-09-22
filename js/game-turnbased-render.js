@@ -3,6 +3,11 @@
 
 // Main render function for turn-based overlays
 CyberOpsGame.prototype.renderTurnBasedOverlay = function() {
+
+    // Initialize logger if needed
+    if (!this.logger && window.Logger) {
+        this.logger = new window.Logger('GameTurnbasedRender');
+    }
     if (!this.turnBasedMode) return;
 
     // Ensure arrays exist
@@ -517,4 +522,4 @@ CyberOpsGame.prototype.renderTurnBasedIndicator = function() {
     ctx.restore();
 };
 
-console.log('🎨 Turn-based rendering system loaded');
+if (this.logger) this.logger.info('🎨 Turn-based rendering system loaded');

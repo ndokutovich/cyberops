@@ -2,7 +2,12 @@
 // Handles multiple tracks, transitions, and event-based music changes
 
 CyberOpsGame.prototype.initMusicSystem = function() {
-    console.log('🎵 Initializing advanced music system...');
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameMusicSystem') : null;
+    }
+    if (this.logger) this.logger.debug('🎵 Initializing advanced music system...');
 
     this.musicSystem = {
         currentTrack: null,
@@ -44,18 +49,18 @@ CyberOpsGame.prototype.initMusicSystem = function() {
         });
     }
 
-    console.log('✅ Music system initialized with', this.musicSystem.maxAudioElements, 'audio channels');
+    if (this.logger) this.logger.info('✅ Music system initialized with', this.musicSystem.maxAudioElements, 'audio channels');
 };
 
 // Load music configuration from mission
 CyberOpsGame.prototype.loadMissionMusic = function(missionDef) {
     if (!missionDef || !missionDef.music) {
-        console.log('⚠️ No music configuration in mission, using defaults');
+        if (this.logger) this.logger.debug('⚠️ No music configuration in mission, using defaults');
         this.loadDefaultMusic();
         return;
     }
 
-    console.log('🎵 Loading music for mission:', missionDef.name);
+    if (this.logger) this.logger.debug('🎵 Loading music for mission:', missionDef.name);
     this.musicSystem.config = missionDef.music;
 
     // Start with ambient music
@@ -72,7 +77,7 @@ CyberOpsGame.prototype.playMissionTrack = function(trackType, eventId = null) {
     if (trackType === 'event' && eventId) {
         const event = this.musicSystem.config.events?.find(e => e.id === eventId);
         if (!event) {
-            console.warn('❌ Event track not found:', eventId);
+            if (this.logger) this.logger.warn('❌ Event track not found:', eventId);
             return;
         }
         trackConfig = event;
@@ -81,21 +86,21 @@ CyberOpsGame.prototype.playMissionTrack = function(trackType, eventId = null) {
     }
 
     if (!trackConfig) {
-        console.warn('❌ Track type not found:', trackType);
+        if (this.logger) this.logger.warn('❌ Track type not found:', trackType);
         return;
     }
 
     // Check priority
     const priority = trackConfig.priority || 0;
     if (priority < this.musicSystem.currentPriority) {
-        console.log('🎵 Track priority too low, not switching from', this.musicSystem.currentTrackType, 'to', trackType);
+        if (this.logger) this.logger.debug('🎵 Track priority too low, not switching from', this.musicSystem.currentTrackType, 'to', trackType);
         return;
     }
 
     // Get an available audio element
     const audioSlot = this.getAvailableAudioSlot();
     if (!audioSlot) {
-        console.error('❌ No available audio slots!');
+        if (this.logger) this.logger.error('❌ No available audio slots!');
         return;
     }
 
@@ -104,11 +109,11 @@ CyberOpsGame.prototype.playMissionTrack = function(trackType, eventId = null) {
     const musicFile = this.resolveMusicFile(trackConfig.file, trackConfig.fallback);
 
     if (!musicFile) {
-        console.error('❌ No music file found for', trackType);
+        if (this.logger) this.logger.error('❌ No music file found for', trackType);
         return;
     }
 
-    console.log('🎵 Loading track:', trackType, 'from', musicFile);
+    if (this.logger) this.logger.debug('🎵 Loading track:', trackType, 'from', musicFile);
 
     // Configure audio element
     audioElement.src = musicFile;
@@ -126,7 +131,7 @@ CyberOpsGame.prototype.playMissionTrack = function(trackType, eventId = null) {
 
     // Start new track
     audioElement.play().then(() => {
-        console.log('✅ Started playing:', trackType);
+        if (this.logger) this.logger.info('✅ Started playing:', trackType);
         this.fadeInTrack(audioElement, trackConfig.volume || 0.7, trackConfig.fadeIn || 1000);
 
         // Update current track info
@@ -138,7 +143,7 @@ CyberOpsGame.prototype.playMissionTrack = function(trackType, eventId = null) {
         this.musicSystem.tracks[trackType] = audioElement;
 
     }).catch(error => {
-        console.error('❌ Failed to play music:', error);
+        if (this.logger) this.logger.error('❌ Failed to play music:', error);
         audioSlot.inUse = false;
         audioSlot.type = null;
     });
@@ -250,17 +255,17 @@ CyberOpsGame.prototype.updateMusicState = function() {
 
     // Handle state changes
     if (newAlertState && !this.musicSystem.alertState) {
-        console.log('🚨 Alert state activated!');
+        if (this.logger) this.logger.debug('🚨 Alert state activated!');
         this.playMissionTrack('alert');
     } else if (newCombatState && !this.musicSystem.combatState) {
-        console.log('⚔️ Combat state activated!');
+        if (this.logger) this.logger.debug('⚔️ Combat state activated!');
         this.playMissionTrack('combat');
     } else if (newStealthState && !this.musicSystem.stealthState && !newCombatState && !newAlertState) {
-        console.log('🤫 Stealth state activated!');
+        if (this.logger) this.logger.debug('🤫 Stealth state activated!');
         this.playMissionTrack('stealth');
     } else if (!newCombatState && !newStealthState && !newAlertState &&
               (this.musicSystem.combatState || this.musicSystem.stealthState || this.musicSystem.alertState)) {
-        console.log('😌 Returning to ambient music');
+        if (this.logger) this.logger.debug('😌 Returning to ambient music');
         this.playMissionTrack('ambient');
     }
 
@@ -325,7 +330,7 @@ CyberOpsGame.prototype.checkHealthCondition = function(threshold) {
 
 // Play victory music
 CyberOpsGame.prototype.playVictoryMusic = function() {
-    console.log('🎉 Playing victory music!');
+    if (this.logger) this.logger.debug('🎉 Playing victory music!');
     this.musicSystem.currentPriority = 10; // Override everything
     this.playMissionTrack('victory');
 };
@@ -353,7 +358,7 @@ CyberOpsGame.prototype.loadDefaultMusic = function() {
 
 // Clean up music system
 CyberOpsGame.prototype.cleanupMusicSystem = function() {
-    console.log('🧹 Cleaning up music system');
+    if (this.logger) this.logger.debug('🧹 Cleaning up music system');
 
     // Clear all fade timers
     for (const timer of this.musicSystem.fadeTimers) {
@@ -381,4 +386,4 @@ CyberOpsGame.prototype.cleanupMusicSystem = function() {
 };
 
 // Initialize the system on game load
-console.log('🎵 Music system module loaded');
+if (this.logger) this.logger.info('🎵 Music system module loaded');

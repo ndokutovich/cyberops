@@ -2,7 +2,12 @@
 // Handles music for all non-mission game screens using declarative config
 
 CyberOpsGame.prototype.initScreenMusicSystem = function() {
-    console.log('🎵 Initializing screen music system...');
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameScreenMusic') : null;
+    }
+    if (this.logger) this.logger.debug('🎵 Initializing screen music system...');
 
     this.screenMusic = {
         currentScreen: null,
@@ -15,20 +20,20 @@ CyberOpsGame.prototype.initScreenMusicSystem = function() {
     // Load the configuration
     if (typeof GAME_MUSIC_CONFIG !== 'undefined') {
         this.musicConfig = GAME_MUSIC_CONFIG;
-        console.log('✅ Music configuration loaded');
+        if (this.logger) this.logger.info('✅ Music configuration loaded');
     } else {
-        console.warn('⚠️ Music configuration not found, using defaults');
+        if (this.logger) this.logger.warn('⚠️ Music configuration not found, using defaults');
         this.musicConfig = { screens: {}, global: {} };
     }
 };
 
 // Load music for a specific screen
 CyberOpsGame.prototype.loadScreenMusic = function(screenName) {
-    console.log(`🎵 Loading music for screen: ${screenName}`);
+    if (this.logger) this.logger.debug(`🎵 Loading music for screen: ${screenName}`);
 
     // Initialize if not already done
     if (!this.screenMusic) {
-        console.warn('⚠️ Screen music system not initialized, initializing now...');
+        if (this.logger) this.logger.warn('⚠️ Screen music system not initialized, initializing now...');
         this.initScreenMusicSystem();
     }
 
@@ -40,7 +45,7 @@ CyberOpsGame.prototype.loadScreenMusic = function(screenName) {
     // Get configuration for this screen
     const screenConfig = getMusicConfigForScreen ? getMusicConfigForScreen(screenName) : null;
     if (!screenConfig || !screenConfig.tracks) {
-        console.log(`⚠️ No music configuration for screen: ${screenName}`);
+        if (this.logger) this.logger.debug(`⚠️ No music configuration for screen: ${screenName}`);
         return;
     }
 
@@ -58,7 +63,7 @@ CyberOpsGame.prototype.loadScreenMusic = function(screenName) {
 CyberOpsGame.prototype.playScreenTrack = function(trackConfig, trackId) {
     if (!trackConfig) return;
 
-    console.log(`🎵 Playing track: ${trackId} from ${trackConfig.file || trackConfig.fallback}`);
+    if (this.logger) this.logger.debug(`🎵 Playing track: ${trackId} from ${trackConfig.file || trackConfig.fallback}`);
 
     // Check if we should use procedural music
     if (trackConfig.procedural && (!trackConfig.file || !this.fileExists(trackConfig.file))) {
@@ -76,7 +81,7 @@ CyberOpsGame.prototype.playScreenTrack = function(trackConfig, trackId) {
     // Set source with fallback
     const musicFile = trackConfig.file || trackConfig.fallback;
     if (!musicFile) {
-        console.error(`❌ No music file specified for ${trackId}`);
+        if (this.logger) this.logger.error(`❌ No music file specified for ${trackId}`);
         return;
     }
 
@@ -87,23 +92,23 @@ CyberOpsGame.prototype.playScreenTrack = function(trackConfig, trackId) {
 
     // Handle start time with conditional logic
     if (trackConfig.startTime !== undefined) {
-        console.log(`🎵 Start time config: ${trackConfig.startTime}, condition: ${trackConfig.startTimeCondition}, splashSkipped: ${this.splashSkipped}`);
+        if (this.logger) this.logger.debug(`🎵 Start time config: ${trackConfig.startTime}, condition: ${trackConfig.startTimeCondition}, splashSkipped: ${this.splashSkipped}`);
 
         // Check if there's a condition for using the start time
         if (trackConfig.startTimeCondition) {
             // Only apply startTime if condition is met
             if (trackConfig.startTimeCondition === 'splashSkipped' && this.splashSkipped) {
-                console.log(`🎵 Splash was skipped, seeking to ${trackConfig.startTime}s`);
+                if (this.logger) this.logger.debug(`🎵 Splash was skipped, seeking to ${trackConfig.startTime}s`);
                 audio.currentTime = trackConfig.startTime;
             } else if (trackConfig.startTimeCondition === 'splashSkipped' && !this.splashSkipped) {
-                console.log(`🎵 Splash was NOT skipped, NOT seeking (continuing naturally)`);
+                if (this.logger) this.logger.debug(`🎵 Splash was NOT skipped, NOT seeking (continuing naturally)`);
             } else if (!trackConfig.startTimeCondition) {
                 // No condition, always apply
                 audio.currentTime = trackConfig.startTime;
             }
         } else {
             // No condition specified, always apply start time
-            console.log(`🎵 No condition, applying start time: ${trackConfig.startTime}`);
+            if (this.logger) this.logger.debug(`🎵 No condition, applying start time: ${trackConfig.startTime}`);
             audio.currentTime = trackConfig.startTime;
         }
     }
@@ -115,7 +120,7 @@ CyberOpsGame.prototype.playScreenTrack = function(trackConfig, trackId) {
 
     // Play new track
     audio.play().then(() => {
-        console.log(`✅ Started playing: ${trackId}`);
+        if (this.logger) this.logger.info(`✅ Started playing: ${trackId}`);
         const targetVolume = (trackConfig.volume || 0.7) * (this.musicConfig.global?.musicVolume || 1);
         this.fadeInScreenTrack(audio, targetVolume, trackConfig.fadeIn || this.musicConfig.global?.fadeInTime || 2000);
         this.screenMusic.currentTrack = audio;
@@ -130,7 +135,7 @@ CyberOpsGame.prototype.playScreenTrack = function(trackConfig, trackId) {
             }, trackConfig.delay);
         }
     }).catch(error => {
-        console.error(`❌ Failed to play music: ${error}`);
+        if (this.logger) this.logger.error(`❌ Failed to play music: ${error}`);
         // Try procedural fallback
         if (trackConfig.procedural !== false) {
             this.playProceduralScreenMusic(trackConfig, trackId);
@@ -140,15 +145,15 @@ CyberOpsGame.prototype.playScreenTrack = function(trackConfig, trackId) {
 
 // Stop current screen music
 CyberOpsGame.prototype.stopScreenMusic = function() {
-    console.log('🛑 stopScreenMusic called');
+    if (this.logger) this.logger.debug('🛑 stopScreenMusic called');
 
     if (!this.screenMusic) {
-        console.log('⚠️ Screen music system not initialized');
+        if (this.logger) this.logger.info('⚠️ Screen music system not initialized');
         return;
     }
 
     if (this.screenMusic.currentTrack) {
-        console.log('🛑 Stopping current track:', this.screenMusic.currentTrack.src);
+        if (this.logger) this.logger.debug('🛑 Stopping current track:', this.screenMusic.currentTrack.src);
         this.fadeOutScreenTrack(this.screenMusic.currentTrack, 500); // Faster fade for mission start
         this.screenMusic.currentTrack = null;
     }
@@ -156,7 +161,7 @@ CyberOpsGame.prototype.stopScreenMusic = function() {
     // Also check for any audio elements that might be playing
     Object.values(this.screenMusic.audioElements || {}).forEach(audio => {
         if (audio && !audio.paused) {
-            console.log('🛑 Stopping audio element:', audio.src);
+            if (this.logger) this.logger.debug('🛑 Stopping audio element:', audio.src);
             audio.pause();
             audio.currentTime = 0;
         }
@@ -218,10 +223,10 @@ CyberOpsGame.prototype.fadeOutScreenTrack = function(audio, duration) {
 
 // Play procedural music as fallback
 CyberOpsGame.prototype.playProceduralScreenMusic = function(trackConfig, trackId) {
-    console.log(`🎹 Generating procedural music for ${trackId}`);
+    if (this.logger) this.logger.debug(`🎹 Generating procedural music for ${trackId}`);
 
     if (!this.audioContext) {
-        console.warn('⚠️ AudioContext not available for procedural music');
+        if (this.logger) this.logger.warn('⚠️ AudioContext not available for procedural music');
         return;
     }
 
@@ -252,19 +257,19 @@ CyberOpsGame.prototype.playProceduralScreenMusic = function(trackConfig, trackId
 
 // Handle screen transitions
 CyberOpsGame.prototype.transitionScreenMusic = function(fromScreen, toScreen) {
-    console.log(`🎵 Music transition: ${fromScreen} → ${toScreen}, splashSkipped: ${this.splashSkipped}`);
+    if (this.logger) this.logger.debug(`🎵 Music transition: ${fromScreen} → ${toScreen}, splashSkipped: ${this.splashSkipped}`);
 
     // Special case: splash to menu
     if (fromScreen === 'splash' && toScreen === 'menu') {
         if (!this.splashSkipped) {
-            console.log('🎵 Natural splash→menu transition - continuing same track');
+            if (this.logger) this.logger.debug('🎵 Natural splash→menu transition - continuing same track');
             // Don't reload, just update the current screen reference
             this.screenMusic.currentScreen = 'menu';
             const menuConfig = getMusicConfigForScreen ? getMusicConfigForScreen('menu') : null;
             this.screenMusic.currentConfig = menuConfig;
             return;  // Music continues playing seamlessly
         } else {
-            console.log('🎵 Splash was SKIPPED - need to reload music with seek');
+            if (this.logger) this.logger.debug('🎵 Splash was SKIPPED - need to reload music with seek');
             // Fall through to load menu music with startTime applied
             this.loadScreenMusic(toScreen);
             return;
@@ -387,4 +392,4 @@ CyberOpsGame.prototype.fileExists = function(filepath) {
 };
 
 // Initialize on load
-console.log('🎵 Screen music manager loaded');
+if (this.logger) this.logger.info('🎵 Screen music manager loaded');

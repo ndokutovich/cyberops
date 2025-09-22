@@ -19,17 +19,17 @@ class ContentLoader {
      * @returns {Promise<boolean>} Success status
      */
     async loadCampaign(campaign, game) {
-        console.log('📦 Loading campaign:', campaign.metadata?.name || 'Unknown');
+        if (logger) logger.debug('📦 Loading campaign:', campaign.metadata?.name || 'Unknown');
 
         // Validate campaign first
         const validation = window.CampaignContentInterface.validateCampaign(campaign);
         if (!validation.valid) {
-            console.error('❌ Campaign validation failed:', validation.errors);
+            if (logger) logger.error('❌ Campaign validation failed:', validation.errors);
             return false;
         }
 
         if (validation.warnings.length > 0) {
-            console.warn('⚠️ Campaign warnings:', validation.warnings);
+            if (logger) logger.warn('⚠️ Campaign warnings:', validation.warnings);
         }
 
         // Merge with defaults
@@ -64,11 +64,11 @@ class ContentLoader {
             // 9. Load progression system
             this.loadProgression(game);
 
-            console.log('✅ Campaign loaded successfully');
+            if (logger) logger.info('✅ Campaign loaded successfully');
             return true;
 
         } catch (error) {
-            console.error('❌ Error loading campaign:', error);
+            if (logger) logger.error('❌ Error loading campaign:', error);
             return false;
         }
     }
@@ -79,11 +79,11 @@ class ContentLoader {
     loadRPGConfig(game) {
         if (!this.currentCampaign.rpgConfig) return;
 
-        console.log('🎮 Loading RPG configuration...');
+        if (logger) logger.debug('🎮 Loading RPG configuration...');
 
         // Set RPG_CONFIG globally for backward compatibility with game-rpg-system.js
         window.RPG_CONFIG = this.currentCampaign.rpgConfig;
-        console.log('✅ RPG_CONFIG set globally');
+        if (logger) logger.info('✅ RPG_CONFIG set globally');
 
         // Also inject into services for proper architecture
         if (game.gameServices?.rpgService) {
@@ -105,7 +105,7 @@ class ContentLoader {
     loadAgents(game) {
         if (!this.currentCampaign.agents) return;
 
-        console.log(`👥 Loading ${this.currentCampaign.agents.length} agents...`);
+        if (logger) logger.debug(`👥 Loading ${this.currentCampaign.agents.length} agents...`);
 
         // Clear existing agents
         game.availableAgents = [];
@@ -164,7 +164,7 @@ class ContentLoader {
      * Load weapons and equipment
      */
     loadEquipment(game) {
-        console.log('🔫 Loading equipment...');
+        if (logger) logger.debug('🔫 Loading equipment...');
 
         // Load weapons
         if (this.currentCampaign.weapons) {
@@ -195,7 +195,7 @@ class ContentLoader {
     loadEnemies(game) {
         if (!this.currentCampaign.enemies) return;
 
-        console.log('👹 Loading enemy types...');
+        if (logger) logger.debug('👹 Loading enemy types...');
 
         game.enemyTypes = {};
 
@@ -232,7 +232,7 @@ class ContentLoader {
         const economy = this.currentCampaign.economy;
         if (!economy) return;
 
-        console.log('💰 Loading economy configuration...');
+        if (logger) logger.debug('💰 Loading economy configuration...');
 
         game.credits = economy.startingCredits || 5000;
         game.researchPoints = economy.startingResearchPoints || 100;
@@ -250,7 +250,7 @@ class ContentLoader {
         const combat = this.currentCampaign.combat;
         if (!combat) return;
 
-        console.log('⚔️ Loading combat formulas...');
+        if (logger) logger.debug('⚔️ Loading combat formulas...');
 
         // Load formula set
         const formulaSet = combat.formulaSet || 'standard';
@@ -368,7 +368,7 @@ class ContentLoader {
         const ui = this.currentCampaign.ui;
         if (!ui?.strings) return;
 
-        console.log('📝 Loading UI strings...');
+        if (logger) logger.debug('📝 Loading UI strings...');
 
         // Get current language (default to 'en')
         const language = game.currentLanguage || 'en';
@@ -390,7 +390,7 @@ class ContentLoader {
         const audio = this.currentCampaign.audio;
         if (!audio) return;
 
-        console.log('🎵 Loading audio configuration...');
+        if (logger) logger.debug('🎵 Loading audio configuration...');
 
         // Update music config
         if (window.MUSIC_CONFIG) {
@@ -423,7 +423,7 @@ class ContentLoader {
         const progression = this.currentCampaign.progression;
         if (!progression) return;
 
-        console.log('📈 Loading progression system...');
+        if (logger) logger.debug('📈 Loading progression system...');
 
         // Load research tree
         if (progression.researchTree && game.gameServices?.researchService) {
@@ -458,7 +458,7 @@ class ContentLoader {
 
         // Fallback to key if not found
         if (!value) {
-            console.warn(`String not found: ${key}`);
+            if (logger) logger.warn(`String not found: ${key}`);
             return key;
         }
 

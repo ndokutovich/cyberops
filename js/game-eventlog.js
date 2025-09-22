@@ -5,6 +5,11 @@
 
 // Initialize event log
 CyberOpsGame.prototype.initEventLog = function() {
+
+    // Initialize logger
+    if (!this.logger) {
+        this.logger = window.Logger ? new window.Logger('GameEventlog') : null;
+    }
     this.eventLog = [];
     this.maxLogEntries = 50;
     this.eventLogElement = document.getElementById('eventLogContent');

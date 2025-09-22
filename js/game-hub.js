@@ -1,8 +1,13 @@
     // Syndicate Hub System
 CyberOpsGame.prototype.showSyndicateHub = function() {
+
+    // Initialize logger if needed
+    if (!this.logger && window.Logger) {
+        this.logger = new window.Logger('GameHub');
+    }
         // CRITICAL: Disable 3D mode if active
         if (this.is3DMode) {
-            console.log('🔄 Disabling 3D mode when entering Hub');
+            if (this.logger) this.logger.debug('🔄 Disabling 3D mode when entering Hub');
             this.cleanup3D();
         }
 
@@ -30,7 +35,7 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
 
         // Stop mission music and cleanup music system
         if (this.musicSystem && this.cleanupMusicSystem) {
-            console.log('🛑 Stopping mission music when returning to hub');
+            if (this.logger) this.logger.debug('🛑 Stopping mission music when returning to hub');
             this.cleanupMusicSystem();
         }
 
@@ -39,11 +44,11 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
         // Handle music transition based on where we're coming from
         if (this.transitionScreenMusic && previousScreen && previousScreen !== 'game') {
             // Use transition system if coming from another screen (not from mission)
-            console.log(`🎵 Transitioning music from ${previousScreen} to hub`);
+            if (this.logger) this.logger.debug(`🎵 Transitioning music from ${previousScreen} to hub`);
             this.transitionScreenMusic(previousScreen, 'hub');
         } else if (this.loadScreenMusic) {
             // Direct load if no previous screen or coming from mission
-            console.log('🎵 Loading hub music');
+            if (this.logger) this.logger.debug('🎵 Loading hub music');
             this.loadScreenMusic('hub');
         }
 
@@ -51,14 +56,14 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
 }
     
 CyberOpsGame.prototype.updateHubStats = function() {
-        console.log('🔍 updateHubStats called - checking data:');
-        console.log('- this.missions:', this.missions ? this.missions.length : 'UNDEFINED');
-        console.log('- this.activeAgents:', this.activeAgents ? this.activeAgents.length : 'UNDEFINED');
-        console.log('- this.completedMissions:', this.completedMissions ? this.completedMissions.length : 'UNDEFINED');
+        if (this.logger) this.logger.debug('🔍 updateHubStats called - checking data:');
+        if (this.logger) this.logger.debug('- this.missions:', this.missions ? this.missions.length : 'UNDEFINED');
+        if (this.logger) this.logger.debug('- this.activeAgents:', this.activeAgents ? this.activeAgents.length : 'UNDEFINED');
+        if (this.logger) this.logger.info('- this.completedMissions:', this.completedMissions ? this.completedMissions.length : 'UNDEFINED');
         
         // EMERGENCY FIX: If missions is undefined, initialize it immediately
         if (!this.missions) {
-            console.error('🚨 EMERGENCY: this.missions is undefined! Initializing now...');
+            if (this.logger) this.logger.error('🚨 EMERGENCY: this.missions is undefined! Initializing now...');
             this.initializeHub();
         }
         
@@ -154,7 +159,7 @@ CyberOpsGame.prototype.showMissionsFromHub = function() {
     if (this.dialogEngine && this.dialogEngine.navigateTo) {
         this.dialogEngine.navigateTo('mission-select-hub');
     } else {
-        console.error('Dialog engine not available for mission selection');
+        if (this.logger) this.logger.error('Dialog engine not available for mission selection');
     }
 }
 
@@ -222,7 +227,7 @@ CyberOpsGame.prototype.showHallOfGlory = function() {
     if (this.dialogEngine && this.dialogEngine.navigateTo) {
         this.dialogEngine.navigateTo('hall-of-glory');
     } else {
-        console.error('Dialog engine not available for Hall of Glory');
+        if (this.logger) this.logger.error('Dialog engine not available for Hall of Glory');
     }
 }
 
@@ -235,7 +240,7 @@ CyberOpsGame.prototype.returnToHub = function() {
 
     // Don't restart music when returning from dialogs - let it continue playing
     // Music will only restart when coming from missions (handled in showSyndicateHub)
-    console.log('🎵 Returning to hub from dialog - music continues playing');
+    if (this.logger) this.logger.debug('🎵 Returning to hub from dialog - music continues playing');
 
     // Check where we came from and return to the appropriate screen
     // Use the saved return screen if available
@@ -503,7 +508,7 @@ CyberOpsGame.prototype.showIntelligenceOld = function() {
     if (!this.unlockedIntelReports) this.unlockedIntelReports = [];
 
     // Debug logging
-    console.log('📡 Intel Modal Debug:', {
+    if (this.logger) this.logger.debug('📡 Intel Modal Debug:', {
         totalIntel: this.totalIntelCollected,
         thisMission: this.intelThisMission,
         byMission: this.intelByMission,
@@ -686,7 +691,7 @@ CyberOpsGame.prototype.showHiringDialog = function() {
                         e.preventDefault();
                         e.stopPropagation();
                         const agentId = parseInt(btn.dataset.agentId);
-                        console.log('Hiring agent:', agentId);
+                        if (this.logger) this.logger.debug('Hiring agent:', agentId);
                         this.hireAgent(agentId);
                     };
                 });
@@ -885,7 +890,7 @@ CyberOpsGame.prototype.showShopDialogOld = function() {
 
 // Generate world map content for dialog system
 CyberOpsGame.prototype.generateWorldMapContent = function() {
-    console.log('🗺️ Generating world map content...');
+    if (this.logger) this.logger.debug('🗺️ Generating world map content...');
 
     // Define world regions with mission data
     const regions = [
@@ -1009,7 +1014,7 @@ CyberOpsGame.prototype.generateWorldMapContent = function() {
     mapContent += '</div>';
     mapContent += '</div>';
 
-    console.log('🗺️ Map HTML content length:', mapContent.length);
+    if (this.logger) this.logger.debug('🗺️ Map HTML content length:', mapContent.length);
 
     // Return the HTML content for the dialog system
     return mapContent;
@@ -1017,11 +1022,11 @@ CyberOpsGame.prototype.generateWorldMapContent = function() {
 
 // Select a region from the world map
 CyberOpsGame.prototype.selectRegion = function(regionId) {
-    console.log(`🗺️ Selected region: ${regionId}`);
+    if (this.logger) this.logger.debug(`🗺️ Selected region: ${regionId}`);
 
     // Get missions for this region
     const regionMissions = this.missions ? this.missions.filter(m => m.region === regionId) : [];
-    console.log(`🗺️ Found ${regionMissions.length} missions in ${regionId}`);
+    if (this.logger) this.logger.debug(`🗺️ Found ${regionMissions.length} missions in ${regionId}`);
 
     // Store selected region and its missions for filtering
     this.selectedRegion = regionId;
