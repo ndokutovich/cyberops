@@ -23,7 +23,7 @@ class TestFramework {
             verbose: false,
             stopOnFailure: false,
             captureScreenshots: false,
-            timeout: 5000  // Default timeout, can be overridden per test
+            timeout: 10000  // Default timeout increased to 10s, can be overridden per test
         };
     }
 

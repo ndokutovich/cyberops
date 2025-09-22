@@ -26,7 +26,12 @@ describe('Full Coverage Dialog Tests', () => {
             }
         };
 
-        // Navigate to hire-agents first (parent)
+        // Navigate to agent-management first (level 1)
+        game.dialogEngine.navigateTo('agent-management');
+        await sleep(50);
+        assertEqual(game.dialogEngine.currentState, 'agent-management', 'Should be in agent-management');
+
+        // Then navigate to hire-agents (level 2)
         game.dialogEngine.navigateTo('hire-agents');
         await sleep(50);
         assertEqual(game.dialogEngine.currentState, 'hire-agents', 'Should be in hire-agents');
@@ -37,7 +42,7 @@ describe('Full Coverage Dialog Tests', () => {
         assertEqual(game.dialogEngine.currentState, 'hire-confirm', 'Should navigate to hire-confirm with data');
 
         // Verify stack depth
-        assertEqual(game.dialogEngine.stateStack.length, 2, 'Should have 2 levels (hire-agents -> hire-confirm)');
+        assertEqual(game.dialogEngine.stateStack.length, 3, 'Should have 3 levels (agent-management -> hire-agents -> hire-confirm)');
 
         // Test back navigation
         game.dialogEngine.back();

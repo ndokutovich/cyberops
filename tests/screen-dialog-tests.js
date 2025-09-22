@@ -6,6 +6,22 @@
 
 describe('Screen Dialog Tests', () => {
 
+    // Wait for screen integrations to load
+    beforeAll(async () => {
+        // Give time for screen integrations to register
+        await sleep(500);
+
+        // Check if screen states are registered
+        if (game && game.dialogEngine && game.dialogEngine.config) {
+            const hasVictory = !!game.dialogEngine.config.states['victory-screen'];
+            const hasDefeat = !!game.dialogEngine.config.states['defeat-screen'];
+            if (!hasVictory || !hasDefeat) {
+                console.warn('Screen states not yet registered, waiting...');
+                await sleep(1000);
+            }
+        }
+    });
+
     // Test navigation to all screen states
     it('should navigate to all screen dialogs', async () => {
         const screenStates = [
@@ -50,6 +66,10 @@ describe('Screen Dialog Tests', () => {
         game.dialogEngine.closeAll();
         await sleep(50);
 
+        // Set game screen to 'game' as victory screen parent is 'game'
+        game.screen = 'game';
+        game.currentScreen = 'game';
+
         // Mock mission data
         game.currentMission = {
             id: 'test-mission-1',
@@ -93,6 +113,10 @@ describe('Screen Dialog Tests', () => {
     it('should show defeat screen with failure reason', async () => {
         game.dialogEngine.closeAll();
         await sleep(50);
+
+        // Set game screen to 'game' as defeat screen parent is 'game'
+        game.screen = 'game';
+        game.currentScreen = 'game';
 
         // Mock defeat data
         game.defeatReason = 'All agents were eliminated';
