@@ -1016,11 +1016,15 @@ The game uses a centralized logging system (logger-service.js) that provides:
 
 #### Usage in Code:
 ```javascript
-// Initialize logger in constructor
+// Initialize logger in constructor or at module level
+// For class methods:
 constructor() {
-    this.logger = window.getLogger ? window.getLogger('ClassName') : null;
+    this.logger = window.Logger ? new window.Logger('ClassName') : null;
     if (this.logger) this.logger.debug('ClassName initialized');
 }
+
+// For standalone modules (use unique names to avoid conflicts):
+const moduleLogger = window.Logger ? new window.Logger('ModuleName') : null;
 
 // Use appropriate log levels
 if (this.logger) this.logger.trace('Detailed diagnostic info');
@@ -1047,16 +1051,21 @@ if (this.logger) this.logger.fatal('Critical system failure');
    - INFO: Important events (item pickup, level complete)
    - WARN: Potential issues (missing items, fallback used)
    - ERROR: Errors that can be recovered from
-   - FATAL: Critical errors requiring immediate attention
-4. **Include context** in log messages (entity names, values, states)
-5. **Keep emojis** for important user-facing events (pickups, achievements)
+   - FATAL: Critical failures requiring immediate attention
+4. **Avoid global namespace conflicts** - Use unique names for module-level loggers
+5. **Logger initialization locations**:
+   - Instance methods: `this.logger` in constructor
+   - Static/prototype methods: `this.logger` in first method that runs
+   - Standalone modules: `const uniqueLogger` at module top
+6. **Migration complete**: All console.log/warn/error have been replaced with Logger
 
 ### Debugging
-- Use Logger for all debugging output
-- Debug flags for pathfinding, vision cones, etc.
-- Comprehensive error messages with context
-- Check logger output for service initialization and operations
-- Access log history: `Logger.getHistory({source: 'InventoryService', level: LogLevel.WARN})`
+- **Use Logger for ALL debugging output** - console.log is deprecated
+- Debug flags for pathfinding, vision cones, etc. controlled via Logger levels
+- Comprehensive error messages with context using appropriate logger level
+- Check browser console for color-coded, timestamped logger output
+- Access log history: `window.Logger.getHistory({source: 'ClassName', level: LogLevel.WARN})`
+- Filter logs by source: `window.Logger.setMinLevel('ClassName', LogLevel.INFO)`
 
 ## Common Pitfalls to Avoid
 
