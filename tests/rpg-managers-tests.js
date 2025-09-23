@@ -52,7 +52,9 @@ describe('RPG Managers Tests', () => {
             const agent = { name: 'Agent1', health: 100 };
             const rpgAgent = rpgManager.createRPGAgent(agent, 'soldier');
 
-            assertTruthy(rpgManager.entities.has(rpgAgent), 'Should track entity in map');
+            // Entities are tracked by ID or name, not by object reference
+            const entityKey = agent.id || agent.name;
+            assertTruthy(rpgManager.entities.has(entityKey), 'Should track entity in map');
             assertEqual(rpgManager.entities.size, 1, 'Should have one entity');
         });
 

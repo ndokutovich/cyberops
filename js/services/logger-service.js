@@ -27,6 +27,7 @@ class LogLevel {
 class Logger {
     constructor(className) {
         this.className = className;
+        this.source = className; // Alias for test compatibility
         this.enabled = true;
         this.minLevel = LogLevel.DEBUG; // Default to DEBUG in development
         this.showTimestamp = true;
@@ -79,7 +80,11 @@ class Logger {
 
     // Core logging method
     log(level, message, ...args) {
-        if (!this.enabled || level < this.minLevel) return;
+        // Check static min level if set
+        const staticMinLevel = Logger.minLevels?.get(this.className);
+        const effectiveMinLevel = staticMinLevel !== undefined ? staticMinLevel : this.minLevel;
+
+        if (!this.enabled || level < effectiveMinLevel) return;
 
         const parts = [];
         const styles = [];
@@ -118,18 +123,19 @@ class Logger {
             consoleMethod(logLine, ...args);
         }
 
-        // Store in history for debugging
-        this.addToHistory(level, logLine, args);
+        // Store in history for debugging - pass the original message, not the formatted line
+        this.addToHistory(level, message, args);
     }
 
     // Store log history (useful for debugging)
     addToHistory(level, message, args) {
         if (!Logger.history) Logger.history = [];
+
         Logger.history.push({
             timestamp: new Date(),
             level: level,
             source: this.className,
-            message: message,
+            message: message,  // Already the clean message
             args: args
         });
 
@@ -246,7 +252,19 @@ class Logger {
     static enableAll(enabled = true) {
         Logger.configureAll({ enabled: enabled });
     }
+
+    // Static method to set minimum level for a source
+    static setMinLevel(source, level) {
+        // Store min levels in a static map
+        if (!Logger.minLevels) Logger.minLevels = new Map();
+        Logger.minLevels.set(source, level);
+    }
 }
+
+// Initialize static properties
+Logger.history = [];
+Logger.minLevels = new Map();
+Logger.MAX_HISTORY = 1000;
 
 // Export for use
 window.Logger = Logger;

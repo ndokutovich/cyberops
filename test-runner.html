@@ -275,6 +275,11 @@
     <script src="js/game-mission-constants.js"></script>
     <script src="js/campaign-system.js"></script>
     <script src="js/game-core.js"></script>
+
+    <!-- Engine Layer (AFTER game-core.js which defines CyberOpsGame) -->
+    <script src="js/engine/campaign-interface.js"></script>
+    <script src="js/engine/content-loader.js"></script>
+    <script src="js/engine/engine-integration.js"></script>
     <script src="js/game-events.js"></script>
     <script src="js/game-flow.js"></script>
     <script src="js/game-saveload.js"></script>
@@ -326,6 +331,7 @@
 
     <!-- Test framework and suites -->
     <script src="js/test-framework.js"></script>
+    <script src="tests/diagnostic-test.js"></script>
     <script src="tests/simple-test-suite.js"></script>
     <script src="tests/dialog-basic-tests.js"></script>
     <script src="tests/dialog-test-suite.js"></script>

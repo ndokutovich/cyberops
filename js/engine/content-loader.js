@@ -258,8 +258,15 @@ class ContentLoader {
      * Load combat formulas from campaign
      */
     loadCombatFormulas(game) {
-        const combat = this.currentCampaign.combat;
-        if (!combat) return;
+        // Use campaign combat config if available, otherwise use defaults
+        const combat = this.currentCampaign?.combat || { formulaSet: 'standard' };
+        if (!combat && !this.currentCampaign) {
+            // If no campaign at all, just set up standard formulas
+            this.formulas.set('damage', this.standardDamageFormula.bind(this));
+            this.formulas.set('hitChance', this.standardHitFormula.bind(this));
+            this.formulas.set('critical', this.standardCriticalFormula.bind(this));
+            return;
+        }
 
         if (logger) logger.debug('⚔️ Loading combat formulas...');
 

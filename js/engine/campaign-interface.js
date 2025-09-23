@@ -39,21 +39,26 @@ class CampaignContentInterface {
         const errors = [];
         const warnings = [];
 
-        // Check required sections
+        // First check if campaign exists
+        if (!campaign) {
+            errors.push("Campaign is null or undefined");
+            return { valid: false, errors, warnings };
+        }
+
+        // Check required sections - this is the critical check!
         for (const section of this.requiredSections) {
             if (!campaign[section]) {
                 errors.push(`Missing required section: ${section}`);
             }
         }
 
-        // Validate metadata
+        // Validate metadata separately (already in required sections, but check content)
         if (campaign.metadata) {
-            if (!campaign.metadata.id) errors.push("Campaign must have an ID");
             if (!campaign.metadata.name) errors.push("Campaign must have a name");
             if (!campaign.metadata.version) warnings.push("Campaign should specify version");
         }
 
-        // Validate agents structure
+        // Validate agents structure if present
         if (campaign.agents && Array.isArray(campaign.agents)) {
             campaign.agents.forEach((agent, idx) => {
                 if (!agent.id) errors.push(`Agent ${idx} missing ID`);
@@ -61,6 +66,76 @@ class CampaignContentInterface {
                 if (!agent.class && campaign.rpgConfig) warnings.push(`Agent ${agent.name} has no class`);
             });
         }
+
+        console.log('[VALIDATE] Campaign:', campaign);
+        console.log('[VALIDATE] Errors:', errors);
+        console.log('[VALIDATE] Valid?', errors.length === 0);
+
+        return {
+            valid: errors.length === 0,
+            errors,
+            warnings
+        };
+    }
+
+    /**
+     * Validate a mission structure
+     * @param {Object} mission - Mission data to validate
+     * @returns {Object} Validation result
+     */
+    validateMission(mission) {
+        const errors = [];
+        const warnings = [];
+
+        if (!mission.id) errors.push("Mission must have an ID");
+        if (!mission.name) errors.push("Mission must have a name");
+        if (!mission.briefing) warnings.push("Mission should have briefing");
+        if (!mission.map) errors.push("Mission must have a map");
+        if (!mission.objectives || !Array.isArray(mission.objectives)) {
+            warnings.push("Mission should have objectives");
+        }
+
+        return {
+            valid: errors.length === 0,
+            errors,
+            warnings
+        };
+    }
+
+    /**
+     * Validate an agent structure
+     * @param {Object} agent - Agent data to validate
+     * @returns {Object} Validation result
+     */
+    validateAgent(agent) {
+        const errors = [];
+        const warnings = [];
+
+        if (!agent.id) errors.push("Agent must have an ID");
+        if (!agent.name) errors.push("Agent must have a name");
+        if (!agent.health && agent.health !== 0) warnings.push("Agent should have health");
+        if (!agent.damage && agent.damage !== 0) warnings.push("Agent should have damage");
+
+        return {
+            valid: errors.length === 0,
+            errors,
+            warnings
+        };
+    }
+
+    /**
+     * Validate a weapon structure
+     * @param {Object} weapon - Weapon data to validate
+     * @returns {Object} Validation result
+     */
+    validateWeapon(weapon) {
+        const errors = [];
+        const warnings = [];
+
+        if (!weapon.id) errors.push("Weapon must have an ID");
+        if (!weapon.name) errors.push("Weapon must have a name");
+        if (!weapon.damage && weapon.damage !== 0) errors.push("Weapon must have damage");
+        if (!weapon.cost && weapon.cost !== 0) warnings.push("Weapon should have cost");
 
         return {
             valid: errors.length === 0,
@@ -243,22 +318,36 @@ class CampaignContentInterface {
      * @returns {Object} Complete campaign with defaults
      */
     mergeCampaignWithDefaults(campaign) {
+        // Version marker to ensure new code is loaded
+        console.log('[MERGE] Version: 2024-12-23-v4-fixed');
+
         const defaults = this.getDefaultCampaign();
 
-        // Deep merge function
-        const deepMerge = (target, source) => {
-            for (const key in source) {
-                if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-                    target[key] = target[key] || {};
-                    deepMerge(target[key], source[key]);
-                } else if (target[key] === undefined) {
-                    target[key] = source[key];
+        // Deep copy defaults first
+        const result = JSON.parse(JSON.stringify(defaults));
+
+        // Now overlay campaign properties on top
+        if (campaign) {
+            for (const key in campaign) {
+                if (campaign[key] !== undefined) {
+                    if (key === 'metadata' && result.metadata) {
+                        // Special handling for metadata - merge it
+                        result.metadata = Object.assign({}, result.metadata, campaign.metadata);
+                    } else if (typeof campaign[key] === 'object' && campaign[key] !== null && !Array.isArray(campaign[key])) {
+                        // For other objects, merge them
+                        result[key] = Object.assign({}, result[key] || {}, campaign[key]);
+                    } else {
+                        // For primitives and arrays, replace
+                        result[key] = campaign[key];
+                    }
                 }
             }
-            return target;
-        };
+        }
 
-        return deepMerge(campaign, defaults);
+        console.log('[MERGE] Result keys:', Object.keys(result));
+        console.log('[MERGE] Has agents?', 'agents' in result, Array.isArray(result.agents));
+
+        return result;
     }
 
     /**

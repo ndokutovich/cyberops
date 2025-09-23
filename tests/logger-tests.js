@@ -75,7 +75,7 @@ describe('Logger Tests', () => {
             const lastEntry = Logger.history[Logger.history.length - 1];
             assertEqual(lastEntry.level, LogLevel.TRACE, 'Should be TRACE level');
             assertEqual(lastEntry.source, 'TestMethods', 'Should have correct source');
-            assertTruthy(lastEntry.message.includes('Trace test'), 'Should contain message');
+            assertTruthy(lastEntry.message === 'Trace test', 'Should contain message');
         });
 
         it('should log debug messages', () => {
@@ -83,7 +83,7 @@ describe('Logger Tests', () => {
 
             const lastEntry = Logger.history[Logger.history.length - 1];
             assertEqual(lastEntry.level, LogLevel.DEBUG, 'Should be DEBUG level');
-            assertTruthy(lastEntry.message.includes('Debug test'), 'Should contain message');
+            assertTruthy(lastEntry.message === 'Debug test', 'Should contain message');
         });
 
         it('should log info messages', () => {
@@ -91,7 +91,7 @@ describe('Logger Tests', () => {
 
             const lastEntry = Logger.history[Logger.history.length - 1];
             assertEqual(lastEntry.level, LogLevel.INFO, 'Should be INFO level');
-            assertTruthy(lastEntry.message.includes('Info test'), 'Should contain message');
+            assertTruthy(lastEntry.message === 'Info test', 'Should contain message');
         });
 
         it('should log warn messages', () => {
@@ -99,7 +99,7 @@ describe('Logger Tests', () => {
 
             const lastEntry = Logger.history[Logger.history.length - 1];
             assertEqual(lastEntry.level, LogLevel.WARN, 'Should be WARN level');
-            assertTruthy(lastEntry.message.includes('Warning test'), 'Should contain message');
+            assertTruthy(lastEntry.message === 'Warning test', 'Should contain message');
         });
 
         it('should log error messages', () => {
@@ -107,7 +107,7 @@ describe('Logger Tests', () => {
 
             const lastEntry = Logger.history[Logger.history.length - 1];
             assertEqual(lastEntry.level, LogLevel.ERROR, 'Should be ERROR level');
-            assertTruthy(lastEntry.message.includes('Error test'), 'Should contain message');
+            assertTruthy(lastEntry.message === 'Error test', 'Should contain message');
         });
 
         it('should log fatal messages', () => {
@@ -115,21 +115,30 @@ describe('Logger Tests', () => {
 
             const lastEntry = Logger.history[Logger.history.length - 1];
             assertEqual(lastEntry.level, LogLevel.FATAL, 'Should be FATAL level');
-            assertTruthy(lastEntry.message.includes('Fatal test'), 'Should contain message');
+            assertTruthy(lastEntry.message === 'Fatal test', 'Should contain message');
         });
     });
 
     describe('History Management', () => {
         it('should maintain log history', () => {
+            // Ensure history is initialized
+            if (!Logger.history) Logger.history = [];
+
             const logger = new Logger('HistoryTest');
-            const startLength = Logger.history.length;
+
+            // Clear history or record starting entries for this test source
+            const startEntries = Logger.history.filter(e => e.source === 'HistoryTest').length;
 
             logger.info('Test 1');
             logger.info('Test 2');
             logger.info('Test 3');
 
-            assertTruthy(Logger.history.length >= startLength + 3,
-                'Should add entries to history');
+            const endEntries = Logger.history.filter(e => e.source === 'HistoryTest').length;
+            const entriesAdded = endEntries - startEntries;
+
+            assertTruthy(Logger.history, 'Logger.history should exist');
+            assertTruthy(entriesAdded >= 3,
+                `Should add at least 3 entries to history (added ${entriesAdded} for HistoryTest)`);
         });
 
         it('should limit history size to 1000 entries', () => {

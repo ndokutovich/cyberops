@@ -102,6 +102,16 @@ class RPGManager {
         }
     }
 
+    getExperienceForLevel(level) {
+        // Return experience required for a specific level
+        return this.experienceTable[level] || 0;
+    }
+
+    getEntity(id) {
+        // Get entity by ID from the entities map
+        return this.entities.get(id);
+    }
+
     createRPGAgent(baseAgent, classType = 'soldier') {
         // Direct implementation - don't call RPGService to avoid recursion
         if (this.logger) this.logger.debug(`\n🎮 Creating RPG Agent: ${baseAgent.name}`);
@@ -109,14 +119,18 @@ class RPGManager {
 
         const classConfig = this.config?.classes?.[classType] || {};
         const rpgAgent = new RPGAgent({
+            id: baseAgent.id || baseAgent.name, // Ensure ID is set
             ...baseAgent,
             class: classType,
             level: baseAgent.level || 1,
-            experience: baseAgent.experience || 0,
+            xp: baseAgent.experience || baseAgent.xp || 0, // RPGAgent uses 'xp', not 'experience'
             stats: this.generateInitialStats(classType),
             skills: this.getClassSkills(classType),
             perks: []
         });
+
+        // Add experience property for compatibility
+        rpgAgent.experience = rpgAgent.xp;
 
         if (this.logger) this.logger.debug(`   Initial Stats:`, rpgAgent.stats);
 
@@ -259,9 +273,14 @@ class RPGManager {
 
     grantExperience(entity, amount) {
         // Direct implementation - don't call back to RPGService to avoid recursion
-        if (!entity.experience) entity.experience = 0;
-        const oldXP = entity.experience;
-        entity.experience += amount;
+        // Handle both 'xp' and 'experience' properties for compatibility
+        if (!entity.experience && !entity.xp) {
+            entity.experience = 0;
+            entity.xp = 0;
+        }
+        const oldXP = entity.experience || entity.xp || 0;
+        entity.experience = (entity.experience || entity.xp || 0) + amount;
+        entity.xp = entity.experience; // Keep both in sync
 
         const currentLevel = entity.level || 1;
         const requiredXP = this.experienceTable[currentLevel + 1];
@@ -272,7 +291,7 @@ class RPGManager {
         if (this.logger) this.logger.debug(`   XP Progress: ${oldXP} → ${entity.experience} / ${requiredXP} (${progressPercent}%)`);
 
         // Check for level up
-        if (entity.experience >= requiredXP) {
+        if ((entity.experience || entity.xp) >= requiredXP) {
             if (this.logger) this.logger.debug(`   🎉 LEVEL UP TRIGGERED!`);
             this.levelUp(entity);
         }
@@ -317,6 +336,20 @@ class RPGManager {
         if (availablePerks.length > 0) {
             if (this.logger) this.logger.debug(`   Perks you can choose:`, availablePerks.map(p => p.name));
         }
+
+        // Trigger level up callbacks
+        const rewards = {
+            statPoints,
+            skillPoints,
+            perkPoints: entity.unspentPerkPoints || 0
+        };
+        this.levelUpCallbacks.forEach(callback => {
+            try {
+                callback(entity, entity.level, rewards);
+            } catch (error) {
+                if (this.logger) this.logger.error('Level up callback error:', error);
+            }
+        });
 
         // Notify
         if (this.game && this.game.logEvent) {

@@ -31,21 +31,23 @@ describe('ContentLoader Tests', () => {
             const originalValidate = window.CampaignContentInterface?.validateCampaign;
             let validationCalled = false;
 
-            if (window.CampaignContentInterface) {
-                window.CampaignContentInterface.validateCampaign = (campaign) => {
-                    validationCalled = true;
-                    return { valid: false, errors: ['Missing metadata'] };
-                };
-            }
+            try {
+                if (window.CampaignContentInterface) {
+                    window.CampaignContentInterface.validateCampaign = (campaign) => {
+                        validationCalled = true;
+                        return { valid: false, errors: ['Missing metadata'] };
+                    };
+                }
 
-            const mockGame = {};
-            const result = await loader.loadCampaign(invalidCampaign, mockGame);
+                const mockGame = {};
+                const result = await loader.loadCampaign(invalidCampaign, mockGame);
 
-            assertFalsy(result, 'Should reject invalid campaign');
-
-            // Restore original
-            if (window.CampaignContentInterface && originalValidate) {
-                window.CampaignContentInterface.validateCampaign = originalValidate;
+                assertFalsy(result, 'Should reject invalid campaign');
+            } finally {
+                // ALWAYS restore original
+                if (window.CampaignContentInterface && originalValidate) {
+                    window.CampaignContentInterface.validateCampaign = originalValidate;
+                }
             }
         });
 
@@ -56,33 +58,86 @@ describe('ContentLoader Tests', () => {
                 agents: [{ id: 'agent1', name: 'Test Agent' }],
                 weapons: [{ id: 'weapon1', name: 'Test Weapon', damage: 10 }],
                 equipment: [{ id: 'armor1', name: 'Test Armor', protection: 5 }],
+                enemies: [],  // Required section
+                missions: [],  // Required section
                 rpgConfig: { classes: {}, items: {} }
             };
 
+            // Debug: Check if CampaignContentInterface exists
+            console.log('CampaignContentInterface exists:', !!window.CampaignContentInterface);
+            console.log('Has validateCampaign:', typeof window.CampaignContentInterface?.validateCampaign);
+
             // Mock validation to succeed
             const originalValidate = window.CampaignContentInterface?.validateCampaign;
-            if (window.CampaignContentInterface) {
-                window.CampaignContentInterface.validateCampaign = () => ({
-                    valid: true,
-                    warnings: []
-                });
-                window.CampaignContentInterface.mergeCampaignWithDefaults = (c) => c;
-            }
+            const originalMerge = window.CampaignContentInterface?.mergeCampaignWithDefaults;
+            const originalGameServices = window.GameServices;
 
-            const mockGame = {
-                gameServices: {
-                    rpgService: { setConfig: () => {} },
-                    formulaService: { setFormulas: () => {}, setCombatConfig: () => {} }
+            try {
+                if (window.CampaignContentInterface) {
+                    window.CampaignContentInterface.validateCampaign = () => ({
+                        valid: true,
+                        errors: [],  // Add missing errors array
+                        warnings: []
+                    });
+                    window.CampaignContentInterface.mergeCampaignWithDefaults = (c) => c;
+                } else {
+                    console.error('WARNING: CampaignContentInterface not available for mocking');
                 }
-            };
 
-            const result = await loader.loadCampaign(validCampaign, mockGame);
-            assertTruthy(result, 'Should load valid campaign');
-            assertEqual(loader.currentCampaign, validCampaign, 'Should store current campaign');
+                const mockGame = {
+                    gameServices: {
+                        rpgService: { setConfig: () => {} },
+                        formulaService: {
+                            setFormulas: () => {},
+                            setCombatConfig: () => {},
+                            // Add any other methods that might be called
+                            registerFormula: () => {},
+                            clearFormulas: () => {}
+                        }
+                    }
+                };
 
-            // Restore
-            if (window.CampaignContentInterface && originalValidate) {
-                window.CampaignContentInterface.validateCampaign = originalValidate;
+                // Mock window.GameServices for the test - MUST have the methods ContentLoader expects
+                window.GameServices = {
+                    formulaService: {
+                        setFormulas: () => { console.log('[TEST] Mock setFormulas called'); },
+                        setCombatConfig: () => { console.log('[TEST] Mock setCombatConfig called'); }
+                    },
+                    agentService: {
+                        clearAllAgents: () => {},
+                        addAvailableAgent: () => {},
+                        getAvailableAgents: () => []
+                    },
+                    inventoryService: {
+                        initialize: () => {}
+                    },
+                    resourceService: {
+                        setCredits: () => {},
+                        setResearchPoints: () => {}
+                    }
+                };
+
+                const result = await loader.loadCampaign(validCampaign, mockGame);
+
+                console.log('LoadCampaign result:', result);
+                console.log('Current campaign:', loader.currentCampaign);
+
+                assertTruthy(result, 'Should load valid campaign');
+                assertEqual(loader.currentCampaign, validCampaign, 'Should store current campaign');
+            } finally {
+                // ALWAYS restore, even if test fails
+                if (window.CampaignContentInterface) {
+                    if (originalValidate) {
+                        window.CampaignContentInterface.validateCampaign = originalValidate;
+                    }
+                    if (originalMerge) {
+                        window.CampaignContentInterface.mergeCampaignWithDefaults = originalMerge;
+                    }
+                }
+                // ALWAYS restore GameServices
+                if (originalGameServices !== undefined) {
+                    window.GameServices = originalGameServices;
+                }
             }
         });
     });
@@ -171,25 +226,29 @@ describe('ContentLoader Tests', () => {
 
         it('should load different formula sets', () => {
             const loader = new ContentLoader();
-            const mockGame = {
-                gameServices: {
-                    formulaService: {
-                        setFormulas: function(formulas) {
-                            this.formulas = formulas;
-                        },
-                        setCombatConfig: function(config) {
-                            this.config = config;
-                        }
+
+            // Set up window.GameServices for the test
+            const originalGameServices = window.GameServices;
+            window.GameServices = {
+                formulaService: {
+                    setFormulas: function(formulas) {
+                        this.formulas = formulas;
+                    },
+                    setCombatConfig: function(config) {
+                        this.config = config;
                     }
                 }
             };
 
-            loader.loadCombatFormulas(mockGame);
+            loader.loadCombatFormulas({});
 
             // Check that formulas are set
             assertTruthy(loader.formulas.has('damage'), 'Should have damage formula');
             assertTruthy(loader.formulas.has('hitChance'), 'Should have hit chance formula');
             assertTruthy(loader.formulas.has('critical'), 'Should have critical formula');
+
+            // Restore original
+            window.GameServices = originalGameServices;
         });
     });
 
@@ -203,7 +262,8 @@ describe('ContentLoader Tests', () => {
             window.GameServices = {
                 agentService: {
                     clearAllAgents: () => { agentServiceCalled = true; },
-                    addAvailableAgent: () => {}
+                    addAvailableAgent: () => {},
+                    getAvailableAgents: () => []  // Add missing method
                 },
                 inventoryService: {
                     initialize: () => { inventoryServiceCalled = true; }

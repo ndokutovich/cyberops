@@ -8,6 +8,7 @@ describe('Campaign System Tests', () => {
     describe('CampaignInterface Validation', () => {
         it('should validate campaign structure', () => {
             if (!window.CampaignContentInterface) {
+                console.error('CampaignContentInterface not found on window');
                 // Skip if not available
                 assertTruthy(true, 'CampaignContentInterface not loaded - skipping');
                 return;
@@ -22,28 +23,39 @@ describe('Campaign System Tests', () => {
                 },
                 agents: [],
                 weapons: [],
-                equipment: []
+                equipment: [],
+                enemies: [],  // Required section
+                missions: []  // Required section
             };
 
             const result = window.CampaignContentInterface.validateCampaign(validCampaign);
+            assertTruthy(result, 'Should return validation result');
             assertTruthy(result.valid, 'Valid campaign should pass validation');
-            assertEqual(result.errors.length, 0, 'Should have no errors');
+            assertTruthy(result.errors !== undefined, 'Should have errors array');
+            assertEqual(result.errors ? result.errors.length : 0, 0, 'Should have no errors');
         });
 
         it('should reject invalid campaign', () => {
+            console.warn('=== TEST: Reject Invalid Campaign ===');
+
             if (!window.CampaignContentInterface) {
-                assertTruthy(true, 'CampaignContentInterface not loaded - skipping');
-                return;
+                console.warn('SKIP: CampaignContentInterface not loaded');
+                return; // Skip test
             }
 
             const invalidCampaign = {
-                // Missing metadata
+                // Missing metadata and other required fields
                 agents: []
             };
 
             const result = window.CampaignContentInterface.validateCampaign(invalidCampaign);
+            console.warn('Validation result:', result);
+            console.warn('Result valid?', result?.valid);
+            console.warn('Result errors?', result?.errors);
+
+            assertTruthy(result, 'Should return validation result');
             assertFalsy(result.valid, 'Invalid campaign should fail validation');
-            assertTruthy(result.errors.length > 0, 'Should have errors');
+            assertTruthy(result.errors && result.errors.length > 0, 'Should have errors');
         });
 
         it('should validate mission structure', () => {
@@ -113,15 +125,37 @@ describe('Campaign System Tests', () => {
                 return;
             }
 
+            console.log('Testing merge with defaults...');
+            console.log('mergeCampaignWithDefaults type:', typeof window.CampaignContentInterface.mergeCampaignWithDefaults);
+
             const minimalCampaign = {
                 metadata: { name: 'Minimal' }
             };
 
             const merged = window.CampaignContentInterface.mergeCampaignWithDefaults(minimalCampaign);
 
-            assertTruthy(merged.agents, 'Should add default agents array');
-            assertTruthy(merged.weapons, 'Should add default weapons array');
-            assertTruthy(merged.equipment, 'Should add default equipment array');
+            console.log('TEST: Merged object exists?', !!merged);
+            console.log('TEST: Merged keys:', merged ? Object.keys(merged) : 'null');
+            console.log('TEST: agents property exists?', 'agents' in merged);
+            console.log('TEST: agents value:', merged?.agents);
+            console.log('TEST: agents is array?', Array.isArray(merged?.agents));
+            console.log('TEST: Full merged object:', merged);
+
+            // Debug output
+            if (!merged || !Array.isArray(merged.agents)) {
+                console.error('MERGE FAILED to add arrays:', {
+                    merged: !!merged,
+                    agents: merged?.agents,
+                    weapons: merged?.weapons,
+                    equipment: merged?.equipment,
+                    allKeys: merged ? Object.keys(merged) : []
+                });
+            }
+
+            assertTruthy(merged, 'Should return merged object');
+            assertTruthy(Array.isArray(merged.agents), 'Should add default agents array');
+            assertTruthy(Array.isArray(merged.weapons), 'Should add default weapons array');
+            assertTruthy(Array.isArray(merged.equipment), 'Should add default equipment array');
         });
     });
 
@@ -255,11 +289,22 @@ describe('Campaign System Tests', () => {
                 return;
             }
 
+            console.log('Testing default values...');
+
             const minimal = {
                 metadata: { name: 'Test' }
             };
 
             const merged = window.CampaignContentInterface.mergeCampaignWithDefaults(minimal);
+
+            console.log('TEST2: Merged object exists?', !!merged);
+            console.log('TEST2: Merged keys:', merged ? Object.keys(merged) : 'null');
+            console.log('TEST2: agents property exists?', 'agents' in merged);
+            console.log('TEST2: agents value:', merged?.agents);
+            console.log('TEST2: agents is array?', Array.isArray(merged?.agents));
+            console.log('TEST2: metadata.version:', merged?.metadata?.version);
+
+            assertTruthy(merged, 'Should return merged object');
 
             // Check for default arrays
             assertTruthy(Array.isArray(merged.agents), 'Should have agents array');
@@ -267,7 +312,7 @@ describe('Campaign System Tests', () => {
             assertTruthy(Array.isArray(merged.equipment), 'Should have equipment array');
 
             // Check for default values
-            assertTruthy(merged.metadata.version, 'Should add default version');
+            assertTruthy(merged.metadata && merged.metadata.version, 'Should add default version');
         });
     });
 });
