@@ -181,8 +181,8 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
                             if (this.logger) this.logger.warn('⚠️ onEnemyEliminated NOT FOUND');
                             // Track directly through MissionService
                             if (this.gameServices && this.gameServices.missionService) {
-                                this.gameServices.missionService.trackEvent('enemyKilled', {
-                                    enemyType: enemy.type || 'soldier'
+                                this.gameServices.missionService.trackEvent('eliminate', {
+                                    type: enemy.type || 'soldier'
                                 });
                             }
                         }
@@ -419,8 +419,8 @@ CyberOpsGame.prototype.update = function() {
 
                         // Track through MissionService
                         if (this.gameServices && this.gameServices.missionService) {
-                            this.gameServices.missionService.trackEvent('terminalHacked', {
-                                terminalId: agent.autoHackTarget.id || 'unknown'
+                            this.gameServices.missionService.trackEvent('terminal', {
+                                id: agent.autoHackTarget.id || 'unknown'
                             });
                         }
 

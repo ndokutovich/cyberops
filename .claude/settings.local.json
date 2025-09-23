@@ -47,7 +47,8 @@
       "Bash(mv:*)",
       "Bash(python:*)",
       "Bash(echo:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(start test-mission-fix.html)"
     ],
     "deny": [],
     "ask": []

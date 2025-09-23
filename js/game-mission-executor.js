@@ -388,9 +388,8 @@ CyberOpsGame.prototype.useActionAbility = function(agent) {
             if (this.gameServices && this.gameServices.missionService) {
                 switch(nearestTarget.type) {
                     case INTERACTION_TARGETS.TERMINAL:
-                        this.gameServices.missionService.trackEvent('interact', {
-                            type: nearestTarget.type,
-                            targetId: nearestTarget.id
+                        this.gameServices.missionService.trackEvent('terminal', {
+                            id: nearestTarget.id
                         });
                         if (this.logger) this.logger.debug(`🖥️ Terminal hacked!`);
                         break;
@@ -784,10 +783,10 @@ CyberOpsGame.prototype.onEnemyEliminated = function(enemy) {
 
     // Track ONLY in MissionService (single source of truth)
     if (this.gameServices && this.gameServices.missionService) {
-        this.gameServices.missionService.trackEvent('enemyKilled', {
-            enemyType: enemy.type || 'unknown'
+        this.gameServices.missionService.trackEvent('eliminate', {
+            type: enemy.type || 'unknown'
         });
-        if (this.logger) this.logger.info('📊 Tracked enemy kill in MissionService');
+        if (this.logger) this.logger.info('📊 Tracked enemy elimination in MissionService');
     }
 
     // Handle weapon drops (40% chance)

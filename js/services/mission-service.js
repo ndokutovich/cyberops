@@ -249,36 +249,39 @@ class MissionService {
 
         // Update trackers
         switch (eventType) {
-            case 'enemyKilled':
+            case 'eliminate':
                 this.trackers.enemiesEliminated++;
 
                 // Track by type
-                const enemyType = eventData.enemyType || 'unknown';
+                const enemyType = eventData.type || 'unknown';
                 if (!this.trackers.enemiesEliminatedByType[enemyType]) {
                     this.trackers.enemiesEliminatedByType[enemyType] = 0;
                 }
                 this.trackers.enemiesEliminatedByType[enemyType]++;
 
-                if (this.logger) this.logger.info(`🎯 Enemy killed: ${enemyType} (${this.trackers.enemiesEliminated} total, ${this.trackers.enemiesEliminatedByType[enemyType]} ${enemyType})`);
+                if (this.logger) this.logger.info(`🎯 Enemy eliminated: ${enemyType} (${this.trackers.enemiesEliminated} total, ${this.trackers.enemiesEliminatedByType[enemyType]} ${enemyType})`);
                 this.checkObjectiveProgress('eliminate', { enemy: enemyType });
                 break;
 
-            case 'itemCollected':
+            case 'collect':
                 this.trackers.itemsCollected++;
-                if (this.logger) this.logger.debug(`📦 Item collected: ${eventData.itemType || 'unknown'}`);
-                this.checkObjectiveProgress('collect', { item: eventData.itemType });
+                if (this.logger) this.logger.debug(`📦 Item collected: ${eventData.type || 'unknown'}`);
+                this.checkObjectiveProgress('collect', { item: eventData.type });
                 break;
 
-            case 'terminalHacked':
+            case 'terminal':
                 this.trackers.terminalsHacked++;
 
                 // Track specific object
-                if (eventData.terminalId) {
-                    this.interactedObjects.add(eventData.terminalId);
+                const terminalId = eventData.id;
+                if (terminalId) {
+                    this.interactedObjects.add(terminalId);
                 }
 
-                if (this.logger) this.logger.info(`💻 Terminal hacked: ${eventData.terminalId || 'unknown'}`);
-                this.checkObjectiveProgress('hack', { terminal: eventData.terminalId });
+                if (this.logger) this.logger.info(`💻 Terminal hacked: ${terminalId || 'unknown'}`);
+                // Check both 'hack' and 'interact' type objectives for terminals
+                this.checkObjectiveProgress('hack', { terminal: terminalId, id: terminalId });
+                this.checkObjectiveProgress('interact', { terminal: terminalId, id: terminalId });
                 break;
 
             case 'areaReached':
@@ -308,6 +311,29 @@ class MissionService {
                 this.trackers.civiliansCasualties++;
                 this.checkObjectiveProgress('protect', { casualties: this.trackers.civiliansCasualties });
                 break;
+
+            case 'interact':
+                // Generic interaction event for explosives, switches, gates, etc.
+                const targetId = eventData.id;
+
+                if (targetId) {
+                    this.interactedObjects.add(targetId);
+                }
+
+                // Track specific interaction types
+                if (eventData.type === 'explosive') {
+                    this.trackers.explosivesPlanted++;
+                    if (this.logger) this.logger.info(`💣 Explosive planted: ${targetId || 'unknown'}`);
+                } else if (eventData.type === 'switch') {
+                    this.trackers.switchesActivated++;
+                    if (this.logger) this.logger.info(`🔌 Switch activated: ${targetId || 'unknown'}`);
+                } else if (eventData.type === 'gate') {
+                    this.trackers.gatesBreached++;
+                    if (this.logger) this.logger.info(`🚪 Gate breached: ${targetId || 'unknown'}`);
+                }
+
+                this.checkObjectiveProgress('interact', eventData);
+                break;
         }
 
         // Log event
@@ -332,12 +358,12 @@ class MissionService {
             switch (objective.type) {
                 case 'eliminate':
                     // Check if target matches
-                    if (!objective.target.type || objective.target.type === 'all') {
+                    if (!objective.target.type || objective.target.type === 'all' || objective.target.type === 'enemy') {
                         // Any enemy counts
                         objective.progress++;
                         progressMade = true;
-                    } else if (objective.target.type === data.enemy) {
-                        // Specific type must match
+                    } else if (objective.target.type === data.type) {
+                        // Specific type must match (data.type is the enemy type)
                         objective.progress++;
                         progressMade = true;
                     }
@@ -355,17 +381,32 @@ class MissionService {
                     }
                     break;
 
+                case 'interact':  // Support both 'interact' and 'hack' types
                 case 'hack':
-                    // Check for specific terminal or any terminal
-                    if (!objective.target.id) {
-                        // Any terminal counts
-                        objective.progress++;
-                        progressMade = true;
-                    } else if (objective.target.id === data.terminal) {
-                        // Specific terminal must match
-                        objective.progress++;
-                        progressMade = true;
-                    } else if (objective.target.specific && Array.isArray(objective.target.specific)) {
+                    // Check if this is for the right target type
+                    if (objective.target && objective.target.type === 'terminal') {
+                        // This is a terminal objective
+                        if (!objective.target.id) {
+                            // Any terminal counts
+                            objective.progress++;
+                            progressMade = true;
+                        } else if (objective.target.id === data.id || objective.target.id === data.terminal) {
+                            // Specific terminal must match
+                            objective.progress++;
+                            progressMade = true;
+                        }
+                    } else if (!objective.target || !objective.target.type) {
+                        // No specific target type, treat as generic hack/interact
+                        if (!objective.target || !objective.target.id) {
+                            // Any interaction counts
+                            objective.progress++;
+                            progressMade = true;
+                        } else if (objective.target.id === data.id || objective.target.id === data.terminal) {
+                            // Specific target must match
+                            objective.progress++;
+                            progressMade = true;
+                        }
+                    } else if (objective.target && objective.target.specific && Array.isArray(objective.target.specific)) {
                         // Check if all specific terminals are hacked
                         const allHacked = objective.target.specific.every(id =>
                             this.interactedObjects.has(id)

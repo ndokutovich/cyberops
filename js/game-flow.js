@@ -1857,8 +1857,8 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
 
                 // Track through MissionService
                 if (this.gameServices && this.gameServices.missionService) {
-                    this.gameServices.missionService.trackEvent('terminalHacked', {
-                        terminalId: terminal.id || 'unknown'
+                    this.gameServices.missionService.trackEvent('terminal', {
+                        id: terminal.id || 'unknown'
                     });
                 }
 
