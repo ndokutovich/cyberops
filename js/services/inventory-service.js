@@ -35,24 +35,24 @@ class InventoryService {
     }
 
     /**
-     * Initialize inventory from game state
+     * Initialize inventory from data (NOT from game object)
      */
-    initializeFromGame(game) {
-        if (this.logger) this.logger.info('Initializing from game state');
+    initialize(data = {}) {
+        if (this.logger) this.logger.info('Initializing inventory from data');
 
-        // Import existing weapons
-        if (game.weapons) {
-            this.inventory.weapons = game.weapons.map(w => ({
+        // Import weapons data
+        if (data.weapons) {
+            this.inventory.weapons = data.weapons.map(w => ({
                 ...w,
                 equipped: w.equipped || 0
             }));
-            if (this.logger) this.logger.debug(`Imported ${game.weapons.length} weapons`);
+            if (this.logger) this.logger.debug(`Imported ${data.weapons.length} weapons`);
         }
 
-        // Import existing equipment
-        if (game.equipment) {
-            if (this.logger) this.logger.debug(`Processing ${game.equipment.length} equipment items`);
-            game.equipment.forEach(item => {
+        // Import equipment data
+        if (data.equipment) {
+            if (this.logger) this.logger.debug(`Processing ${data.equipment.length} equipment items`);
+            data.equipment.forEach(item => {
                 let category = this.getItemCategory(item.type || item.slot);
 
                 // For generic 'equipment' type, categorize based on item properties
@@ -83,17 +83,31 @@ class InventoryService {
         }
 
         // Import agent loadouts
-        if (game.agentLoadouts) {
-            this.agentLoadouts = { ...game.agentLoadouts };
+        if (data.agentLoadouts) {
+            this.agentLoadouts = { ...data.agentLoadouts };
         }
 
         // Import intel
-        if (game.intel !== undefined) {
-            this.inventory.intel = game.intel;
+        if (data.intel !== undefined) {
+            this.inventory.intel = data.intel;
         }
 
         // Sync equipped counts from loadouts
         this.syncEquippedCounts();
+    }
+
+    /**
+     * @deprecated Use initialize() instead
+     */
+    initializeFromGame(game) {
+        if (this.logger) this.logger.warn('DEPRECATED: initializeFromGame called, use initialize() instead');
+        // Extract data from game object for backward compatibility
+        this.initialize({
+            weapons: game.weapons,
+            equipment: game.equipment,
+            agentLoadouts: game.agentLoadouts,
+            intel: game.intel
+        });
     }
 
     /**
@@ -672,6 +686,70 @@ class InventoryService {
             }
         }
         return false;
+    }
+
+    /**
+     * Get all weapons (for service access)
+     */
+    getWeapons() {
+        return this.inventory.weapons || [];
+    }
+
+    /**
+     * Get all equipment (armor and utility combined)
+     */
+    getEquipment() {
+        return [
+            ...(this.inventory.armor || []),
+            ...(this.inventory.utility || [])
+        ];
+    }
+
+    /**
+     * Get specific agent's loadout
+     */
+    getAgentLoadout(agentId) {
+        return this.agentLoadouts[agentId] || {
+            weapon: null,
+            armor: null,
+            utility: null,
+            special: null
+        };
+    }
+
+    /**
+     * Get all agent loadouts
+     */
+    getAllLoadouts() {
+        return this.agentLoadouts || {};
+    }
+
+    /**
+     * Get item by type and ID
+     * @param {string} type - Item type ('weapon', 'armor', or 'equipment')
+     * @param {string} itemId - Item ID
+     * @returns {Object|null} Item data or null if not found
+     */
+    getItemById(type, itemId) {
+        if (type === 'weapon') {
+            return this.inventory.weapons.find(w => w.id === itemId) || null;
+        } else if (type === 'armor') {
+            return this.inventory.equipment.find(e => e.id === itemId && e.protection) || null;
+        } else {
+            return this.inventory.equipment.find(e => e.id === itemId) || null;
+        }
+    }
+
+    /**
+     * Set agent's loadout
+     */
+    setAgentLoadout(agentId, loadout) {
+        if (!this.agentLoadouts) {
+            this.agentLoadouts = {};
+        }
+        this.agentLoadouts[agentId] = loadout;
+        this.syncEquippedCounts();
+        return true;
     }
 }
 

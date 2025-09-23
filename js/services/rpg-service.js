@@ -11,21 +11,15 @@ class RPGService {
     }
 
     /**
-     * Initialize RPG system with game instance
-     * @param {Object} game - Game instance
+     * Initialize RPG system
      */
-    initialize(game) {
-        if (!game) return false;
-
+    initialize() {
         // Initialize managers
         this.rpgManager = new RPGManager();
-        this.rpgManager.game = game;
 
         this.inventoryManager = new InventoryManager();
-        this.inventoryManager.game = game;
 
         this.shopManager = new ShopManager();
-        this.shopManager.game = game;
 
         // Get RPG config from campaign
         this.loadRPGConfig();
@@ -34,11 +28,6 @@ class RPGService {
         if (this.shopManager) {
             this.shopManager.loadShops();
         }
-
-        // Store references on game instance
-        game.rpgManager = this.rpgManager;
-        game.inventoryManager = this.inventoryManager;
-        game.shopManager = this.shopManager;
 
         return true;
     }
@@ -58,14 +47,15 @@ class RPGService {
         let baseDamage = 20; // Default base damage
         let weaponBonus = 0;
 
-        // Check for real-time equipped weapon from loadout
-        if (window.game && window.game.agentLoadouts) {
+        // Check for real-time equipped weapon from inventory service
+        if (window.GameServices && window.GameServices.inventoryService) {
             const agentId = attacker.originalId || attacker.id || attacker.name;
-            const loadout = window.game.agentLoadouts[agentId];
+            const loadout = window.GameServices.inventoryService.getAgentLoadout(agentId);
 
-            if (loadout && loadout.weapon && window.game.weapons) {
-                // Find the actual weapon from the loadout
-                const equippedWeapon = window.game.weapons.find(w => w.id === loadout.weapon);
+            if (loadout && loadout.weapon) {
+                // Find the actual weapon from inventory
+                const weapons = window.GameServices.inventoryService.getWeapons();
+                const equippedWeapon = weapons.find(w => w.id === loadout.weapon);
                 if (equippedWeapon) {
                     weaponBonus = equippedWeapon.damage || 0;
                 }
@@ -127,82 +117,87 @@ class RPGService {
 
     /**
      * Sync equipment between hub and RPG systems
-     * @param {Object} game - Game instance
      */
-    syncEquipment(game) {
-        if (!game || !this.inventoryManager) return;
+    syncEquipment() {
+        if (!this.inventoryManager) return;
 
-        // Sync weapons
-        if (game.weapons) {
-            game.weapons.forEach(weapon => {
-                if (weapon.owned > 0) {
-                    const rpgWeapon = {
-                        id: `weapon_${weapon.id}`,
-                        name: weapon.name,
-                        type: 'weapon',
-                        slot: 'primary',
-                        weight: weapon.weight || 5,
-                        value: weapon.cost || 1000,
-                        stats: {
-                            damage: weapon.damage || 10
-                        },
-                        quantity: weapon.owned
-                    };
+        // Get data from services
+        const inventoryService = window.GameServices?.inventoryService;
+        if (!inventoryService) return;
 
-                    const rpgConfig = this.getRPGConfig();
-                    if (rpgConfig.items && !rpgConfig.items.weapons[rpgWeapon.id]) {
-                        rpgConfig.items.weapons[rpgWeapon.id] = rpgWeapon;
-                    }
+        // Sync weapons from inventory service
+        const weapons = inventoryService.getWeapons();
+        weapons.forEach(weapon => {
+            if (weapon.owned > 0) {
+                const rpgWeapon = {
+                    id: `weapon_${weapon.id}`,
+                    name: weapon.name,
+                    type: 'weapon',
+                    slot: 'primary',
+                    weight: weapon.weight || 5,
+                    value: weapon.cost || 1000,
+                    stats: {
+                        damage: weapon.damage || 10
+                    },
+                    quantity: weapon.owned
+                };
+
+                const rpgConfig = this.getRPGConfig();
+                if (rpgConfig.items && !rpgConfig.items.weapons[rpgWeapon.id]) {
+                    rpgConfig.items.weapons[rpgWeapon.id] = rpgWeapon;
                 }
-            });
-        }
+            }
+        });
 
-        // Sync equipment
-        if (game.equipment) {
-            game.equipment.forEach(item => {
-                if (item.owned > 0) {
-                    const itemType = item.protection ? 'armor' : 'consumables';
-                    const rpgItem = {
-                        id: `${itemType}_${item.id}`,
-                        name: item.name,
-                        type: itemType,
-                        slot: item.protection ? 'armor' : null,
-                        weight: item.weight || 3,
-                        value: item.cost || 500,
-                        stats: {},
-                        quantity: item.owned
-                    };
+        // Sync equipment from inventory service
+        const equipment = inventoryService.getEquipment();
+        equipment.forEach(item => {
+            if (item.owned > 0) {
+                const itemType = item.protection ? 'armor' : 'consumables';
+                const rpgItem = {
+                    id: `${itemType}_${item.id}`,
+                    name: item.name,
+                    type: itemType,
+                    slot: item.protection ? 'armor' : null,
+                    weight: item.weight || 3,
+                    value: item.cost || 500,
+                    stats: {},
+                    quantity: item.owned
+                };
 
-                    if (item.protection) rpgItem.stats.defense = item.protection;
-                    if (item.hackBonus) rpgItem.stats.hackBonus = item.hackBonus;
-                    if (item.stealthBonus) rpgItem.stats.stealthBonus = item.stealthBonus;
+                if (item.protection) rpgItem.stats.defense = item.protection;
+                if (item.hackBonus) rpgItem.stats.hackBonus = item.hackBonus;
+                if (item.stealthBonus) rpgItem.stats.stealthBonus = item.stealthBonus;
 
-                    const rpgConfig = this.getRPGConfig();
-                    if (rpgConfig.items && !rpgConfig.items[itemType][rpgItem.id]) {
-                        rpgConfig.items[itemType][rpgItem.id] = rpgItem;
-                    }
+                const rpgConfig = this.getRPGConfig();
+                if (rpgConfig.items && !rpgConfig.items[itemType][rpgItem.id]) {
+                    rpgConfig.items[itemType][rpgItem.id] = rpgItem;
                 }
-            });
-        }
+            }
+        });
 
         // Sync loadouts to inventories
-        this.syncLoadouts(game);
+        this.syncLoadouts();
     }
 
     /**
      * Sync agent loadouts with RPG inventories
-     * @param {Object} game - Game instance
      */
-    syncLoadouts(game) {
-        if (!game.agentLoadouts || !this.inventoryManager) return;
+    syncLoadouts() {
+        if (!this.inventoryManager) return;
 
-        const agentsToSync = game.activeAgents || game.agents || [];
+        // Get data from services
+        const agentService = window.GameServices?.agentService;
+        const inventoryService = window.GameServices?.inventoryService;
+        if (!agentService || !inventoryService) return;
+
+        const agentsToSync = agentService.getActiveAgents();
 
         agentsToSync.forEach(agent => {
             const agentId = agent.id || agent.name;
             // Try to get loadout by original ID first (for mission agents), then by current ID
             const loadoutId = agent.originalId || agent.name || agentId;
-            const loadout = game.agentLoadouts[loadoutId];
+            const loadout = inventoryService.getAgentLoadout(loadoutId);
 
             let inventory = this.inventoryManager.getInventory(agentId);
             if (!inventory) {
@@ -216,7 +211,7 @@ class RPGService {
 
                 // Sync equipped weapon
                 if (loadout.weapon) {
-                    const weapon = game.getItemById('weapon', loadout.weapon);
+                    const weapon = inventoryService.getItemById('weapon', loadout.weapon);
                     if (weapon) {
                         const rpgWeaponId = `weapon_${loadout.weapon}`;
                         const rpgConfig = this.getRPGConfig();
@@ -237,7 +232,7 @@ class RPGService {
 
                 // Sync equipped armor
                 if (loadout.armor) {
-                    const armor = game.getItemById('armor', loadout.armor);
+                    const armor = inventoryService.getItemById('armor', loadout.armor);
                     if (armor) {
                         const rpgArmorId = `armor_${loadout.armor}`;
                         const rpgConfig = this.getRPGConfig();
@@ -258,7 +253,7 @@ class RPGService {
 
                 // Sync utility items
                 if (loadout.utility) {
-                    const utility = game.getItemById('equipment', loadout.utility);
+                    const utility = inventoryService.getItemById('equipment', loadout.utility);
                     if (utility) {
                         const rpgUtilityId = `consumables_${loadout.utility}`;
                         const rpgConfig = this.getRPGConfig();

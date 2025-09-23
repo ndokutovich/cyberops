@@ -86,8 +86,8 @@ class ContentLoader {
         if (logger) logger.info('✅ RPG_CONFIG set globally');
 
         // Also inject into services for proper architecture
-        if (game.gameServices?.rpgService) {
-            game.gameServices.rpgService.setConfig(this.currentCampaign.rpgConfig);
+        if (window.GameServices?.rpgService) {
+            window.GameServices.rpgService.setConfig(this.currentCampaign.rpgConfig);
         }
 
         // Make config available to RPG systems
@@ -107,18 +107,21 @@ class ContentLoader {
 
         if (logger) logger.debug(`👥 Loading ${this.currentCampaign.agents.length} agents...`);
 
-        // Clear existing agents
-        game.availableAgents = [];
-        game.activeAgents = [];
+        // Load agents into service
+        const agentService = window.GameServices?.agentService;
+        if (agentService) {
+            // Clear existing agents
+            agentService.clearAllAgents();
 
-        // Load campaign agents
-        this.currentCampaign.agents.forEach(agentData => {
-            const agent = this.createAgentFromData(agentData);
-            game.availableAgents.push(agent);
-        });
+            // Load campaign agents
+            this.currentCampaign.agents.forEach(agentData => {
+                const agent = this.createAgentFromData(agentData);
+                agentService.addAvailableAgent(agent);
+            });
 
-        // Store for reference
-        this.contentCache.set('agents', game.availableAgents);
+            // Store for reference
+            this.contentCache.set('agents', agentService.getAvailableAgents());
+        }
     }
 
     /**
@@ -166,27 +169,30 @@ class ContentLoader {
     loadEquipment(game) {
         if (logger) logger.debug('🔫 Loading equipment...');
 
-        // Load weapons
-        if (this.currentCampaign.weapons) {
-            game.weapons = this.currentCampaign.weapons.map(w => ({
-                ...w,
-                owned: w.owned || 0,
-                equipped: w.equipped || 0
-            }));
-        }
+        const inventoryService = window.GameServices?.inventoryService;
+        if (inventoryService) {
+            // Load weapons
+            if (this.currentCampaign.weapons) {
+                const weapons = this.currentCampaign.weapons.map(w => ({
+                    ...w,
+                    owned: w.owned || 0,
+                    equipped: w.equipped || 0
+                }));
+                inventoryService.initialize({ weapons });
+                this.contentCache.set('weapons', weapons);
+            }
 
-        // Load equipment
-        if (this.currentCampaign.equipment) {
-            game.equipment = this.currentCampaign.equipment.map(e => ({
-                ...e,
-                owned: e.owned || 0,
-                equipped: e.equipped || 0
-            }));
+            // Load equipment
+            if (this.currentCampaign.equipment) {
+                const equipment = this.currentCampaign.equipment.map(e => ({
+                    ...e,
+                    owned: e.owned || 0,
+                    equipped: e.equipped || 0
+                }));
+                inventoryService.initialize({ equipment });
+                this.contentCache.set('equipment', equipment);
+            }
         }
-
-        // Store for reference
-        this.contentCache.set('weapons', game.weapons);
-        this.contentCache.set('equipment', game.equipment);
     }
 
     /**
@@ -234,8 +240,13 @@ class ContentLoader {
 
         if (logger) logger.debug('💰 Loading economy configuration...');
 
-        game.credits = economy.startingCredits || 5000;
-        game.researchPoints = economy.startingResearchPoints || 100;
+        const resourceService = window.GameServices?.resourceService;
+        if (resourceService) {
+            resourceService.setCredits(economy.startingCredits || 5000);
+            resourceService.setResearchPoints(economy.startingResearchPoints || 100);
+        }
+
+        // These can stay as game properties since they're config, not state
         game.sellValueMultiplier = economy.sellValueMultiplier || 0.5;
         game.repairCostMultiplier = economy.repairCostMultiplier || 0.3;
 
@@ -287,9 +298,9 @@ class ContentLoader {
         this.contentCache.set('combat', combat);
 
         // Update formula service if exists
-        if (game.gameServices?.formulaService) {
-            game.gameServices.formulaService.setFormulas(this.formulas);
-            game.gameServices.formulaService.setCombatConfig(combat);
+        if (window.GameServices?.formulaService) {
+            window.GameServices.formulaService.setFormulas(this.formulas);
+            window.GameServices.formulaService.setCombatConfig(combat);
         }
     }
 
@@ -426,8 +437,8 @@ class ContentLoader {
         if (logger) logger.debug('📈 Loading progression system...');
 
         // Load research tree
-        if (progression.researchTree && game.gameServices?.researchService) {
-            game.gameServices.researchService.loadTree(progression.researchTree);
+        if (progression.researchTree && window.GameServices?.researchService) {
+            window.GameServices.researchService.loadTree(progression.researchTree);
         }
 
         // Load unlock schedule

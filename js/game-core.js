@@ -506,6 +506,59 @@ Object.defineProperty(CyberOpsGame.prototype, 'worldControl', {
     configurable: true
 });
 
+// Inventory-related properties that delegate to InventoryService
+Object.defineProperty(CyberOpsGame.prototype, 'weapons', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.inventoryService) return [];
+        return this.gameServices.inventoryService.getWeapons();
+    },
+    set: function(value) {
+        if (!this.gameServices || !this.gameServices.inventoryService) return;
+        // For bulk assignment during initialization
+        if (Array.isArray(value)) {
+            this.gameServices.inventoryService.inventory.weapons = value;
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'equipment', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.inventoryService) return [];
+        return this.gameServices.inventoryService.getEquipment();
+    },
+    set: function(value) {
+        if (!this.gameServices || !this.gameServices.inventoryService) return;
+        // For bulk assignment during initialization
+        if (Array.isArray(value)) {
+            // Split equipment into armor and utility
+            const armor = value.filter(e => e.type === 'armor');
+            const utility = value.filter(e => e.type !== 'armor');
+            this.gameServices.inventoryService.inventory.armor = armor;
+            this.gameServices.inventoryService.inventory.utility = utility;
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'agentLoadouts', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.inventoryService) return {};
+        return this.gameServices.inventoryService.getAllLoadouts();
+    },
+    set: function(value) {
+        if (!this.gameServices || !this.gameServices.inventoryService) return;
+        // For bulk assignment
+        if (typeof value === 'object') {
+            this.gameServices.inventoryService.agentLoadouts = value;
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
 Object.defineProperty(CyberOpsGame.prototype, 'availableAgents', {
     get: function() {
         if (!this.gameServices || !this.gameServices.agentService) return [];

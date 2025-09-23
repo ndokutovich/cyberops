@@ -679,11 +679,7 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
     }
 
     // Add credits via ResourceService
-    if (this.gameServices && this.gameServices.resourceService) {
-        this.gameServices.resourceService.add('credits', result.price, `sold ${result.itemName}`);
-    } else {
-        this.credits += result.price; // Fallback
-    }
+    this.gameServices.resourceService.add('credits', result.price, `sold ${result.itemName}`);
 
     // Sync weapons back
     if (this.gameServices && this.gameServices.inventoryService) {
@@ -737,11 +733,7 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
                     }
 
                     // Add credits from sale
-                    if (this.gameServices?.resourceService) {
-                        this.gameServices.resourceService.add('credits', finalSellPrice, `sold ${item.name}`);
-                    } else {
-                        this.credits = creditsBefore + finalSellPrice;
-                    }
+                    this.gameServices.resourceService.add('credits', finalSellPrice, `sold ${item.name}`);
 
                     if (this.logger) this.logger.debug('Item count after:', item.owned);
                     if (this.logger) this.logger.debug('Credits after sell:', this.credits);
@@ -849,7 +841,7 @@ CyberOpsGame.prototype.buyItem = function(type, itemId) {
     }
 
     // Check affordability
-    const currentCredits = this.gameServices?.resourceService?.get('credits') || this.credits;
+    const currentCredits = this.gameServices.resourceService.get('credits');
     if (currentCredits < itemData.cost) {
         this.showHudDialog(
             '❌ INSUFFICIENT FUNDS',
@@ -882,7 +874,7 @@ CyberOpsGame.prototype.buyItem = function(type, itemId) {
 CyberOpsGame.prototype.showSellDialog = function() {
     let html = '<div style="max-height: 400px; overflow-y: auto;">';
     html += '<h3 style="color: #ff6600; margin-bottom: 15px;">💰 SELL ITEMS</h3>';
-    const currentCredits = this.gameServices?.resourceService?.get('credits') || this.credits;
+    const currentCredits = this.gameServices.resourceService.get('credits');
     html += `<div style="color: #ffa500; margin-bottom: 20px;">Credits: ${currentCredits}</div>`;
 
     // Get all sellable items
@@ -966,7 +958,7 @@ CyberOpsGame.prototype.showSellDialog = function() {
 CyberOpsGame.prototype.showShopDialog = function() {
     let html = '<div style="max-height: 400px; overflow-y: auto;">';
     html += '<h3 style="color: #00ff00; margin-bottom: 15px;">🛒 WEAPON & EQUIPMENT SHOP</h3>';
-    const currentCredits = this.gameServices?.resourceService?.get('credits') || this.credits;
+    const currentCredits = this.gameServices.resourceService.get('credits');
     html += `<div style="color: #ffa500; margin-bottom: 20px;">Credits: ${currentCredits}</div>`;
 
     // Get all available items
@@ -1002,7 +994,7 @@ CyberOpsGame.prototype.showShopDialog = function() {
         html += `<h4 style="color: #00ffff; margin: 15px 0 10px;">${category}</h4>`;
 
         categories[category].forEach(item => {
-            const canAfford = (this.gameServices?.resourceService?.canAfford('credits', item.cost)) || (this.credits >= item.cost);
+            const canAfford = this.gameServices.resourceService.canAfford('credits', item.cost);
             const owned = item.owned || 0;
 
             html += `
@@ -1286,7 +1278,7 @@ CyberOpsGame.prototype.saveLoadouts = function() {
 // Update credits display
 CyberOpsGame.prototype.updateCreditsDisplay = function() {
     const creditsEl = document.getElementById('equipCredits');
-    const currentCredits = this.gameServices?.resourceService?.get('credits') || this.credits;
+    const currentCredits = this.gameServices.resourceService.get('credits');
     if (creditsEl) creditsEl.textContent = currentCredits.toLocaleString();
 
     // Calculate inventory value
@@ -1388,7 +1380,7 @@ CyberOpsGame.prototype.showShopInterface = function() {
     }
 
     allItems.forEach(item => {
-        const canAfford = (this.gameServices?.resourceService?.canAfford('credits', item.cost)) || (this.credits >= item.cost);
+        const canAfford = this.gameServices.resourceService.canAfford('credits', item.cost);
 
         const itemDiv = document.createElement('div');
         itemDiv.style.cssText = `
@@ -1429,7 +1421,7 @@ CyberOpsGame.prototype.showShopInterface = function() {
 // Buy item from shop
 CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
     // ONLY use InventoryService - no fallback
-    const inventoryService = this.gameServices?.inventoryService;
+    const inventoryService = this.gameServices.inventoryService;
     if (!inventoryService) {
         if (this.logger) this.logger.error('❌ InventoryService is required!');
         return;
@@ -1460,7 +1452,7 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
     }
 
     // Check affordability
-    const canAfford = this.gameServices?.resourceService?.canAfford('credits', itemData.cost) || this.credits >= itemData.cost;
+    const canAfford = this.gameServices.resourceService.canAfford('credits', itemData.cost);
     if (!canAfford) {
         return;
     }
@@ -1470,11 +1462,7 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
 
     if (result.success) {
         // Deduct credits via ResourceService
-        if (this.gameServices && this.gameServices.resourceService) {
-            this.gameServices.resourceService.spend('credits', itemData.cost, `bought ${itemData.name}`);
-        } else {
-            this.credits -= itemData.cost; // Fallback
-        }
+        this.gameServices.resourceService.spend('credits', itemData.cost, `bought ${itemData.name}`);
 
         // Sync inventory back
         if (type === 'weapon') {

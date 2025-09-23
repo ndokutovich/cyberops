@@ -99,16 +99,20 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
                 }
             }
 
-            // Load weapons
-            if (content.weapons) {
-                this.weapons = content.weapons;
-                if (this.logger) this.logger.info(`✅ Loaded ${content.weapons.length} weapons`);
+            // Load weapons into InventoryService
+            if (content.weapons && this.gameServices.inventoryService) {
+                this.gameServices.inventoryService.initialize({
+                    weapons: content.weapons
+                });
+                if (this.logger) this.logger.info(`✅ Loaded ${content.weapons.length} weapons into InventoryService`);
             }
 
-            // Load equipment
-            if (content.equipment) {
-                this.equipment = content.equipment;
-                if (this.logger) this.logger.info(`✅ Loaded ${content.equipment.length} equipment items`);
+            // Load equipment into InventoryService
+            if (content.equipment && this.gameServices.inventoryService) {
+                this.gameServices.inventoryService.initialize({
+                    equipment: content.equipment
+                });
+                if (this.logger) this.logger.info(`✅ Loaded ${content.equipment.length} equipment items into InventoryService`);
             }
 
             // Store enemy types for mission spawning

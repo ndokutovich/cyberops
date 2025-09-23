@@ -168,6 +168,34 @@ class AgentService {
     }
 
     /**
+     * Clear all agents from all lists
+     */
+    clearAllAgents() {
+        this.activeAgents = [];
+        this.availableAgents = [];
+        this.fallenAgents = [];
+        if (this.logger) this.logger.info('🗑️ Cleared all agents');
+    }
+
+    /**
+     * Add an available agent
+     * @param {Object} agent - Agent to add
+     */
+    addAvailableAgent(agent) {
+        if (!agent) return false;
+
+        // Ensure agent has required properties
+        agent.hired = agent.hired || false;
+        agent.alive = agent.alive !== false;
+        agent.health = agent.health || agent.maxHealth || 100;
+        agent.maxHealth = agent.maxHealth || agent.health || 100;
+
+        this.availableAgents.push(agent);
+        if (this.logger) this.logger.debug(`➕ Added available agent: ${agent.name}`);
+        return true;
+    }
+
+    /**
      * Get fallen agents
      */
     getFallenAgents() {

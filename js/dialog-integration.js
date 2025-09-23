@@ -644,77 +644,11 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             }
         }
 
-        // Ensure we have arrays for weapons and equipment
-        if (!this.weapons) this.weapons = [];
-        if (!this.equipment) this.equipment = [];
-        if (!this.activeAgents) this.activeAgents = [];
+        // Properties are handled by getters/setters that route to services
+        // No need to initialize empty arrays
 
-        // Re-sync InventoryService with current equipment and weapons to ensure it has latest data
-        if (this.gameServices && this.gameServices.inventoryService) {
-            const logger = window.getLogger ? window.getLogger('DialogIntegration') : null;
-            if (logger) logger.debug('Re-syncing InventoryService with equipment and weapons data');
-
-            // Sync weapons - always ensure InventoryService has the weapons
-            if (this.weapons && this.weapons.length > 0) {
-                // If InventoryService has no weapons, populate it
-                if (this.gameServices.inventoryService.inventory.weapons.length === 0) {
-                    this.gameServices.inventoryService.inventory.weapons = this.weapons.map(w => ({
-                        ...w,
-                        equipped: w.equipped || 0
-                    }));
-                    if (logger) logger.debug(`Synced ${this.weapons.length} weapons to InventoryService`);
-                }
-            }
-
-            // Only re-sync equipment if not already synced (to avoid clearing existing data)
-            const needsEquipmentSync = this.equipment && this.equipment.length > 0 &&
-                                      (this.gameServices.inventoryService.inventory.armor.length === 0 &&
-                                       this.gameServices.inventoryService.inventory.utility.length === 0);
-
-            // Sync equipment if needed
-            if (needsEquipmentSync) {
-                // Clear arrays only if we're going to populate them
-                this.gameServices.inventoryService.inventory.armor = [];
-                this.gameServices.inventoryService.inventory.utility = [];
-
-                // Re-import equipment with proper categorization
-                this.equipment.forEach(item => {
-                    let category = null;
-                    if (item.protection || item.defense) {
-                        category = 'armor';
-                    } else {
-                        category = 'utility';
-                    }
-
-                    if (category) {
-                        this.gameServices.inventoryService.inventory[category].push({
-                            ...item,
-                            owned: item.owned || 1,
-                            equipped: item.equipped || 0
-                        });
-                    }
-                });
-
-                if (logger) {
-                    const armor = this.gameServices.inventoryService.inventory.armor.length;
-                    const utility = this.gameServices.inventoryService.inventory.utility.length;
-                    logger.info(`Equipment synced: ${armor} armor, ${utility} utility items`);
-                }
-            }
-
-            // Sync weapons back from InventoryService only if they exist there
-            // Don't overwrite this.weapons if InventoryService has no weapons
-            if (this.gameServices.inventoryService.inventory.weapons.length > 0) {
-                this.weapons = this.gameServices.inventoryService.inventory.weapons;
-            } else if (this.weapons && this.weapons.length > 0) {
-                // If InventoryService has no weapons but game has them, sync to InventoryService
-                this.gameServices.inventoryService.inventory.weapons = this.weapons.map(w => ({
-                    ...w,
-                    equipped: w.equipped || 0
-                }));
-                if (logger) logger.debug(`Synced ${this.weapons.length} weapons to InventoryService`);
-            }
-        }
+        // Services are the single source of truth
+        // The getters will return service data, no syncing needed
 
         // In mission context, populate activeAgents from mission agents
         if (this.currentScreen === 'game' && this.agents && this.agents.length > 0) {

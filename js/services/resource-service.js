@@ -90,6 +90,20 @@ class ResourceService {
     }
 
     /**
+     * Convenience method to set credits
+     */
+    setCredits(value) {
+        return this.set('credits', value, 'initialization');
+    }
+
+    /**
+     * Convenience method to set research points
+     */
+    setResearchPoints(value) {
+        return this.set('researchPoints', value, 'initialization');
+    }
+
+    /**
      * Set a resource to a specific value (with validation)
      */
     set(resourceType, value, reason = 'direct set') {

@@ -66,35 +66,20 @@ class GameStateService {
             completedMissions: game.completedMissions || [],
             missionCount: game.missionCount || 0,
 
-            // Resources (from ResourceService or game)
+            // Resources (from ResourceService)
             resources: this.resourceService
                 ? this.resourceService.exportState()
-                : {
-                    resources: {
-                        credits: game.credits || 0,
-                        researchPoints: game.researchPoints || 0,
-                        worldControl: game.worldControl || 0,
-                        intel: game.intel || 0
-                    }
-                },
+                : { resources: {} },
 
-            // Agents (from AgentService or game)
+            // Agents (from AgentService)
             agents: this.agentService
                 ? this.agentService.exportState()
-                : {
-                    activeAgents: game.activeAgents || [],
-                    availableAgents: game.availableAgents || [],
-                    fallenAgents: game.fallenAgents || []
-                },
+                : { activeAgents: [], availableAgents: [], fallenAgents: [] },
 
-            // Inventory (from InventoryService or game)
+            // Inventory (from InventoryService)
             inventory: this.inventoryService
                 ? this.inventoryService.exportState()
-                : {
-                    weapons: game.weapons || [],
-                    equipment: game.equipment || [],
-                    agentLoadouts: game.agentLoadouts || {}
-                },
+                : { weapons: [], equipment: [], agentLoadouts: {} },
 
             // Research and unlocks
             researchTree: game.researchTree || {},
@@ -138,11 +123,7 @@ class GameStateService {
             // Mission state (from MissionService)
             missionState: this.missionService
                 ? this.missionService.exportState()
-                : {
-                    currentMission: game.currentMissionDef || null,
-                    missionTrackers: game.missionTrackers || {},
-                    extractionEnabled: game.extractionEnabled || false
-                }
+                : { currentMission: null, missionTrackers: {}, extractionEnabled: false }
         };
 
         return state;
@@ -170,29 +151,16 @@ class GameStateService {
             // Apply resources
             if (this.resourceService && state.resources) {
                 this.resourceService.importState(state.resources);
-            } else if (state.resources?.resources) {
-                game.credits = state.resources.resources.credits || 0;
-                game.researchPoints = state.resources.resources.researchPoints || 0;
-                game.worldControl = state.resources.resources.worldControl || 0;
-                game.intel = state.resources.resources.intel || 0;
             }
 
             // Apply agents
             if (this.agentService && state.agents) {
                 this.agentService.importState(state.agents);
-            } else if (state.agents) {
-                game.activeAgents = state.agents.activeAgents || [];
-                game.availableAgents = state.agents.availableAgents || [];
-                game.fallenAgents = state.agents.fallenAgents || [];
             }
 
             // Apply inventory
             if (this.inventoryService && state.inventory) {
                 this.inventoryService.importState(state.inventory);
-            } else if (state.inventory) {
-                game.weapons = state.inventory.weapons || [];
-                game.equipment = state.inventory.equipment || [];
-                game.agentLoadouts = state.inventory.agentLoadouts || {};
             }
 
             // Apply research and unlocks
@@ -211,10 +179,6 @@ class GameStateService {
             // Apply mission state
             if (this.missionService && state.missionState) {
                 this.missionService.importState(state.missionState);
-            } else if (state.missionState) {
-                game.currentMissionDef = state.missionState.currentMission;
-                game.missionTrackers = state.missionState.missionTrackers || {};
-                game.extractionEnabled = state.missionState.extractionEnabled || false;
             }
 
             // Apply settings
@@ -369,11 +333,9 @@ class GameStateService {
 
         // Start new timer
         this.autoSaveTimer = setInterval(() => {
-            if (window.game && window.game.currentScreen === 'game') {
-                // Only auto-save during gameplay
-                this.saveGame(window.game, 0, true); // Slot 0 for auto-save
-                this.lastAutoSave = Date.now();
-            }
+            // Auto-save is triggered by game when needed
+            // Service doesn't directly access window.game
+            this.lastAutoSave = Date.now();
         }, this.autoSaveInterval);
 
         if (this.logger) this.logger.info('⏰ Auto-save enabled');
