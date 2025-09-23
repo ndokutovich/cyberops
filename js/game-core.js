@@ -43,6 +43,17 @@ class CyberOpsGame {
         // Initialize services FIRST before any properties that use them
         this.gameServices = window.GameServices;
 
+        // Initialize new architecture (GameEngine and GameFacade)
+        // This will gradually take over game functionality
+        if (window.GameController && window.GameEngine && window.GameFacade) {
+            if (this.logger) this.logger.info('🏗️ Initializing new architecture...');
+            this.gameController = new window.GameController(this);
+            this.useNewArchitecture = true;
+        } else {
+            if (this.logger) this.logger.warn('New architecture not available, using legacy mode');
+            this.useNewArchitecture = false;
+        }
+
         this.currentMissionIndex = 0; // TODO: Move to MissionService
         this.missionTimer = 0; // TODO: Move to MissionService
         this.selectedAgents = [];
@@ -82,7 +93,7 @@ class CyberOpsGame {
 
         // EARLY INITIALIZE: Initialize missions immediately in constructor
         this.missions = [];
-        if (logger) logger.info('🏗️ Early missions array initialized');
+        if (this.logger) this.logger.info('🏗️ Early missions array initialized');
 
         // Isometric Settings - will be overridden by campaign
         this.tileWidth = 64; // Default, overridden by campaign
@@ -90,7 +101,7 @@ class CyberOpsGame {
         this.cameraX = 0;
         this.cameraY = 0;
         this.zoom = 1;
-        if (logger) logger.info('🎥 Camera initialized:', { cameraX: this.cameraX, cameraY: this.cameraY, tileWidth: this.tileWidth, tileHeight: this.tileHeight });
+        if (this.logger) this.logger.info('🎥 Camera initialized:', { cameraX: this.cameraX, cameraY: this.cameraY, tileWidth: this.tileWidth, tileHeight: this.tileHeight });
 
         // Input State
         this.touches = {};
@@ -128,11 +139,11 @@ class CyberOpsGame {
 
         // Track selectedAgent changes
         this._selectedAgent = null;
-        if (logger) logger.info('🏗️ Constructor: _selectedAgent initialized as null');
+        if (this.logger) this.logger.info('🏗️ Constructor: _selectedAgent initialized as null');
 
         // CRITICAL: Add protection against accidental clearing
         this.selectionProtection = true;
-        if (logger) logger.debug('🔧 selectionProtection set to:', this.selectionProtection);
+        if (this.logger) this.logger.debug('🔧 selectionProtection set to:', this.selectionProtection);
 
         // Visual effects will be initialized by visual effects system
 
@@ -169,71 +180,71 @@ class CyberOpsGame {
         this.initPathCache();
 
         // NOW CALL THE INITIALIZATION FUNCTIONS IN THE CONSTRUCTOR
-        if (logger) logger.debug('🔧 Initializing game systems...');
+        if (this.logger) this.logger.debug('🔧 Initializing game systems...');
 
         // Initialize hub first (agents, equipment, etc.)
-        if (logger) logger.debug('🏢 Setting up hub...');
+        if (this.logger) this.logger.debug('🏢 Setting up hub...');
         this.initializeHub();
 
         // Initialize mission system (required)
-        if (logger) logger.debug('🆕 Initializing mission system...');
+        if (this.logger) this.logger.debug('🆕 Initializing mission system...');
         if (this.initMissions) {
             this.initMissions();
         }
 
         // Initialize screen music system
-        if (logger) logger.debug('🎵 Initializing screen music system...');
+        if (this.logger) this.logger.debug('🎵 Initializing screen music system...');
         if (this.initScreenMusicSystem) {
             this.initScreenMusicSystem();
         }
 
         // Initialize visual effects system
-        if (logger) logger.debug('🎨 Initializing visual effects system...');
+        if (this.logger) this.logger.debug('🎨 Initializing visual effects system...');
         if (this.initVisualEffects) {
             this.initVisualEffects();
         }
 
-        if (logger) logger.info('✅ All systems initialized');
+        if (this.logger) this.logger.info('✅ All systems initialized');
 
         // Initialize services with default data
         this.initializeServices();
 
         // Initialize equipment system
-        if (logger) logger.debug('🔧 Initializing equipment system...');
+        if (this.logger) this.logger.debug('🔧 Initializing equipment system...');
         if (this.initializeEquipmentSystem) {
             this.initializeEquipmentSystem();
-            if (logger) logger.info('✅ Equipment system initialized');
+            if (this.logger) this.logger.info('✅ Equipment system initialized');
         }
 
         // Initialize 3D system - check if Three.js is loaded
-        if (logger) logger.debug('🔍 Checking Three.js availability...');
-        if (logger) logger.debug('- window.THREE exists:', !!window.THREE);
-        if (logger) logger.debug('- typeof THREE:', typeof THREE);
+        if (this.logger) this.logger.debug('🔍 Checking Three.js availability...');
+        if (this.logger) this.logger.debug('- window.THREE exists:', !!window.THREE);
+        if (this.logger) this.logger.debug('- typeof THREE:', typeof THREE);
 
         try {
-            if (logger) logger.debug('🚀 About to call init3D()...');
+            if (this.logger) this.logger.debug('🚀 About to call init3D()...');
             this.init3D();
-            if (logger) logger.info('✅ init3D() call completed');
+            if (this.logger) this.logger.info('✅ init3D() call completed');
         } catch (error) {
-            if (logger) logger.error('💥 ERROR in init3D():', error);
-            if (logger) logger.error('Stack trace:', error.stack);
+            if (this.logger) this.logger.error('💥 ERROR in init3D():', error);
+            if (this.logger) this.logger.error('Stack trace:', error.stack);
         }
 
-        if (logger) logger.info('🏗️ Constructor completed - checking key data:');
-        if (logger) logger.debug('- missions:', this.missions ? this.missions.length : 'undefined');
-        if (logger) logger.debug('- activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
-        if (logger) logger.info('- completedMissions:', this.completedMissions ? this.completedMissions.length : 'undefined');
+        if (this.logger) this.logger.info('🏗️ Constructor completed - checking key data:');
+        if (this.logger) this.logger.debug('- missions:', this.missions ? this.missions.length : 'undefined');
+        if (this.logger) this.logger.debug('- activeAgents:', this.activeAgents ? this.activeAgents.length : 'undefined');
+        if (this.logger) this.logger.info('- completedMissions:', this.completedMissions ? this.completedMissions.length : 'undefined');
 
         // CRITICAL CHECK: Make sure missions are really defined
         if (!this.missions) {
-            if (logger) logger.error('🚨 CRITICAL ERROR: Constructor finished but this.missions is STILL undefined!');
-            if (logger) logger.debug('🔧 Force calling initializeHub() again as emergency fix...');
+            if (this.logger) this.logger.error('🚨 CRITICAL ERROR: Constructor finished but this.missions is STILL undefined!');
+            if (this.logger) this.logger.debug('🔧 Force calling initializeHub() again as emergency fix...');
             this.initializeHub();
         }
     }
 
     initializeCanvasAndState() {
-        if (logger) logger.debug('🎨 Initializing canvas and game state');
+        if (this.logger) this.logger.debug('🎨 Initializing canvas and game state');
 
         // Isometric Settings - already set above
         // this.tileWidth and this.tileHeight already initialized
@@ -270,12 +281,12 @@ class CyberOpsGame {
             setTimeout(() => this.resizeCanvas(), 100);
         });
 
-        if (logger) logger.info('✅ Canvas and game state initialized');
+        if (this.logger) this.logger.info('✅ Canvas and game state initialized');
     }
 
     initializeAudio() {
         // Audio initialization now handled by game-audio.js and music systems
-        if (logger) logger.debug('🎵 Audio initialization delegated to modular systems');
+        if (this.logger) this.logger.debug('🎵 Audio initialization delegated to modular systems');
     }
 } // Close the CyberOpsGame class
 
