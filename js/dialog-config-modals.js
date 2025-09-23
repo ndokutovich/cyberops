@@ -8,6 +8,11 @@
     // Get the dialog config object
     const dialogConfig = window.DIALOG_CONFIG || {};
 
+    // Ensure states object exists
+    if (!dialogConfig.states) {
+        dialogConfig.states = {};
+    }
+
     // ========== CONFIRMATION MODALS ==========
 
     // Return to Hub Confirmation (from pause menu)

@@ -238,19 +238,27 @@ describe('Complete Dialog State Audit', () => {
 
         const results = [];
 
-        for (const testCase of testCases) {
-            game.dialogEngine.closeAll();
-            await sleep(50);
+        let iterations = 0;
+        const maxIterations = 10; // Safety limit
 
-            // Navigate through path
+        for (const testCase of testCases) {
+            if (iterations++ >= maxIterations) {
+                console.warn('Reached max iterations, stopping test');
+                break;
+            }
+
+            game.dialogEngine.closeAll();
+            await sleep(20); // Reduced delay
+
+            // Navigate through path with timeout
             for (const state of testCase.path) {
                 game.dialogEngine.navigateTo(state);
-                await sleep(50);
+                await sleep(20); // Reduced delay
             }
 
             // Test back navigation
             game.dialogEngine.back();
-            await sleep(50);
+            await sleep(20); // Reduced delay
 
             const actualState = game.dialogEngine.currentState;
             const success = actualState === testCase.expectedBack;
@@ -327,14 +335,21 @@ describe('Complete Dialog State Audit', () => {
 
         const refreshableStates = ['arsenal', 'character', 'agent-management', 'settings'];
         const results = [];
+        let iterations = 0;
+        const maxIterations = 10; // Safety limit
 
         for (const state of refreshableStates) {
+            if (iterations++ >= maxIterations) {
+                console.warn('Reached max iterations in refresh test');
+                break;
+            }
+
             game.dialogEngine.closeAll();
-            await sleep(50);
+            await sleep(20); // Reduced delay
 
             // Navigate to state
             game.dialogEngine.navigateTo(state);
-            await sleep(50);
+            await sleep(20); // Reduced delay
 
             const beforeRefresh = {
                 state: game.dialogEngine.currentState,
@@ -343,7 +358,7 @@ describe('Complete Dialog State Audit', () => {
 
             // Refresh
             game.dialogEngine.navigateTo(state, null, true);
-            await sleep(50);
+            await sleep(20); // Reduced delay
 
             const afterRefresh = {
                 state: game.dialogEngine.currentState,

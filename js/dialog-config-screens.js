@@ -8,6 +8,11 @@
     // Get the dialog config object
     const dialogConfig = window.DIALOG_CONFIG || {};
 
+    // Ensure states object exists
+    if (!dialogConfig.states) {
+        dialogConfig.states = {};
+    }
+
     // ========== VICTORY/DEFEAT SCREENS (INTERMISSION) ==========
 
     // Victory Screen (Mission Complete)

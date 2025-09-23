@@ -723,10 +723,8 @@ const DIALOG_CONFIG = {
 // Make config globally available
 window.DIALOG_CONFIG = DIALOG_CONFIG;
 
-// Initialize the engine with config when ready
-if (window.declarativeDialogEngine) {
-    window.declarativeDialogEngine.initialize(DIALOG_CONFIG);
-}
+// Don't auto-initialize - let it happen after all configs are loaded
+// The engine will be initialized in dialog-integration.js or manually
 
 // Export for module usage
 if (typeof module !== 'undefined' && module.exports) {

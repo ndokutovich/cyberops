@@ -360,12 +360,23 @@
     // Register when dialog engine is ready
     if (window.declarativeDialogEngine) {
         registerAdditionalIntegrations();
+
+        // Final initialization with complete config after all files loaded
+        if (window.DIALOG_CONFIG && window.declarativeDialogEngine) {
+            // Re-initialize to ensure all states from all config files are included
+            window.declarativeDialogEngine.initialize(window.DIALOG_CONFIG);
+        }
     } else {
         // Wait for engine to be initialized
         const checkInterval = setInterval(() => {
             if (window.declarativeDialogEngine) {
                 clearInterval(checkInterval);
                 registerAdditionalIntegrations();
+
+                // Final initialization with complete config
+                if (window.DIALOG_CONFIG) {
+                    window.declarativeDialogEngine.initialize(window.DIALOG_CONFIG);
+                }
             }
         }, 100);
     }

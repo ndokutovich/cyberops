@@ -65,8 +65,8 @@ class DeclarativeDialogEngine {
 
         // Validate each state
         for (const [stateId, state] of Object.entries(config.states)) {
-            if (!state.type || !state.level) {
-                if (this.logger) this.logger.error(`State ${stateId} missing required fields`);
+            if (!state.type || (state.level === undefined || state.level === null)) {
+                if (this.logger) this.logger.error(`State ${stateId} missing required fields (type: ${state.type}, level: ${state.level})`);
                 return false;
             }
 

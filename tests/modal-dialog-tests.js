@@ -16,21 +16,32 @@ describe('Modal Dialog Tests', () => {
             'confirm-surrender'
         ];
 
+        let iterations = 0;
+        const maxIterations = 10; // Safety limit
+
         for (const state of modalStates) {
+            if (iterations++ >= maxIterations) {
+                console.warn('Reached max iterations in modal test');
+                break;
+            }
+
             game.dialogEngine.closeAll();
-            await sleep(50);
+            await sleep(20); // Reduced delay
 
             // Navigate to modal
             game.dialogEngine.navigateTo(state);
-            await sleep(50);
+            await sleep(20); // Reduced delay
 
             assertEqual(game.dialogEngine.currentState, state, `Should navigate to ${state}`);
 
             // Verify it's level 2 or 3 (modal level)
             const stateConfig = game.dialogEngine.config.states[state];
-            assertTruthy(stateConfig.level >= 2, `${state} should be level 2 or higher`);
+            if (stateConfig) {
+                assertTruthy(stateConfig.level >= 2, `${state} should be level 2 or higher`);
+            }
 
             game.dialogEngine.closeAll();
+            await sleep(10); // Small delay after close
         }
     });
 

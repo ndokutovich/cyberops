@@ -262,6 +262,8 @@
     <script src="js/services/formula-service.js"></script>
     <script src="js/services/resource-service.js"></script>
     <script src="js/services/agent-service.js"></script>
+    <script src="js/services/mission-service.js"></script>
+    <script src="js/services/game-state-service.js"></script>
     <script src="js/services/research-service.js"></script>
     <script src="js/services/equipment-service.js"></script>
     <script src="js/services/inventory-service.js"></script>
@@ -292,6 +294,9 @@
     <script src="js/game-npc.js"></script>
     <script src="js/game-settings.js"></script>
     <script src="js/game-equipment.js"></script>
+    <script src="js/game-rpg-system.js"></script>
+    <script src="js/game-rpg-integration.js"></script>
+    <script src="js/game-rpg-ui.js"></script>
     <script src="js/campaign-integration.js"></script>
     <script src="js/game-pathfinding.js"></script>
     <script src="js/game-teamcommands.js"></script>
@@ -422,6 +427,47 @@
                     logToOutput('💬 Dialog system initialized');
                 }
 
+                // Ensure dialogEngine is properly connected to game
+                if (!game.dialogEngine && window.declarativeDialogEngine) {
+                    game.dialogEngine = window.declarativeDialogEngine;
+                    logToOutput('🔗 Dialog engine connected to game');
+                }
+
+                // Double-check dialog engine is initialized with game reference
+                if (game.dialogEngine && !game.dialogEngine.game) {
+                    game.dialogEngine.game = game;
+                    logToOutput('🎮 Game reference set in dialog engine');
+                }
+
+                // Initialize dialog state stack if needed
+                if (game.dialogEngine && !game.dialogEngine.stateStack) {
+                    game.dialogEngine.stateStack = [];
+                    game.dialogEngine.currentState = null;
+                    logToOutput('📚 Dialog state stack initialized');
+                }
+
+                // Re-initialize dialog engine with complete config after all files loaded
+                if (game.dialogEngine && window.DIALOG_CONFIG) {
+                    game.dialogEngine.initialize(window.DIALOG_CONFIG);
+                    logToOutput('🔄 Dialog engine re-initialized with complete config');
+                }
+
+                // Ensure gameServices is properly connected
+                if (!game.gameServices && window.GameServices) {
+                    game.gameServices = window.GameServices;
+                    logToOutput('🔧 GameServices connected to game');
+
+                    // Initialize services with test data
+                    if (game.gameServices.resourceService) {
+                        game.gameServices.resourceService.initialize({
+                            credits: 10000,
+                            researchPoints: 100,
+                            worldControl: 0
+                        });
+                        logToOutput('💰 Resources initialized for tests');
+                    }
+                }
+
                 // Initialize screen manager
                 if (window.screenManager) {
                     window.screenManager.init(game);
@@ -429,7 +475,14 @@
                 }
 
                 // Initialize game but skip the initial screen
-                game.init();
+                // IMPORTANT: init() is async and loads campaign content
+                await game.init();
+
+                // Ensure campaign content is loaded (for tests that check agents)
+                if (game.loadCampaignContent && (!game.activeAgents || game.activeAgents.length === 0)) {
+                    logToOutput('📦 Loading campaign content for tests...');
+                    await game.loadCampaignContent('main');
+                }
 
                 // Set screen to hub for testing (do this BEFORE overriding showInitialScreen)
                 game.screen = 'hub';

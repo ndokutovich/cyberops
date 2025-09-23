@@ -46,7 +46,8 @@
       "Bash(then grep -l \"console\\.\\(log\\|warn\\|error\\)\" \"$file\")",
       "Bash(mv:*)",
       "Bash(python:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []
