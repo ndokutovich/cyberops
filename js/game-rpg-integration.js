@@ -80,15 +80,13 @@ CyberOpsGame.prototype.initRPGSystem = function() {
 // RPG Manager - Central management of RPG mechanics
 class RPGManager {
     constructor() {
-        this.logger = window.Logger ? new window.Logger("CyberOpsGame") : null;
+        this.logger = window.Logger ? new window.Logger("RPGManager") : null;
         this.config = null;
         this.entities = new Map(); // Track all RPG entities
         this.experienceTable = [];
+        this.levelUpCallbacks = []; // Callbacks for level up events
 
-        // Set rpgService first
-        this.rpgService = window.GameServices?.rpgService;
-
-        // Then generate experience table
+        // Generate experience table (no circular references)
         this.generateExperienceTable();
     }
 
@@ -98,14 +96,9 @@ class RPGManager {
     }
 
     generateExperienceTable() {
-        // Use RPGService experience table if available, otherwise generate default
-        if (this.rpgService && this.rpgService.experienceTable) {
-            this.experienceTable = this.rpgService.experienceTable;
-        } else {
-            // Generate default table
-            for (let level = 1; level <= 100; level++) {
-                this.experienceTable[level] = Math.floor(100 * Math.pow(1.5, level - 1));
-            }
+        // Generate default experience table
+        for (let level = 1; level <= 100; level++) {
+            this.experienceTable[level] = Math.floor(100 * Math.pow(1.5, level - 1));
         }
     }
 
@@ -408,15 +401,20 @@ class InventoryManager {
 
 // Shop Manager
 class ShopManager {
-    constructor() {
+    constructor(rpgManager = null, inventoryManager = null) {
         this.shops = new Map();
-        this.game = null; // Will be set when game initializes
+        this.rpgManager = rpgManager;
+        this.inventoryManager = inventoryManager;
+        this.rpgConfig = null;
+    }
+
+    setConfig(config) {
+        this.rpgConfig = config;
     }
 
     loadShops() {
         // Load shops from config
-        const rpgConfig = this.game?.getRPGConfig ? this.game.getRPGConfig() :
-                         (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {});
+        const rpgConfig = this.rpgConfig || window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {};
         if (rpgConfig?.shops) {
             Object.entries(rpgConfig.shops).forEach(([id, shop]) => {
                 this.shops.set(id, {
@@ -433,8 +431,7 @@ class ShopManager {
         if (shop.itemCategories) {
             shop.itemCategories.forEach(category => {
                 // Get items from config matching category
-                const rpgConfig = this.game?.getRPGConfig ? this.game.getRPGConfig() :
-                                 (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {});
+                const rpgConfig = this.rpgConfig || window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {};
                 if (rpgConfig?.items?.[category]) {
                     Object.entries(rpgConfig.items[category]).forEach(([id, item]) => {
                         inventory.push({
@@ -460,8 +457,8 @@ class ShopManager {
 
         const totalCost = item.price * quantity;
 
-        // Check buyer has enough credits (assuming credits stored on entity)
-        const buyer = this.game?.rpgManager?.entities.get(buyerId);
+        // Check buyer has enough credits
+        const buyer = this.rpgManager?.entities.get(buyerId);
         if (!buyer || (buyer.credits || 0) < totalCost) return false;
 
         // Check stock
@@ -472,7 +469,7 @@ class ShopManager {
         if (item.stock !== -1) item.stock -= quantity;
 
         // Add to buyer inventory
-        const inventory = this.game?.inventoryManager?.getInventory(buyerId);
+        const inventory = this.inventoryManager?.getInventory(buyerId);
         if (inventory) {
             inventory.addItem(item, quantity);
         }
@@ -484,7 +481,7 @@ class ShopManager {
         const shop = this.shops.get(shopId);
         if (!shop) return false;
 
-        const inventory = this.game?.inventoryManager?.getInventory(sellerId);
+        const inventory = this.inventoryManager?.getInventory(sellerId);
         if (!inventory) return false;
 
         const item = inventory.getItem(itemId);
@@ -495,7 +492,7 @@ class ShopManager {
         const totalValue = sellPrice * quantity;
 
         // Process transaction
-        const seller = this.game?.rpgManager?.entities.get(sellerId);
+        const seller = this.rpgManager?.entities.get(sellerId);
         if (seller) {
             seller.credits = (seller.credits || 0) + totalValue;
             inventory.removeItem(itemId, quantity);

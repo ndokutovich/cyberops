@@ -1,0 +1,467 @@
+@startuml CyberOps_Game_Architecture
+
+!define ABSTRACT abstract
+!define SERVICE #LightBlue
+!define GAME #LightGreen
+!define ENGINE #LightYellow
+!define DIALOG #Pink
+!define MANAGER #Orange
+!define INTEGRATION #LightGray
+
+' =====================================
+' Core Game Class
+' =====================================
+class CyberOpsGame GAME {
+    ' Core Properties (via getters/setters)
+    + credits : number
+    + researchPoints : number
+    + worldControl : number
+    + weapons : array
+    + equipment : array
+    + activeAgents : array
+    + availableAgents : array
+    + agentLoadouts : object
+
+    ' UI State Properties
+    + currentScreen : string
+    + currentMission : object
+    + isPaused : boolean
+    + selectedAgent : object
+    + currentInventoryMode : string
+    + currentInventoryTab : string
+
+    ' Game State
+    + completedMissions : array
+    + missionCount : number
+    + missionTrackers : object
+    + extractionEnabled : boolean
+
+    ' Systems References
+    + gameServices : GameServices
+    + dialogEngine : DeclarativeDialogEngine
+    + rpgManager : RPGManager
+    + inventoryManager : InventoryManager
+    + shopManager : ShopManager
+
+    ' Core Methods
+    + constructor()
+    + init()
+    + startNewCampaign()
+    + loadMission()
+    + update()
+    + render()
+}
+
+' =====================================
+' Service Layer
+' =====================================
+class GameServices SERVICE {
+    + formulaService : FormulaService
+    + resourceService : ResourceService
+    + agentService : AgentService
+    + inventoryService : InventoryService
+    + equipmentService : EquipmentService
+    + rpgService : RPGService
+    + researchService : ResearchService
+    + missionService : MissionService
+    + gameStateService : GameStateService
+
+    + constructor()
+    + initialize()
+}
+
+class FormulaService SERVICE {
+    - formulas : Map
+    - combatConfig : object
+    - logger : Logger
+
+    + calculateDamage(baseDamage, weaponDamage, bonuses, armor)
+    + calculateHitChance(attacker, target, distance)
+    + calculateCritical(attacker)
+    + calculateDodge(target)
+    + calculateHealing(baseHeal, bonuses)
+    + setFormulas(formulas)
+    + setCombatConfig(config)
+}
+
+class ResourceService SERVICE {
+    - resources : object
+    - limits : object
+    - history : array
+    - listeners : Map
+    - logger : Logger
+
+    + get(resourceType) : number
+    + set(resourceType, value, reason)
+    + add(resourceType, amount, reason)
+    + spend(resourceType, amount, reason)
+    + earn(resourceType, amount, reason)
+    + canAfford(resourceType, amount) : boolean
+    + getCredits() : number
+    + setCredits(value)
+    + getResearchPoints() : number
+    + setResearchPoints(value)
+    + getWorldControl() : number
+    + exportState() : object
+    + importState(state)
+}
+
+class AgentService SERVICE {
+    - availableAgents : array
+    - activeAgents : array
+    - fallenAgents : array
+    - maxActiveAgents : number
+    - listeners : Map
+    - logger : Logger
+
+    + initialize(agents)
+    + getActiveAgents() : array
+    + getAvailableAgents() : array
+    + getFallenAgents() : array
+    + clearAllAgents()
+    + addAvailableAgent(agent)
+    + hireAgent(agentId) : boolean
+    + fireAgent(agentId) : boolean
+    + healAgent(agentId, amount) : boolean
+    + damageAgent(agentId, amount, source) : boolean
+    + killAgent(agentId, killer) : boolean
+    + reviveAgent(agentId, cost) : boolean
+    + findAgent(agentId) : object
+    + exportState() : object
+    + importState(state)
+}
+
+class InventoryService SERVICE {
+    - inventory : object
+    - agentLoadouts : object
+    - formulaService : FormulaService
+    - equipmentService : EquipmentService
+    - logger : Logger
+
+    + initialize(data)
+    + getWeapons() : array
+    + getEquipment() : array
+    + getAgentLoadout(agentId) : object
+    + getAllLoadouts() : object
+    + getItemById(type, itemId) : object
+    + setAgentLoadout(agentId, loadout)
+    + equipItem(agentId, slot, itemId) : boolean
+    + unequipItem(agentId, slot) : boolean
+    + pickupItem(item) : boolean
+    + buyItem(itemType, itemId) : object
+    + sellItem(itemType, itemId, quantity) : object
+    + hasItem(itemType, itemId) : boolean
+    + exportState() : object
+    + importState(state)
+}
+
+class EquipmentService SERVICE {
+    - formulaService : FormulaService
+    - logger : Logger
+
+    + optimizeLoadouts(agents, weapons, equipment) : object
+    + calculateLoadoutScore(agent, loadout) : number
+    + applyLoadoutToAgent(agent, loadout)
+    + getAvailableItems(weapons, equipment) : object
+    + isItemEquipped(item) : boolean
+    + canEquipItem(agent, item) : boolean
+}
+
+class RPGService SERVICE {
+    - formulaService : FormulaService
+    - rpgManager : RPGManager
+    - inventoryManager : InventoryManager
+    - shopManager : ShopManager
+    - rpgConfig : object
+    - logger : Logger
+
+    + initialize()
+    + calculateRPGDamage(attacker, target, weaponType) : number
+    + grantExperience(entity, amount)
+    + syncEquipment()
+    + syncLoadouts()
+    + createRPGAgent(agent, className) : object
+    + createRPGEnemy(enemy, enemyType) : object
+    + loadRPGConfig()
+    + getRPGConfig() : object
+    + setConfig(config)
+}
+
+class ResearchService SERVICE {
+    - researchTree : object
+    - completedResearch : array
+    - activeResearch : object
+    - formulaService : FormulaService
+    - logger : Logger
+
+    + loadTree(tree)
+    + canResearch(techId) : boolean
+    + startResearch(techId) : boolean
+    + completeResearch(techId) : boolean
+    + isResearched(techId) : boolean
+    + getAvailableResearch() : array
+    + getResearchProgress(techId) : number
+    + exportState() : object
+    + importState(state)
+}
+
+class MissionService SERVICE {
+    - currentMission : object
+    - missionTrackers : object
+    - extractionEnabled : boolean
+    - listeners : Map
+    - logger : Logger
+
+    + startMission(missionDef)
+    + updateObjective(event, data)
+    + checkObjectiveCompletion() : boolean
+    + enableExtraction()
+    + completeMission(success)
+    + trackEvent(eventName, data)
+    + getMissionProgress() : object
+    + exportState() : object
+    + importState(state)
+}
+
+class GameStateService SERVICE {
+    - resourceService : ResourceService
+    - agentService : AgentService
+    - inventoryService : InventoryService
+    - missionService : MissionService
+    - saveSlots : number
+    - currentSlot : number
+    - saveVersion : string
+    - autoSaveEnabled : boolean
+    - logger : Logger
+
+    + initialize()
+    + collectGameState(game) : object
+    + applyGameState(game, state) : boolean
+    + saveGame(game, slot, isAutoSave) : boolean
+    + loadGame(game, slot) : boolean
+    + quickSave(game) : boolean
+    + quickLoad(game) : boolean
+    + getSaveSlots() : array
+    + deleteSave(slot)
+    + exportSave(slot) : string
+    + importSave(file, slot) : boolean
+}
+
+' =====================================
+' Dialog System
+' =====================================
+class DeclarativeDialogEngine DIALOG {
+    - config : object
+    - currentState : string
+    - stateStack : array
+    - stateData : object
+    - generators : Map
+    - actions : Map
+    - transitions : Map
+
+    + navigateTo(stateId, context, forceRefresh)
+    + back()
+    + close()
+    + closeAll()
+    + registerGenerator(name, func)
+    + registerAction(name, func)
+    + canTransition(from, to) : boolean
+    + executeAction(action, context)
+}
+
+class DialogIntegration INTEGRATION {
+    + generateEquipmentManagement() : string
+    + generateAgentManagement() : string
+    + generateArsenalContent() : string
+    + generateCharacterSheet() : string
+    + generateResearchLab() : string
+    + handleEquipmentAction(action, params)
+    + handleAgentAction(action, params)
+}
+
+class ModalEngine DIALOG {
+    - modals : array
+    - baseZIndex : number
+
+    + createModal(options) : Modal
+    + showConfirmation(title, message, onConfirm, onCancel)
+    + showAlert(title, message, onOk)
+    + closeAll()
+}
+
+' =====================================
+' RPG System
+' =====================================
+class RPGManager MANAGER {
+    - config : object
+    - entities : Map
+    - experienceTable : array
+    - levelUpCallbacks : array
+    - logger : Logger
+
+    + createRPGAgent(agent, className) : RPGEntity
+    + createRPGEnemy(enemy, type) : RPGEntity
+    + calculateDerivedStats(entity) : object
+    + levelUp(entity)
+    + grantExperience(entity, xp)
+    + loadConfig(config)
+    + generateExperienceTable()
+    + onLevelUp(callback)
+    + getExperienceForLevel(level) : number
+}
+
+class InventoryManager MANAGER {
+    - inventories : Map
+
+    + createInventory(entityId, maxWeight) : Inventory
+    + getInventory(entityId) : Inventory
+    + transferItem(fromId, toId, itemId) : boolean
+    + dropItem(entityId, itemId) : boolean
+}
+
+class ShopManager MANAGER {
+    - shops : Map
+    - rpgManager : RPGManager
+    - inventoryManager : InventoryManager
+    - rpgConfig : object
+
+    + constructor(rpgManager, inventoryManager)
+    + setConfig(config)
+    + loadShops()
+    + generateShopInventory(shop) : array
+    + buyItem(shopId, itemId, quantity, buyerId) : boolean
+    + sellItem(shopId, itemId, quantity, sellerId) : boolean
+    + getShopInventory(shopId) : array
+}
+
+' =====================================
+' Engine Layer
+' =====================================
+class ContentLoader ENGINE {
+    - currentCampaign : object
+    - contentCache : Map
+    - formulas : Map
+    - strings : object
+
+    + loadCampaign(campaign, game) : boolean
+    + loadRPGConfig(game)
+    + loadAgents(game)
+    + loadEquipment(game)
+    + loadEnemies(game)
+    + loadEconomy(game)
+    + loadCombatFormulas(game)
+    + loadUIStrings(game)
+    + getString(key, params) : string
+    + getContent(type) : object
+}
+
+class CampaignInterface ENGINE {
+    <<interface>>
+    + validateCampaign(campaign) : object
+    + validateMission(mission) : object
+    + validateAgent(agent) : object
+    + validateWeapon(weapon) : object
+    + mergeCampaignWithDefaults(campaign) : object
+}
+
+class CampaignSystem ENGINE {
+    - campaigns : Map
+    - missions : Map
+
+    + registerCampaign(id, data)
+    + registerMission(campaignId, actId, missionId, data)
+    + getCampaign(id) : object
+    + getMission(campaignId, missionId) : object
+    + getAllMissions(campaignId) : array
+}
+
+' =====================================
+' Utility Services
+' =====================================
+class Logger {
+    - source : string
+    - minLevel : LogLevel
+    <<static>> - history : array
+
+    + trace(message, ...args)
+    + debug(message, ...args)
+    + info(message, ...args)
+    + warn(message, ...args)
+    + error(message, ...args)
+    + fatal(message, ...args)
+    <<static>> + getHistory(filters) : array
+    <<static>> + setMinLevel(source, level)
+}
+
+class KeybindingService SERVICE {
+    - bindings : Map
+    - handlers : Map
+
+    + registerBinding(key, action)
+    + registerHandler(action, handler)
+    + handleKeyPress(event)
+    + getBindings() : object
+    + setBinding(action, key)
+}
+
+' =====================================
+' Relationships
+' =====================================
+
+' Game to Services
+CyberOpsGame --> GameServices : uses
+CyberOpsGame --> DeclarativeDialogEngine : uses
+
+' GameServices composition
+GameServices *-- FormulaService : owns
+GameServices *-- ResourceService : owns
+GameServices *-- AgentService : owns
+GameServices *-- InventoryService : owns
+GameServices *-- EquipmentService : owns
+GameServices *-- RPGService : owns
+GameServices *-- ResearchService : owns
+GameServices *-- MissionService : owns
+GameServices *-- GameStateService : owns
+
+' Service dependencies
+InventoryService --> FormulaService : uses
+InventoryService --> EquipmentService : uses
+EquipmentService --> FormulaService : uses
+RPGService --> FormulaService : uses
+ResearchService --> FormulaService : uses
+GameStateService --> ResourceService : uses
+GameStateService --> AgentService : uses
+GameStateService --> InventoryService : uses
+GameStateService --> MissionService : uses
+
+' RPG System (owned by RPGService)
+RPGService *-- RPGManager : owns
+RPGService *-- InventoryManager : owns
+RPGService *-- ShopManager : owns
+
+' ShopManager dependencies
+ShopManager --> RPGManager : uses
+ShopManager --> InventoryManager : uses
+
+' Dialog System
+DeclarativeDialogEngine --> DialogIntegration : uses
+CyberOpsGame --> ModalEngine : uses
+
+' Content Loading
+ContentLoader --> CampaignInterface : uses
+ContentLoader --> GameServices : configures
+CyberOpsGame --> ContentLoader : uses
+CyberOpsGame --> CampaignSystem : uses
+
+' All services use Logger
+FormulaService --> Logger : uses
+ResourceService --> Logger : uses
+AgentService --> Logger : uses
+InventoryService --> Logger : uses
+EquipmentService --> Logger : uses
+RPGService --> Logger : uses
+ResearchService --> Logger : uses
+MissionService --> Logger : uses
+GameStateService --> Logger : uses
+
+@enduml

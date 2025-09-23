@@ -16,16 +16,17 @@ class RPGService {
     initialize() {
         // Initialize managers
         this.rpgManager = new RPGManager();
-
         this.inventoryManager = new InventoryManager();
 
-        this.shopManager = new ShopManager();
+        // Pass dependencies to ShopManager
+        this.shopManager = new ShopManager(this.rpgManager, this.inventoryManager);
 
         // Get RPG config from campaign
         this.loadRPGConfig();
 
-        // Load shops after config is loaded
-        if (this.shopManager) {
+        // Set config and load shops after config is loaded
+        if (this.shopManager && this.rpgConfig) {
+            this.shopManager.setConfig(this.rpgConfig);
             this.shopManager.loadShops();
         }
 

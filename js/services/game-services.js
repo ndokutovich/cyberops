@@ -87,13 +87,13 @@ class GameServices {
             }
         }
         // Otherwise check for real-time equipped weapon from loadout
-        else if (window.game && window.game.agentLoadouts) {
+        else if (this.inventoryService) {
             const agentId = attacker.originalId || attacker.id || attacker.name;
-            const loadout = window.game.agentLoadouts[agentId];
+            const loadout = this.inventoryService.getAgentLoadout(agentId);
 
-            if (loadout && loadout.weapon && window.game.weapons) {
+            if (loadout && loadout.weapon) {
                 // Find the actual weapon from the loadout
-                const equippedWeapon = window.game.weapons.find(w => w.id === loadout.weapon);
+                const equippedWeapon = this.inventoryService.getItemById('weapon', loadout.weapon);
                 if (equippedWeapon) {
                     weaponBonus = equippedWeapon.damage || 0;
                     if (this.formulaService && this.formulaService.logger) {
