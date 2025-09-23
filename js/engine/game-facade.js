@@ -153,6 +153,11 @@ class GameFacade {
         // Switch to game screen
         this.currentScreen = 'game';
 
+        // Initialize combat if CombatService available
+        if (this.services.combatService && this.enemies.length > 0) {
+            this.services.combatService.startCombat(this.agents, this.enemies);
+        }
+
         if (this.logger) this.logger.info(`Mission started: ${missionId}`);
         return true;
     }
@@ -266,11 +271,25 @@ class GameFacade {
      * Spawn NPCs
      */
     spawnNPCs(npcData) {
-        this.npcs = npcData.map((npc, index) => ({
-            ...npc,
-            id: npc.id || `npc_${index}`,
-            interacted: false
-        }));
+        this.npcs = npcData.map((npc, index) => {
+            const npcEntity = {
+                ...npc,
+                id: npc.id || `npc_${index}`,
+                interacted: false
+            };
+
+            // Register NPC quests with QuestService
+            if (this.services.questService && npc.quests) {
+                npc.quests.forEach(quest => {
+                    this.services.questService.registerQuest({
+                        ...quest,
+                        giver: npcEntity.id
+                    });
+                });
+            }
+
+            return npcEntity;
+        });
     }
 
     /**
@@ -393,7 +412,26 @@ class GameFacade {
      * Perform attack
      */
     performAttack(attacker, target) {
-        // Calculate damage using formula service
+        // Use CombatService if available
+        if (this.services.combatService) {
+            const result = this.services.combatService.performAttack(attacker.id, target.id);
+
+            if (result && result.hit) {
+                // Create visual projectile
+                this.createProjectile(attacker, target);
+
+                // Update target health locally for immediate feedback
+                target.health -= result.damage;
+                if (result.killed) {
+                    target.alive = false;
+                    this.onEntityDeath(target);
+                }
+            }
+
+            return result;
+        }
+
+        // Fallback to old system if CombatService not available
         const damage = this.services.formulaService.calculateDamage(
             attacker.damage || 10,
             attacker.weaponDamage || 0,
@@ -630,13 +668,27 @@ class GameFacade {
      */
     toggleTurnBasedMode() {
         this.turnBasedMode = !this.turnBasedMode;
-        if (this.turnBasedMode) {
+
+        // Use CombatService if available
+        if (this.services.combatService) {
+            this.services.combatService.setTurnBasedMode(this.turnBasedMode);
+
+            // Sync turn state from CombatService
+            if (this.turnBasedMode) {
+                const turnInfo = this.services.combatService.getCurrentTurnInfo();
+                if (turnInfo) {
+                    this.currentTurn = turnInfo.entity;
+                    this.actionPoints = this.services.combatService.actionPoints;
+                }
+            }
+        } else if (this.turnBasedMode) {
+            // Fallback to old system
             this.initializeTurnBasedMode();
         }
     }
 
     /**
-     * Initialize turn-based mode
+     * Initialize turn-based mode (fallback)
      */
     initializeTurnBasedMode() {
         // Create turn order
@@ -658,6 +710,17 @@ class GameFacade {
      * Start next turn
      */
     startNextTurn() {
+        // Use CombatService if available
+        if (this.services.combatService) {
+            this.services.combatService.nextTurn();
+            const turnInfo = this.services.combatService.getCurrentTurnInfo();
+            if (turnInfo) {
+                this.currentTurn = turnInfo.entity;
+            }
+            return;
+        }
+
+        // Fallback to old system
         if (this.turnOrder.length === 0) return;
 
         this.currentTurn = this.turnOrder.shift();

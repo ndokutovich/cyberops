@@ -29,6 +29,25 @@ class GameServices {
             this.missionService
         );
 
+        // NEW SERVICES: Combat, Quest, and SaveGame
+        // Combat service for centralized combat state management
+        if (window.CombatService) {
+            this.combatService = new CombatService(this.formulaService, this.agentService);
+            if (this.logger) this.logger.debug('CombatService initialized');
+        }
+
+        // Quest service for quest and objective tracking
+        if (window.QuestService) {
+            this.questService = new QuestService(this.resourceService);
+            if (this.logger) this.logger.debug('QuestService initialized');
+        }
+
+        // SaveGame service for save/load operations
+        if (window.SaveGameService) {
+            this.saveGameService = new SaveGameService(this.gameStateService);
+            if (this.logger) this.logger.debug('SaveGameService initialized');
+        }
+
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
         this.applyAllModifiers = this.applyAllModifiers.bind(this);
