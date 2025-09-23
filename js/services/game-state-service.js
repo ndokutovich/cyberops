@@ -153,7 +153,7 @@ class GameStateService {
      */
     applyGameState(game, state) {
         if (!this.validateSaveData(state)) {
-            console.error('❌ Invalid save data');
+            if (this.logger) this.logger.error('❌ Invalid save data');
             return false;
         }
 
@@ -243,11 +243,11 @@ class GameStateService {
             game.milestones = state.milestones || [];
             game.achievements = state.achievements || [];
 
-            console.log('✅ Game state applied successfully');
+            if (this.logger) this.logger.info('✅ Game state applied successfully');
             return true;
 
         } catch (error) {
-            console.error('❌ Error applying game state:', error);
+            if (this.logger) this.logger.error('❌ Error applying game state:', error);
             this.notifyListeners('error', { error, operation: 'apply' });
             return false;
         }
@@ -286,11 +286,11 @@ class GameStateService {
                 timestamp: state.timestamp
             });
 
-            console.log(`💾 Game saved to slot ${slot}${isAutoSave ? ' (auto-save)' : ''}`);
+            if (this.logger) this.logger.info(`💾 Game saved to slot ${slot}${isAutoSave ? ' (auto-save)' : ''}`);
             return true;
 
         } catch (error) {
-            console.error('❌ Error saving game:', error);
+            if (this.logger) this.logger.error('❌ Error saving game:', error);
             this.notifyListeners('error', { error, operation: 'save' });
             return false;
         }
@@ -313,7 +313,7 @@ class GameStateService {
 
             // Check version compatibility
             if (!this.checkVersionCompatibility(state.version)) {
-                console.warn('⚠️ Save version incompatible, attempting migration...');
+                if (this.logger) this.logger.warn('⚠️ Save version incompatible, attempting migration...');
                 this.migrateSaveData(state);
             }
 
@@ -330,13 +330,13 @@ class GameStateService {
                     timestamp: state.timestamp
                 });
 
-                console.log(`✅ Game loaded from slot ${slot}`);
+                if (this.logger) this.logger.info(`✅ Game loaded from slot ${slot}`);
             }
 
             return success;
 
         } catch (error) {
-            console.error('❌ Error loading game:', error);
+            if (this.logger) this.logger.error('❌ Error loading game:', error);
             this.notifyListeners('error', { error, operation: 'load' });
             return false;
         }
@@ -376,7 +376,7 @@ class GameStateService {
             }
         }, this.autoSaveInterval);
 
-        console.log('⏰ Auto-save enabled');
+        if (this.logger) this.logger.info('⏰ Auto-save enabled');
     }
 
     /**
@@ -387,7 +387,7 @@ class GameStateService {
             clearInterval(this.autoSaveTimer);
             this.autoSaveTimer = null;
         }
-        console.log('⏰ Auto-save disabled');
+        if (this.logger) this.logger.info('⏰ Auto-save disabled');
     }
 
     /**
@@ -432,7 +432,7 @@ class GameStateService {
         const saveKey = `cyberops_save_slot_${slot}`;
         localStorage.removeItem(saveKey);
         this.updateSaveIndex(slot, null);
-        console.log(`🗑️ Deleted save in slot ${slot}`);
+        if (this.logger) this.logger.info(`🗑️ Deleted save in slot ${slot}`);
     }
 
     /**
@@ -446,7 +446,7 @@ class GameStateService {
         // Check required fields
         for (const field of this.requiredFields) {
             if (!(field in state)) {
-                console.warn(`⚠️ Missing required field: ${field}`);
+                if (this.logger) this.logger.warn(`⚠️ Missing required field: ${field}`);
                 return false;
             }
         }
@@ -472,7 +472,7 @@ class GameStateService {
      */
     migrateSaveData(state) {
         // Add any necessary migrations here
-        console.log('🔄 Migrating save data from', state.version, 'to', this.saveVersion);
+        if (this.logger) this.logger.info('🔄 Migrating save data from', state.version, 'to', this.saveVersion);
 
         // Example migrations:
         // v0.9.0 -> v1.0.0: Add inventory service data
@@ -501,7 +501,7 @@ class GameStateService {
                 index = JSON.parse(savedIndex);
             }
         } catch (e) {
-            console.warn('Could not parse save index');
+            if (this.logger) this.logger.warn('Could not parse save index');
         }
 
         if (state) {
@@ -525,7 +525,7 @@ class GameStateService {
         const savedData = localStorage.getItem(saveKey);
 
         if (!savedData) {
-            console.warn(`⚠️ No save found in slot ${slot}`);
+            if (this.logger) this.logger.warn(`⚠️ No save found in slot ${slot}`);
             return null;
         }
 
@@ -541,7 +541,7 @@ class GameStateService {
         a.click();
 
         URL.revokeObjectURL(url);
-        console.log(`📤 Exported save from slot ${slot}`);
+        if (this.logger) this.logger.info(`📤 Exported save from slot ${slot}`);
         return filename;
     }
 
@@ -561,11 +561,11 @@ class GameStateService {
             localStorage.setItem(saveKey, text);
             this.updateSaveIndex(slot, state);
 
-            console.log(`📥 Imported save to slot ${slot}`);
+            if (this.logger) this.logger.info(`📥 Imported save to slot ${slot}`);
             return true;
 
         } catch (error) {
-            console.error('❌ Error importing save:', error);
+            if (this.logger) this.logger.error('❌ Error importing save:', error);
             return false;
         }
     }
@@ -605,7 +605,7 @@ class GameStateService {
                 try {
                     callback(data);
                 } catch (e) {
-                    console.error(`Error in state listener (${eventType}):`, e);
+                    if (this.logger) this.logger.error(`Error in state listener (${eventType}):`, e);
                 }
             });
         }
@@ -615,7 +615,7 @@ class GameStateService {
             try {
                 callback({ type: eventType, ...data });
             } catch (e) {
-                console.error('Error in global state listener:', e);
+                if (this.logger) this.logger.error('Error in global state listener:', e);
             }
         });
     }
@@ -632,6 +632,55 @@ class GameStateService {
             autoSaveInterval: this.autoSaveInterval,
             lastAutoSave: this.lastAutoSave
         };
+    }
+
+    /**
+     * Get all saves from localStorage
+     */
+    getAllSaves() {
+        const saves = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('cyberops_save_')) {
+                try {
+                    const saveData = JSON.parse(localStorage.getItem(key));
+                    saveData.id = key.replace('cyberops_save_', '');
+                    saves.push(saveData);
+                } catch (e) {
+                    if (this.logger) this.logger.error('Invalid save data:', key);
+                }
+            }
+        }
+        // Sort by timestamp, newest first
+        return saves.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    }
+
+    /**
+     * Delete a save slot
+     */
+    deleteSave(slotId) {
+        localStorage.removeItem(`cyberops_save_${slotId}`);
+        if (this.logger) this.logger.info('🗑️ Deleted save slot:', slotId);
+        this.notifyListeners('saveDeleted', { slotId });
+    }
+
+    /**
+     * Rename a save slot
+     */
+    renameSave(slotId, newName) {
+        const saveKey = `cyberops_save_${slotId}`;
+        const saveData = localStorage.getItem(saveKey);
+        if (saveData) {
+            try {
+                const save = JSON.parse(saveData);
+                save.name = newName;
+                localStorage.setItem(saveKey, JSON.stringify(save));
+                if (this.logger) this.logger.info('✏️ Renamed save slot:', slotId, 'to', newName);
+                this.notifyListeners('saveRenamed', { slotId, newName });
+            } catch (e) {
+                if (this.logger) this.logger.error('Failed to rename save:', e);
+            }
+        }
     }
 }
 

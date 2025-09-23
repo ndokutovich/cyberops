@@ -78,7 +78,7 @@ class AgentService {
             hired: data.hired || false,
             alive: data.alive !== undefined ? data.alive : true,
             health: data.health || 100,
-            maxHealth: data.maxHealth || 100,
+            maxHealth: data.maxHealth || data.health || 100,
 
             // Combat stats
             damage: data.damage || 10,

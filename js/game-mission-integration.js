@@ -1,6 +1,10 @@
 // Mission System Integration
 // This file bridges the new mission system with the existing game code
 
+// Initialize module logger
+const integrationLogger = window.Logger ? new window.Logger('MissionIntegration') : null;
+if (integrationLogger) integrationLogger.info('🚀 game-mission-integration.js LOADED');
+
 // Override the existing mission loading to use the new system
 CyberOpsGame.prototype.initMissions = function() {
 
@@ -98,46 +102,122 @@ CyberOpsGame.prototype.useAbilityForAllSelected = CyberOpsGame.prototype.useAbil
 
 // Update mission initialization to use the new system
 CyberOpsGame.prototype.initMissionUpdated = function() {
+    if (this.logger) this.logger.info('🚀 initMissionUpdated STARTED');
+
     // Call the original init for basic setup
     if (this.initMissionOriginal) {
+        if (this.logger) this.logger.info('📞 Calling initMissionOriginal');
         this.initMissionOriginal.call(this);
+    } else {
+        if (this.logger) this.logger.error('❌ initMissionOriginal NOT FOUND!');
     }
 
-    // Initialize from mission definition
+    // Initialize from mission definition - get the FULL mission data
     const mission = this.missions && this.missions[this.currentMissionIndex];
-    // Use _campaignData if available (has full mission data including NPCs)
-    this.currentMissionDef = mission?._campaignData || mission;
-    if (this.logger) this.logger.debug('🎯 Setting currentMissionDef for mission', this.currentMissionIndex, ':', this.currentMissionDef);
-    this.initMissionFromDefinition();
+    if (this.logger) this.logger.info('📋 Mission from array:', mission ? Object.keys(mission) : 'NULL');
 
-    // Spawn NPCs now that mission definition is loaded
+    // Use the mission directly - it has been processed by convertToLegacyFormat
+    // and contains objectives, npcs, etc. properly formatted
+    // The _campaignData is just the raw data and might not have everything
+    if (mission) {
+        this.currentMissionDef = mission;
+        if (this.logger) this.logger.info('📋 Using processed mission data with objectives');
+    } else {
+        this.currentMissionDef = null;
+    }
+    if (this.logger) {
+        this.logger.info('📋 currentMissionDef set to:', this.currentMissionDef ? this.currentMissionDef.name : 'NULL');
+        if (this.currentMissionDef) {
+            this.logger.info('📋 Mission has these properties:', Object.keys(this.currentMissionDef));
+            this.logger.info('📋 Objectives present?', !!this.currentMissionDef.objectives);
+            if (this.currentMissionDef.objectives) {
+                this.logger.info('📋 Number of objectives:', this.currentMissionDef.objectives.length);
+            }
+        }
+    }
+
+    // No need to copy properties - we're using the mission directly now
+    // which already has all the data from convertToLegacyFormat
+
+    if (this.logger) {
+        this.logger.debug('🎯 Setting currentMissionDef for mission', this.currentMissionIndex);
+        this.logger.debug('Mission has objectives?', !!(this.currentMissionDef && this.currentMissionDef.objectives));
+        this.logger.debug('Mission has NPCs?', !!(this.currentMissionDef && this.currentMissionDef.npcs));
+        if (this.currentMissionDef) {
+            this.logger.debug('Mission properties:', Object.keys(this.currentMissionDef));
+            if (this.currentMissionDef.objectives) {
+                this.logger.debug('Number of objectives:', this.currentMissionDef.objectives.length);
+                this.logger.debug('First objective:', this.currentMissionDef.objectives[0]);
+            }
+            if (this.currentMissionDef.npcs) {
+                this.logger.debug('Number of NPCs:', this.currentMissionDef.npcs.length);
+            }
+        }
+    }
+
+    // Mission tracking now handled entirely by MissionService
+    // No need for local missionTrackers anymore
+
+    // Initialize from definition if we have a valid mission
+    if (this.currentMissionDef) {
+        if (this.logger) this.logger.info('📋 BEFORE initMissionFromDefinition - objectives?', !!this.currentMissionDef.objectives);
+        this.initMissionFromDefinition();
+        if (this.logger) this.logger.info('📋 AFTER initMissionFromDefinition - objectives?', !!this.currentMissionDef.objectives);
+    } else {
+        if (this.logger) this.logger.warn('⚠️ Cannot initialize mission - no mission definition found');
+    }
+
+    // Spawn NPCs AFTER mission definition is initialized
     if (this.spawnNPCs) {
         if (this.logger) this.logger.info('🎮 Spawning NPCs for mission after definition loaded...');
         this.spawnNPCs();
     }
 
-    // Track terminal hacking properly
-    if (!this.missionTrackers) this.missionTrackers = {};
-    this.missionTrackers.terminalsHacked = 0;
-    this.missionTrackers.enemiesEliminated = 0;
-    this.missionTrackers.explosivesPlanted = 0;
-    this.missionTrackers.switchesActivated = 0;
-    this.missionTrackers.intelCollected = 0;
+    // Start mission through MissionService AFTER everything is set up
+    if (this.gameServices && this.gameServices.missionService && this.currentMissionDef) {
+        if (this.logger) this.logger.info('📋 BEFORE MissionService.startMission - objectives?', !!this.currentMissionDef.objectives);
+        this.gameServices.missionService.startMission(this.currentMissionDef);
+
+        // IMPORTANT: Keep a reference to MissionService objectives for backward compatibility
+        // This ensures the game can find objectives even if code checks currentMissionDef.objectives
+        this.currentMissionDef.objectives = this.gameServices.missionService.objectives;
+        if (this.logger) this.logger.info('🔗 Linked MissionService objectives to currentMissionDef');
+        if (this.logger) this.logger.info('📋 AFTER linking - objectives count:', this.currentMissionDef.objectives ? this.currentMissionDef.objectives.length : 0);
+    } else if (!this.gameServices || !this.gameServices.missionService) {
+        if (this.logger) this.logger.warn('⚠️ MissionService not available, objectives may not track properly');
+    }
+
+    // The objectives initialization is now handled by MissionService
+    // Just verify they exist
+    if (this.currentMissionDef && this.currentMissionDef.objectives) {
+        if (this.logger) this.logger.info('✅ Mission initialized with objectives:', this.currentMissionDef.objectives.length);
+    } else {
+        if (this.logger) this.logger.error('❌ CRITICAL: No objectives at end of initMissionUpdated!', {
+            hasDef: !!this.currentMissionDef,
+            hasObjectives: !!(this.currentMissionDef && this.currentMissionDef.objectives),
+            missionService: !!(this.gameServices && this.gameServices.missionService),
+            serviceObjectives: this.gameServices && this.gameServices.missionService ? this.gameServices.missionService.objectives.length : 0
+        });
+    }
 };
 
 // Save original and replace
 if (!CyberOpsGame.prototype.initMissionOriginal) {
-    if (this.logger) this.logger.debug('🔄 Replacing initMission with updated version');
+    if (integrationLogger) integrationLogger.info('🔄 REPLACING initMission with updated version');
     CyberOpsGame.prototype.initMissionOriginal = CyberOpsGame.prototype.initMission;
     CyberOpsGame.prototype.initMission = CyberOpsGame.prototype.initMissionUpdated;
 } else {
-    if (this.logger) this.logger.debug('⚠️ initMission already replaced');
+    if (integrationLogger) integrationLogger.warn('⚠️ initMission ALREADY REPLACED');
 }
 
 // Update the game loop to check objectives
 CyberOpsGame.prototype.updateMissionObjectives = function() {
     // Check mission objectives each frame
-    this.checkMissionObjectives();
+    if (this.checkMissionObjectives) {
+        this.checkMissionObjectives();
+    } else {
+        if (this.logger) this.logger.error('⚠️ checkMissionObjectives NOT FOUND!');
+    }
 
     // Check quest objectives
     this.checkQuestCompletion();
@@ -170,24 +250,19 @@ CyberOpsGame.prototype.gameLoopUpdated = function() {
 
 // Save original and replace
 if (!CyberOpsGame.prototype.gameLoopOriginal) {
+    if (integrationLogger) integrationLogger.info('🔄 REPLACING gameLoop with updated version');
     CyberOpsGame.prototype.gameLoopOriginal = CyberOpsGame.prototype.gameLoop;
     CyberOpsGame.prototype.gameLoop = CyberOpsGame.prototype.gameLoopUpdated;
+} else {
+    if (integrationLogger) integrationLogger.warn('⚠️ gameLoop ALREADY REPLACED');
 }
 
-// Fix the hackedTerminals tracking
+// Interaction tracking now handled by MissionService
 CyberOpsGame.prototype.performInteractionUpdated = function(agent, targetType, target) {
     // Call the new performInteraction
     this.performInteraction(agent, targetType, target);
 
-    // Update legacy counters for backward compatibility
-    switch(targetType) {
-        case INTERACTION_TARGETS.TERMINAL:
-            this.hackedTerminals = (this.missionTrackers.terminalsHacked || 0);
-            break;
-        case INTERACTION_TARGETS.EXPLOSIVE:
-            this.explosivesPlanted = (this.missionTrackers.explosivesPlanted || 0);
-            break;
-    }
+    // MissionService handles all tracking now
 };
 
 // Override the original hackNearestTerminal completely
@@ -221,14 +296,14 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
         // Mark as hacked
         nearestTerminal.hacked = true;
 
-        // Update trackers
-        if (!this.missionTrackers) this.missionTrackers = {};
-        this.missionTrackers.terminalsHacked = (this.missionTrackers.terminalsHacked || 0) + 1;
+        // Track ONLY through MissionService
+        if (this.gameServices && this.gameServices.missionService) {
+            this.gameServices.missionService.trackEvent('terminalHacked', {
+                terminalId: terminal.id || 'unknown'
+            });
+        }
 
-        // Update legacy counter
-        this.hackedTerminals = this.missionTrackers.terminalsHacked;
-
-        if (this.logger) this.logger.debug(`🖥️ Terminal hacked! Total: ${this.hackedTerminals}`);
+        if (this.logger) this.logger.debug(`🖥️ Terminal hacked!`);
 
         // Log the hacking event
         if (this.logEvent) {
@@ -260,15 +335,12 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
 
 // Update enemy elimination tracking
 CyberOpsGame.prototype.onEnemyDeath = function(enemy) {
-    // Track elimination
+    // Track elimination through MissionService
     this.onEnemyEliminated(enemy);
-
-    // Update legacy counter
-    this.enemiesKilledThisMission = this.missionTrackers.enemiesEliminated || 0;
 };
 
 // Don't automatically reinitialize - let campaign-integration handle this
 // The missions are already loaded from game-core.js and we want to preserve them
 // unless explicitly using the new campaign system
 
-if (this.logger) this.logger.info('✅ Mission system integration loaded');
+if (integrationLogger) integrationLogger.info('✅ Mission system integration loaded');

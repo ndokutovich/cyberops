@@ -8,11 +8,8 @@ CyberOpsGame.prototype.initMissionSystem = function() {
     if (!this.logger) {
         this.logger = window.Logger ? new window.Logger('GameMissionExecutor') : null;
     }
-    // Initialize mission tracking system
-    this.missionTrackers = {};
-    this.interactedObjects = new Set();
-    this.enemiesEliminatedByType = {};
-    this.survivalTimers = {};
+    // All tracking now handled by MissionService
+    // Only keeping quest tracking here for backward compatibility
     this.activeQuests = {};
 
     if (this.logger) this.logger.info('🎮 Mission system initialized');
@@ -90,11 +87,7 @@ CyberOpsGame.prototype.initMissionFromDefinition = function() {
     const missionDef = this.currentMissionDef;
     if (!missionDef) return;
 
-    // Reset trackers
-    this.missionTrackers = {};
-    this.interactedObjects = new Set();
-    this.enemiesEliminatedByType = {};
-    this.survivalTimers = {};
+    // MissionService handles all tracking now
 
     // Generate map with objects
     this.generateMapWithObjects(missionDef.map);
@@ -266,6 +259,8 @@ CyberOpsGame.prototype.useActionAbility = function(agent) {
     let actionPerformed = false;
 
     // Check each objective to see what actions are available
+    if (!this.currentMissionDef.objectives) return false;
+
     this.currentMissionDef.objectives.forEach(obj => {
         if (actionPerformed) return; // Only perform one action
         if (obj.completed) return; // Skip completed objectives
@@ -389,27 +384,38 @@ CyberOpsGame.prototype.useActionAbility = function(agent) {
         if (nearestTarget) {
             this.performInteraction(agent, nearestTarget.type, nearestTarget);
 
-            // Update appropriate tracker
-            if (!this.missionTrackers) this.missionTrackers = {};
-
-            switch(nearestTarget.type) {
-                case INTERACTION_TARGETS.TERMINAL:
-                    this.hackedTerminals = (this.hackedTerminals || 0) + 1;
-                    this.missionTrackers.terminalsHacked = (this.missionTrackers.terminalsHacked || 0) + 1;
-                    if (this.logger) this.logger.debug(`🖥️ Terminal hacked! Total: ${this.hackedTerminals}`);
-                    break;
-                case INTERACTION_TARGETS.EXPLOSIVE:
-                    this.missionTrackers.explosivesPlanted = (this.missionTrackers.explosivesPlanted || 0) + 1;
-                    if (this.logger) this.logger.debug(`💣 Explosive planted! Total: ${this.missionTrackers.explosivesPlanted}`);
-                    break;
-                case INTERACTION_TARGETS.SWITCH:
-                    this.missionTrackers.switchesActivated = (this.missionTrackers.switchesActivated || 0) + 1;
-                    if (this.logger) this.logger.debug(`🔌 Switch activated! Total: ${this.missionTrackers.switchesActivated}`);
-                    break;
-                case INTERACTION_TARGETS.GATE:
-                    this.missionTrackers.gatesBreached = (this.missionTrackers.gatesBreached || 0) + 1;
-                    if (this.logger) this.logger.debug(`🚪 Gate breached! Total: ${this.missionTrackers.gatesBreached}`);
-                    break;
+            // Track interaction through MissionService
+            if (this.gameServices && this.gameServices.missionService) {
+                switch(nearestTarget.type) {
+                    case INTERACTION_TARGETS.TERMINAL:
+                        this.gameServices.missionService.trackEvent('interact', {
+                            type: nearestTarget.type,
+                            targetId: nearestTarget.id
+                        });
+                        if (this.logger) this.logger.debug(`🖥️ Terminal hacked!`);
+                        break;
+                    case INTERACTION_TARGETS.EXPLOSIVE:
+                        this.gameServices.missionService.trackEvent('interact', {
+                            type: nearestTarget.type,
+                            targetId: nearestTarget.id
+                        });
+                        if (this.logger) this.logger.debug(`💣 Explosive planted!`);
+                        break;
+                    case INTERACTION_TARGETS.SWITCH:
+                        this.gameServices.missionService.trackEvent('interact', {
+                            type: nearestTarget.type,
+                            targetId: nearestTarget.id
+                        });
+                        if (this.logger) this.logger.debug(`🔌 Switch activated!`);
+                        break;
+                    case INTERACTION_TARGETS.GATE:
+                        this.gameServices.missionService.trackEvent('interact', {
+                            type: nearestTarget.type,
+                            targetId: nearestTarget.id
+                        });
+                        if (this.logger) this.logger.debug(`🚪 Gate breached!`);
+                        break;
+                }
             }
 
             actionPerformed = true;
@@ -532,12 +538,38 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
     let allRequiredComplete = true;
     let anyIncomplete = false;
 
-    this.currentMissionDef.objectives.forEach(obj => {
+    // Get objectives from MissionService if available
+    let objectives;
+    if (this.gameServices && this.gameServices.missionService && this.gameServices.missionService.objectives.length > 0) {
+        objectives = this.gameServices.missionService.objectives;
+        // Use TRACE level to avoid spam
+        if (this.logger) this.logger.trace('📋 Using MissionService objectives');
+    } else if (this.currentMissionDef && this.currentMissionDef.objectives) {
+        objectives = this.currentMissionDef.objectives;
+        if (this.logger) this.logger.trace('📋 Using currentMissionDef objectives');
+    } else {
+        if (this.logger) this.logger.warn('⚠️ No objectives available');
+        return;
+    }
+
+    // Ensure objectives have required properties
+    objectives.forEach(obj => {
+        if (obj.active === undefined) obj.active = true;
+        if (obj.completed === undefined) obj.completed = false;
+    });
+
+    // Only log at TRACE level to avoid spam (this runs every frame)
+    if (this.logger) this.logger.trace(`🔍 Checking ${objectives.length} objectives`);
+
+    objectives.forEach(obj => {
+        if (this.logger) this.logger.trace(`  Checking objective: ${obj.id || obj.description}`);
+
         // Check if prerequisites are met
         if (obj.triggerAfter) {
             const prereqsMet = obj.triggerAfter.every(prereqId => {
-                const prereq = this.currentMissionDef.objectives.find(o => o.id === prereqId);
-                return prereq && OBJECTIVE_HANDLERS.checkComplete(prereq, this);
+                const prereq = objectives.find(o => o.id === prereqId);
+                // Check if prerequisite is completed (MissionService tracks this)
+                return prereq && (prereq.completed || prereq.status === 'completed');
             });
             if (!prereqsMet) {
                 obj.active = false;
@@ -549,12 +581,12 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
             obj.active = true;
         }
 
-        // Check completion
-        const wasComplete = obj.completed;
-        obj.completed = OBJECTIVE_HANDLERS.checkComplete(obj, this);
+        // MissionService already tracks completion, just check if status changed
+        const wasComplete = obj.completed || (obj.status === 'completed');
 
         // Handle newly completed objectives
         if (!wasComplete && obj.completed) {
+            // This is important - log at INFO level when objective actually completes
             if (this.logger) this.logger.info(`✅ Objective completed: ${obj.description}`);
             this.addNotification(`✅ ${obj.description}`);
 
@@ -585,13 +617,12 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
 
     // Check for mission completion
     if (allRequiredComplete) {
-        // Only enable extraction once
-        if (!this.extractionEnabled) {
-            this.extractionEnabled = true;
-            this.addNotification('📍 Extraction point activated! Get to the extraction!');
-            if (this.logEvent) {
-                this.logEvent('All primary objectives complete - extraction point activated!', 'extraction', true);
-            }
+        // Use MissionService to enable extraction
+        if (this.gameServices && this.gameServices.missionService) {
+            this.gameServices.missionService.enableExtraction();
+
+            // Sync extraction state from MissionService
+            this.extractionEnabled = this.gameServices.missionService.extractionEnabled;
 
             // Update objective display to show extraction
             const tracker = document.getElementById('objectiveTracker');
@@ -599,16 +630,16 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
                 tracker.textContent = 'All objectives complete! Reach extraction point!';
             }
         }
-
-        // Don't complete mission yet - wait for extraction
-        // this.completeMission(true);
     }
 };
 
 // Update objective display
 CyberOpsGame.prototype.updateObjectiveDisplay = function() {
     const tracker = document.getElementById('objectiveTracker');
-    if (!tracker || !this.currentMissionDef) return;
+    if (!tracker || !this.currentMissionDef) {
+        if (this.logger) this.logger.warn('📋 updateObjectiveDisplay: No tracker element or missionDef');
+        return;
+    }
 
     let displayText = '';
 
@@ -626,11 +657,33 @@ CyberOpsGame.prototype.updateObjectiveDisplay = function() {
         displayText = tbInfo;
     }
 
+    // Get objectives from MissionService if available, otherwise from currentMissionDef
+    let objectives;
+    if (this.gameServices && this.gameServices.missionService && this.gameServices.missionService.objectives.length > 0) {
+        // Use MissionService's objectives (single source of truth)
+        objectives = this.gameServices.missionService.objectives;
+    } else if (this.currentMissionDef && this.currentMissionDef.objectives) {
+        // Fallback to currentMissionDef if MissionService not available
+        objectives = this.currentMissionDef.objectives;
+    } else {
+        tracker.textContent = displayText + 'Mission objectives loading...';
+        return;
+    }
+
     // Show primary objective
-    const primaryObj = this.currentMissionDef.objectives.find(o => o.required && o.active && !o.completed);
+    const primaryObj = objectives.find(o => o.required && (o.active !== false) && (o.status !== 'completed'));
+    // Only log display updates at TRACE level to avoid spam
+    if (this.logger) {
+        this.logger.trace(`📋 Updating objective display:`);
+        this.logger.trace(`  - Objectives count: ${objectives.length}`);
+        this.logger.trace(`  - Primary objective: ${primaryObj ? primaryObj.description : 'none'}`);
+        if (primaryObj && primaryObj.progress !== undefined) {
+            this.logger.trace(`  - Progress: ${primaryObj.progress}/${primaryObj.maxProgress}`);
+        }
+    }
     if (primaryObj) {
         displayText += OBJECTIVE_HANDLERS.getDisplayText(primaryObj, this);
-    } else if (this.extractionEnabled) {
+    } else if (this.gameServices?.missionService?.extractionEnabled) {
         displayText += 'All objectives complete! Reach extraction point!';
     } else {
         displayText += 'All objectives complete!';
@@ -677,11 +730,24 @@ CyberOpsGame.prototype.giveRewards = function(rewards) {
 
 // Complete mission
 CyberOpsGame.prototype.completeMission = function(victory) {
-    if (this.logger) this.logger.error('🎯 Mission complete!', victory ? 'Victory!' : 'Failed');
+    if (this.logger) this.logger.info('🎯 Mission complete!', victory ? 'Victory!' : 'Failed');
 
-    // Give mission rewards if victorious
-    if (victory && this.currentMissionDef) {
-        this.giveRewards(this.currentMissionDef.rewards);
+    // Use MissionService to complete the mission
+    if (this.gameServices && this.gameServices.missionService) {
+        if (victory) {
+            const result = this.gameServices.missionService.completeMission(true);
+            // MissionService already applies rewards via ResourceService
+            if (this.logger && result) {
+                this.logger.info('🎆 Mission stats:', result.stats);
+            }
+        } else {
+            this.gameServices.missionService.failMission('Mission failed');
+        }
+    } else {
+        // Fallback if MissionService not available
+        if (victory && this.currentMissionDef) {
+            this.giveRewards(this.currentMissionDef.rewards);
+        }
     }
 
     // Navigate to victory/defeat screen using screen manager
@@ -714,16 +780,15 @@ CyberOpsGame.prototype.checkAgentsAlive = function(objective) {
 
 // Handle enemy elimination
 CyberOpsGame.prototype.onEnemyEliminated = function(enemy) {
-    // Track by type
-    if (enemy.type) {
-        this.enemiesEliminatedByType[enemy.type] = (this.enemiesEliminatedByType[enemy.type] || 0) + 1;
+    if (this.logger) this.logger.info('🎯 onEnemyEliminated CALLED');
+
+    // Track ONLY in MissionService (single source of truth)
+    if (this.gameServices && this.gameServices.missionService) {
+        this.gameServices.missionService.trackEvent('enemyKilled', {
+            enemyType: enemy.type || 'unknown'
+        });
+        if (this.logger) this.logger.info('📊 Tracked enemy kill in MissionService');
     }
-
-    // Track total
-    if (!this.missionTrackers) this.missionTrackers = {};
-    this.missionTrackers.enemiesEliminated = (this.missionTrackers.enemiesEliminated || 0) + 1;
-
-    if (this.logger) this.logger.debug(`💀 Enemy eliminated! Total: ${this.missionTrackers.enemiesEliminated}`);
 
     // Handle weapon drops (40% chance)
     if (enemy.weapon && enemy.weapon.dropChance) {
@@ -759,10 +824,13 @@ CyberOpsGame.prototype.onEnemyEliminated = function(enemy) {
 
 // Handle item collection
 CyberOpsGame.prototype.onItemCollected = function(itemType) {
-    if (!this.missionTrackers) this.missionTrackers = {};
-
-    const tracker = itemType + 'Collected';
-    this.missionTrackers[tracker] = (this.missionTrackers[tracker] || 0) + 1;
+    // Track through MissionService
+    if (this.gameServices && this.gameServices.missionService) {
+        this.gameServices.missionService.trackEvent('collect', {
+            type: itemType,
+            count: 1
+        });
+    }
 
     // Check objectives
     this.checkMissionObjectives();
@@ -770,24 +838,17 @@ CyberOpsGame.prototype.onItemCollected = function(itemType) {
 
 // Update survival timers
 CyberOpsGame.prototype.updateSurvivalTimers = function(deltaTime) {
-    if (!this.currentMissionDef) return;
-
-    this.currentMissionDef.objectives.forEach(obj => {
-        if (obj.type === OBJECTIVE_TYPES.SURVIVE && obj.active && !obj.completed) {
-            if (!this.survivalTimers[obj.id]) {
-                this.survivalTimers[obj.id] = 0;
-            }
-            this.survivalTimers[obj.id] += deltaTime;
-        }
-    });
+    // Survival timers now handled by MissionService.update()
+    // MissionService tracks per-objective timers internally
+    if (this.gameServices && this.gameServices.missionService) {
+        this.gameServices.missionService.update(deltaTime * 1000); // Convert seconds to milliseconds
+    }
 };
 
 // Initialize quest system
 CyberOpsGame.prototype.initQuestSystem = function() {
-    this.quests = {};  // All quests given by NPCs
-    this.activeQuests = {};
-    this.completedQuests = new Set();
-
+    // Quest tracking now handled by MissionService
+    this.quests = {};  // Keep for NPC quest definitions
     if (this.logger) this.logger.info('📜 Quest system initialized');
 };
 
@@ -833,7 +894,8 @@ CyberOpsGame.prototype.checkQuestCompletion = function() {
         let allComplete = true;
 
         quest.objectives.forEach(obj => {
-            obj.completed = OBJECTIVE_HANDLERS.checkComplete(obj, this);
+            // Quest completion should also use MissionService
+            // For now, keep quest system separate as it's NPC-driven
             if (!obj.completed) allComplete = false;
         });
 

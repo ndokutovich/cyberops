@@ -25,6 +25,7 @@ class MissionService {
         // Mission trackers
         this.trackers = {
             enemiesEliminated: 0,
+            enemiesEliminatedByType: {}, // Track by type: guard, soldier, heavy, etc.
             itemsCollected: 0,
             terminalsHacked: 0,
             areasReached: 0,
@@ -35,6 +36,12 @@ class MissionService {
             alertsTriggered: 0,
             civiliansCasualties: 0
         };
+
+        // Track specific interacted objects
+        this.interactedObjects = new Set();
+
+        // Per-objective timers
+        this.objectiveTimers = {};
 
         // Mission history
         this.completedMissions = [];
@@ -77,7 +84,7 @@ class MissionService {
      */
     startMission(missionData) {
         if (this.missionStatus === 'active') {
-            console.warn('⚠️ Mission already in progress');
+            if (this.logger) this.logger.warn('⚠️ Mission already in progress');
             return false;
         }
 
@@ -100,8 +107,16 @@ class MissionService {
 
         // Reset trackers
         Object.keys(this.trackers).forEach(key => {
-            this.trackers[key] = 0;
+            if (key === 'enemiesEliminatedByType') {
+                this.trackers[key] = {};
+            } else {
+                this.trackers[key] = 0;
+            }
         });
+
+        // Reset object tracking
+        this.interactedObjects.clear();
+        this.objectiveTimers = {};
 
         // Set extraction point
         this.extractionPoint = missionData.extractionPoint || missionData.map?.extraction;
@@ -131,25 +146,49 @@ class MissionService {
      * Parse mission objectives
      */
     parseObjectives(objectiveData) {
-        return objectiveData.map((obj, index) => ({
-            id: obj.id || `obj_${index}`,
-            type: obj.type || 'custom',
-            description: obj.description || 'Complete objective',
-            required: obj.required !== false,
-            bonus: obj.bonus || false,
-            hidden: obj.hidden || false,
-            target: obj.target || {},
-            progress: 0,
-            maxProgress: this.getObjectiveMaxProgress(obj),
-            status: 'pending', // pending, active, completed, failed
-            rewards: obj.rewards || {}
-        }));
+        return objectiveData.map((obj, index) => {
+            // Parse target - handle both old and new mission formats
+            let target = {};
+            if (typeof obj.target === 'string') {
+                // Simple target like 'all' or enemy type
+                target.type = obj.target;
+            } else if (obj.target) {
+                target = obj.target;
+            }
+
+            // Add count to target if at top level
+            if (obj.count) {
+                target.count = obj.count;
+            }
+
+            return {
+                id: obj.id || `obj_${index}`,
+                type: obj.type || 'custom',
+                description: obj.description || 'Complete objective',
+                displayText: obj.displayText || obj.description || 'Complete objective', // Preserve displayText
+                required: obj.required !== false,
+                bonus: obj.bonus || false,
+                hidden: obj.hidden || false,
+                target: target,
+                tracker: obj.tracker, // Preserve tracker for compatibility
+                progress: 0,
+                maxProgress: this.getObjectiveMaxProgress(obj),
+                status: 'pending', // pending, active, completed, failed
+                active: true, // Add active flag for compatibility
+                completed: false, // Add completed flag for compatibility
+                rewards: obj.rewards || {}
+            };
+        });
     }
 
     /**
      * Get objective max progress
      */
     getObjectiveMaxProgress(objective) {
+        // Check count at top level first (mission format), then in target
+        if (objective.count) {
+            return objective.count;
+        }
         if (objective.target) {
             return objective.target.count || objective.target.amount || 1;
         }
@@ -166,6 +205,22 @@ class MissionService {
         this.missionTimer += deltaTime;
         this.trackers.timeElapsed = Math.floor(this.missionTimer / 1000);
 
+        // Update per-objective timers for survive objectives
+        this.objectives.forEach(obj => {
+            if (obj.type === 'survive' && obj.status === 'active') {
+                if (!this.objectiveTimers[obj.id]) {
+                    this.objectiveTimers[obj.id] = 0;
+                }
+                this.objectiveTimers[obj.id] += deltaTime / 1000; // Convert to seconds
+
+                // Check if survival time met
+                if (this.objectiveTimers[obj.id] >= obj.target.duration) {
+                    obj.progress = obj.maxProgress;
+                    this.completeObjective(obj.id);
+                }
+            }
+        });
+
         // Check objective timeouts
         if (this.config.objectiveTimeout > 0) {
             if (this.trackers.timeElapsed > this.config.objectiveTimeout) {
@@ -178,7 +233,7 @@ class MissionService {
         if (this.extractionEnabled && this.extractionTimer > 0) {
             this.extractionTimer -= deltaTime;
             if (this.extractionTimer <= 0) {
-                console.log('⏰ Extraction timer expired');
+                if (this.logger) this.logger.info('⏰ Extraction timer expired');
             }
         }
 
@@ -196,16 +251,33 @@ class MissionService {
         switch (eventType) {
             case 'enemyKilled':
                 this.trackers.enemiesEliminated++;
-                this.checkObjectiveProgress('eliminate', { enemy: eventData.enemyType });
+
+                // Track by type
+                const enemyType = eventData.enemyType || 'unknown';
+                if (!this.trackers.enemiesEliminatedByType[enemyType]) {
+                    this.trackers.enemiesEliminatedByType[enemyType] = 0;
+                }
+                this.trackers.enemiesEliminatedByType[enemyType]++;
+
+                if (this.logger) this.logger.info(`🎯 Enemy killed: ${enemyType} (${this.trackers.enemiesEliminated} total, ${this.trackers.enemiesEliminatedByType[enemyType]} ${enemyType})`);
+                this.checkObjectiveProgress('eliminate', { enemy: enemyType });
                 break;
 
             case 'itemCollected':
                 this.trackers.itemsCollected++;
+                if (this.logger) this.logger.debug(`📦 Item collected: ${eventData.itemType || 'unknown'}`);
                 this.checkObjectiveProgress('collect', { item: eventData.itemType });
                 break;
 
             case 'terminalHacked':
                 this.trackers.terminalsHacked++;
+
+                // Track specific object
+                if (eventData.terminalId) {
+                    this.interactedObjects.add(eventData.terminalId);
+                }
+
+                if (this.logger) this.logger.info(`💻 Terminal hacked: ${eventData.terminalId || 'unknown'}`);
                 this.checkObjectiveProgress('hack', { terminal: eventData.terminalId });
                 break;
 
@@ -259,9 +331,20 @@ class MissionService {
 
             switch (objective.type) {
                 case 'eliminate':
-                    if (!objective.target.type || objective.target.type === data.enemy) {
+                    // Check if target matches
+                    if (!objective.target.type || objective.target.type === 'all') {
+                        // Any enemy counts
                         objective.progress++;
                         progressMade = true;
+                    } else if (objective.target.type === data.enemy) {
+                        // Specific type must match
+                        objective.progress++;
+                        progressMade = true;
+                    }
+
+                    // Use TRACE to avoid spam
+                    if (progressMade && this.logger) {
+                        this.logger.trace(`🎯 Eliminate progress: ${objective.progress}/${objective.maxProgress}`);
                     }
                     break;
 
@@ -273,9 +356,24 @@ class MissionService {
                     break;
 
                 case 'hack':
-                    if (!objective.target.id || objective.target.id === data.terminal) {
+                    // Check for specific terminal or any terminal
+                    if (!objective.target.id) {
+                        // Any terminal counts
                         objective.progress++;
                         progressMade = true;
+                    } else if (objective.target.id === data.terminal) {
+                        // Specific terminal must match
+                        objective.progress++;
+                        progressMade = true;
+                    } else if (objective.target.specific && Array.isArray(objective.target.specific)) {
+                        // Check if all specific terminals are hacked
+                        const allHacked = objective.target.specific.every(id =>
+                            this.interactedObjects.has(id)
+                        );
+                        if (allHacked) {
+                            objective.progress = objective.maxProgress;
+                            progressMade = true;
+                        }
                     }
                     break;
 
@@ -317,12 +415,19 @@ class MissionService {
 
             if (progressMade) {
                 objective.status = 'active';
+                objective.active = true; // For compatibility
                 objectivesUpdated = true;
 
                 // Check if completed
                 if (objective.progress >= objective.maxProgress) {
                     this.completeObjective(objective.id);
+                } else {
+                    // Update completed flag for compatibility
+                    objective.completed = false;
                 }
+
+                // Only log at INFO when progress is actually made, not every frame
+                if (this.logger) this.logger.debug(`📋 Objective progress: "${objective.description}" - ${objective.progress}/${objective.maxProgress}`);
             }
         });
 
@@ -339,6 +444,7 @@ class MissionService {
         if (!objective || objective.status === 'completed') return;
 
         objective.status = 'completed';
+        objective.completed = true; // For compatibility with game-mission-executor
         objective.progress = objective.maxProgress;
         this.completedObjectives.add(objectiveId);
 
@@ -358,7 +464,7 @@ class MissionService {
         // Notify listeners
         this.notifyListeners('objectiveComplete', { objective });
 
-        console.log(`✅ Objective completed: ${objective.description}`);
+        if (this.logger) this.logger.info(`✅ Objective completed: ${objective.description}`);
 
         // Check extraction eligibility
         this.checkExtractionEligibility();
@@ -385,7 +491,7 @@ class MissionService {
         // Notify listeners
         this.notifyListeners('objectiveFail', { objective });
 
-        console.log(`❌ Objective failed: ${objective.description}`);
+        if (this.logger) this.logger.warn(`❌ Objective failed: ${objective.description}`);
 
         // Check if mission failed
         if (objective.required) {
@@ -428,7 +534,7 @@ class MissionService {
             autoExtraction: this.config.autoExtraction
         });
 
-        console.log('🚁 Extraction point activated!');
+        if (this.logger) this.logger.info('🚁 Extraction point activated!');
     }
 
     /**
@@ -483,7 +589,7 @@ class MissionService {
         // Notify listeners
         this.notifyListeners('complete', { mission: this.currentMission, stats, rewards });
 
-        console.log(`🏆 Mission completed: ${this.currentMission.name}`);
+        if (this.logger) this.logger.info(`🏆 Mission completed: ${this.currentMission.name}`);
         return { stats, rewards };
     }
 
@@ -528,7 +634,7 @@ class MissionService {
         // Notify listeners
         this.notifyListeners('fail', { mission: this.currentMission, reason, stats });
 
-        console.log(`💀 Mission failed: ${this.currentMission.name} - ${reason}`);
+        if (this.logger) this.logger.warn(`💀 Mission failed: ${this.currentMission.name} - ${reason}`);
         return { stats, reason };
     }
 
@@ -634,10 +740,21 @@ class MissionService {
         this.completedObjectives.clear();
         this.failedObjectives.clear();
         this.extractionEnabled = false;
+
+        // Reset all trackers
         Object.keys(this.trackers).forEach(key => {
-            this.trackers[key] = 0;
+            if (key === 'enemiesEliminatedByType') {
+                this.trackers[key] = {};
+            } else {
+                this.trackers[key] = 0;
+            }
         });
-        console.log('🔄 Mission service reset');
+
+        // Reset object and timer tracking
+        this.interactedObjects.clear();
+        this.objectiveTimers = {};
+
+        if (this.logger) this.logger.info('🔄 Mission service reset');
     }
 
     /**
@@ -701,7 +818,7 @@ class MissionService {
                 try {
                     callback(data);
                 } catch (e) {
-                    console.error(`Error in mission listener (${eventType}):`, e);
+                    if (this.logger) this.logger.error(`Error in mission listener (${eventType}):`, e);
                 }
             });
         }

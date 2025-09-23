@@ -78,6 +78,9 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **logger-service.js**: Centralized logging system with timestamp and source tracking
 - **resource-service.js**: Centralized resource management (credits, research points, world control)
 - **agent-service.js**: Complete agent lifecycle management (hire, kill, revive, damage, selection)
+- **mission-service.js**: SINGLE SOURCE OF TRUTH for all mission tracking and objectives
+- **game-state-service.js**: Game state management and auto-save functionality
+- **event-log-service.js**: Event history and logging for gameplay events
 - **game-services.js**: Service locator pattern for dependency injection
 - **formula-service.js**: Centralized damage and combat formulas
 - **equipment-service.js**: Equipment management and optimization
@@ -531,12 +534,20 @@ Each mission file (e.g., `campaigns/main/act1/main-01-001.js`) is self-contained
 - **OBJECTIVE_TYPES**: Interact, Eliminate, Collect, Reach, Survive, Custom
 - **INTERACTION_TARGETS**: Terminal, Explosive, Switch, Gate, Door, NPC
 
-### Mission Flow
-1. Mission loads from JSON definition
-2. Map generates from declarative data (preserving original layouts)
-3. Objectives tracked via `missionTrackers` counters
-4. Extraction enables when all required objectives complete
-5. Mission completes when agents reach extraction point
+### Mission Flow (Clean Architecture)
+1. Mission loads from campaign definition
+2. Map loads from embedded string arrays (NO generation)
+3. MissionService handles ALL objective tracking (single source of truth)
+4. MissionService enables extraction when objectives complete
+5. MissionService completes mission when agents reach extraction
+
+### Mission Tracking Architecture
+- **MissionService**: The ONLY system that tracks objectives and mission state
+- **No duplicate tracking**: Removed ALL legacy tracking: `missionTrackers`, `hackedTerminals`, `interactedObjects`, `enemiesEliminatedByType`, `survivalTimers`
+- **Event-driven**: All game events call `MissionService.trackEvent()`
+- **Enhanced tracking**: Tracks by enemy type, specific objects, and per-objective timers
+- **Backward compatibility**: `missionTrackers` property proxies to MissionService.trackers
+- **Quest system**: Kept separate in `activeQuests`/`completedQuests` for NPC compatibility
 
 ### Special Interactions
 All interactions use the H key with context-sensitive behavior:
@@ -546,11 +557,12 @@ All interactions use the H key with context-sensitive behavior:
 - **Gates**: Breach fortified entrances (Mission 5)
 - **NPCs**: Engage in dialog and receive quests
 
-### Mission Integration
-- `game-mission-executor.js`: Generic objective checking, no hardcoded logic
-- `game-mission-integration.js`: Bridges new system with legacy code
-- `useActionAbility()`: Universal interaction handler
-- Fallback system allows interactions even when not mission objectives
+### Mission Integration (Clean)
+- `game-mission-executor.js`: UI and display logic only
+- `game-mission-integration.js`: Links MissionService objectives to game
+- `MissionService.trackEvent()`: ALL tracking goes through this
+- `MissionService.objectives`: Single array for all objective data
+- No fallbacks or duplicate systems - MissionService is authoritative
 
 ### Map System
 - **Embedded Maps Only**: All maps are embedded in mission files as string arrays
@@ -576,8 +588,12 @@ All interactions use the H key with context-sensitive behavior:
 - **NEVER** put NPCs, quests, or content in engine code
 - **NEVER** use browser-based tools for data conversion - use Node.js
 - **NEVER** leave unused generation code in mission files
+- **NEVER** use dual tracking systems - MissionService is the ONLY tracker
+- **NEVER** use missionTrackers, hackedTerminals, or other legacy counters
+- **NEVER** check objectives outside of MissionService
 - **ALWAYS** keep complete separation between engine and content
 - **ALWAYS** use campaign files for all mission-specific content
+- **ALWAYS** use MissionService.trackEvent() for ALL mission events
 
 ### Content Location Rules
 - **Mission Content**: ONLY in `campaigns/*/act*/mission.js` files
@@ -587,13 +603,19 @@ All interactions use the H key with context-sensitive behavior:
 
 ## Major Cleanup Process Completed
 
-### What Was Removed
+### What Was Removed (Complete Cleanup)
 1. **Procedural Map Generation**: 973 lines reduced to 22-line stub
 2. **Hardcoded NPCs**: 400+ lines of NPCs removed from game-npc.js
 3. **Hardcoded Missions**: All mission data moved to campaign files
 4. **game-maps-data.js**: Completely deleted (was 14,000+ lines)
 5. **game-missions-data.js**: Completely deleted
 6. **Intermediate Tools**: All test HTML files and conversion scripts removed
+7. **Duplicate Tracking Systems**: Removed all missionTrackers initialization and direct usage
+8. **OBJECTIVE_HANDLERS.checkComplete**: Removed - MissionService handles all checking
+9. **Local tracking variables**: Removed interactedObjects, enemiesEliminatedByType, survivalTimers from game-mission-executor
+10. **Duplicate completeMission**: Now uses MissionService.completeMission()
+11. **Legacy counter updates**: Removed hackedTerminals counter, all interaction tracking through MissionService
+12. **Duplicate enemy tracking**: Removed redundant MissionService.trackEvent in game-flow (onEnemyEliminated already tracks)
 
 ### Storage Efficiency Achieved
 - **Old Format**: 14,000+ lines per mission (object per tile)
@@ -769,8 +791,22 @@ this.activeAgents;    // Automatically uses AgentService
 - **Formula consistency**: All damage/stat calculations MUST go through FormulaService
 - **Resource operations**: All credit/research point changes MUST go through ResourceService
 - **Agent operations**: All agent management MUST go through AgentService
+- **Mission tracking**: ALL objective tracking MUST go through MissionService
 - **Service initialization order**: Core services first (Formula, Resource), then dependent services
 - **Backward compatibility**: Services enhance but don't break existing systems - compatibility layer ensures legacy code works
+
+### Known Service Integration Issues (Fixed)
+
+1. **AgentService Health Bug (FIXED)**:
+   - **Issue**: AgentService was setting `maxHealth: 100` as default, ignoring campaign health values
+   - **Impact**: Agents appeared damaged at mission start (e.g., 90/100 health)
+   - **Fix**: Changed to `maxHealth: data.maxHealth || data.health || 100`
+   - **Lesson**: Services must preserve original data flow behavior
+
+2. **Mission Tracking Consolidation**:
+   - **Issue**: Duplicate tracking between game code and MissionService
+   - **Fix**: Removed all legacy tracking, MissionService is single source of truth
+   - **Compatibility**: `missionTrackers` property proxies to MissionService
 
 ### Compatibility Layer
 

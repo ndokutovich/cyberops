@@ -52,20 +52,38 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
         bonusObjectives: []
     };
 
-    // Gather main objectives from current mission definition
-    if (this.currentMissionDef && this.currentMissionDef.objectives) {
-        summary.totalMainObjectives = this.currentMissionDef.objectives.filter(o => o.required !== false).length;
-        summary.totalObjectives = this.currentMissionDef.objectives.length;
+    // Gather main objectives from MissionService first, fallback to currentMissionDef
+    let objectives = null;
+    if (this.gameServices && this.gameServices.missionService && this.gameServices.missionService.objectives) {
+        objectives = this.gameServices.missionService.objectives;
+    } else if (this.currentMissionDef && this.currentMissionDef.objectives) {
+        objectives = this.currentMissionDef.objectives;
+    }
 
-        this.currentMissionDef.objectives.forEach(obj => {
-            const completed = this.checkObjectiveComplete ? this.checkObjectiveComplete(obj) : false;
+    if (objectives) {
+        summary.totalMainObjectives = objectives.filter(o => o.required !== false).length;
+        summary.totalObjectives = objectives.length;
+
+        objectives.forEach(obj => {
+            // Check completion from MissionService or fallback to game method
+            let completed = false;
+            if (this.gameServices && this.gameServices.missionService) {
+                // Check if objective is in completed set
+                completed = obj.status === 'completed' || this.gameServices.missionService.completedObjectives.has(obj.id);
+            } else if (this.checkObjectiveComplete) {
+                completed = this.checkObjectiveComplete(obj);
+            }
 
             // Build progress string for objectives with counters
             let progress = '';
-            if (obj.tracker && this.missionTrackers) {
-                const current = this.missionTrackers[obj.tracker] || 0;
+            if (obj.progress !== undefined && obj.maxProgress !== undefined) {
+                // Use MissionService progress data if available
+                progress = `${obj.progress}/${obj.maxProgress}`;
+            } else if (obj.tracker && this.gameServices && this.gameServices.missionService) {
+                // Get tracker value from MissionService
+                const tracker = this.gameServices.missionService.trackers[obj.tracker] || 0;
                 const required = obj.count || 1;
-                progress = `${current}/${required}`;
+                progress = `${tracker}/${required}`;
             }
 
             summary.mainObjectives.push({

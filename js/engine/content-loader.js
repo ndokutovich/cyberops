@@ -130,7 +130,7 @@ class ContentLoader {
             name: data.name,
             portrait: data.portrait || 'default',
             health: data.health || 100,
-            maxHealth: data.health || 100,
+            maxHealth: data.maxHealth || data.health || 100,
             damage: data.damage || 10,
             class: data.class || 'soldier',
             hiringCost: data.hiringCost || 1000,

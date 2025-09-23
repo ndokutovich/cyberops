@@ -15,8 +15,8 @@ CyberOpsGame.prototype.initNPCSystem = function() {
     }
     this.npcs = [];
     this.dialogQueue = [];
-    this.quests = {};
-    this.completedQuests = new Set();
+    this.quests = {}; // Keep for NPC quest definitions (dialog handled here)
+    // Quest completion tracking moved to MissionService
     this.npcInteractionRange = 3; // Distance for interaction (same as hack/bomb)
 
     if (this.logger) this.logger.info('💬 NPC System initialized');
@@ -416,8 +416,12 @@ Quest.prototype.checkObjective = function(objective, game) {
                 return false;
 
             case 'hack':
-                // Simple hack count check
-                return (game.hackedTerminals || 0) >= (objective.count || 1);
+                // Check terminals hacked through MissionService
+                if (game.gameServices && game.gameServices.missionService) {
+                    const terminalsHacked = game.gameServices.missionService.trackers.terminalsHacked || 0;
+                    return terminalsHacked >= (objective.count || 1);
+                }
+                return false;
 
             case 'interact':
                 // Check for terminal hacking
@@ -833,21 +837,31 @@ CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
     if (typeof OBJECTIVE_TYPES !== 'undefined') {
         switch(obj.type) {
             case OBJECTIVE_TYPES.INTERACT:
-                if (obj.tracker && this.missionTrackers) {
-                    const current = this.missionTrackers[obj.tracker] || 0;
-                    const required = obj.count || 1;
-                    return current >= required;
+                // Check through MissionService if available
+                if (this.gameServices && this.gameServices.missionService) {
+                    // Check if this specific object has been interacted with
+                    const objId = obj.target?.id || obj.tracker;
+                    if (objId && this.gameServices.missionService.interactedObjects.has(objId)) {
+                        return true;
+                    }
+                    // Check interaction count if using a tracker
+                    if (obj.tracker) {
+                        const tracker = this.gameServices.missionService.trackers[obj.tracker] || 0;
+                        const required = obj.count || 1;
+                        return tracker >= required;
+                    }
                 }
                 return false;
 
             case OBJECTIVE_TYPES.ELIMINATE:
-                if (obj.tracker && this.missionTrackers) {
-                    const current = this.missionTrackers[obj.tracker] || 0;
-                    const required = obj.count || 1;
-                    return current >= required;
+                // Check through MissionService if available
+                if (this.gameServices && this.gameServices.missionService) {
+                    const tracker = this.gameServices.missionService.trackers.enemiesEliminated || 0;
+                    return tracker >= (obj.count || 1);
                 }
+                // Fallback for quest system
                 if (obj.target === 'all') {
-                    return (this.missionTrackers.enemiesEliminated || 0) >= (obj.count || 1);
+                    return false; // Let MissionService handle this
                 }
                 return false;
 
@@ -862,10 +876,10 @@ CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
                 return this.missionTimer >= survivalTime;
 
             case OBJECTIVE_TYPES.COLLECT:
-                if (obj.tracker && this.missionTrackers) {
-                    const current = this.missionTrackers[obj.tracker] || 0;
-                    const required = obj.count || 1;
-                    return current >= required;
+                // Check through MissionService if available
+                if (this.gameServices && this.gameServices.missionService) {
+                    const tracker = this.gameServices.missionService.trackers.itemsCollected || 0;
+                    return tracker >= (obj.count || 1);
                 }
                 return false;
 
@@ -880,10 +894,18 @@ CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
     // Check objective type
     switch(obj.type) {
         case 'hack':
-            return (this.hackedTerminals || 0) >= (obj.count || 1);
+            // Check through MissionService
+            if (this.gameServices && this.gameServices.missionService) {
+                return this.gameServices.missionService.trackers.terminalsHacked >= (obj.count || 1);
+            }
+            return false;
 
         case 'eliminate_all':
-            return this.enemiesKilledThisMission >= (obj.count || this.totalEnemiesInMission);
+            // Check through MissionService
+            if (this.gameServices && this.gameServices.missionService) {
+                return this.gameServices.missionService.trackers.enemiesEliminated >= (obj.count || this.totalEnemiesInMission);
+            }
+            return false;
 
         case 'reach_extraction':
         case 'extract':

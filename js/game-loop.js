@@ -172,8 +172,19 @@ CyberOpsGame.prototype.updateProjectilesOnly = function() {
                             hasOnEntityDeath: !!this.onEntityDeath
                         });
 
-                        if (this.missionTrackers) {
-                            this.missionTrackers.enemiesEliminated++;
+                        // Call onEnemyEliminated to properly track
+                        if (this.logger) this.logger.info('💥 Enemy killed! Tracking...');
+                        if (this.onEnemyEliminated) {
+                            if (this.logger) this.logger.info('📢 Calling onEnemyEliminated');
+                            this.onEnemyEliminated(enemy);
+                        } else {
+                            if (this.logger) this.logger.warn('⚠️ onEnemyEliminated NOT FOUND');
+                            // Track directly through MissionService
+                            if (this.gameServices && this.gameServices.missionService) {
+                                this.gameServices.missionService.trackEvent('enemyKilled', {
+                                    enemyType: enemy.type || 'soldier'
+                                });
+                            }
                         }
                         if (this.logEvent) {
                             this.logEvent(`Enemy eliminated!`, 'combat');
@@ -405,7 +416,14 @@ CyberOpsGame.prototype.update = function() {
                     // Reached terminal, hack it
                     if (!agent.autoHackTarget.hacked) {
                         agent.autoHackTarget.hacked = true;
-                        this.hackedTerminals++;
+
+                        // Track through MissionService
+                        if (this.gameServices && this.gameServices.missionService) {
+                            this.gameServices.missionService.trackEvent('terminalHacked', {
+                                terminalId: agent.autoHackTarget.id || 'unknown'
+                            });
+                        }
+
                         this.addNotification("🖥️ Terminal hacked!");
 
                         // Play hack sound if available
@@ -862,8 +880,9 @@ CyberOpsGame.prototype.checkMissionStatus = function() {
 CyberOpsGame.prototype.checkExtractionPoint = function() {
     if (!this.map || !this.map.extraction) return;
 
-    // Check if extraction is enabled (all objectives complete)
-    if (!this.extractionEnabled) return;
+    // Check if extraction is enabled through MissionService
+    const extractionEnabled = this.gameServices?.missionService?.extractionEnabled || this.extractionEnabled;
+    if (!extractionEnabled) return;
 
     const atExtraction = this.agents.some(agent => {
         if (!agent.alive) return false;
@@ -875,6 +894,10 @@ CyberOpsGame.prototype.checkExtractionPoint = function() {
     });
 
     if (atExtraction) {
+        // Complete mission through MissionService
+        if (this.gameServices && this.gameServices.missionService) {
+            this.gameServices.missionService.completeMission(true);
+        }
         this.endMission(true);
     }
 }

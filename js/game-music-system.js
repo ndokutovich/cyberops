@@ -309,7 +309,13 @@ CyberOpsGame.prototype.checkMusicEventTriggers = function() {
 CyberOpsGame.prototype.checkObjectiveCondition = function(condition) {
     switch (condition) {
         case 'all_terminals_hacked':
-            return this.missionTrackers?.terminalsHacked >= this.missionTrackers?.terminalsTotal;
+            // Check through MissionService
+            if (this.gameServices && this.gameServices.missionService) {
+                const terminalsHacked = this.gameServices.missionService.trackers.terminalsHacked || 0;
+                const terminalsTotal = this.terminals ? this.terminals.length : 0;
+                return terminalsHacked >= terminalsTotal;
+            }
+            return false;
         case 'extraction_enabled':
             return this.extractionEnabled;
         default:

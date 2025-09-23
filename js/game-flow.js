@@ -17,7 +17,7 @@ CyberOpsGame.prototype.startCampaign = function() {
 
         this.clearDemosceneTimer(); // Clear timer when user takes action
         this.currentMissionIndex = 0;
-        this.completedMissions = [];
+        // Mission tracking now handled by MissionService
 
         // Initialize game state for new campaign
         if (this.gameServices?.resourceService) {
@@ -358,9 +358,7 @@ CyberOpsGame.prototype.initMission = function() {
             if (this.logger) this.logger.warn('⚠️ NPC system not loaded - initNPCSystem not found');
         }
 
-        // Reset mission tracking
-        this.hackedTerminals = 0;  // Reset terminal hacking counter
-        this.enemiesKilledThisMission = 0;  // Reset enemy kill counter
+        // Mission tracking handled by MissionService now
         this.intelThisMission = 0;
         this.researchPointsThisMission = 0;
         this.creditsThisMission = 0;
@@ -663,7 +661,9 @@ CyberOpsGame.prototype.initMission = function() {
             }
 
             // Ensure required properties exist
-            agent.maxHealth = agent.maxHealth || agent.health;
+            // IMPORTANT: Set maxHealth first, then restore health to full for mission start
+            agent.maxHealth = agent.maxHealth || agent.health || 100;
+            agent.health = agent.maxHealth;  // Start mission with full health
             agent.protection = agent.protection || 0;
             // Initialize bonuses through service if not set
             if (!agent.hackBonus) agent.hackBonus = 0;
@@ -1372,13 +1372,9 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                         this.totalEnemiesDefeated++;
 
                         // Track enemy elimination for mission objectives
+                        // onEnemyEliminated already tracks through MissionService
                         if (this.onEnemyEliminated) {
                             this.onEnemyEliminated(enemy);
-                        }
-
-                        // Update mission tracker
-                        if (this.missionTrackers) {
-                            this.missionTrackers.enemiesEliminated++;
                         }
 
                         if (this.logger) this.logger.debug(`💥 Grenade killed enemy at (${enemy.x}, ${enemy.y})`);
@@ -1859,15 +1855,14 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
             if (dist < hackRange) {
                 terminal.hacked = true;
 
-                // Increment the hackedTerminals counter for quest tracking
-                this.hackedTerminals = (this.hackedTerminals || 0) + 1;
-
-                // Also update mission trackers for the new system
-                if (this.missionTrackers) {
-                    this.missionTrackers.terminalsHacked = (this.missionTrackers.terminalsHacked || 0) + 1;
+                // Track through MissionService
+                if (this.gameServices && this.gameServices.missionService) {
+                    this.gameServices.missionService.trackEvent('terminalHacked', {
+                        terminalId: terminal.id || 'unknown'
+                    });
                 }
 
-                if (this.logger) this.logger.debug(`🖥️ Terminal hacked! Total: ${this.hackedTerminals}`);
+                if (this.logger) this.logger.debug(`🖥️ Terminal hacked!`);
 
                 // Log the hacking event
                 if (this.logEvent) {

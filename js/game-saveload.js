@@ -201,21 +201,11 @@ CyberOpsGame.prototype.refreshSaveList = function() {
 }
 
 CyberOpsGame.prototype.getAllSaves = function() {
-    const saves = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('cyberops_save_')) {
-            try {
-                const saveData = JSON.parse(localStorage.getItem(key));
-                saveData.id = key.replace('cyberops_save_', '');
-                saves.push(saveData);
-            } catch (e) {
-                if (this.logger) this.logger.error('Invalid save data:', key);
-            }
-        }
+    // Use GameStateService only
+    if (this.gameServices && this.gameServices.gameStateService) {
+        return this.gameServices.gameStateService.getAllSaves();
     }
-    // Sort by timestamp, newest first
-    return saves.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return [];
 }
 
 CyberOpsGame.prototype.createNewSave = function() {
@@ -269,7 +259,10 @@ CyberOpsGame.prototype.deleteSave = function(slotId) {
     const confirm = window.confirm(`Delete save "${save.name}"? This cannot be undone.`);
     if (!confirm) return;
 
-    localStorage.removeItem(`cyberops_save_${slotId}`);
+    // Use GameStateService only
+    if (this.gameServices && this.gameServices.gameStateService) {
+        this.gameServices.gameStateService.deleteSave(slotId);
+    }
     this.refreshSaveList();
 
     this.showHudDialog(
@@ -288,49 +281,61 @@ CyberOpsGame.prototype.renameSave = function(slotId) {
     const newName = prompt('Enter new name:', save.name);
     if (!newName || newName === save.name) return;
 
-    save.name = newName;
-    localStorage.setItem(`cyberops_save_${slotId}`, JSON.stringify(save));
+    // Use GameStateService only
+    if (this.gameServices && this.gameServices.gameStateService) {
+        this.gameServices.gameStateService.renameSave(slotId, newName);
+    }
     this.refreshSaveList();
 }
 
 // Load specific save slot
 CyberOpsGame.prototype.loadSaveSlot = function(slotId) {
-
     // Initialize logger
     if (!this.logger) {
         this.logger = window.Logger ? new window.Logger('GameSaveload') : null;
     }
-    try {
-        const saveData = JSON.parse(localStorage.getItem(`cyberops_save_${slotId}`));
-        if (!saveData) {
-            this.showHudDialog(
-                '❌ ERROR',
-                'Save file not found or corrupted.',
-                [{ text: 'OK', action: 'close' }]
-            );
-            return;
-        }
 
-        const saveTime = new Date(saveData.timestamp).toLocaleString();
+    // Get save info first to show confirmation
+    const saves = this.getAllSaves();
+    const saveData = saves.find(s => s.id === slotId);
+
+    if (!saveData) {
         this.showHudDialog(
-            '📁 LOAD GAME',
-            `Load "${saveData.name}"?<br><br>Saved: ${saveTime}<br>Mission: ${saveData.gameState.currentMissionIndex + 1}/${this.missions.length}`,
-            [
-                { text: 'LOAD', action: () => {
-                    this.performLoadGame(saveData);
-                    this.closeSaveList();
-                }},
-                { text: 'CANCEL', action: 'close' }
-            ]
-        );
-    } catch (error) {
-        if (this.logger) this.logger.error('Failed to load save:', error);
-        this.showHudDialog(
-            '❌ LOAD ERROR',
-            'Failed to load save file.',
+            '❌ ERROR',
+            'Save file not found or corrupted.',
             [{ text: 'OK', action: 'close' }]
         );
+        return;
     }
+
+    const saveTime = new Date(saveData.timestamp).toLocaleString();
+    this.showHudDialog(
+        '📁 LOAD GAME',
+        `Load "${saveData.name}"?<br><br>Saved: ${saveTime}<br>Mission: ${saveData.gameState.currentMissionIndex + 1}/${this.missions.length}`,
+        [
+            { text: 'LOAD', action: () => {
+                // Load through GameStateService only
+                const success = this.gameServices.gameStateService.loadGame(this, slotId);
+                if (success) {
+                    this.closeSaveList();
+                    // Navigate to hub
+                    this.changeScreen('hub');
+                    this.showHudDialog(
+                        '✅ GAME LOADED',
+                        `Game loaded successfully!<br><br>Mission: ${this.currentMissionIndex + 1}/${this.missions.length}<br>Credits: ${this.credits.toLocaleString()}`,
+                        [{ text: 'CONTINUE', action: 'close' }]
+                    );
+                } else {
+                    this.showHudDialog(
+                        '❌ LOAD ERROR',
+                        'Failed to load game state.',
+                        [{ text: 'OK', action: 'close' }]
+                    );
+                }
+            }},
+            { text: 'CANCEL', action: 'close' }
+        ]
+    );
 }
 
 // Quick save - saves to automatic slot
@@ -341,15 +346,14 @@ CyberOpsGame.prototype.quickSave = function() {
 }
 
 CyberOpsGame.prototype.quickLoad = function() {
-    // Try to load the quicksave first
-    const quickSaveKey = 'cyberops_save_quicksave';
-    const quickSave = localStorage.getItem(quickSaveKey);
+    // Check for quicksave via GameStateService
+    const saves = this.getAllSaves();
+    const quickSave = saves.find(s => s.id === 'quicksave');
 
     if (quickSave) {
         this.loadSaveSlot('quicksave');
     } else {
         // Fall back to most recent save
-        const saves = this.getAllSaves();
         if (saves.length > 0) {
             this.loadSaveSlot(saves[0].id);
         } else {
@@ -378,137 +382,17 @@ CyberOpsGame.prototype.loadGame = function() {
     return this.gameServices.gameStateService.loadGame(this, 'quicksave');
 }
 
-CyberOpsGame.prototype.performLoadGame = function(saveData) {
-        // Use GameStateService ONLY - no fallback
-        const success = this.gameServices.gameStateService.applyGameState(this, saveData.gameState);
-        if (success) {
-            // Navigate to hub
-            this.changeScreen('hub');
-            this.showHudDialog(
-                '✅ GAME LOADED',
-                `Game loaded successfully!<br><br>Mission: ${this.currentMissionIndex + 1}/${this.missions.length}<br>Credits: ${this.credits.toLocaleString()}`,
-                [{ text: 'CONTINUE', action: 'close' }]
-            );
-        } else {
-            this.showHudDialog(
-                '❌ LOAD ERROR',
-                'Failed to load game state.',
-                [{ text: 'OK', action: 'close' }]
-            );
-        }
-        return success;
-}
+// Legacy performLoadGame removed - loading is done directly in loadSaveSlot
 
-// REMOVED: Legacy load code completely removed
-// All loading now goes through GameStateService
-
-CyberOpsGame.prototype.performLoadGame_REMOVED = function() {
-        // Legacy code removed - use GameStateService
-        try {
-            // Restore game state
-            this.currentMissionIndex = saveData.gameState.currentMissionIndex;
-            this.completedMissions = [...saveData.gameState.completedMissions];
-            this.totalCampaignTime = saveData.gameState.totalCampaignTime || 0;
-            this.totalEnemiesDefeated = saveData.gameState.totalEnemiesDefeated || 0;
-
-            // Restore hub data (if available)
-            if (saveData.gameState.credits !== undefined) {
-                // Import via services if available, otherwise use fallback assignment
-                if (this.gameServices?.resourceService && saveData.gameState.resources) {
-                    this.gameServices.resourceService.importState(saveData.gameState.resources);
-                } else {
-                    // Fallback for older saves or when services not available
-                    this.credits = saveData.gameState.credits;
-                    this.researchPoints = saveData.gameState.researchPoints;
-                    this.worldControl = saveData.gameState.worldControl;
-                }
-
-                // Import agent data via AgentService if available
-                if (this.gameServices?.agentService && (saveData.gameState.availableAgents || saveData.gameState.activeAgents)) {
-                    this.gameServices.agentService.importState({
-                        availableAgents: saveData.gameState.availableAgents,
-                        activeAgents: saveData.gameState.activeAgents,
-                        fallenAgents: saveData.gameState.fallenAgents || []
-                    });
-                } else {
-                    // Fallback for older saves
-                    this.availableAgents = saveData.gameState.availableAgents;
-                    this.activeAgents = saveData.gameState.activeAgents;
-                    this.fallenAgents = saveData.gameState.fallenAgents || [];
-                }
-
-                this.weapons = saveData.gameState.weapons;
-                this.equipment = saveData.gameState.equipment;
-                this.completedResearch = saveData.gameState.completedResearch || [];
-                this.agentLoadouts = saveData.gameState.agentLoadouts || {};
-
-                // Restore InventoryService state if available
-                if (saveData.gameState.inventoryState && this.gameServices?.inventoryService) {
-                    this.gameServices.inventoryService.importState(saveData.gameState.inventoryState);
-                    // Sync weapons back from InventoryService
-                    this.weapons = this.gameServices.inventoryService.inventory.weapons;
-                    this.agentLoadouts = this.gameServices.inventoryService.agentLoadouts;
-                }
-            }
-
-            // Determine which screen to transition to based on saved state
-            const targetScreen = saveData.gameState.currentScreen || 'hub';
-
-            // If we're currently in a mission, exit it first
-            if (this.currentScreen === 'game') {
-                // Clean up current mission
-                if (this.cleanup3D) this.cleanup3D();
-                this.agents = [];
-                this.enemies = [];
-                this.projectiles = [];
-                this.effects = [];
-            }
-
-            // Transition to the appropriate screen
-            if (targetScreen === 'hub' || !saveData.gameState.currentScreen) {
-                // Go to hub by default
-                this.currentScreen = 'hub';
-                this.initHub();
-            } else if (targetScreen === 'game' && this.currentMission) {
-                // Resume mission if one was in progress
-                this.currentScreen = 'game';
-                // Note: Mission state would need to be saved/restored for this to work properly
-                this.initHub(); // For now, go to hub instead
-            } else {
-                // Default to hub
-                this.currentScreen = 'hub';
-                this.initHub();
-            }
-
-            // Close dialog and update menu
-            this.closeDialog();
-            this.updateMenuState();
-            this.updateHubStats(); // Update hub displays
-
-            this.showHudDialog(
-                '✅ GAME LOADED',
-                `Game successfully loaded!<br><br>Welcome back, Commander.<br><br><strong>Progress:</strong><br>• Missions Completed: ${this.completedMissions.length}/${this.missions.length}<br>• Current Mission: ${this.currentMissionIndex + 1}<br>• Credits: ${this.credits?.toLocaleString() || 'N/A'}<br>• Research Points: ${this.researchPoints?.toLocaleString() || 'N/A'}`,
-                [{ text: 'CONTINUE', action: 'close' }]
-            );
-
-        } catch (error) {
-            if (this.logger) this.logger.error('Failed to perform load:', error);
-            this.showHudDialog(
-                '❌ LOAD ERROR',
-                'An error occurred while loading the game.<br><br>Please try again or start a new campaign.',
-                [{ text: 'OK', action: 'close' }]
-            );
-        }
-}
+// Legacy load code completely removed - all loading through GameStateService
 
 CyberOpsGame.prototype.hasSavedGame = function() {
-        try {
-            const savedData = localStorage.getItem('cyberops_savegame');
-            return savedData !== null;
-        } catch (error) {
-            if (this.logger) this.logger.error('Error checking save game:', error);
-            return false;
-        }
+    // Check via GameStateService
+    if (this.gameServices && this.gameServices.gameStateService) {
+        const saves = this.gameServices.gameStateService.getAllSaves();
+        return saves.length > 0;
+    }
+    return false;
 }
 
 CyberOpsGame.prototype.exitGame = function() {
@@ -529,21 +413,11 @@ CyberOpsGame.prototype.saveAndExit = function() {
         // Check if there's progress to save
         const hasProgress = this.completedMissions.length > 0 || this.currentMissionIndex > 0;
 
-        if (hasProgress) {
+        if (hasProgress && this.gameServices && this.gameServices.gameStateService) {
             try {
-                const saveData = {
-                    version: '1.0',
-                    timestamp: new Date().toISOString(),
-                    gameState: {
-                        currentMissionIndex: this.currentMissionIndex,
-                        completedMissions: [...this.completedMissions],
-                        totalCampaignTime: this.totalCampaignTime,
-                        totalEnemiesDefeated: this.totalEnemiesDefeated,
-                        currentScreen: this.currentScreen
-                    }
-                };
-
-                localStorage.setItem('cyberops_savegame', JSON.stringify(saveData));
+                // Use GameStateService to save
+                const slotId = 'autosave_exit';
+                this.gameServices.gameStateService.saveGame(this, slotId, false);
             } catch (error) {
                 if (this.logger) this.logger.error('Failed to save before exit:', error);
             }
