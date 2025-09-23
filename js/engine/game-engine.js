@@ -47,7 +47,11 @@ class GameEngine {
         this.particles = [];
         this.screenShake = { intensity: 0, duration: 0 };
 
-        this.initializeInputHandlers();
+        // Skip input handlers if legacy game already has them
+        // They will be synced via GameController
+        if (!window.game) {
+            this.initializeInputHandlers();
+        }
 
         if (this.logger) this.logger.info('GameEngine initialized');
     }
@@ -121,6 +125,8 @@ class GameEngine {
      * Start render loop
      */
     startRenderLoop(updateCallback, renderCallback) {
+        if (this.logger) this.logger.info('🎮 Starting GameEngine render loop');
+
         const loop = () => {
             requestAnimationFrame(loop);
 
@@ -135,33 +141,31 @@ class GameEngine {
                 updateCallback(delta);
             }
 
+            // Ensure canvas size is current
+            if (this.canvas.width !== window.innerWidth || this.canvas.height !== window.innerHeight) {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
             // Clear canvas
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-            // Apply camera transform
-            this.ctx.save();
-            this.ctx.translate(this.cameraX, this.cameraY);
-            this.ctx.scale(this.zoom, this.zoom);
-
-            // Apply screen shake if active
-            if (this.screenShake.duration > 0) {
-                const shake = this.screenShake.intensity;
-                this.ctx.translate(
-                    (Math.random() - 0.5) * shake,
-                    (Math.random() - 0.5) * shake
-                );
-                this.screenShake.duration -= delta;
-            }
-
-            // Render game content
+            // Render game content (camera transform applied inside legacy render)
             if (renderCallback) {
                 renderCallback(this.ctx);
             }
 
-            this.ctx.restore();
+            // Update FPS display if exists
+            if (window.game && window.game.fps !== undefined) {
+                window.game.fps = this.fps;
+            }
 
-            // Render UI (after restore, so it's not affected by camera)
-            this.renderFPS();
+            // Track render loop activity
+            if (!this.renderFrameCount) this.renderFrameCount = 0;
+            this.renderFrameCount++;
+            if (this.renderFrameCount % 600 === 0) {
+                if (this.logger) this.logger.debug(`🖼️ Rendering: Frame ${this.renderFrameCount}, FPS: ${this.fps}`);
+            }
         };
 
         loop();

@@ -44,14 +44,12 @@ class CyberOpsGame {
         this.gameServices = window.GameServices;
 
         // Initialize new architecture (GameEngine and GameFacade)
-        // This will gradually take over game functionality
         if (window.GameController && window.GameEngine && window.GameFacade) {
             if (this.logger) this.logger.info('🏗️ Initializing new architecture...');
             this.gameController = new window.GameController(this);
-            this.useNewArchitecture = true;
         } else {
-            if (this.logger) this.logger.warn('New architecture not available, using legacy mode');
-            this.useNewArchitecture = false;
+            if (this.logger) this.logger.error('❌ CRITICAL: New architecture not available!');
+            throw new Error('GameController, GameEngine, or GameFacade not loaded');
         }
 
         this.currentMissionIndex = 0; // TODO: Move to MissionService
@@ -412,7 +410,14 @@ CyberOpsGame.prototype.init = function() {
                            this.agents?.filter(a => a.alive).length || 0);
             }
         }, 5000); // Log every 5 seconds when in game
-        this.gameLoop();
+
+        // START NEW ARCHITECTURE GAME LOOP
+        if (this.gameController) {
+            if (this.logger) this.logger.info('🚀 Starting game loop via GameController');
+            this.gameController.start();
+        } else {
+            if (this.logger) this.logger.error('❌ GameController not initialized! Cannot start game.');
+        }
 }
 
 CyberOpsGame.prototype.setupCanvas = function() {

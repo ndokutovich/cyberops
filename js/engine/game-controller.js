@@ -10,11 +10,11 @@ class GameController {
         // Reference to CyberOpsGame for backward compatibility
         this.legacyGame = game;
 
-        // Initialize engine (technical layer)
-        this.engine = new GameEngine(game.canvas, game.audioContext);
+        // Initialize engine (technical layer) using existing canvas
+        this.engine = new window.GameEngine(game.canvas, game.audioContext || null);
 
-        // Initialize facade (game logic layer)
-        this.facade = new GameFacade(game.gameServices);
+        // Initialize facade (game logic layer) with existing services
+        this.facade = new window.GameFacade(game.gameServices || window.GameServices);
 
         // Wire up connections
         this.setupConnections();
@@ -42,10 +42,18 @@ class GameController {
     syncState() {
         const game = this.legacyGame;
 
+        // Track screen changes
+        const prevScreen = this.facade.currentScreen;
+
         // Sync game state
         this.facade.currentScreen = game.currentScreen;
         this.facade.isPaused = game.isPaused;
         this.facade.gameSpeed = game.gameSpeed;
+
+        // Log screen transitions
+        if (prevScreen !== this.facade.currentScreen) {
+            if (this.logger) this.logger.info(`📺 Screen transition: ${prevScreen} → ${this.facade.currentScreen}`);
+        }
 
         // Sync entities
         if (game.agents) this.facade.agents = game.agents;
@@ -101,34 +109,48 @@ class GameController {
      * Start the game loop
      */
     start() {
+        if (this.logger) this.logger.info('🚀 Starting new architecture game loop');
+
         // Use engine's render loop
         this.engine.startRenderLoop(
             (deltaTime) => this.update(deltaTime),
             (ctx) => this.render(ctx)
         );
+
+        if (this.logger) this.logger.info('✅ Game loop started successfully');
     }
 
     /**
      * Update game logic
      */
     update(deltaTime) {
-        // Process input
-        const inputState = this.engine.getInputState();
-        this.processInput(inputState);
+        // Sync current state from legacy game
+        this.syncState();
 
-        // Update facade
-        this.facade.update(deltaTime);
-
-        // Sync state back to legacy game for compatibility
-        this.syncBack();
-
-        // Let legacy game do its remaining updates
-        // This allows gradual migration
-        if (this.legacyGame.updateNPCs) {
-            this.legacyGame.updateNPCs();
+        // Let legacy game do its updates for now
+        // We'll gradually migrate these to facade
+        if (this.legacyGame.currentScreen === 'game' && !this.legacyGame.isPaused) {
+            if (this.legacyGame.updateGame) {
+                this.legacyGame.updateGame(deltaTime);
+            }
+            if (this.legacyGame.updateNPCs) {
+                this.legacyGame.updateNPCs();
+            }
+            if (this.legacyGame.updateMissionObjectives) {
+                this.legacyGame.updateMissionObjectives();
+            }
         }
-        if (this.legacyGame.updateMissionObjectives) {
-            this.legacyGame.updateMissionObjectives();
+
+        // Update visual effects
+        if (this.legacyGame.updateVisualEffects) {
+            this.legacyGame.updateVisualEffects(deltaTime);
+        }
+
+        // Log periodically (every 300 frames = ~5 seconds at 60fps)
+        if (!this.frameCounter) this.frameCounter = 0;
+        this.frameCounter++;
+        if (this.frameCounter % 300 === 0) {
+            if (this.logger) this.logger.debug(`🔄 New architecture: Frame ${this.frameCounter}, Screen: ${this.facade.currentScreen}`);
         }
     }
 
@@ -187,25 +209,24 @@ class GameController {
      * Render game
      */
     render(ctx) {
-        // Get current game state
-        const gameState = this.facade.getGameState();
-
-        // Render based on screen
-        switch (gameState.screen) {
-            case 'game':
-                this.renderBridge.renderGame(ctx, gameState);
-                break;
-            case 'menu':
-                this.renderBridge.renderMenu(ctx);
-                break;
-            case 'hub':
-                this.renderBridge.renderHub(ctx);
-                break;
-            default:
-                // Let legacy game handle other screens for now
-                if (this.legacyGame.render) {
-                    this.legacyGame.render();
-                }
+        // For now, just use the legacy game's render method entirely
+        // We'll gradually migrate this
+        if (this.legacyGame.render) {
+            this.legacyGame.render();
+        } else {
+            // Fallback to new rendering if old one not available
+            const gameState = this.facade.getGameState();
+            switch (gameState.screen) {
+                case 'game':
+                    this.renderBridge.renderGame(ctx, gameState);
+                    break;
+                case 'menu':
+                    this.renderBridge.renderMenu(ctx);
+                    break;
+                case 'hub':
+                    this.renderBridge.renderHub(ctx);
+                    break;
+            }
         }
     }
 

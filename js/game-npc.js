@@ -248,16 +248,37 @@ NPC.prototype.checkQuestCompletion = function(game) {
     }
 
 NPC.prototype.giveQuest = function(quest, game) {
+        // USE QUEST SERVICE - REQUIRED
+        if (!window.GameServices || !window.GameServices.questService) {
+            if (game.logger) game.logger.error('QuestService not available!');
+            return;
+        }
+
+        // Register quest with QuestService
+        window.GameServices.questService.registerQuest({
+            id: quest.id,
+            name: quest.name,
+            description: quest.description,
+            type: quest.type || 'side',
+            giver: this.id,
+            objectives: quest.objectives || [{
+                id: `${quest.id}_main`,
+                type: 'custom',
+                description: quest.description
+            }],
+            rewards: quest.reward || quest.rewards || {},
+            prerequisites: quest.requirements || []
+        });
+
+        // Start the quest
+        window.GameServices.questService.startQuest(quest.id);
+
+        // Track that this NPC gave the quest
         this.questsGiven.add(quest.id);
+
+        // Also keep in old system for now for UI compatibility
         game.quests[quest.id] = quest;
         quest.active = true;
-
-        // Add to active quests for tracking
-        // Use separate array for NPC quests to avoid conflict with mission executor
-        if (!game.npcActiveQuests) {
-            game.npcActiveQuests = [];
-        }
-        game.npcActiveQuests.push(quest);
 
         // Use introDialog if available, otherwise use description
         const questText = quest.introDialog || quest.description || `I have a task for you: ${quest.name}`;

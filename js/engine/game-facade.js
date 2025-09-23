@@ -8,8 +8,18 @@ class GameFacade {
     constructor(gameServices) {
         this.logger = window.Logger ? new window.Logger('GameFacade') : null;
 
-        // Services
-        this.services = gameServices || new GameServices();
+        // Services - use provided services or window.GameServices if available
+        this.services = gameServices || window.GameServices;
+        if (!this.services) {
+            if (this.logger) this.logger.error('GameFacade: No GameServices available, creating minimal stub');
+            // Create a minimal stub to prevent crashes
+            this.services = {
+                agentService: { getAvailableAgents: () => [] },
+                combatService: null,
+                questService: null,
+                resourceService: { addCredits: () => {}, addResearchPoints: () => {} }
+            };
+        }
 
         // Game state
         this.currentScreen = 'splash';
@@ -311,6 +321,17 @@ class GameFacade {
         this.updateProjectiles(deltaTime);
         this.updateObjectives();
         this.checkMissionCompletion();
+
+        // Log mission progress periodically
+        if (!this.updateCounter) this.updateCounter = 0;
+        this.updateCounter++;
+        if (this.updateCounter % 600 === 0 && this.currentMission) {
+            const aliveAgents = this.agents.filter(a => a.alive).length;
+            const aliveEnemies = this.enemies.filter(e => e.alive).length;
+            if (this.logger) {
+                this.logger.debug(`📊 Mission Progress: ${aliveAgents} agents, ${aliveEnemies} enemies, Extraction: ${this.extractionEnabled ? 'ENABLED' : 'DISABLED'}`);
+            }
+        }
     }
 
     /**
@@ -412,48 +433,27 @@ class GameFacade {
      * Perform attack
      */
     performAttack(attacker, target) {
-        // Use CombatService if available
-        if (this.services.combatService) {
-            const result = this.services.combatService.performAttack(attacker.id, target.id);
+        // CombatService is required
+        if (!this.services.combatService) {
+            if (this.logger) this.logger.error('CombatService not available!');
+            return null;
+        }
 
-            if (result && result.hit) {
-                // Create visual projectile
-                this.createProjectile(attacker, target);
+        const result = this.services.combatService.performAttack(attacker.id, target.id);
 
-                // Update target health locally for immediate feedback
-                target.health -= result.damage;
-                if (result.killed) {
-                    target.alive = false;
-                    this.onEntityDeath(target);
-                }
+        if (result && result.hit) {
+            // Create visual projectile
+            this.createProjectile(attacker, target);
+
+            // Update target health locally for immediate feedback
+            target.health -= result.damage;
+            if (result.killed) {
+                target.alive = false;
+                this.onEntityDeath(target);
             }
-
-            return result;
         }
 
-        // Fallback to old system if CombatService not available
-        const damage = this.services.formulaService.calculateDamage(
-            attacker.damage || 10,
-            attacker.weaponDamage || 0,
-            attacker.damageBonus || 0,
-            target.protection || 0
-        );
-
-        // Apply damage
-        target.health -= damage;
-        if (target.health <= 0) {
-            target.health = 0;
-            target.alive = false;
-            this.onEntityDeath(target);
-        }
-
-        // Create projectile
-        this.createProjectile(attacker, target);
-
-        // Set cooldown
-        attacker.attackCooldown = 1000; // 1 second
-
-        if (this.logger) this.logger.debug(`${attacker.id} attacked ${target.id} for ${damage} damage`);
+        return result;
     }
 
     /**
@@ -669,67 +669,40 @@ class GameFacade {
     toggleTurnBasedMode() {
         this.turnBasedMode = !this.turnBasedMode;
 
-        // Use CombatService if available
-        if (this.services.combatService) {
-            this.services.combatService.setTurnBasedMode(this.turnBasedMode);
-
-            // Sync turn state from CombatService
-            if (this.turnBasedMode) {
-                const turnInfo = this.services.combatService.getCurrentTurnInfo();
-                if (turnInfo) {
-                    this.currentTurn = turnInfo.entity;
-                    this.actionPoints = this.services.combatService.actionPoints;
-                }
-            }
-        } else if (this.turnBasedMode) {
-            // Fallback to old system
-            this.initializeTurnBasedMode();
+        // CombatService is required for turn-based mode
+        if (!this.services.combatService) {
+            if (this.logger) this.logger.error('CombatService not available for turn-based mode!');
+            this.turnBasedMode = false;
+            return;
         }
-    }
 
-    /**
-     * Initialize turn-based mode (fallback)
-     */
-    initializeTurnBasedMode() {
-        // Create turn order
-        this.turnOrder = [
-            ...this.agents.filter(a => a.alive),
-            ...this.enemies.filter(e => e.alive)
-        ].sort((a, b) => (b.initiative || 0) - (a.initiative || 0));
+        this.services.combatService.setTurnBasedMode(this.turnBasedMode);
 
-        // Initialize action points
-        this.turnOrder.forEach(entity => {
-            this.actionPoints.set(entity.id, entity.maxAP || 10);
-        });
-
-        // Start first turn
-        this.startNextTurn();
+        // Sync turn state from CombatService
+        if (this.turnBasedMode) {
+            const turnInfo = this.services.combatService.getCurrentTurnInfo();
+            if (turnInfo) {
+                this.currentTurn = turnInfo.entity;
+                this.actionPoints = this.services.combatService.actionPoints;
+            }
+        }
     }
 
     /**
      * Start next turn
      */
     startNextTurn() {
-        // Use CombatService if available
-        if (this.services.combatService) {
-            this.services.combatService.nextTurn();
-            const turnInfo = this.services.combatService.getCurrentTurnInfo();
-            if (turnInfo) {
-                this.currentTurn = turnInfo.entity;
-            }
+        // CombatService is required
+        if (!this.services.combatService) {
+            if (this.logger) this.logger.error('CombatService not available!');
             return;
         }
 
-        // Fallback to old system
-        if (this.turnOrder.length === 0) return;
-
-        this.currentTurn = this.turnOrder.shift();
-        this.turnOrder.push(this.currentTurn);
-
-        // Restore AP for current entity
-        this.actionPoints.set(this.currentTurn.id, this.currentTurn.maxAP || 10);
-
-        if (this.logger) this.logger.debug(`Turn started: ${this.currentTurn.id}`);
+        this.services.combatService.nextTurn();
+        const turnInfo = this.services.combatService.getCurrentTurnInfo();
+        if (turnInfo) {
+            this.currentTurn = turnInfo.entity;
+        }
     }
 
     /**

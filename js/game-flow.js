@@ -1228,39 +1228,53 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
         });
 
         if (nearest) {
-            // Calculate damage from weapon if equipped, otherwise use base damage
-            let damage = agent.damage || 10; // Base damage fallback
+            // USE COMBAT SERVICE - REQUIRED
+            if (!window.GameServices || !window.GameServices.combatService) {
+                if (this.logger) this.logger.error('CombatService not available!');
+                return;
+            }
 
-            // Log comprehensive weapon info for debugging
-            if (this.logger) {
-                this.logger.info(`🔫 Weapon check for ${agent.name}:`, {
-                    hasWeapon: !!agent.weapon,
-                    weaponType: agent.weapon?.type || 'none',
-                    weaponDamage: agent.weapon?.damage || 0,
-                    baseDamage: agent.damage,
-                    finalDamage: agent.weapon?.damage || damage
+            // Initialize combat if not already in combat
+            if (!window.GameServices.combatService.inCombat) {
+                window.GameServices.combatService.startCombat(this.agents, this.enemies);
+            }
+
+            // Perform attack through CombatService
+            const attackerId = agent.id || agent.name || `agent_${this.agents.indexOf(agent)}`;
+            const targetId = nearest.id || nearest.name || `enemy_${this.enemies.indexOf(nearest)}`;
+            const result = window.GameServices.combatService.performAttack(attackerId, targetId);
+
+            if (result) {
+                // Create projectile for visual feedback
+                this.projectiles.push({
+                    x: agent.x,
+                    y: agent.y,
+                    targetX: nearest.x,
+                    targetY: nearest.y,
+                    targetEnemy: nearest,
+                    damage: result.damage || 0,
+                    speed: 0.5,
+                    owner: agent.id,
+                    shooter: agent,
+                    weaponType: agent.weapon?.type || 'rifle'
                 });
-            }
 
-            if (agent.weapon && agent.weapon.damage) {
-                damage = agent.weapon.damage;
-                if (this.logger) this.logger.info(`🎯 ${agent.name} shooting with ${agent.weapon.type} (damage: ${damage})`);
-            } else {
-                if (this.logger) this.logger.warn(`⚠️ ${agent.name} shooting with base damage: ${damage} (no weapon equipped)`);
-            }
+                // Update health locally (CombatService tracks internally but we need visual sync)
+                if (result.hit && result.damage) {
+                    nearest.health -= result.damage;
+                    if (result.killed) {
+                        nearest.alive = false;
+                    }
+                }
 
-            this.projectiles.push({
-                x: agent.x,
-                y: agent.y,
-                targetX: nearest.x,
-                targetY: nearest.y,
-                targetEnemy: nearest, // Store the actual target
-                damage: damage,
-                speed: 0.5,
-                owner: agent.id,
-                shooter: agent, // Store shooter for RPG calculations
-                weaponType: agent.weapon?.type || 'rifle' // Use actual weapon type if available
-            });
+                if (this.logger) {
+                    if (result.hit) {
+                        this.logger.info(`🎯 ${agent.name} hit for ${result.damage} damage${result.critical ? ' (CRITICAL!)' : ''}`);
+                    } else {
+                        this.logger.info(`❌ ${agent.name} missed`);
+                    }
+                }
+            }
 
             // Trigger recoil effect for shooting
             if (this.triggerVisualEffect) {
