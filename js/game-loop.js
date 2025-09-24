@@ -1,234 +1,19 @@
-    // Game Loop
+// Main game loop - REMOVED
+// Now using GameController.start() from new architecture
 CyberOpsGame.prototype.gameLoop = function() {
-
-    // Initialize logger if needed
-    if (!this.logger && window.Logger) {
-        this.logger = new window.Logger('GameLoop');
-    }
-        // Skip game loop in test mode to avoid DOM errors
-        if (this.testMode) {
-            return;
-        }
-
-        requestAnimationFrame(() => this.gameLoop());
-
-        // Update FPS counter
-        this.updateFPS();
-
-        if (this.currentScreen === 'game' && !this.isPaused) {
-            // Handle turn-based mode differently
-            if (this.turnBasedMode) {
-                // In turn-based mode, still update movement animations and visual effects
-                // Update agent movements (animations only, no AI decisions)
-                if (this.agents) {
-                    this.agents.forEach(agent => {
-                        if (agent.alive && agent.targetX !== undefined && agent.targetY !== undefined) {
-                            // Smooth movement toward target
-                            const dx = agent.targetX - agent.x;
-                            const dy = agent.targetY - agent.y;
-                            const dist = Math.sqrt(dx * dx + dy * dy);
-
-                            if (dist > 0.5) {
-                                const moveSpeed = (agent.speed || 2) * this.gameSpeed;
-                                const moveStep = Math.min(moveSpeed * 0.1, dist); // Limit step size
-                                agent.x += (dx / dist) * moveStep;
-                                agent.y += (dy / dist) * moveStep;
-                            } else {
-                                // Reached destination, clear target
-                                agent.x = agent.targetX;
-                                agent.y = agent.targetY;
-                                agent.targetX = undefined;
-                                agent.targetY = undefined;
-                            }
-                        }
-                    });
-                }
-
-                // Update fog of war based on agent positions
-                if (this.updateFogOfWar) this.updateFogOfWar();
-
-                // Update projectiles and visual effects
-                this.updateProjectilesOnly(); // Use a dedicated function for TB mode
-                this.updateEffectsOnly(); // Update effects animations
-                if (this.updateVisualEffects) this.updateVisualEffects();
-
-                // Update 3D if in 3D mode
-                if (this.is3DMode) {
-                    this.update3D();
-                    this.update3DCamera();
-                    this.sync3DTo2D();
-                }
-            } else {
-                // Normal real-time update
-                const updateCount = Math.floor(this.gameSpeed);
-                for (let i = 0; i < updateCount; i++) {
-                    this.update();
-                    // Update 3D if in 3D mode
-                    if (this.is3DMode) {
-                        this.update3D();
-                        this.update3DCamera();
-                        this.sync3DTo2D();
-                    }
-                }
-            }
-
-            // Only update these in real-time mode
-            if (!this.turnBasedMode) {
-                // Check for nearby enemies and auto-slowdown
-                this.checkAutoSlowdown();
-
-                // Update music system based on game state
-                if (this.musicSystem && this.musicSystem.config) {
-                    this.updateMusicState();
-                }
-            }
-        }
-
-        if (this.currentScreen === 'game') {
-            if (this.is3DMode) {
-                this.render3D();
-                this.update3DHUD();
-            } else {
-                this.render();
-            }
-        }
+    // Empty stub for compatibility
+    // All game loop functionality now handled by GameController
 }
 
-// Update projectiles only (for turn-based mode)
+// Projectile and effects update functions - REMOVED
+// Now handled by GameController and GameFacade
 CyberOpsGame.prototype.updateProjectilesOnly = function() {
-    if (!this.projectiles) return;
+    // Stub for compatibility
+}
 
-    this.projectiles = this.projectiles.filter(proj => {
-        const dx = proj.targetX - proj.x;
-        const dy = proj.targetY - proj.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < 0.5) {
-            // Hit the target
-            if (proj.hostile) {
-                // Enemy projectile hitting agent
-                if (proj.targetAgent && proj.targetAgent.alive) {
-                    const agent = proj.targetAgent;
-
-                    // Use RPG damage calculation if available
-                    let damage = proj.damage;
-                    if (this.calculateDamage && proj.shooter) {
-                        damage = this.calculateDamage(proj.shooter, agent, proj.weaponType || 'rifle');
-                    }
-
-                    agent.shield = Math.max(0, agent.shield - damage);
-                    if (agent.shield === 0) {
-                        agent.health = Math.max(0, agent.health - damage);
-                    }
-                    if (agent.health <= 0) {
-                        // Handle agent death via AgentService
-                        if (this.gameServices && this.gameServices.agentService) {
-                            this.gameServices.agentService.killAgent(agent.id || agent.name, proj.shooter?.name || 'enemy');
-                        } else {
-                            // Fallback
-                            agent.alive = false;
-                            agent.health = 0;
-                        }
-
-                        // Handle agent death (could trigger respawn or game over)
-                        if (this.onEntityDeath) {
-                            this.onEntityDeath(agent, proj.shooter);
-                        }
-                    }
-
-                    // Effects
-                    this.effects.push({
-                        type: 'hit',
-                        x: agent.x,
-                        y: agent.y,
-                        frame: 0,
-                        duration: 30
-                    });
-                    this.playSound('hit', 0.3);
-
-                    if (this.logEvent) {
-                        this.logEvent(`${agent.name} hit for ${proj.damage} damage!`, 'combat');
-                    }
-                }
-            } else {
-                // Agent projectile hitting enemy
-                if (proj.targetEnemy && proj.targetEnemy.alive) {
-                    const enemy = proj.targetEnemy;
-
-                    // Use RPG damage calculation if available
-                    let damage = proj.damage;
-                    if (this.calculateDamage && proj.shooter) {
-                        damage = this.calculateDamage(proj.shooter, enemy, proj.weaponType || 'rifle');
-                    }
-
-                    enemy.health = Math.max(0, enemy.health - damage);
-                    if (enemy.health <= 0) {
-                        enemy.alive = false;
-                        if (this.logger) this.logger.debug(`⚔️ ENEMY KILLED! Details:`, {
-                            enemyType: enemy.type,
-                            enemyHasRPG: !!enemy.rpgEntity,
-                            shooterName: proj.shooter?.name || 'unknown',
-                            shooterHasRPG: !!proj.shooter?.rpgEntity,
-                            hasOnEntityDeath: !!this.onEntityDeath
-                        });
-
-                        // Call onEnemyEliminated to properly track
-                        if (this.logger) this.logger.info('💥 Enemy killed! Tracking...');
-                        if (this.onEnemyEliminated) {
-                            if (this.logger) this.logger.info('📢 Calling onEnemyEliminated');
-                            this.onEnemyEliminated(enemy);
-                        } else {
-                            if (this.logger) this.logger.warn('⚠️ onEnemyEliminated NOT FOUND');
-                            // Track directly through MissionService
-                            if (this.gameServices && this.gameServices.missionService) {
-                                this.gameServices.missionService.trackEvent('eliminate', {
-                                    type: enemy.type || 'soldier'
-                                });
-                            }
-                        }
-                        if (this.logEvent) {
-                            this.logEvent(`Enemy eliminated!`, 'combat');
-                        }
-
-                        // Grant XP if RPG system is active
-                        if (this.onEntityDeath) {
-                            if (this.logger) this.logger.debug(`📞 Calling onEntityDeath...`);
-                            this.onEntityDeath(enemy, proj.shooter);
-                        } else {
-                            if (this.logger) this.logger.error(`❌ onEntityDeath method not found!`);
-                        }
-                    }
-
-                    // Effects
-                    this.effects.push({
-                        type: 'hit',
-                        x: enemy.x,
-                        y: enemy.y,
-                        frame: 0,
-                        duration: 30
-                    });
-                    this.playSound('hit', 0.3);
-                }
-            }
-            return false; // Remove projectile
-        }
-
-        // Move projectile
-        proj.x += (dx / dist) * proj.speed;
-        proj.y += (dy / dist) * proj.speed;
-        return true; // Keep projectile
-    });
-};
-
-// Update effects only (for turn-based mode)
 CyberOpsGame.prototype.updateEffectsOnly = function() {
-    if (!this.effects) return;
-
-    this.effects = this.effects.filter(effect => {
-        effect.frame++;
-        return effect.frame < effect.duration;
-    });
-};
+    // Stub for compatibility
+}
 
 // FPS Counter
 CyberOpsGame.prototype.updateFPS = function() {
@@ -978,17 +763,8 @@ CyberOpsGame.prototype.endMission = function(victory) {
 
             // Award mission rewards
             if (this.currentMission.rewards) {
-                if (this.gameServices && this.gameServices.resourceService) {
-                    this.gameServices.resourceService.applyMissionRewards(this.currentMission.rewards);
-                } else {
-                    // Fallback
-                    this.credits += this.currentMission.rewards.credits || 0;
-                    this.researchPoints += this.currentMission.rewards.researchPoints || 0;
-                    this.worldControl += this.currentMission.rewards.worldControl || 0;
-
-                    // Cap world control at 100%
-                    if (this.worldControl > 100) this.worldControl = 100;
-                }
+                // Use ResourceService for mission rewards (required)
+                this.gameServices.resourceService.applyMissionRewards(this.currentMission.rewards);
             }
         }
         
@@ -1217,11 +993,8 @@ CyberOpsGame.prototype.handleCollectableEffects = function(agent, item) {
 
         // Apply effects
         if (effects.credits > 0) {
-            if (this.gameServices && this.gameServices.resourceService) {
-                this.gameServices.resourceService.add('credits', effects.credits, 'item pickup');
-            } else {
-                this.credits += effects.credits; // Fallback
-            }
+            // Use ResourceService for credits (required)
+            this.gameServices.resourceService.add('credits', effects.credits, 'item pickup');
             this.creditsThisMission = (this.creditsThisMission || 0) + effects.credits;
         }
         if (effects.health > 0) {
@@ -1231,11 +1004,8 @@ CyberOpsGame.prototype.handleCollectableEffects = function(agent, item) {
             agent.protection = (agent.protection || 0) + effects.armor;
         }
         if (effects.researchPoints > 0) {
-            if (this.gameServices && this.gameServices.resourceService) {
-                this.gameServices.resourceService.add('researchPoints', effects.researchPoints, 'item pickup');
-            } else {
-                this.researchPoints += effects.researchPoints; // Fallback
-            }
+            // Use ResourceService for research points (required)
+            this.gameServices.resourceService.add('researchPoints', effects.researchPoints, 'item pickup');
             this.researchPointsThisMission = (this.researchPointsThisMission || 0) + effects.researchPoints;
 
             // Track intel statistics if this was an intel item

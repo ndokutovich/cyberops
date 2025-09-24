@@ -214,10 +214,8 @@ const SCREEN_CONFIG = {
                 game.currentScreen = 'game';
                 game.screen = 'game';
 
-                // Start game loop if needed
-                if (game.gameLoop && !game.gameLoopRunning) {
-                    game.gameLoop();
-                }
+                // Game loop now handled by GameController
+                // Old gameLoop() call removed
             }
         },
         onExit: function() {

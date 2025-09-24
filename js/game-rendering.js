@@ -1229,7 +1229,10 @@ CyberOpsGame.prototype.renderHotkeyHelp = function() {
 
 CyberOpsGame.prototype.renderMinimap = function() {
         const minimap = document.getElementById('minimapContent');
-        
+
+        // Skip if minimap element doesn't exist (e.g., in tests or certain screens)
+        if (!minimap) return;
+
         if (!this.minimapCanvas) {
             this.minimapCanvas = document.createElement('canvas');
             this.minimapCanvas.width = 120;
@@ -1237,10 +1240,12 @@ CyberOpsGame.prototype.renderMinimap = function() {
             minimap.appendChild(this.minimapCanvas);
             this.minimapCtx = this.minimapCanvas.getContext('2d');
         }
-        
+
         const mctx = this.minimapCtx;
+        if (!mctx) return; // Skip if minimap context not available
+
         mctx.clearRect(0, 0, 120, 120);
-        
+
         if (!this.map) return;
         
         const scale = 120 / Math.max(this.map.width, this.map.height);

@@ -251,7 +251,13 @@
         <div id="loadingProgress" style="display: none;"></div>
         <div id="loadingScreen" style="display: none;"></div>
         <div id="syndicateHub" class="game-screen" style="display: none;"></div>
-        <div id="gameHUD" style="display: none;"></div>
+        <div id="gameHUD" style="display: none;">
+            <div id="squadHealth"></div>
+        </div>
+        <div id="gameHUD3D" style="display: none;"></div>
+        <div id="minimap" style="display: none;">
+            <div id="minimapContent"></div>
+        </div>
     </div>
 
     <!-- Load Three.js properly -->
@@ -269,6 +275,9 @@
     <script src="js/services/inventory-service.js"></script>
     <script src="js/services/keybinding-service.js"></script>
     <script src="js/services/rpg-service.js"></script>
+    <script src="js/services/combat-service.js"></script>
+    <script src="js/services/quest-service.js"></script>
+    <script src="js/services/save-game-service.js"></script>
     <script src="js/services/game-services.js"></script>
 
     <!-- Game files in dependency order -->
@@ -280,6 +289,12 @@
     <script src="js/engine/campaign-interface.js"></script>
     <script src="js/engine/content-loader.js"></script>
     <script src="js/engine/engine-integration.js"></script>
+
+    <!-- New Architecture (GameEngine, GameFacade, GameController) -->
+    <script src="js/engine/game-engine.js"></script>
+    <script src="js/engine/game-facade.js"></script>
+    <script src="js/engine/game-controller.js"></script>
+
     <script src="js/game-events.js"></script>
     <script src="js/game-flow.js"></script>
     <script src="js/game-saveload.js"></script>

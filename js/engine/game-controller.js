@@ -130,14 +130,9 @@ class GameController {
         // Let legacy game do its updates for now
         // We'll gradually migrate these to facade
         if (this.legacyGame.currentScreen === 'game' && !this.legacyGame.isPaused) {
-            if (this.legacyGame.updateGame) {
-                this.legacyGame.updateGame(deltaTime);
-            }
-            if (this.legacyGame.updateNPCs) {
-                this.legacyGame.updateNPCs();
-            }
-            if (this.legacyGame.updateMissionObjectives) {
-                this.legacyGame.updateMissionObjectives();
+            // Call the main update function (not updateGame which doesn't exist)
+            if (this.legacyGame.update) {
+                this.legacyGame.update(deltaTime);
             }
         }
 
