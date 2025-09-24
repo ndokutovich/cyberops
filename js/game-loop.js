@@ -8,638 +8,105 @@ CyberOpsGame.prototype.gameLoop = function() {
 // Projectile and effects update functions - REMOVED
 // Now handled by GameController and GameFacade
 CyberOpsGame.prototype.updateProjectilesOnly = function() {
-    // Stub for compatibility
+    // Stub for compatibility - moved to GameFacade.updateProjectilesOnly()
 }
 
 CyberOpsGame.prototype.updateEffectsOnly = function() {
-    // Stub for compatibility
+    // Stub for compatibility - moved to GameFacade.updateEffectsOnly()
 }
 
-// FPS Counter
+// FPS Counter - STILL USED
 CyberOpsGame.prototype.updateFPS = function() {
-        this.frameCount++;
-        const now = Date.now();
-        const delta = now - this.lastFpsUpdate;
+    this.frameCount++;
+    const now = Date.now();
+    const delta = now - this.lastFpsUpdate;
 
-        if (delta >= 1000) {
-            this.fps = Math.round((this.frameCount * 1000) / delta);
-            this.frameCount = 0;
-            this.lastFpsUpdate = now;
-        }
+    if (delta >= 1000) {
+        this.fps = Math.round((this.frameCount * 1000) / delta);
+        this.frameCount = 0;
+        this.lastFpsUpdate = now;
+    }
 }
-    
-// Collision detection helper
+
+// ============================================
+// HELPER FUNCTIONS - STILL NEEDED
+// ============================================
+
+// Collision detection helper - STILL USED
 CyberOpsGame.prototype.isWalkable = function(x, y) {
-        // Check map bounds
-        if (x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) {
-            return false;
-        }
+    // Check map bounds
+    if (x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) {
+        return false;
+    }
 
-        // Check tile - 0 is walkable, 1 is wall
-        const tileX = Math.floor(x);
-        const tileY = Math.floor(y);
+    // Check tile - 0 is walkable, 1 is wall
+    const tileX = Math.floor(x);
+    const tileY = Math.floor(y);
 
-        // Safety check for array access
-        if (!this.map.tiles[tileY] || this.map.tiles[tileY][tileX] === undefined) {
-            return false;
-        }
+    // Safety check for array access
+    if (!this.map.tiles[tileY] || this.map.tiles[tileY][tileX] === undefined) {
+        return false;
+    }
 
-        // Check if this is an unlocked door position
-        if (this.map.doors) {
-            for (let door of this.map.doors) {
-                // Check if we're at a door position (with some tolerance for floating point)
-                const atDoor = Math.abs(door.x - tileX) < 1 && Math.abs(door.y - tileY) < 1;
-                if (atDoor && !door.locked) {
-                    // Unlocked door - allow passage
-                    return true;
-                }
+    // Check if this is an unlocked door position
+    if (this.map.doors) {
+        for (let door of this.map.doors) {
+            // Check if we're at a door position (with some tolerance for floating point)
+            const atDoor = Math.abs(door.x - tileX) < 1 && Math.abs(door.y - tileY) < 1;
+            if (atDoor && !door.locked) {
+                // Unlocked door - allow passage
+                return true;
             }
         }
+    }
 
-        return this.map.tiles[tileY][tileX] === 0;
+    return this.map.tiles[tileY][tileX] === 0;
 }
 
-// Movement is always with pathfinding - no simple movement fallback
-
+// Movement validation - STILL USED
 CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
-        // Check if target position is walkable
-        if (!this.isWalkable(toX, toY)) {
+    // Check if target position is walkable
+    if (!this.isWalkable(toX, toY)) {
+        return false;
+    }
+
+    // Check if blocked by a locked door
+    if (this.isDoorBlocking(toX, toY)) {
+        return false;
+    }
+
+    // Check corners for diagonal movement to prevent clipping through walls
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+
+    // If moving diagonally, check both adjacent tiles
+    if (Math.abs(dx) > 0.01 && Math.abs(dy) > 0.01) {
+        // Check horizontal then vertical path
+        if (!this.isWalkable(toX, fromY) || !this.isWalkable(fromX, toY)) {
             return false;
         }
+    }
 
-        // Check if blocked by a locked door
-        if (this.isDoorBlocking(toX, toY)) {
-            return false;
-        }
-
-        // Check corners for diagonal movement to prevent clipping through walls
-        const dx = toX - fromX;
-        const dy = toY - fromY;
-
-        // If moving diagonally, check both adjacent tiles
-        if (Math.abs(dx) > 0.01 && Math.abs(dy) > 0.01) {
-            // Check horizontal then vertical path
-            if (!this.isWalkable(toX, fromY) || !this.isWalkable(fromX, toY)) {
-                return false;
-            }
-        }
-
-        return true;
+    return true;
 }
+
+// ============================================
+// MAIN UPDATE - MIGRATED TO GAMEFACADE
+// ============================================
 
 CyberOpsGame.prototype.update = function() {
-        // Update visual effects FIRST (including freeze timers)
-        if (this.updateVisualEffects) {
-            this.updateVisualEffects(16.67); // ~60 FPS in milliseconds
-        }
-
-        // Check if frozen AFTER updating effects
-        if (this.isFreezeActive && this.isFreezeActive()) {
-            return; // Skip game update while frozen
-        }
-
-        this.missionTimer++;
-        const seconds = Math.floor(this.missionTimer / 60);
-
-        // Update team AI for unselected agents
-        if (this.updateTeamAI) {
-            this.updateTeamAI();
-        }
-        const minutes = Math.floor(seconds / 60);
-        const timerElement = document.getElementById('missionTimer');
-        if (timerElement) {
-            timerElement.textContent =
-                `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-        }
-
-        // Update fog of war
-        this.updateFogOfWar();
-
-        // Update agents
-        this.agents.forEach(agent => {
-            if (!agent.alive) return;
-
-            // Initialize facing angle if not set
-            if (agent.facingAngle === undefined) {
-                agent.facingAngle = Math.PI / 2; // Default facing down
-            }
-
-            // In 3D mode, make non-controlled agents follow the player (if enabled)
-            if (this.is3DMode && this.squadFollowing !== false && this._selectedAgent && agent !== this._selectedAgent) {
-                // Calculate distance to leader
-                const leaderDist = Math.sqrt(
-                    Math.pow(agent.x - this._selectedAgent.x, 2) +
-                    Math.pow(agent.y - this._selectedAgent.y, 2)
-                );
-
-                // Only update target if too far from leader (to avoid constant movement)
-                if (leaderDist > 5) {
-                    // Set follow target with offset for formation
-                    const followDist = 2.5; // Distance to maintain from leader
-                    const index = this.agents.filter(a => a.alive).indexOf(agent);
-                    const squadSize = this.agents.filter(a => a.alive).length - 1;
-
-                    // Create formation behind the leader based on their facing
-                    const leaderFacing = this._selectedAgent.facingAngle || 0;
-                    const formationAngle = leaderFacing + Math.PI; // Behind the leader
-
-                    // Spread agents in a line formation behind leader
-                    const offsetAngle = formationAngle + (Math.PI / 4) * ((index / squadSize) - 0.5);
-
-                    // Calculate formation position
-                    agent.targetX = this._selectedAgent.x + Math.cos(offsetAngle) * followDist;
-                    agent.targetY = this._selectedAgent.y + Math.sin(offsetAngle) * followDist;
-                } else if (leaderDist < 2) {
-                    // Too close, stop moving
-                    agent.targetX = agent.x;
-                    agent.targetY = agent.y;
-                }
-            }
-
-            // Check for waypoints first
-            if (this.agentWaypoints && this.agentWaypoints[agent.id] && this.agentWaypoints[agent.id].length > 0) {
-                const waypoints = this.agentWaypoints[agent.id];
-                const currentWaypoint = waypoints[0];
-
-                // Set target to current waypoint
-                agent.targetX = currentWaypoint.x;
-                agent.targetY = currentWaypoint.y;
-
-                // Check if we've reached the waypoint
-                const wpDx = currentWaypoint.x - agent.x;
-                const wpDy = currentWaypoint.y - agent.y;
-                const wpDist = Math.sqrt(wpDx * wpDx + wpDy * wpDy);
-
-                if (wpDist < 0.5) {
-                    // Reached waypoint, remove it and move to next
-                    waypoints.shift();
-
-                    // Update the main waypoints array reference
-                    this.agentWaypoints[agent.id] = waypoints;
-
-                    if (agent.selected) {
-                        if (this.logger) this.logger.info(`✅ ${agent.name} reached waypoint, ${waypoints.length} remaining`);
-                    }
-
-                    // If there are more waypoints, update target to next one
-                    if (waypoints.length > 0) {
-                        agent.targetX = waypoints[0].x;
-                        agent.targetY = waypoints[0].y;
-                        if (this.logger) this.logger.debug(`📍 Moving to next waypoint: (${waypoints[0].x.toFixed(1)}, ${waypoints[0].y.toFixed(1)})`);
-                    }
-                }
-            }
-
-            // Check for auto-hack when agent reaches terminal
-            if (agent.autoHackTarget) {
-                const hackDist = Math.sqrt(
-                    Math.pow(agent.autoHackTarget.x - agent.x, 2) +
-                    Math.pow(agent.autoHackTarget.y - agent.y, 2)
-                );
-
-                if (hackDist <= 1.5) {
-                    // Reached terminal, hack it
-                    if (!agent.autoHackTarget.hacked) {
-                        agent.autoHackTarget.hacked = true;
-
-                        // Track through MissionService
-                        if (this.gameServices && this.gameServices.missionService) {
-                            this.gameServices.missionService.trackEvent('terminal', {
-                                id: agent.autoHackTarget.id || 'unknown'
-                            });
-                        }
-
-                        this.addNotification("🖥️ Terminal hacked!");
-
-                        // Play hack sound if available
-                        if (this.playSound) {
-                            this.playSound('hack');
-                        }
-                    }
-                    agent.autoHackTarget = null; // Clear auto-hack flag
-                }
-            }
-
-            // Check for auto-bomb when agent reaches explosive target
-            if (agent.autoBombTarget) {
-                const bombDist = Math.sqrt(
-                    Math.pow(agent.autoBombTarget.x - agent.x, 2) +
-                    Math.pow(agent.autoBombTarget.y - agent.y, 2)
-                );
-
-                if (bombDist <= 1.5) {
-                    // Reached target, plant bomb
-                    if (!agent.autoBombTarget.destroyed) {
-                        agent.autoBombTarget.destroyed = true;
-                        this.destroyedTargets = (this.destroyedTargets || 0) + 1;
-                        this.addNotification("💣 Explosive planted!");
-
-                        // Play bomb sound if available
-                        if (this.playSound) {
-                            this.playSound('explosion');
-                        }
-
-                        // Create explosion effect
-                        if (this.createExplosion) {
-                            this.createExplosion(agent.autoBombTarget.x, agent.autoBombTarget.y);
-                        }
-                    }
-                    agent.autoBombTarget = null; // Clear auto-bomb flag
-                }
-            }
-
-            const dx = agent.targetX - agent.x;
-            const dy = agent.targetY - agent.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist > 0.1) {
-                // Always use pathfinding
-                this.moveAgentWithPathfinding(agent);
-            }
-            // Agent is standing still - keep last facing direction
-
-            // Check for collectable pickup
-            if (this.map.collectables) {
-                this.map.collectables.forEach(item => {
-                    if (!item.collected) {
-                        // Check if quest is required and active
-                        if (item.questRequired) {
-                            // Check both mission activeQuests (object) and NPC quests (array)
-                            const missionQuestActive = this.activeQuests && this.activeQuests[item.questRequired];
-                            const npcQuestActive = this.npcActiveQuests && this.npcActiveQuests.some(q => q.id === item.questRequired);
-                            const questActive = missionQuestActive || npcQuestActive;
-                            if (!questActive) return; // Skip if quest not active
-                        }
-
-                        const dist = Math.sqrt(
-                            Math.pow(item.x - agent.x, 2) +
-                            Math.pow(item.y - agent.y, 2)
-                        );
-                        if (dist < 1) {
-                            item.collected = true;
-                            if (this.logger) {
-                                this.logger.debug(`📦 Pickup by agent:`, {
-                                    name: agent.name,
-                                    id: agent.id,
-                                    originalId: agent.originalId,
-                                    index: this.agents.indexOf(agent)
-                                });
-                            }
-                            this.handleCollectablePickup(agent, item);
-                            // Log item collection
-                            if (this.logItemCollected) this.logItemCollected(agent, item);
-                        }
-                    }
-                });
-            }
-
-            for (let i = 0; i < agent.cooldowns.length; i++) {
-                if (agent.cooldowns[i] > 0) agent.cooldowns[i]--;
-            }
-
-            if (agent.shieldDuration > 0) {
-                agent.shieldDuration--;
-                if (agent.shieldDuration === 0) agent.shield = 0;
-            }
-        });
-        
-        // Update enemies
-        this.enemies.forEach(enemy => {
-            if (!enemy.alive) return;
-
-            if (enemy.alertLevel > 0) {
-                const dx = enemy.targetX - enemy.x;
-                const dy = enemy.targetY - enemy.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist > 0.5) {
-                    // Update facing angle when chasing
-                    enemy.facingAngle = Math.atan2(dy, dx);
-
-                    const moveSpeed = enemy.speed / 60;
-                    const moveX = (dx / dist) * moveSpeed;
-                    const moveY = (dy / dist) * moveSpeed;
-
-                    const newX = enemy.x + moveX;
-                    const newY = enemy.y + moveY;
-
-                    // Check collision before moving
-                    if (this.canMoveTo(enemy.x, enemy.y, newX, newY)) {
-                        enemy.x = newX;
-                        enemy.y = newY;
-                    } else {
-                        // Try to slide along walls
-                        if (this.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
-                            enemy.x = newX;
-                            enemy.facingAngle = dx > 0 ? 0 : Math.PI;
-                        } else if (this.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
-                            enemy.y = newY;
-                            enemy.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
-                        }
-                    }
-                } else {
-                    enemy.alertLevel = Math.max(0, enemy.alertLevel - 0.5);
-                }
-            } else {
-                if (Math.random() < 0.01) {
-                    // Generate new target position that is walkable
-                    let attempts = 0;
-                    let newTargetX, newTargetY;
-                    do {
-                        newTargetX = enemy.x + (Math.random() - 0.5) * 5;
-                        newTargetY = enemy.y + (Math.random() - 0.5) * 5;
-                        attempts++;
-                    } while (!this.isWalkable(newTargetX, newTargetY) && attempts < 10);
-
-                    if (attempts < 10) {
-                        enemy.targetX = newTargetX;
-                        enemy.targetY = newTargetY;
-                    }
-                }
-
-                const dx = enemy.targetX - enemy.x;
-                const dy = enemy.targetY - enemy.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist > 0.1) {
-                    // Update facing angle when patrolling
-                    enemy.facingAngle = Math.atan2(dy, dx);
-
-                    const moveSpeed = enemy.speed / 120;
-                    const moveX = (dx / dist) * moveSpeed;
-                    const moveY = (dy / dist) * moveSpeed;
-
-                    const newX = enemy.x + moveX;
-                    const newY = enemy.y + moveY;
-
-                    // Check collision before moving
-                    if (this.canMoveTo(enemy.x, enemy.y, newX, newY)) {
-                        enemy.x = newX;
-                        enemy.y = newY;
-                    } else {
-                        // Try to slide along walls
-                        if (this.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
-                            enemy.x = newX;
-                            enemy.facingAngle = dx > 0 ? 0 : Math.PI;
-                        } else if (this.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
-                            enemy.y = newY;
-                            enemy.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
-                        } else {
-                            // If stuck, pick a new target
-                            enemy.targetX = enemy.x;
-                            enemy.targetY = enemy.y;
-                        }
-                    }
-                }
-            }
-            
-            // Check vision
-            this.agents.forEach(agent => {
-                if (!agent.alive) return;
-                const dist = Math.sqrt(
-                    Math.pow(agent.x - enemy.x, 2) + 
-                    Math.pow(agent.y - enemy.y, 2)
-                );
-                
-                // Apply stealth bonuses to reduce detection range
-                const effectiveVisionRange = this.getStealthDetectionRange(agent);
-                
-                if (dist < effectiveVisionRange) {
-                    enemy.alertLevel = 100;
-                    enemy.targetX = agent.x;
-                    enemy.targetY = agent.y;
-                    
-                    if (Math.random() < 0.02 && dist < 5) {
-                        // Calculate damage using GameServices
-                        let damage = enemy.damage || 10;
-                        if (window.GameServices && window.GameServices.calculateAttackDamage) {
-                            // Use unified damage calculation
-                            damage = window.GameServices.calculateAttackDamage(
-                                enemy,
-                                agent,
-                                { weaponType: 'rifle', distance: dist }
-                            );
-                        }
-
-                        this.projectiles.push({
-                            x: enemy.x,
-                            y: enemy.y,
-                            targetX: agent.x,
-                            targetY: agent.y,
-                            targetAgent: agent, // Store the specific target agent
-                            damage: damage,
-                            speed: 0.3,
-                            owner: enemy.id,
-                            hostile: true,
-                            shooter: enemy, // Store shooter for RPG calculations
-                            weaponType: enemy.weaponType || 'rifle'
-                        });
-                    }
-                }
-            });
-        });
-
-        // Update NPCs (only if function exists)
-        if (this.updateNPCs) {
-            this.updateNPCs();
-        }
-
-        // Update projectiles
-        this.projectiles = this.projectiles.filter(proj => {
-            const dx = proj.targetX - proj.x;
-            const dy = proj.targetY - proj.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < 0.5) {
-                if (proj.hostile) {
-                    // Find the specific target agent
-                    if (proj.targetAgent) {
-                        // Damage only the specific target
-                        const agent = proj.targetAgent;
-                        if (agent && agent.alive) {
-                            let actualDamage = proj.damage;
-
-                            // Apply protection bonus from equipment
-                            if (agent.protection) {
-                                actualDamage = Math.max(1, actualDamage - agent.protection);
-                            }
-
-                            // Use FormulaService to apply damage properly
-                            const damageResult = window.GameServices.formulaService.applyDamage(agent, actualDamage);
-                            if (damageResult.isDead) {
-                                // Log agent death
-                                if (this.logDeath) this.logDeath(agent);
-                            } else {
-                                // Log hit - use projectile owner or generic enemy
-                                if (this.logCombatHit) {
-                                    const attacker = proj.owner ?
-                                        this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
-                                        { name: 'Enemy' };
-                                    this.logCombatHit(attacker, agent, actualDamage);
-                                }
-                            }
-                            // Play hit sound
-                            this.playSound('hit', 0.3);
-                        }
-                    } else {
-                        // Fallback: find closest agent to impact point
-                        let closestAgent = null;
-                        let closestDist = Infinity;
-                        this.agents.forEach(agent => {
-                            const hitDist = Math.sqrt(
-                                Math.pow(agent.x - proj.targetX, 2) +
-                                Math.pow(agent.y - proj.targetY, 2)
-                            );
-                            if (hitDist < 1 && hitDist < closestDist) {
-                                closestDist = hitDist;
-                                closestAgent = agent;
-                            }
-                        });
-
-                        if (closestAgent) {
-                            let actualDamage = proj.damage;
-
-                            // Apply protection
-                            if (closestAgent.protection) {
-                                actualDamage = Math.max(1, actualDamage - closestAgent.protection);
-                            }
-                            if (closestAgent.shield > 0) {
-                                closestAgent.shield -= actualDamage;
-                            } else {
-                                // Use FormulaService to apply damage
-                                const damageResult = window.GameServices.formulaService.applyDamage(closestAgent, actualDamage);
-                                if (damageResult.isDead) {
-                                    // Log agent death
-                                    if (this.logDeath) this.logDeath(closestAgent);
-                                } else {
-                                    // Log hit - use projectile owner or generic enemy
-                                    if (this.logCombatHit) {
-                                        const attacker = proj.owner ?
-                                            this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
-                                            { name: 'Enemy' };
-                                        this.logCombatHit(attacker, closestAgent, actualDamage);
-                                    }
-                                }
-                            }
-                            // Play hit sound
-                            this.playSound('hit', 0.3);
-                        }
-                    }
-                } else {
-                    // Player projectile hitting enemy
-                    if (proj.targetEnemy) {
-                        // Damage only the specific target enemy
-                        const enemy = proj.targetEnemy;
-                        if (enemy && enemy.alive) {
-                            // Use GameServices to calculate actual damage if available
-                            let actualDamage = proj.damage;
-                            if (window.GameServices && window.GameServices.calculateAttackDamage) {
-                                actualDamage = window.GameServices.calculateAttackDamage(
-                                    proj.agent || { damage: proj.damage },
-                                    enemy,
-                                    { distance: 0 }
-                                );
-                            }
-
-                            // Use FormulaService to apply damage
-                            const damageResult = window.GameServices.formulaService.applyDamage(enemy, actualDamage);
-                            if (damageResult.isDead) {
-                                this.totalEnemiesDefeated++;
-
-                                if (this.logger) this.logger.debug(`⚔️ ENEMY KILLED (alternate path)! Details:`, {
-                                    enemyType: enemy.type,
-                                    enemyHasRPG: !!enemy.rpgEntity,
-                                    shooterFromProj: proj.shooter?.name || proj.agent?.name || 'unknown',
-                                    shooterHasRPG: !!(proj.shooter?.rpgEntity || proj.agent?.rpgEntity)
-                                });
-
-                                // Track enemy elimination for mission objectives
-                                if (this.onEnemyEliminated) {
-                                    this.onEnemyEliminated(enemy);
-                                }
-
-                                // Grant XP for kills!
-                                const killer = proj.shooter || proj.agent || null;
-                                if (this.onEntityDeath && killer) {
-                                    if (this.logger) this.logger.debug(`📞 Calling onEntityDeath from alternate path...`);
-                                    this.onEntityDeath(enemy, killer);
-                                }
-
-                                // Log enemy death
-                                if (this.logDeath) this.logDeath(enemy);
-                            } else {
-                                // Log hit
-                                if (this.logCombatHit) this.logCombatHit(proj.agent || { name: 'Agent' }, enemy, actualDamage);
-                            }
-                            // Play hit sound
-                            this.playSound('hit', 0.3);
-                        }
-                    } else {
-                        // Fallback: find closest enemy to impact point
-                        let closestEnemy = null;
-                        let closestDist = Infinity;
-                        this.enemies.forEach(enemy => {
-                            const hitDist = Math.sqrt(
-                                Math.pow(enemy.x - proj.targetX, 2) +
-                                Math.pow(enemy.y - proj.targetY, 2)
-                            );
-                            if (hitDist < 1 && hitDist < closestDist) {
-                                closestDist = hitDist;
-                                closestEnemy = enemy;
-                            }
-                        });
-
-                        if (closestEnemy) {
-                            // Use GameServices to calculate actual damage if available
-                            let actualDamage = proj.damage;
-                            if (window.GameServices && window.GameServices.calculateAttackDamage) {
-                                actualDamage = window.GameServices.calculateAttackDamage(
-                                    proj.agent || { damage: proj.damage },
-                                    closestEnemy,
-                                    { distance: 0 }
-                                );
-                            }
-
-                            // Use FormulaService to apply damage
-                            const damageResult = window.GameServices.formulaService.applyDamage(closestEnemy, actualDamage);
-                            if (damageResult.isDead) {
-                                this.totalEnemiesDefeated++;
-                                // Log enemy death
-                                if (this.logDeath) this.logDeath(closestEnemy);
-                            } else {
-                                // Log hit
-                                if (this.logCombatHit) {
-                                    const attacker = proj.agent || { name: 'Agent' };
-                                    this.logCombatHit(attacker, closestEnemy, actualDamage);
-                                }
-                            }
-                            // Play hit sound
-                            this.playSound('hit', 0.3);
-                        }
-                    }
-                }
-                return false;
-            }
-
-            proj.x += (dx / dist) * proj.speed;
-            proj.y += (dy / dist) * proj.speed;
-            return true;
-        });
-        
-        // Update effects
-        this.effects = this.effects.filter(effect => {
-            effect.frame++;
-            return effect.frame < effect.duration;
-        });
-        
-        this.updateSquadHealth();
-        if (this.agents.some(a => a.selected)) {
-            this.updateCooldownDisplay();
-        }
-        
-        this.checkMissionStatus();
+    // STUB - This method has been fully migrated to GameFacade.update()
+    // The new architecture handles all update logic through:
+    // - GameController.update() - orchestration
+    // - GameFacade.update() - game logic (551 lines migrated)
+    //
+    // This stub remains for compatibility with any legacy code that might call it directly
 }
-    
+
+// ============================================
+// MISSION AND GAME FLOW - STILL NEEDED
+// ============================================
+
 CyberOpsGame.prototype.checkMissionStatus = function() {
         const aliveAgents = this.agents.filter(a => a.alive).length;
         const aliveEnemies = this.enemies.filter(e => e.alive).length;

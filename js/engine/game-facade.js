@@ -546,39 +546,18 @@ class GameFacade {
      * Update mission objectives
      */
     updateObjectives() {
-        this.missionObjectives.forEach(objective => {
-            if (objective.completed) return;
+        // Delegate to MissionService if available - it's the source of truth
+        const game = this.legacyGame;
+        if (game && game.checkMissionObjectives) {
+            game.checkMissionObjectives();
 
-            switch (objective.type) {
-                case 'eliminate':
-                    if (objective.target.type === 'all_enemies') {
-                        objective.completed = this.enemies.every(e => !e.alive);
-                    } else if (objective.target.count) {
-                        objective.completed = objective.progress >= objective.target.count;
-                    }
-                    break;
-
-                case 'reach':
-                    const extraction = this.currentMap?.extraction;
-                    if (extraction) {
-                        objective.completed = this.agents.some(agent =>
-                            agent.alive &&
-                            Math.abs(agent.x - extraction.x) < 2 &&
-                            Math.abs(agent.y - extraction.y) < 2
-                        );
-                    }
-                    break;
+            // Sync extraction state from MissionService
+            if (game.gameServices && game.gameServices.missionService) {
+                this.extractionEnabled = game.gameServices.missionService.extractionEnabled;
+            } else {
+                // Fallback to game's extraction state
+                this.extractionEnabled = game.extractionEnabled || false;
             }
-        });
-
-        // Enable extraction if all required objectives complete
-        const requiredComplete = this.missionObjectives
-            .filter(obj => obj.required)
-            .every(obj => obj.completed);
-
-        if (requiredComplete && !this.extractionEnabled) {
-            this.extractionEnabled = true;
-            if (this.logger) this.logger.info('Extraction enabled!');
         }
     }
 
@@ -586,20 +565,10 @@ class GameFacade {
      * Check mission completion
      */
     checkMissionCompletion() {
-        if (!this.extractionEnabled) return;
-
-        const extraction = this.currentMap?.extraction;
-        if (!extraction) return;
-
-        const allAgentsAtExtraction = this.agents
-            .filter(a => a.alive)
-            .every(agent =>
-                Math.abs(agent.x - extraction.x) < 2 &&
-                Math.abs(agent.y - extraction.y) < 2
-            );
-
-        if (allAgentsAtExtraction) {
-            this.completeMission();
+        // Delegate to legacy game's extraction checking
+        const game = this.legacyGame;
+        if (game && game.checkExtractionPoint) {
+            game.checkExtractionPoint();
         }
     }
 

@@ -317,12 +317,12 @@ NPC.prototype.completeQuest = function(quest, game) {
         // Give rewards through ResourceService
         if (quest.rewards) {
             if (quest.rewards.credits) {
-                window.GameServices.resourceService.earn('credits', quest.rewards.credits, `quest: ${quest.id}`);
+                window.GameServices.resourceService.add('credits', quest.rewards.credits, `quest: ${quest.id}`);
                 game.addNotification(`💰 +${quest.rewards.credits} credits`);
             }
 
             if (quest.rewards.researchPoints) {
-                window.GameServices.resourceService.earn('researchPoints', quest.rewards.researchPoints, `quest: ${quest.id}`);
+                window.GameServices.resourceService.add('researchPoints', quest.rewards.researchPoints, `quest: ${quest.id}`);
                 game.addNotification(`🔬 +${quest.rewards.researchPoints} RP`);
             }
 

@@ -618,7 +618,10 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
     if (allRequiredComplete) {
         // Use MissionService to enable extraction
         if (this.gameServices && this.gameServices.missionService) {
-            this.gameServices.missionService.enableExtraction();
+            // Only enable if not already enabled
+            if (!this.gameServices.missionService.extractionEnabled) {
+                this.gameServices.missionService.enableExtraction();
+            }
 
             // Sync extraction state from MissionService
             this.extractionEnabled = this.gameServices.missionService.extractionEnabled;
