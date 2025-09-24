@@ -49,7 +49,8 @@
       "Bash(echo:*)",
       "Bash(findstr:*)",
       "Bash(start test-mission-fix.html)",
-      "Bash(start test-direct.html)"
+      "Bash(start test-direct.html)",
+      "Read(//w/**)"
     ],
     "deny": [],
     "ask": []

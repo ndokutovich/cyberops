@@ -334,6 +334,7 @@ CyberOpsGame.prototype.moveAgentWithPathfinding = function(agent) {
 
         // Move towards waypoint - with safety checks
         if (dist > 0) {
+            // Original - NO speed multiplier (speed comes from multiple update calls)
             const moveSpeed = agent.speed / 60;
             const moveX = (dx / dist) * moveSpeed;
             const moveY = (dy / dist) * moveSpeed;

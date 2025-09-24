@@ -5,8 +5,11 @@
  */
 
 class GameFacade {
-    constructor(gameServices) {
+    constructor(gameServices, legacyGame) {
         this.logger = window.Logger ? new window.Logger('GameFacade') : null;
+
+        // Store reference to legacy game for migration
+        this.legacyGame = legacyGame;
 
         // Services - use provided services or window.GameServices if available
         this.services = gameServices || window.GameServices;
@@ -25,6 +28,9 @@ class GameFacade {
         this.currentScreen = 'splash';
         this.isPaused = false;
         this.gameSpeed = 1;
+        this.targetGameSpeed = 1;
+        this.autoSlowdownRange = 10;
+        this.speedIndicatorFadeTime = 0;
 
         // Mission state
         this.currentMission = null;
@@ -37,6 +43,7 @@ class GameFacade {
         this.enemies = [];
         this.npcs = [];
         this.projectiles = [];
+        this.effects = [];
         this.items = [];
 
         // Selection state
@@ -63,6 +70,19 @@ class GameFacade {
         // Dialog state
         this.activeDialogs = [];
         this.npcConversations = new Map();
+
+        // Rendering-related state (needed by GameEngine)
+        this.fogEnabled = false;
+        this.fogOfWar = null;
+        this.showPaths = false;
+        this.debugMode = false;
+        this.usePathfinding = true;
+        this.agentWaypoints = {};
+        this.destinationIndicators = [];
+        this.squadSelectEffect = null;
+        this.activeQuests = null;
+        this.npcActiveQuests = [];
+        this.is3DMode = false;
 
         // Initialize subsystems
         this.initializeDefaultState();
@@ -313,9 +333,8 @@ class GameFacade {
         // Update based on game mode
         if (this.turnBasedMode) {
             this.updateTurnBased(deltaTime);
-        } else {
-            this.updateRealTime(deltaTime);
         }
+        // Real-time updates happen in main update flow below, not in separate method
 
         // Always update these
         this.updateProjectiles(deltaTime);
@@ -335,59 +354,79 @@ class GameFacade {
     }
 
     /**
-     * Update real-time mode
+     * Update real-time mode - REMOVED
+     * This was causing issues by duplicating agent updates
+     * All real-time updates now handled in main update() method
      */
     updateRealTime(deltaTime) {
-        const speedMultiplier = this.gameSpeed;
+        // Empty - all logic moved to main update() to match original structure
+    }
 
-        // Update agents
-        this.agents.forEach(agent => {
-            if (!agent.alive) return;
+    /**
+     * Update turn-based animations only (for turn-based mode)
+     * This only handles visual animations, not game logic
+     */
+    updateTurnBasedAnimations(deltaTime) {
+        // Update agent movement animations only
+        if (this.agents) {
+            this.agents.forEach(agent => {
+                if (agent.alive && agent.targetX !== undefined && agent.targetY !== undefined) {
+                    // Smooth movement toward target
+                    const dx = agent.targetX - agent.x;
+                    const dy = agent.targetY - agent.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // Move towards target
-            if (agent.targetX !== undefined && agent.targetY !== undefined) {
-                this.moveEntityTowards(agent, agent.targetX, agent.targetY, deltaTime * speedMultiplier);
-            }
-
-            // Auto-attack nearby enemies
-            if (agent.autoAttack && !agent.attackCooldown) {
-                const nearbyEnemy = this.findNearbyEnemy(agent);
-                if (nearbyEnemy) {
-                    this.performAttack(agent, nearbyEnemy);
+                    if (dist > 0.5) {
+                        const moveSpeed = (agent.speed || 2) * this.gameSpeed;
+                        const moveStep = Math.min(moveSpeed * 0.1, dist); // Limit step size
+                        agent.x += (dx / dist) * moveStep;
+                        agent.y += (dy / dist) * moveStep;
+                    } else {
+                        // Reached destination, clear target
+                        agent.x = agent.targetX;
+                        agent.y = agent.targetY;
+                        agent.targetX = undefined;
+                        agent.targetY = undefined;
+                    }
                 }
+            });
+        }
+
+        // Update projectiles and visual effects
+        this.updateProjectilesOnly(); // Use dedicated function for TB mode
+        this.updateEffectsOnly(); // Update effects animations
+    }
+
+    /**
+     * Update projectiles only (for turn-based mode)
+     */
+    updateProjectilesOnly() {
+        if (!this.projectiles) return;
+
+        this.projectiles = this.projectiles.filter(proj => {
+            const dx = proj.targetX - proj.x;
+            const dy = proj.targetY - proj.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 0.5) {
+                // Hit logic here (simplified for TB mode)
+                return false;
             }
 
-            // Update cooldowns
-            if (agent.attackCooldown) {
-                agent.attackCooldown -= deltaTime * speedMultiplier;
-                if (agent.attackCooldown <= 0) {
-                    agent.attackCooldown = 0;
-                }
-            }
+            // Move projectile
+            proj.x += (dx / dist) * proj.speed;
+            proj.y += (dy / dist) * proj.speed;
+            return true;
         });
+    }
 
-        // Update enemies
-        this.enemies.forEach(enemy => {
-            if (!enemy.alive) return;
-
-            // Simple AI - move towards nearest agent
-            const target = this.findNearestAgent(enemy);
-            if (target) {
-                const distance = this.getDistance(enemy, target);
-                if (distance > 2) {
-                    this.moveEntityTowards(enemy, target.x, target.y, deltaTime * speedMultiplier * 0.5);
-                } else if (!enemy.attackCooldown) {
-                    this.performAttack(enemy, target);
-                }
-            }
-
-            // Update cooldowns
-            if (enemy.attackCooldown) {
-                enemy.attackCooldown -= deltaTime * speedMultiplier;
-                if (enemy.attackCooldown <= 0) {
-                    enemy.attackCooldown = 0;
-                }
-            }
+    /**
+     * Update effects only (for turn-based mode)
+     */
+    updateEffectsOnly() {
+        this.effects = this.effects.filter(effect => {
+            effect.frame++;
+            return effect.frame < effect.duration;
         });
     }
 
@@ -758,6 +797,577 @@ class GameFacade {
             actionPoints: this.actionPoints,
             isPaused: this.isPaused
         };
+    }
+
+    /**
+     * Main update loop - migrated from game-loop.js
+     */
+    update(deltaTime) {
+        // Access legacy game for transition period
+        const game = this.legacyGame;
+        if (!game) return;
+
+        // Update visual effects FIRST (including freeze timers)
+        if (game.updateVisualEffects) {
+            game.updateVisualEffects(deltaTime);
+        }
+
+        // Check if frozen AFTER updating effects
+        if (game.isFreezeActive && game.isFreezeActive()) {
+            return; // Skip game update while frozen
+        }
+
+        // Original - simple increment (speed comes from multiple update calls)
+        game.missionTimer++;
+        const seconds = Math.floor(game.missionTimer / 60);
+
+        // Update team AI for unselected agents
+        if (game.updateTeamAI) {
+            game.updateTeamAI();
+        }
+        const minutes = Math.floor(seconds / 60);
+        const timerElement = document.getElementById('missionTimer');
+        if (timerElement) {
+            timerElement.textContent =
+                `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+        }
+
+        // Update fog of war
+        if (game.updateFogOfWar) {
+            game.updateFogOfWar();
+        }
+
+        // Check for auto-slowdown near enemies
+        if (game.checkAutoSlowdown) {
+            game.checkAutoSlowdown();
+        }
+
+        // Removed duplicate update logic - already handled above
+
+        // Update agents - use facade's agents array
+        this.agents.forEach(agent => {
+            if (!agent.alive) return;
+
+            // Initialize facing angle if not set
+            if (agent.facingAngle === undefined) {
+                agent.facingAngle = Math.PI / 2; // Default facing down
+            }
+
+            // In 3D mode, make non-controlled agents follow the player (if enabled)
+            if (game.is3DMode && game.squadFollowing !== false && this.selectedAgent && agent !== this.selectedAgent) {
+                // Calculate distance to leader
+                const leaderDist = Math.sqrt(
+                    Math.pow(agent.x - this.selectedAgent.x, 2) +
+                    Math.pow(agent.y - this.selectedAgent.y, 2)
+                );
+
+                // Only update target if too far from leader (to avoid constant movement)
+                if (leaderDist > 5) {
+                    // Set follow target with offset for formation
+                    const followDist = 2.5; // Distance to maintain from leader
+                    const index = this.agents.filter(a => a.alive).indexOf(agent);
+                    const squadSize = this.agents.filter(a => a.alive).length - 1;
+
+                    // Create formation behind the leader based on their facing
+                    const leaderFacing = this.selectedAgent.facingAngle || 0;
+                    const formationAngle = leaderFacing + Math.PI; // Behind the leader
+
+                    // Spread agents in a line formation behind leader
+                    const offsetAngle = formationAngle + (Math.PI / 4) * ((index / squadSize) - 0.5);
+
+                    // Calculate formation position
+                    agent.targetX = this.selectedAgent.x + Math.cos(offsetAngle) * followDist;
+                    agent.targetY = this.selectedAgent.y + Math.sin(offsetAngle) * followDist;
+                } else if (leaderDist < 2) {
+                    // Too close, stop moving
+                    agent.targetX = agent.x;
+                    agent.targetY = agent.y;
+                }
+            }
+
+            // Check for waypoints first
+            if (game.agentWaypoints && game.agentWaypoints[agent.id] && game.agentWaypoints[agent.id].length > 0) {
+                const waypoints = game.agentWaypoints[agent.id];
+                const currentWaypoint = waypoints[0];
+
+                // Set target to current waypoint
+                agent.targetX = currentWaypoint.x;
+                agent.targetY = currentWaypoint.y;
+
+                // Check if we've reached the waypoint
+                const wpDx = currentWaypoint.x - agent.x;
+                const wpDy = currentWaypoint.y - agent.y;
+                const wpDist = Math.sqrt(wpDx * wpDx + wpDy * wpDy);
+
+                if (wpDist < 0.5) {
+                    // Reached waypoint, remove it and move to next
+                    waypoints.shift();
+
+                    // Update the main waypoints array reference
+                    game.agentWaypoints[agent.id] = waypoints;
+
+                    if (agent.selected) {
+                        if (this.logger) this.logger.info(`✅ ${agent.name} reached waypoint, ${waypoints.length} remaining`);
+                    }
+
+                    // If there are more waypoints, update target to next one
+                    if (waypoints.length > 0) {
+                        agent.targetX = waypoints[0].x;
+                        agent.targetY = waypoints[0].y;
+                        if (this.logger) this.logger.debug(`📍 Moving to next waypoint: (${waypoints[0].x.toFixed(1)}, ${waypoints[0].y.toFixed(1)})`);
+                    }
+                }
+            }
+
+            // Check for auto-hack when agent reaches terminal
+            if (agent.autoHackTarget) {
+                const hackDist = Math.sqrt(
+                    Math.pow(agent.autoHackTarget.x - agent.x, 2) +
+                    Math.pow(agent.autoHackTarget.y - agent.y, 2)
+                );
+
+                if (hackDist <= 1.5) {
+                    // Reached terminal, hack it
+                    if (!agent.autoHackTarget.hacked) {
+                        agent.autoHackTarget.hacked = true;
+
+                        // Track through MissionService
+                        if (this.services && this.services.missionService) {
+                            this.services.missionService.trackEvent('terminal', {
+                                id: agent.autoHackTarget.id || 'unknown'
+                            });
+                        }
+
+                        game.addNotification("🖥️ Terminal hacked!");
+
+                        // Play hack sound if available
+                        if (game.playSound) {
+                            game.playSound('hack');
+                        }
+                    }
+                    agent.autoHackTarget = null; // Clear auto-hack flag
+                }
+            }
+
+            // Check for auto-bomb when agent reaches explosive target
+            if (agent.autoBombTarget) {
+                const bombDist = Math.sqrt(
+                    Math.pow(agent.autoBombTarget.x - agent.x, 2) +
+                    Math.pow(agent.autoBombTarget.y - agent.y, 2)
+                );
+
+                if (bombDist <= 1.5) {
+                    // Reached target, plant bomb
+                    if (!agent.autoBombTarget.destroyed) {
+                        agent.autoBombTarget.destroyed = true;
+                        game.destroyedTargets = (game.destroyedTargets || 0) + 1;
+                        game.addNotification("💣 Explosive planted!");
+
+                        // Play bomb sound if available
+                        if (game.playSound) {
+                            game.playSound('explosion');
+                        }
+
+                        // Create explosion effect
+                        if (game.createExplosion) {
+                            game.createExplosion(agent.autoBombTarget.x, agent.autoBombTarget.y);
+                        }
+                    }
+                    agent.autoBombTarget = null; // Clear auto-bomb flag
+                }
+            }
+
+            const dx = agent.targetX - agent.x;
+            const dy = agent.targetY - agent.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 0.1) {
+                // Always use pathfinding
+                game.moveAgentWithPathfinding(agent);
+            }
+            // Agent is standing still - keep last facing direction
+
+            // Check for collectable pickup
+            if (this.currentMap && this.currentMap.collectables) {
+                this.currentMap.collectables.forEach(item => {
+                    if (!item.collected) {
+                        // Check if quest is required and active
+                        if (item.questRequired) {
+                            // Check both mission activeQuests (object) and NPC quests (array)
+                            const missionQuestActive = game.activeQuests && game.activeQuests[item.questRequired];
+                            const npcQuestActive = game.npcActiveQuests && game.npcActiveQuests.some(q => q.id === item.questRequired);
+                            const questActive = missionQuestActive || npcQuestActive;
+                            if (!questActive) return; // Skip if quest not active
+                        }
+
+                        const dist = Math.sqrt(
+                            Math.pow(item.x - agent.x, 2) +
+                            Math.pow(item.y - agent.y, 2)
+                        );
+                        if (dist < 1) {
+                            item.collected = true;
+                            if (this.logger) {
+                                this.logger.debug(`📦 Pickup by agent:`, {
+                                    name: agent.name,
+                                    id: agent.id,
+                                    originalId: agent.originalId,
+                                    index: this.agents.indexOf(agent)
+                                });
+                            }
+                            game.handleCollectablePickup(agent, item);
+                            // Log item collection
+                            if (game.logItemCollected) game.logItemCollected(agent, item);
+                        }
+                    }
+                });
+            }
+
+            for (let i = 0; i < agent.cooldowns.length; i++) {
+                if (agent.cooldowns[i] > 0) agent.cooldowns[i]--;
+            }
+
+            if (agent.shieldDuration > 0) {
+                agent.shieldDuration--;
+                if (agent.shieldDuration === 0) agent.shield = 0;
+            }
+        });
+
+        // Update enemies - use facade's enemies array
+        this.enemies.forEach(enemy => {
+            if (!enemy.alive) return;
+
+            if (enemy.alertLevel > 0) {
+                const dx = enemy.targetX - enemy.x;
+                const dy = enemy.targetY - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 0.5) {
+                    // Update facing angle when chasing
+                    enemy.facingAngle = Math.atan2(dy, dx);
+
+                    const moveSpeed = enemy.speed / 60;  // Original - NO speed multiplier
+                    const moveX = (dx / dist) * moveSpeed;
+                    const moveY = (dy / dist) * moveSpeed;
+
+                    const newX = enemy.x + moveX;
+                    const newY = enemy.y + moveY;
+
+                    // Check collision before moving
+                    if (game.canMoveTo(enemy.x, enemy.y, newX, newY)) {
+                        enemy.x = newX;
+                        enemy.y = newY;
+                    } else {
+                        // Try to slide along walls
+                        if (game.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
+                            enemy.x = newX;
+                            enemy.facingAngle = dx > 0 ? 0 : Math.PI;
+                        } else if (game.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
+                            enemy.y = newY;
+                            enemy.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
+                        }
+                    }
+                } else {
+                    enemy.alertLevel = Math.max(0, enemy.alertLevel - 0.5);  // Original - NO multiplier
+                }
+            } else {
+                if (Math.random() < 0.01) {  // Original - NO speed multiplier
+                    // Generate new target position that is walkable
+                    let attempts = 0;
+                    let newTargetX, newTargetY;
+                    do {
+                        newTargetX = enemy.x + (Math.random() - 0.5) * 5;
+                        newTargetY = enemy.y + (Math.random() - 0.5) * 5;
+                        attempts++;
+                    } while (!game.isWalkable(newTargetX, newTargetY) && attempts < 10);
+
+                    if (attempts < 10) {
+                        enemy.targetX = newTargetX;
+                        enemy.targetY = newTargetY;
+                    }
+                }
+
+                const dx = enemy.targetX - enemy.x;
+                const dy = enemy.targetY - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 0.1) {
+                    // Update facing angle when patrolling
+                    enemy.facingAngle = Math.atan2(dy, dx);
+
+                    const moveSpeed = enemy.speed / 120;  // Original - NO speed multiplier
+                    const moveX = (dx / dist) * moveSpeed;
+                    const moveY = (dy / dist) * moveSpeed;
+
+                    const newX = enemy.x + moveX;
+                    const newY = enemy.y + moveY;
+
+                    // Check collision before moving
+                    if (game.canMoveTo(enemy.x, enemy.y, newX, newY)) {
+                        enemy.x = newX;
+                        enemy.y = newY;
+                    } else {
+                        // Try to slide along walls
+                        if (game.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
+                            enemy.x = newX;
+                            enemy.facingAngle = dx > 0 ? 0 : Math.PI;
+                        } else if (game.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
+                            enemy.y = newY;
+                            enemy.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
+                        } else {
+                            // If stuck, pick a new target
+                            enemy.targetX = enemy.x;
+                            enemy.targetY = enemy.y;
+                        }
+                    }
+                }
+            }
+
+            // Check vision
+            this.agents.forEach(agent => {
+                if (!agent.alive) return;
+                const dist = Math.sqrt(
+                    Math.pow(agent.x - enemy.x, 2) +
+                    Math.pow(agent.y - enemy.y, 2)
+                );
+
+                // Apply stealth bonuses to reduce detection range
+                const effectiveVisionRange = game.getStealthDetectionRange ? game.getStealthDetectionRange(agent) : 8;
+
+                if (dist < effectiveVisionRange) {
+                    enemy.alertLevel = 100;
+                    enemy.targetX = agent.x;
+                    enemy.targetY = agent.y;
+
+                    if (Math.random() < 0.02 && dist < 5) {  // Original - NO speed multiplier
+                        // Calculate damage using GameServices
+                        let damage = enemy.damage || 10;
+                        if (window.GameServices && window.GameServices.calculateAttackDamage) {
+                            // Use unified damage calculation
+                            damage = window.GameServices.calculateAttackDamage(
+                                enemy,
+                                agent,
+                                { weaponType: 'rifle', distance: dist }
+                            );
+                        }
+
+                        this.projectiles.push({
+                            x: enemy.x,
+                            y: enemy.y,
+                            targetX: agent.x,
+                            targetY: agent.y,
+                            targetAgent: agent, // Store the specific target agent
+                            damage: damage,
+                            speed: 0.3,
+                            owner: enemy.id,
+                            hostile: true,
+                            shooter: enemy, // Store shooter for RPG calculations
+                            weaponType: enemy.weaponType || 'rifle'
+                        });
+                    }
+                }
+            });
+        });
+
+        // Update NPCs (only if function exists)
+        if (game.updateNPCs) {
+            game.updateNPCs();
+        }
+
+        // Update projectiles - use facade's projectiles array
+        this.projectiles = this.projectiles.filter(proj => {
+            const dx = proj.targetX - proj.x;
+            const dy = proj.targetY - proj.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 0.5) {
+                if (proj.hostile) {
+                    // Find the specific target agent
+                    if (proj.targetAgent) {
+                        // Damage only the specific target
+                        const agent = proj.targetAgent;
+                        if (agent && agent.alive) {
+                            let actualDamage = proj.damage;
+
+                            // Apply protection bonus from equipment
+                            if (agent.protection) {
+                                actualDamage = Math.max(1, actualDamage - agent.protection);
+                            }
+
+                            // Use FormulaService to apply damage properly
+                            const damageResult = window.GameServices.formulaService.applyDamage(agent, actualDamage);
+                            if (damageResult.isDead) {
+                                // Log agent death
+                                if (game.logDeath) game.logDeath(agent);
+                            } else {
+                                // Log hit - use projectile owner or generic enemy
+                                if (game.logCombatHit) {
+                                    const attacker = proj.owner ?
+                                        this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
+                                        { name: 'Enemy' };
+                                    game.logCombatHit(attacker, agent, actualDamage);
+                                }
+                            }
+                            // Play hit sound
+                            game.playSound('hit', 0.3);
+                        }
+                    } else {
+                        // Fallback: find closest agent to impact point
+                        let closestAgent = null;
+                        let closestDist = Infinity;
+                        this.agents.forEach(agent => {
+                            const hitDist = Math.sqrt(
+                                Math.pow(agent.x - proj.targetX, 2) +
+                                Math.pow(agent.y - proj.targetY, 2)
+                            );
+                            if (hitDist < 1 && hitDist < closestDist) {
+                                closestDist = hitDist;
+                                closestAgent = agent;
+                            }
+                        });
+
+                        if (closestAgent) {
+                            let actualDamage = proj.damage;
+
+                            // Apply protection
+                            if (closestAgent.protection) {
+                                actualDamage = Math.max(1, actualDamage - closestAgent.protection);
+                            }
+                            if (closestAgent.shield > 0) {
+                                closestAgent.shield -= actualDamage;
+                            } else {
+                                // Use FormulaService to apply damage
+                                const damageResult = window.GameServices.formulaService.applyDamage(closestAgent, actualDamage);
+                                if (damageResult.isDead) {
+                                    // Log agent death
+                                    if (game.logDeath) game.logDeath(closestAgent);
+                                } else {
+                                    // Log hit - use projectile owner or generic enemy
+                                    if (game.logCombatHit) {
+                                        const attacker = proj.owner ?
+                                            this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
+                                            { name: 'Enemy' };
+                                        game.logCombatHit(attacker, closestAgent, actualDamage);
+                                    }
+                                }
+                            }
+                            // Play hit sound
+                            game.playSound('hit', 0.3);
+                        }
+                    }
+                } else {
+                    // Player projectile hitting enemy
+                    if (proj.targetEnemy) {
+                        // Damage only the specific target enemy
+                        const enemy = proj.targetEnemy;
+                        if (enemy && enemy.alive) {
+                            // Use GameServices to calculate actual damage if available
+                            let actualDamage = proj.damage;
+                            if (window.GameServices && window.GameServices.calculateAttackDamage) {
+                                actualDamage = window.GameServices.calculateAttackDamage(
+                                    proj.agent || { damage: proj.damage },
+                                    enemy,
+                                    { distance: 0 }
+                                );
+                            }
+
+                            // Use FormulaService to apply damage
+                            const damageResult = window.GameServices.formulaService.applyDamage(enemy, actualDamage);
+                            if (damageResult.isDead) {
+                                game.totalEnemiesDefeated++;
+
+                                if (this.logger) this.logger.debug(`⚔️ ENEMY KILLED! Details:`, {
+                                    enemyType: enemy.type,
+                                    enemyHasRPG: !!enemy.rpgEntity,
+                                    shooterFromProj: proj.shooter?.name || proj.agent?.name || 'unknown',
+                                    shooterHasRPG: !!(proj.shooter?.rpgEntity || proj.agent?.rpgEntity)
+                                });
+
+                                // Track enemy elimination for mission objectives
+                                if (game.onEnemyEliminated) {
+                                    game.onEnemyEliminated(enemy);
+                                }
+
+                                // Grant XP for kills!
+                                const killer = proj.shooter || proj.agent || null;
+                                if (game.onEntityDeath && killer) {
+                                    if (this.logger) this.logger.debug(`📞 Calling onEntityDeath...`);
+                                    game.onEntityDeath(enemy, killer);
+                                }
+
+                                // Log enemy death
+                                if (game.logDeath) game.logDeath(enemy);
+                            } else {
+                                // Log hit
+                                if (game.logCombatHit) game.logCombatHit(proj.agent || { name: 'Agent' }, enemy, actualDamage);
+                            }
+                            // Play hit sound
+                            game.playSound('hit', 0.3);
+                        }
+                    } else {
+                        // Fallback: find closest enemy to impact point
+                        let closestEnemy = null;
+                        let closestDist = Infinity;
+                        this.enemies.forEach(enemy => {
+                            const hitDist = Math.sqrt(
+                                Math.pow(enemy.x - proj.targetX, 2) +
+                                Math.pow(enemy.y - proj.targetY, 2)
+                            );
+                            if (hitDist < 1 && hitDist < closestDist) {
+                                closestDist = hitDist;
+                                closestEnemy = enemy;
+                            }
+                        });
+
+                        if (closestEnemy) {
+                            // Use GameServices to calculate actual damage if available
+                            let actualDamage = proj.damage;
+                            if (window.GameServices && window.GameServices.calculateAttackDamage) {
+                                actualDamage = window.GameServices.calculateAttackDamage(
+                                    proj.agent || { damage: proj.damage },
+                                    closestEnemy,
+                                    { distance: 0 }
+                                );
+                            }
+
+                            // Use FormulaService to apply damage
+                            const damageResult = window.GameServices.formulaService.applyDamage(closestEnemy, actualDamage);
+                            if (damageResult.isDead) {
+                                game.totalEnemiesDefeated++;
+                                // Log enemy death
+                                if (game.logDeath) game.logDeath(closestEnemy);
+                            } else {
+                                // Log hit
+                                if (game.logCombatHit) {
+                                    const attacker = proj.agent || { name: 'Agent' };
+                                    game.logCombatHit(attacker, closestEnemy, actualDamage);
+                                }
+                            }
+                            // Play hit sound
+                            game.playSound('hit', 0.3);
+                        }
+                    }
+                }
+                return false;
+            }
+
+            // Original - NO speed multiplier (speed comes from multiple update calls)
+            proj.x += (dx / dist) * proj.speed;
+            proj.y += (dy / dist) * proj.speed;
+            return true;
+        });
+
+        // Update effects - Original simple increment (speed comes from multiple update calls)
+        this.effects = this.effects.filter(effect => {
+            effect.frame++;
+            return effect.frame < effect.duration;
+        });
+
+        game.updateSquadHealth();
+        if (this.agents.some(a => a.selected)) {
+            game.updateCooldownDisplay();
+        }
+
+        game.checkMissionStatus();
     }
 
     /**

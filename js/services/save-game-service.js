@@ -236,8 +236,8 @@ class SaveGameService {
         const saveData = {};
 
         // Get game state from GameStateService
-        if (this.gameStateService) {
-            saveData.gameState = await this.gameStateService.getFullState();
+        if (this.gameStateService && window.game) {
+            saveData.gameState = this.gameStateService.collectGameState(window.game);
         }
 
         // Get data from GameFacade if available
@@ -316,8 +316,8 @@ class SaveGameService {
      */
     async applySaveData(saveData) {
         // Apply to GameStateService
-        if (this.gameStateService && saveData.gameState) {
-            await this.gameStateService.loadFullState(saveData.gameState);
+        if (this.gameStateService && saveData.gameState && window.game) {
+            this.gameStateService.applyGameState(window.game, saveData.gameState);
         }
 
         // Apply to GameFacade if available

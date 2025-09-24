@@ -10,11 +10,11 @@ class GameController {
         // Reference to CyberOpsGame for backward compatibility
         this.legacyGame = game;
 
-        // Initialize engine (technical layer) using existing canvas
-        this.engine = new window.GameEngine(game.canvas, game.audioContext || null);
+        // Initialize facade (game logic layer) with existing services and legacy game reference
+        this.facade = new window.GameFacade(game.gameServices || window.GameServices, game);
 
-        // Initialize facade (game logic layer) with existing services
-        this.facade = new window.GameFacade(game.gameServices || window.GameServices);
+        // Initialize engine (technical layer) using existing canvas and facade reference
+        this.engine = new window.GameEngine(game.canvas, game.audioContext || null, this.facade);
 
         // Wire up connections
         this.setupConnections();
@@ -49,6 +49,9 @@ class GameController {
         this.facade.currentScreen = game.currentScreen;
         this.facade.isPaused = game.isPaused;
         this.facade.gameSpeed = game.gameSpeed;
+        this.facade.targetGameSpeed = game.targetGameSpeed || 1;
+        this.facade.autoSlowdownRange = game.autoSlowdownRange || 10;
+        this.facade.speedIndicatorFadeTime = game.speedIndicatorFadeTime || 0;
 
         // Log screen transitions
         if (prevScreen !== this.facade.currentScreen) {
@@ -65,6 +68,26 @@ class GameController {
         if (game.currentMissionDef) this.facade.currentMission = game.currentMissionDef;
         if (game.map) this.facade.currentMap = game.map;
         if (game.missionObjectives) this.facade.missionObjectives = game.missionObjectives;
+
+        // Sync fog of war state
+        if (game.fogOfWar) this.facade.fogOfWar = game.fogOfWar;
+        if (game.fogEnabled !== undefined) this.facade.fogEnabled = game.fogEnabled;
+
+        // Sync 3D mode state
+        if (game.is3DMode !== undefined) this.facade.is3DMode = game.is3DMode;
+
+        // Sync turn-based mode
+        if (game.turnBasedMode !== undefined) this.facade.turnBasedMode = game.turnBasedMode;
+
+        // Sync other important state
+        if (game.agentWaypoints) this.facade.agentWaypoints = game.agentWaypoints;
+        if (game.destinationIndicators) this.facade.destinationIndicators = game.destinationIndicators;
+        if (game.squadSelectEffect) this.facade.squadSelectEffect = game.squadSelectEffect;
+        if (game.showPaths !== undefined) this.facade.showPaths = game.showPaths;
+        if (game.debugMode !== undefined) this.facade.debugMode = game.debugMode;
+        if (game.usePathfinding !== undefined) this.facade.usePathfinding = game.usePathfinding;
+        if (game.activeQuests) this.facade.activeQuests = game.activeQuests;
+        if (game.npcActiveQuests) this.facade.npcActiveQuests = game.npcActiveQuests;
 
         // Sync camera
         this.engine.setCamera(game.cameraX, game.cameraY, game.zoom || 1);
@@ -83,6 +106,9 @@ class GameController {
         game.currentScreen = this.facade.currentScreen;
         game.isPaused = this.facade.isPaused;
         game.gameSpeed = this.facade.gameSpeed;
+        game.targetGameSpeed = this.facade.targetGameSpeed;
+        game.autoSlowdownRange = this.facade.autoSlowdownRange;
+        game.speedIndicatorFadeTime = this.facade.speedIndicatorFadeTime;
 
         // Sync entities
         game.agents = this.facade.agents;
@@ -95,6 +121,23 @@ class GameController {
         game.map = this.facade.currentMap;
         game.missionObjectives = this.facade.missionObjectives;
         game.extractionEnabled = this.facade.extractionEnabled;
+
+        // Sync fog of war state
+        game.fogOfWar = this.facade.fogOfWar;
+        game.fogEnabled = this.facade.fogEnabled;
+
+        // Sync 3D mode state
+        game.is3DMode = this.facade.is3DMode;
+
+        // Sync other important state
+        game.agentWaypoints = this.facade.agentWaypoints;
+        game.destinationIndicators = this.facade.destinationIndicators;
+        game.squadSelectEffect = this.facade.squadSelectEffect;
+        game.showPaths = this.facade.showPaths;
+        game.debugMode = this.facade.debugMode;
+        game.usePathfinding = this.facade.usePathfinding;
+        game.activeQuests = this.facade.activeQuests;
+        game.npcActiveQuests = this.facade.npcActiveQuests;
 
         // Sync camera
         game.cameraX = this.engine.cameraX;
@@ -127,19 +170,59 @@ class GameController {
         // Sync current state from legacy game
         this.syncState();
 
-        // Let legacy game do its updates for now
-        // We'll gradually migrate these to facade
-        if (this.legacyGame.currentScreen === 'game' && !this.legacyGame.isPaused) {
-            // Call the main update function (not updateGame which doesn't exist)
-            if (this.legacyGame.update) {
-                this.legacyGame.update(deltaTime);
+        if (this.facade.currentScreen === 'game' && !this.facade.isPaused) {
+            // Handle turn-based mode differently (like original)
+            if (this.facade.turnBasedMode) {
+                // In turn-based mode, update animations and effects only
+                // TODO: Implement specialized turn-based update
+                this.facade.updateTurnBasedAnimations(deltaTime);
+
+                // Update fog of war based on agent positions
+                if (this.legacyGame.updateFogOfWar) {
+                    this.legacyGame.updateFogOfWar();
+                }
+
+                // Update visual effects
+                if (this.legacyGame.updateVisualEffects) {
+                    this.legacyGame.updateVisualEffects(deltaTime);
+                }
+            } else {
+                // Normal real-time update - CRITICAL: Call update multiple times based on game speed!
+                const updateCount = Math.floor(this.facade.gameSpeed || 1);
+                for (let i = 0; i < updateCount; i++) {
+                    this.facade.update(deltaTime);
+
+                    // Update 3D if in 3D mode (inside loop like original)
+                    if (this.facade.is3DMode && this.legacyGame.update3D) {
+                        this.legacyGame.update3D();
+                        this.legacyGame.update3DCamera();
+                        this.legacyGame.sync3DTo2D();
+                    }
+                }
+
+                // Only update these in real-time mode (outside loop like original)
+                if (this.legacyGame.checkAutoSlowdown) {
+                    this.legacyGame.checkAutoSlowdown();
+                    // Re-sync game speed after auto-slowdown might have changed it
+                    this.facade.gameSpeed = this.legacyGame.gameSpeed;
+                    this.facade.targetGameSpeed = this.legacyGame.targetGameSpeed;
+                    this.facade.speedIndicatorFadeTime = this.legacyGame.speedIndicatorFadeTime;
+                }
+
+                // Update music system based on game state
+                if (this.legacyGame.musicSystem && this.legacyGame.updateMusicState) {
+                    this.legacyGame.updateMusicState();
+                }
             }
         }
 
-        // Update visual effects
-        if (this.legacyGame.updateVisualEffects) {
+        // Update visual effects outside of game update (for menus etc)
+        if (this.facade.currentScreen !== 'game' && this.legacyGame.updateVisualEffects) {
             this.legacyGame.updateVisualEffects(deltaTime);
         }
+
+        // Sync state back to legacy game after facade updates
+        this.syncBack();
 
         // Log periodically (every 300 frames = ~5 seconds at 60fps)
         if (!this.frameCounter) this.frameCounter = 0;
@@ -204,25 +287,8 @@ class GameController {
      * Render game
      */
     render(ctx) {
-        // For now, just use the legacy game's render method entirely
-        // We'll gradually migrate this
-        if (this.legacyGame.render) {
-            this.legacyGame.render();
-        } else {
-            // Fallback to new rendering if old one not available
-            const gameState = this.facade.getGameState();
-            switch (gameState.screen) {
-                case 'game':
-                    this.renderBridge.renderGame(ctx, gameState);
-                    break;
-                case 'menu':
-                    this.renderBridge.renderMenu(ctx);
-                    break;
-                case 'hub':
-                    this.renderBridge.renderHub(ctx);
-                    break;
-            }
-        }
+        // Use engine's render method now that it's migrated
+        this.engine.render();
     }
 
     /**
