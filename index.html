@@ -890,6 +890,8 @@
     <script src="js/engine/content-loader.js"></script>
 
     <!-- New Architecture: Engine and Facade separation -->
+    <script src="js/engine/rendering-helpers.js"></script>
+    <script src="js/engine/ui-renderer.js"></script>
     <script src="js/engine/game-engine.js"></script>
     <script src="js/engine/game-facade.js"></script>
     <script src="js/engine/game-controller.js"></script>
@@ -973,9 +975,9 @@
 
     <!-- Engine Integration (must load after CyberOpsGame is defined) -->
     <script src="js/engine/engine-integration.js"></script>
-    <script src="js/game-loop.js"></script>
+    <!-- game-loop.js removed - functionality moved to GameEngine/GameFacade/Services -->
     <script src="js/game-pathfinding.js"></script>
-    <script src="js/game-rendering.js"></script>
+    <!-- game-rendering.js removed - functionality moved to GameEngine/RenderingHelpers -->
     <script src="js/game-3d.js"></script>
     <script src="js/game-utils.js"></script>
 

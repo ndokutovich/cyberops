@@ -582,9 +582,10 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
 
         // MissionService already tracks completion, just check if status changed
         const wasComplete = obj.completed || (obj.status === 'completed');
+        const isNowComplete = obj.status === 'completed' || obj.completed === true;
 
         // Handle newly completed objectives
-        if (!wasComplete && obj.completed) {
+        if (!wasComplete && isNowComplete) {
             // This is important - log at INFO level when objective actually completes
             if (this.logger) this.logger.info(`✅ Objective completed: ${obj.description}`);
             this.addNotification(`✅ ${obj.description}`);
@@ -601,12 +602,15 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
         }
 
         // Track overall completion
+        // Check if objective is complete (MissionService uses 'status', legacy uses 'completed')
+        const isComplete = obj.status === 'completed' || obj.completed === true;
+
         // Treat objectives without 'required' field as required by default
         const isRequired = obj.required !== false;
-        if (isRequired && !obj.completed) {
+        if (isRequired && !isComplete) {
             allRequiredComplete = false;
         }
-        if (!obj.completed) {
+        if (!isComplete) {
             anyIncomplete = true;
         }
     });
@@ -616,13 +620,9 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
 
     // Check for mission completion
     if (allRequiredComplete) {
-        // Use MissionService to enable extraction
+        // MissionService handles extraction enablement automatically through trackEvent()
+        // Just sync the state, don't enable it here to avoid duplicate calls
         if (this.gameServices && this.gameServices.missionService) {
-            // Only enable if not already enabled
-            if (!this.gameServices.missionService.extractionEnabled) {
-                this.gameServices.missionService.enableExtraction();
-            }
-
             // Sync extraction state from MissionService
             this.extractionEnabled = this.gameServices.missionService.extractionEnabled;
 

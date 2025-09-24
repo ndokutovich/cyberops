@@ -21,6 +21,12 @@ class GameServices {
         this.rpgService = new RPGService(this.formulaService);
         this.inventoryService = new InventoryService(this.formulaService, this.equipmentService);
 
+        // Item service for collectable handling
+        if (window.ItemService) {
+            this.itemService = new ItemService(this.resourceService, this.formulaService, this.inventoryService);
+            if (this.logger) this.logger.debug('ItemService initialized');
+        }
+
         // Game state service (needs most other services)
         this.gameStateService = new GameStateService(
             this.resourceService,

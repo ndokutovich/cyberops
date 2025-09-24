@@ -27,6 +27,7 @@ class GameEngine {
         this.lastFrameTime = performance.now();
         this.fps = 60;
         this.frameCount = 0;
+        this.lastFpsUpdate = Date.now();
 
         // Input state (raw input, not game interpretation)
         this.mouseX = 0;
@@ -47,6 +48,12 @@ class GameEngine {
         this.scene3D = null;
         this.camera3D = null;
         this.is3DEnabled = false;
+
+        // Initialize RenderingHelpers for entity rendering
+        this.renderingHelpers = new RenderingHelpers(this.tileWidth, this.tileHeight);
+
+        // Initialize UIRenderer for UI overlays
+        this.uiRenderer = new UIRenderer();
 
         // Visual effects
         this.particles = [];
@@ -127,6 +134,27 @@ class GameEngine {
     }
 
     /**
+     * Update FPS counter - calculates average FPS over 1 second
+     * Migrated from game-loop.js
+     */
+    updateFPS() {
+        this.frameCount++;
+        const now = Date.now();
+        const delta = now - this.lastFpsUpdate;
+
+        if (delta >= 1000) {
+            this.fps = Math.round((this.frameCount * 1000) / delta);
+            this.frameCount = 0;
+            this.lastFpsUpdate = now;
+
+            // Update legacy game FPS if exists
+            if (this.facade && this.facade.legacyGame) {
+                this.facade.legacyGame.fps = this.fps;
+            }
+        }
+    }
+
+    /**
      * Start render loop
      */
     startRenderLoop(updateCallback, renderCallback) {
@@ -177,7 +205,57 @@ class GameEngine {
     }
 
     /**
-     * Render FPS counter
+     * Render all UI overlays using UIRenderer
+     */
+    renderUIOverlays() {
+        const game = this.facade.legacyGame;
+        const ctx = this.ctx;
+        const canvas = this.canvas;
+
+        // Render FPS counter
+        if (this.fps !== undefined) {
+            this.uiRenderer.renderFPS(ctx, this.fps, canvas.width, canvas.height);
+        }
+
+        // Render hotkey help
+        if (game && game.showHotkeyHelp) {
+            this.uiRenderer.renderHotkeyHelp(ctx, game.showHotkeyHelp, canvas.width, canvas.height);
+        }
+
+        // Render speed indicator
+        if (!this.facade.turnBasedMode && this.facade.gameSpeed !== undefined) {
+            this.uiRenderer.renderSpeedIndicator(ctx, this.facade.gameSpeed, canvas.width, canvas.height);
+        }
+
+        // Render turn-based indicator
+        if (this.facade.turnBasedMode && this.facade.currentTurn) {
+            const actionPoints = this.facade.actionPoints ? this.facade.actionPoints.get(this.facade.currentTurn) : 0;
+            this.uiRenderer.renderTurnBasedIndicator(
+                ctx,
+                this.facade.turnBasedMode,
+                this.facade.currentTurn,
+                actionPoints,
+                canvas.width,
+                canvas.height
+            );
+        }
+
+        // Render minimap
+        const minimapContainer = document.getElementById('minimapContent');
+        if (minimapContainer && this.facade.currentMap) {
+            this.uiRenderer.renderMinimap(
+                this.facade.currentMap,
+                this.facade.agents,
+                this.facade.enemies,
+                minimapContainer,
+                this.facade.currentMap.extraction,
+                this.facade.extractionEnabled
+            );
+        }
+    }
+
+    /**
+     * Render FPS counter - DEPRECATED (use renderUIOverlays)
      */
     renderFPS() {
         if (this.showFPS) {
@@ -526,22 +604,8 @@ class GameEngine {
             game.renderScreenFlash(ctx);
         }
 
-        // Render UI elements
-        if (game.renderHotkeyHelp) {
-            game.renderHotkeyHelp();
-        }
-
-        if (!this.facade.turnBasedMode && game.renderSpeedIndicator) {
-            game.renderSpeedIndicator();
-        }
-
-        if (game.renderFPS) {
-            game.renderFPS();
-        }
-
-        if (game.renderMinimap) {
-            game.renderMinimap();
-        }
+        // Render UI elements using UIRenderer
+        this.renderUIOverlays();
     }
 
     /**
@@ -660,7 +724,7 @@ class GameEngine {
         if (map.cover) {
             map.cover.forEach(cover => {
                 if (this.shouldRenderInFog(cover.x, cover.y)) {
-                    this.renderCover(cover.x, cover.y);
+                    this.renderingHelpers.renderCover(cover.x, cover.y, this.ctx, (x, y) => this.worldToIsometric(x, y));
                 }
             });
         }
@@ -669,7 +733,7 @@ class GameEngine {
         if (map.terminals) {
             map.terminals.forEach(terminal => {
                 if (this.shouldRenderInFog(terminal.x, terminal.y)) {
-                    this.renderTerminal(terminal.x, terminal.y, terminal.hacked);
+                    this.renderingHelpers.renderTerminal(terminal.x, terminal.y, terminal.hacked, this.ctx, (x, y) => this.worldToIsometric(x, y));
                 }
             });
         }
@@ -678,7 +742,7 @@ class GameEngine {
         if (map.doors) {
             map.doors.forEach(door => {
                 if (this.shouldRenderInFog(door.x, door.y)) {
-                    this.renderDoor(door.x, door.y, door.locked);
+                    this.renderingHelpers.renderDoor(door.x, door.y, door.locked, this.ctx, (x, y) => this.worldToIsometric(x, y));
                 }
             });
         }
@@ -697,9 +761,7 @@ class GameEngine {
 
                     if (this.shouldRenderInFog(item.x, item.y)) {
                         const displaySprite = item.sprite || item.type;
-                        if (game.renderCollectable) {
-                            game.renderCollectable(item.x, item.y, displaySprite);
-                        }
+                        this.renderingHelpers.renderCollectable(item.x, item.y, displaySprite, this.ctx, (x, y) => this.worldToIsometric(x, y));
                     }
                 }
             });
@@ -707,42 +769,41 @@ class GameEngine {
 
         // Render extraction point
         if (map.extraction && this.shouldRenderInFog(map.extraction.x, map.extraction.y)) {
-            if (game.renderExtractionPoint) {
-                game.renderExtractionPoint(map.extraction.x, map.extraction.y);
-            }
+            const extractionEnabled = this.facade.extractionEnabled || false;
+            this.renderingHelpers.renderExtractionPoint(map.extraction.x, map.extraction.y, extractionEnabled, this.ctx, (x, y) => this.worldToIsometric(x, y));
         }
 
         // Delegate other map elements to legacy game for now
         if (map.items) {
             map.items.forEach(item => {
                 if (this.shouldRenderInFog(item.x, item.y)) {
-                    if (item.type === 'marker' && game.renderMarker) {
-                        game.renderMarker(item.x, item.y, item.sprite || '📍', item.name);
+                    if (item.type === 'marker') {
+                        this.renderingHelpers.renderMarker(item.x, item.y, item.sprite || '📍', item.name, this.ctx, (x, y) => this.worldToIsometric(x, y));
                     }
                 }
             });
         }
 
-        if (map.explosiveTargets && game.renderExplosiveTarget) {
+        if (map.explosiveTargets) {
             map.explosiveTargets.forEach(target => {
                 if (this.shouldRenderInFog(target.x, target.y)) {
-                    game.renderExplosiveTarget(target.x, target.y, target.planted);
+                    this.renderingHelpers.renderExplosiveTarget(target.x, target.y, target.planted, this.ctx, (x, y) => this.worldToIsometric(x, y));
                 }
             });
         }
 
-        if (map.targets && game.renderAssassinationTarget) {
+        if (map.targets) {
             map.targets.forEach(target => {
                 if (this.shouldRenderInFog(target.x, target.y)) {
-                    game.renderAssassinationTarget(target.x, target.y, target.type, target.eliminated);
+                    this.renderingHelpers.renderAssassinationTarget(target.x, target.y, target.type, target.eliminated, this.ctx, (x, y) => this.worldToIsometric(x, y));
                 }
             });
         }
 
-        if (map.gates && game.renderGate) {
+        if (map.gates) {
             map.gates.forEach(gate => {
                 if (this.shouldRenderInFog(gate.x, gate.y)) {
-                    game.renderGate(gate.x, gate.y, gate.breached);
+                    this.renderingHelpers.renderGate(gate.x, gate.y, gate.breached, this.ctx, (x, y) => this.worldToIsometric(x, y));
                 }
             });
         }
@@ -766,105 +827,18 @@ class GameEngine {
         return true;
     }
 
-    /**
-     * Render cover
-     */
-    renderCover(x, y) {
-        const ctx = this.ctx;
-        const isoPos = this.worldToIsometric(x, y);
+    // Note: renderCover, renderTerminal, and renderDoor methods have been moved to RenderingHelpers
+    // These stub methods are kept for backward compatibility if needed
 
-        ctx.save();
-        ctx.translate(isoPos.x, isoPos.y);
 
-        ctx.fillStyle = '#2a4a6a';
-        ctx.fillRect(-15, -10, 30, 20);
-
-        ctx.beginPath();
-        ctx.moveTo(-15, -10);
-        ctx.lineTo(0, -20);
-        ctx.lineTo(15, -10);
-        ctx.lineTo(0, 0);
-        ctx.closePath();
-        ctx.fillStyle = '#3a5a7a';
-        ctx.fill();
-
-        ctx.restore();
-    }
-
-    /**
-     * Render terminal
-     */
-    renderTerminal(x, y, hacked) {
-        const ctx = this.ctx;
-        const isoPos = this.worldToIsometric(x, y);
-
-        ctx.save();
-        ctx.translate(isoPos.x, isoPos.y);
-
-        ctx.fillStyle = hacked ? '#00ff00' : '#ff0000';
-        ctx.fillRect(-10, -20, 20, 25);
-
-        ctx.fillStyle = hacked ? '#00ff0044' : '#ff000044';
-        ctx.fillRect(-8, -18, 16, 10);
-
-        ctx.shadowColor = hacked ? '#00ff00' : '#ff0000';
-        ctx.shadowBlur = 10;
-        ctx.strokeStyle = hacked ? '#00ff00' : '#ff0000';
-        ctx.strokeRect(-10, -20, 20, 25);
-
-        ctx.restore();
-    }
-
-    /**
-     * Render door
-     */
-    renderDoor(x, y, locked) {
-        const ctx = this.ctx;
-        const isoPos = this.worldToIsometric(x, y);
-
-        ctx.save();
-        ctx.translate(isoPos.x, isoPos.y);
-
-        if (locked) {
-            // Locked door - red
-            ctx.fillStyle = '#ff3333';
-            ctx.fillRect(-15, -30, 30, 35);
-
-            ctx.fillStyle = '#aa0000';
-            ctx.fillRect(-12, -28, 24, 10);
-
-            // Lock symbol
-            ctx.strokeStyle = '#ffff00';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(0, -15, 5, Math.PI, 0);
-            ctx.stroke();
-            ctx.fillStyle = '#ffff00';
-            ctx.fillRect(-8, -15, 16, 12);
-        } else {
-            // Open door - green
-            ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
-            ctx.fillRect(-15, -30, 30, 35);
-
-            ctx.strokeStyle = '#00ff00';
-            ctx.strokeRect(-15, -30, 30, 35);
-        }
-
-        ctx.restore();
-    }
 
     /**
      * Render enemies
      */
     renderEnemies() {
-        const ctx = this.ctx;
-        const game = this.facade.legacyGame;
-
         this.facade.enemies.forEach(enemy => {
             if (enemy.alive && this.shouldRenderInFog(enemy.x, enemy.y)) {
-                if (game.renderEnemy) {
-                    game.renderEnemy(enemy);
-                }
+                this.renderingHelpers.renderEnemy(enemy, this.ctx, (x, y) => this.worldToIsometric(x, y));
             }
         });
     }
@@ -898,7 +872,7 @@ class GameEngine {
                 if (agent.selected && this.facade.showPaths) {
                     // Render A* pathfinding path
                     if (agent.path) {
-                        this.renderPath(agent.path, agent.currentPathIndex, agent.color);
+                        this.renderingHelpers.renderPath(agent.path, agent.currentPathIndex, agent.color, this.ctx, (x, y) => this.worldToIsometric(x, y));
                     }
 
                     // Render shift-click waypoints
@@ -908,9 +882,7 @@ class GameEngine {
                     }
                 }
 
-                if (game.renderAgent) {
-                    game.renderAgent(agent);
-                }
+                this.renderingHelpers.renderAgent(agent, this.ctx, (x, y) => this.worldToIsometric(x, y));
             }
         });
 
@@ -1125,19 +1097,8 @@ class GameEngine {
      * Render projectiles
      */
     renderProjectiles() {
-        const ctx = this.ctx;
-        const game = this.facade.legacyGame;
-
         this.facade.projectiles.forEach(proj => {
-            if (game.renderProjectile) {
-                game.renderProjectile(proj);
-            } else {
-                const iso = this.worldToIsometric(proj.x, proj.y);
-                ctx.fillStyle = '#ffff00';
-                ctx.beginPath();
-                ctx.arc(iso.x, iso.y, 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            this.renderingHelpers.renderProjectile(proj, this.ctx, (x, y) => this.worldToIsometric(x, y));
         });
     }
 
@@ -1149,17 +1110,7 @@ class GameEngine {
         const game = this.facade.legacyGame;
 
         this.facade.effects.forEach(effect => {
-            if (game.renderEffect) {
-                game.renderEffect(effect);
-            } else {
-                const iso = this.worldToIsometric(effect.x, effect.y);
-                ctx.fillStyle = effect.color || '#ffffff';
-                ctx.globalAlpha = 0.5;
-                ctx.beginPath();
-                ctx.arc(iso.x, iso.y, effect.radius || 5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1;
-            }
+            this.renderingHelpers.renderEffect(effect, this.ctx, (x, y) => this.worldToIsometric(x, y));
         });
     }
 

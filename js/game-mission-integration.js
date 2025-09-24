@@ -230,7 +230,12 @@ CyberOpsGame.prototype.updateMissionObjectives = function() {
     this.lastUpdateTime = Date.now();
 
     // Check if agents reached extraction point
-    if (this.extractionEnabled) {
+    if (this.extractionEnabled || (this.gameServices?.missionService?.extractionEnabled)) {
+        // Add debug log to see if this is running
+        if (!this._lastExtractionCheck || Date.now() - this._lastExtractionCheck > 1000) {
+            if (this.logger) this.logger.debug(`🚁 Checking extraction: extractionEnabled=${this.extractionEnabled}, missionService=${this.gameServices?.missionService?.extractionEnabled}`);
+            this._lastExtractionCheck = Date.now();
+        }
         this.checkExtractionPoint();
     }
 };

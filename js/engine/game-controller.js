@@ -12,6 +12,8 @@ class GameController {
 
         // Initialize facade (game logic layer) with existing services and legacy game reference
         this.facade = new window.GameFacade(game.gameServices || window.GameServices, game);
+        // Make facade globally accessible for backward compatibility
+        window.gameFacade = this.facade;
 
         // Initialize engine (technical layer) using existing canvas and facade reference
         this.engine = new window.GameEngine(game.canvas, game.audioContext || null, this.facade);
@@ -315,6 +317,139 @@ class GameController {
         }
 
         return success;
+    }
+
+    /**
+     * Set game speed to a specific value
+     * @param {number} speed - The speed multiplier (1, 2, 4, 8, 16)
+     * @returns {boolean} True if speed was changed
+     */
+    setGameSpeed(speed) {
+        const availableSpeeds = [1, 2, 4, 8, 16];
+
+        if (!availableSpeeds.includes(speed)) {
+            if (this.logger) this.logger.warn(`Invalid speed: ${speed}. Available speeds: ${availableSpeeds.join(', ')}`);
+            return false;
+        }
+
+        if (this.facade.gameSpeed !== speed) {
+            // Update facade speed
+            this.facade.gameSpeed = speed;
+            this.facade.targetGameSpeed = speed;
+
+            // Update legacy game speed
+            this.legacyGame.gameSpeed = speed;
+            this.legacyGame.targetGameSpeed = speed;
+            this.legacyGame.lastSpeedChangeTime = Date.now();
+            this.legacyGame.speedIndicatorFadeTime = 3000; // Show indicator for 3 seconds
+
+            // Update facade indicator
+            this.facade.speedIndicatorFadeTime = 3000;
+
+            if (this.logger) this.logger.debug(`⚡ Game speed changed to ${speed}x`);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Cycle through available game speeds
+     * @returns {number} The new game speed
+     */
+    cycleGameSpeed() {
+        const speeds = [1, 2, 4, 8, 16];
+        const currentSpeed = this.facade.gameSpeed || 1;
+        const currentIndex = speeds.indexOf(currentSpeed);
+        const nextIndex = (currentIndex + 1) % speeds.length;
+        const newSpeed = speeds[nextIndex];
+
+        this.setGameSpeed(newSpeed);
+        return newSpeed;
+    }
+
+    /**
+     * Get the current effective game speed (accounting for auto-slowdown)
+     * @param {Object} context - Context object with enemy proximity info
+     * @returns {number} Effective game speed
+     */
+    getEffectiveGameSpeed(context = {}) {
+        let effectiveSpeed = this.facade.gameSpeed || 1;
+
+        // Auto-slowdown when near enemies
+        if (context.nearEnemies && effectiveSpeed > 1) {
+            effectiveSpeed = Math.max(1, Math.floor(effectiveSpeed / 2));
+
+            // Update target speed for smooth transition
+            if (this.facade.targetGameSpeed !== effectiveSpeed) {
+                this.facade.targetGameSpeed = effectiveSpeed;
+                this.legacyGame.targetGameSpeed = effectiveSpeed;
+                if (this.logger) this.logger.trace(`Auto-slowdown: ${this.facade.gameSpeed}x → ${effectiveSpeed}x (enemies nearby)`);
+            }
+        }
+
+        // Auto-slowdown during combat
+        if (context.inCombat && effectiveSpeed > 2) {
+            effectiveSpeed = Math.min(effectiveSpeed, 2);
+
+            if (this.facade.targetGameSpeed !== effectiveSpeed) {
+                this.facade.targetGameSpeed = effectiveSpeed;
+                this.legacyGame.targetGameSpeed = effectiveSpeed;
+                if (this.logger) this.logger.trace(`Combat slowdown: ${this.facade.gameSpeed}x → ${effectiveSpeed}x`);
+            }
+        }
+
+        return effectiveSpeed;
+    }
+
+    /**
+     * Check and apply auto-slowdown based on enemy proximity
+     * Moved from game-loop.js
+     */
+    checkAutoSlowdown() {
+        const game = this.legacyGame;
+        if (!game.agents || !game.enemies) return;
+
+        // Check if any living enemy is near any living agent
+        let enemyNearby = false;
+        const autoSlowdownRange = game.autoSlowdownRange || 10;
+
+        for (const agent of game.agents) {
+            if (!agent.alive) continue;
+
+            for (const enemy of game.enemies) {
+                if (!enemy.alive) continue;
+
+                const dx = agent.x - enemy.x;
+                const dy = agent.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < autoSlowdownRange) {
+                    enemyNearby = true;
+                    break;
+                }
+            }
+            if (enemyNearby) break;
+        }
+
+        // Auto-adjust speed based on enemy proximity
+        const currentSpeed = this.facade.gameSpeed || 1;
+        const targetSpeed = this.facade.targetGameSpeed || 1;
+
+        if (enemyNearby && currentSpeed > 1) {
+            // Slow down to 1x when enemies are near
+            this.setGameSpeed(1);
+            this.facade.targetGameSpeed = targetSpeed; // Preserve original target
+            if (this.logger) this.logger.debug('⚠️ Enemy detected - slowing to 1x speed');
+            this.legacyGame.speedIndicatorFadeTime = 2000;
+            this.facade.speedIndicatorFadeTime = 2000;
+        } else if (!enemyNearby && targetSpeed > 1 && currentSpeed === 1) {
+            // Speed back up when enemies are gone
+            this.setGameSpeed(targetSpeed);
+            if (this.logger) this.logger.info(`✅ Area clear - resuming ${targetSpeed}x speed`);
+            this.legacyGame.speedIndicatorFadeTime = 2000;
+            this.facade.speedIndicatorFadeTime = 2000;
+        }
     }
 
     /**

@@ -382,11 +382,10 @@ class GameFacade {
                         agent.x += (dx / dist) * moveStep;
                         agent.y += (dy / dist) * moveStep;
                     } else {
-                        // Reached destination, clear target
+                        // Reached destination, but keep target for movement system
                         agent.x = agent.targetX;
                         agent.y = agent.targetY;
-                        agent.targetX = undefined;
-                        agent.targetY = undefined;
+                        // Don't clear targetX/targetY - they're needed for movement system
                     }
                 }
             });
@@ -1022,15 +1021,15 @@ class GameFacade {
                     const newY = enemy.y + moveY;
 
                     // Check collision before moving
-                    if (game.canMoveTo(enemy.x, enemy.y, newX, newY)) {
+                    if (this.canMoveTo(enemy.x, enemy.y, newX, newY)) {
                         enemy.x = newX;
                         enemy.y = newY;
                     } else {
                         // Try to slide along walls
-                        if (game.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
+                        if (this.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
                             enemy.x = newX;
                             enemy.facingAngle = dx > 0 ? 0 : Math.PI;
-                        } else if (game.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
+                        } else if (this.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
                             enemy.y = newY;
                             enemy.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
                         }
@@ -1047,7 +1046,7 @@ class GameFacade {
                         newTargetX = enemy.x + (Math.random() - 0.5) * 5;
                         newTargetY = enemy.y + (Math.random() - 0.5) * 5;
                         attempts++;
-                    } while (!game.isWalkable(newTargetX, newTargetY) && attempts < 10);
+                    } while (!this.isWalkable(newTargetX, newTargetY) && attempts < 10);
 
                     if (attempts < 10) {
                         enemy.targetX = newTargetX;
@@ -1071,15 +1070,15 @@ class GameFacade {
                     const newY = enemy.y + moveY;
 
                     // Check collision before moving
-                    if (game.canMoveTo(enemy.x, enemy.y, newX, newY)) {
+                    if (this.canMoveTo(enemy.x, enemy.y, newX, newY)) {
                         enemy.x = newX;
                         enemy.y = newY;
                     } else {
                         // Try to slide along walls
-                        if (game.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
+                        if (this.canMoveTo(enemy.x, enemy.y, newX, enemy.y)) {
                             enemy.x = newX;
                             enemy.facingAngle = dx > 0 ? 0 : Math.PI;
-                        } else if (game.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
+                        } else if (this.canMoveTo(enemy.x, enemy.y, enemy.x, newY)) {
                             enemy.y = newY;
                             enemy.facingAngle = dy > 0 ? Math.PI/2 : -Math.PI/2;
                         } else {
@@ -1337,6 +1336,104 @@ class GameFacade {
         }
 
         game.checkMissionStatus();
+    }
+
+    // ============================================
+    // MOVEMENT & COLLISION HELPERS
+    // Migrated from game-loop.js
+    // ============================================
+
+    /**
+     * Check if a position is walkable
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @returns {boolean} - True if position is walkable
+     */
+    isWalkable(x, y) {
+        // Check map bounds
+        if (!this.currentMap || x < 0 || x >= this.currentMap.width || y < 0 || y >= this.currentMap.height) {
+            return false;
+        }
+
+        // Check tile - 0 is walkable, 1 is wall
+        const tileX = Math.floor(x);
+        const tileY = Math.floor(y);
+
+        // Safety check for array access
+        if (!this.currentMap.tiles[tileY] || this.currentMap.tiles[tileY][tileX] === undefined) {
+            return false;
+        }
+
+        // Check if this is an unlocked door position
+        if (this.currentMap.doors) {
+            for (let door of this.currentMap.doors) {
+                // Check if we're at a door position (with some tolerance for floating point)
+                const atDoor = Math.abs(door.x - tileX) < 1 && Math.abs(door.y - tileY) < 1;
+                if (atDoor && !door.locked) {
+                    // Unlocked door - allow passage
+                    return true;
+                }
+            }
+        }
+
+        return this.currentMap.tiles[tileY][tileX] === 0;
+    }
+
+    /**
+     * Check if movement from one position to another is valid
+     * @param {number} fromX - Starting X coordinate
+     * @param {number} fromY - Starting Y coordinate
+     * @param {number} toX - Target X coordinate
+     * @param {number} toY - Target Y coordinate
+     * @returns {boolean} - True if movement is valid
+     */
+    canMoveTo(fromX, fromY, toX, toY) {
+        // Check if target position is walkable
+        if (!this.isWalkable(toX, toY)) {
+            return false;
+        }
+
+        // Check if blocked by a locked door
+        if (this.isDoorBlocking(toX, toY)) {
+            return false;
+        }
+
+        // Check corners for diagonal movement to prevent clipping through walls
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+
+        // If moving diagonally, check both adjacent tiles
+        if (Math.abs(dx) > 0.01 && Math.abs(dy) > 0.01) {
+            // Check horizontal then vertical path
+            if (!this.isWalkable(toX, fromY) || !this.isWalkable(fromX, toY)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if a position is blocked by a locked door
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @returns {boolean} - True if blocked by locked door
+     */
+    isDoorBlocking(x, y) {
+        if (!this.currentMap || !this.currentMap.doors) return false;
+
+        for (let door of this.currentMap.doors) {
+            if (door.locked) {
+                const dist = Math.sqrt(
+                    Math.pow(door.x - x, 2) +
+                    Math.pow(door.y - y, 2)
+                );
+                if (dist < 0.5) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

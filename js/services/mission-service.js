@@ -1041,6 +1041,392 @@ class MissionService {
         };
     }
 
+    // ============================================
+    // MISSION HELPERS - Migrated from game-loop.js
+    // ============================================
+
+    /**
+     * Unlock intel reports based on collection threshold
+     * Migrated from game-loop.js lines 209-228
+     *
+     * @param {number} totalIntelCollected - Total intel collected
+     * @param {Array} campaignIntelReports - Intel reports from campaign
+     * @returns {Array} Newly unlocked reports
+     */
+    unlockIntelReports(totalIntelCollected, campaignIntelReports = []) {
+        if (!this.unlockedIntelReports) {
+            this.unlockedIntelReports = [];
+        }
+
+        const newlyUnlocked = [];
+
+        // Check which reports to unlock
+        campaignIntelReports.forEach(report => {
+            if (totalIntelCollected >= report.threshold) {
+                if (!this.unlockedIntelReports.find(r => r.id === report.id)) {
+                    this.unlockedIntelReports.push(report);
+                    newlyUnlocked.push(report);
+                    if (this.logger) this.logger.info(`🔓 NEW INTEL REPORT UNLOCKED: ${report.title}`);
+                }
+            }
+        });
+
+        return newlyUnlocked;
+    }
+
+    /**
+     * Get all unlocked intel reports
+     * @returns {Array} Unlocked intel reports
+     */
+    getUnlockedIntelReports() {
+        return this.unlockedIntelReports || [];
+    }
+
+    /**
+     * Generate final words for a fallen agent
+     * Migrated from game-loop.js lines 231-237
+     *
+     * @param {string} agentName - Name of the fallen agent
+     * @param {Object} deathSystem - Death system config from campaign
+     * @returns {string} Final words
+     */
+    generateFinalWords(agentName, deathSystem = null) {
+        // Use final words from campaign if available
+        const finalWords = (deathSystem && deathSystem.finalWords) || [
+            "The mission... must continue...",
+            "Tell my family... I tried...",
+            "It was... an honor...",
+            "Complete... the objective...",
+            "Don't let it... be for nothing...",
+            "Remember me... in the hub...",
+            "The syndicate... lives on...",
+            "Victory... at any cost..."
+        ];
+
+        const selectedWords = finalWords[Math.floor(Math.random() * finalWords.length)];
+
+        if (this.logger) this.logger.info(`💀 ${agentName}: "${selectedWords}"`);
+
+        return selectedWords;
+    }
+
+    /**
+     * Generate new agents available for hire
+     * Migrated from game-loop.js lines 240-277
+     *
+     * @param {Object} agentGeneration - Agent generation config from campaign
+     * @param {number} completedMissionCount - Number of missions completed
+     * @param {number} currentAgentCount - Current number of available agents
+     * @returns {Array} Newly generated agents
+     */
+    generateNewAgentsForHire(agentGeneration, completedMissionCount = 0, currentAgentCount = 0) {
+        if (!agentGeneration) {
+            if (this.logger) this.logger.warn('⚠️ No agent generation config provided');
+            return [];
+        }
+
+        const gen = agentGeneration;
+        const agentsToGenerate = gen.agentsPerMission || 2;
+        const newAgents = [];
+
+        // Generate new agents
+        for (let i = 0; i < agentsToGenerate; i++) {
+            const firstName = gen.firstNames[Math.floor(Math.random() * gen.firstNames.length)];
+            const lastName = gen.lastNames[Math.floor(Math.random() * gen.lastNames.length)];
+            const callsign = gen.callsigns[Math.floor(Math.random() * gen.callsigns.length)];
+            const spec = gen.specializations[Math.floor(Math.random() * gen.specializations.length)];
+
+            const newAgent = {
+                id: `agent_gen_${Date.now()}_${i}`,
+                name: `${firstName} "${callsign}" ${lastName}`,
+                specialization: spec.type,
+                skills: spec.skills,
+                cost: gen.baseCost +
+                      Math.floor(Math.random() * gen.maxCostVariance) +
+                      (completedMissionCount * gen.costIncreasePerMission),
+                hired: false,
+                health: spec.health + Math.floor(Math.random() * 20) - 10,
+                maxHealth: spec.health + Math.floor(Math.random() * 20) - 10,
+                speed: spec.speed,
+                damage: spec.damage + Math.floor(Math.random() * 10) - 5,
+                protection: spec.protection || 0,
+                generated: true,
+                generatedAt: Date.now()
+            };
+
+            // Ensure health values are reasonable
+            newAgent.health = Math.max(50, Math.min(150, newAgent.health));
+            newAgent.maxHealth = newAgent.health;
+
+            newAgents.push(newAgent);
+
+            if (this.logger) {
+                this.logger.info(`🆕 New agent available for hire: ${newAgent.name} (${newAgent.specialization})`);
+            }
+        }
+
+        return newAgents;
+    }
+
+    /**
+     * Get mission statistics summary
+     * @returns {Object} Mission statistics
+     */
+    getMissionStatistics() {
+        return {
+            totalMissionsCompleted: this.completedMissions.length,
+            totalMissionsFailed: this.failedMissions.length,
+            successRate: this.completedMissions.length > 0
+                ? (this.completedMissions.length / (this.completedMissions.length + this.failedMissions.length) * 100).toFixed(1)
+                : 0,
+            currentStreak: this.getCurrentWinStreak(),
+            bestStreak: this.getBestWinStreak(),
+            totalEnemiesEliminated: this.getTotalEnemiesEliminated(),
+            totalIntelCollected: this.getTotalIntelCollected()
+        };
+    }
+
+    /**
+     * Get current win streak
+     * @returns {number} Current consecutive wins
+     */
+    getCurrentWinStreak() {
+        let streak = 0;
+        const allMissions = [...this.completedMissions, ...this.failedMissions]
+            .sort((a, b) => (b.completedAt || b.failedAt) - (a.completedAt || a.failedAt));
+
+        for (const mission of allMissions) {
+            if (mission.failed) break;
+            streak++;
+        }
+
+        return streak;
+    }
+
+    /**
+     * Get best win streak
+     * @returns {number} Best consecutive wins ever
+     */
+    getBestWinStreak() {
+        let bestStreak = 0;
+        let currentStreak = 0;
+
+        const allMissions = [...this.completedMissions, ...this.failedMissions]
+            .sort((a, b) => (a.completedAt || a.failedAt) - (b.completedAt || b.failedAt));
+
+        for (const mission of allMissions) {
+            if (mission.failed) {
+                bestStreak = Math.max(bestStreak, currentStreak);
+                currentStreak = 0;
+            } else {
+                currentStreak++;
+            }
+        }
+
+        return Math.max(bestStreak, currentStreak);
+    }
+
+    /**
+     * Get total enemies eliminated across all missions
+     * @returns {number} Total enemies eliminated
+     */
+    getTotalEnemiesEliminated() {
+        let total = 0;
+        this.missionStats.forEach(stats => {
+            total += stats.enemiesEliminated || 0;
+        });
+        return total;
+    }
+
+    /**
+     * Get total intel collected across all missions
+     * @returns {number} Total intel collected
+     */
+    getTotalIntelCollected() {
+        let total = 0;
+        this.missionStats.forEach(stats => {
+            total += stats.intelCollected || 0;
+        });
+        return total;
+    }
+
+    /**
+     * Check mission status and handle mission failure/completion
+     * @param {Object} game - Game instance for accessing agents, enemies, etc
+     */
+    checkMissionStatus(game) {
+        const aliveAgents = game.agents.filter(a => a.alive).length;
+
+        // Track objective status for mission complete modal
+        if (!game.objectiveStatus) {
+            game.objectiveStatus = {};
+        }
+
+        if (aliveAgents === 0) {
+            this.endMission(game, false);
+            return;
+        }
+
+        // Use the new mission system to check objectives
+        if (game.checkMissionObjectives) {
+            // New comprehensive mission system handles everything
+            game.checkMissionObjectives();
+        }
+    }
+
+    /**
+     * Check if agents are at extraction point
+     * @param {Object} game - Game instance
+     */
+    checkExtractionPoint(game) {
+        if (!game.map || !game.map.extraction) {
+            if (this.logger) this.logger.debug('❌ No map or extraction point');
+            return;
+        }
+
+        // Check if extraction is enabled
+        if (!this.extractionEnabled && !game.extractionEnabled) {
+            if (this.logger) this.logger.debug('❌ Extraction not enabled');
+            return;
+        }
+
+        // Prevent multiple extraction triggers
+        if (this.missionStatus !== 'active') {
+            if (this.logger) this.logger.debug(`❌ Mission status is ${this.missionStatus}, not active`);
+            return;
+        }
+
+        const extractionX = game.map.extraction.x;
+        const extractionY = game.map.extraction.y;
+
+        const atExtraction = game.agents.some(agent => {
+            if (!agent.alive) return false;
+            const dist = Math.sqrt(
+                Math.pow(agent.x - extractionX, 2) +
+                Math.pow(agent.y - extractionY, 2)
+            );
+            // Log distance for closest agent
+            if (dist < 10 && this.logger) {
+                this.logger.debug(`📏 Agent ${agent.name} distance to extraction: ${dist.toFixed(2)}`);
+            }
+            return dist < 2;
+        });
+
+        if (atExtraction) {
+            if (this.logger) this.logger.info('✅ Agent at extraction point! Ending mission...');
+            // Set status immediately to prevent re-entry
+            this.missionStatus = 'extracting';
+            this.completeMission(true);
+            this.endMission(game, true);
+        }
+    }
+
+    /**
+     * End the mission with victory or defeat
+     * @param {Object} game - Game instance
+     * @param {boolean} victory - Whether mission was successful
+     */
+    endMission(game, victory) {
+        // Clean up music system but keep music playing
+        if (game.musicSystem && victory) {
+            game.playVictoryMusic();
+        }
+        if (this.logger) this.logger.debug('🎵 Music continues after mission end');
+
+        game.isPaused = true;
+
+        // Switch to tactical view before showing end dialog
+        if (game.is3DMode) {
+            if (this.logger) this.logger.debug('📐 Switching to tactical view for mission end');
+            game.cameraMode = 'tactical';
+            game.disable3DMode();
+        }
+
+        // Release pointer lock so player can interact with dialogs
+        if (document.pointerLockElement) {
+            if (this.logger) this.logger.debug('🔓 Releasing pointer lock for mission end dialog');
+            document.exitPointerLock();
+        }
+
+        // Handle fallen agents - move dead agents to Hall of Glory
+        const fallenThisMission = [];
+        game.agents.forEach(agent => {
+            if (!agent.alive) {
+                // Find the original agent data
+                const originalAgent = game.activeAgents.find(a => a.name === agent.name);
+                if (originalAgent) {
+                    // Add to fallen with mission details
+                    game.fallenAgents.push({
+                        ...originalAgent,
+                        fallenInMission: game.currentMission.title,
+                        missionId: game.currentMission.id,
+                        deathDate: new Date().toISOString(),
+                        finalWords: this.generateFinalWords(originalAgent.name)
+                    });
+                    fallenThisMission.push(originalAgent.name);
+
+                    // Remove from active roster
+                    const index = game.activeAgents.indexOf(originalAgent);
+                    if (index > -1) {
+                        game.activeAgents.splice(index, 1);
+                    }
+                }
+            }
+        });
+
+        if (fallenThisMission.length > 0) {
+            if (this.logger) this.logger.debug(`⚰️ Agents fallen in battle: ${fallenThisMission.join(', ')}`);
+            if (this.logger) this.logger.debug(`📜 Added to Hall of Glory. Active agents remaining: ${game.activeAgents.length}`);
+        }
+
+        // Update campaign statistics and rewards
+        if (victory) {
+            game.totalCampaignTime += game.missionTimer;
+            // Count actual enemies defeated in this mission
+            game.totalEnemiesDefeated += game.enemies.filter(e => !e.alive).length;
+
+            // Add to completed missions
+            if (!game.completedMissions.includes(game.currentMission.id)) {
+                if (this.logger) this.logger.info('📊 Adding mission to completed list:', {
+                    missionId: game.currentMission.id,
+                    currentIndex: game.currentMissionIndex,
+                    completedBefore: [...game.completedMissions],
+                    allMissionIds: game.missions.map(m => m.id)
+                });
+                game.completedMissions.push(game.currentMission.id);
+                if (this.logger) this.logger.info('📊 Completed missions after:', [...game.completedMissions]);
+
+                // Generate new agents available for hire
+                const newAgents = this.generateNewAgentsForHire(
+                    game.agentGeneration || window.ContentLoader?.getContent('agents') || null,
+                    game.completedMissions.length,
+                    game.availableAgents ? game.availableAgents.length : 0
+                );
+
+                // Add generated agents to available pool
+                if (newAgents && newAgents.length > 0) {
+                    if (!game.availableAgents) game.availableAgents = [];
+                    game.availableAgents.push(...newAgents);
+
+                    if (game.logEvent && newAgents.length > 0) {
+                        game.logEvent(`🆕 ${newAgents.length} new agents are available for hire at the Hub!`, 'system');
+                    }
+                }
+            }
+
+            // Award mission rewards
+            if (game.currentMission.rewards && game.gameServices?.resourceService) {
+                // Use ResourceService for mission rewards
+                game.gameServices.resourceService.applyMissionRewards(game.currentMission.rewards);
+            }
+        }
+
+        // Navigate to victory/defeat screen using screen manager
+        setTimeout(() => {
+            window.screenManager.navigateTo(victory ? 'victory' : 'defeat');
+        }, 1000); // Brief delay for dramatic effect
+    }
+
     /**
      * Import state from save
      */

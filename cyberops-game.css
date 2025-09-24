@@ -3991,28 +3991,28 @@ body {
 /* Level Up Notification */
 .level-up-notification {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    bottom: 180px;  /* Above the HUD action buttons */
+    right: 20px;
     background: linear-gradient(135deg, #000 0%, #330066 100%);
     border: 3px solid #ffff00;
-    padding: 30px;
+    padding: 20px;
     text-align: center;
     box-shadow: 0 0 50px rgba(255,255,0,0.8);
     z-index: 20000;
-    animation: levelUpPulse 0.5s ease;
+    max-width: 300px;
+    animation: levelUpSlideIn 0.5s ease;
 }
 
-@keyframes levelUpPulse {
-    0% { transform: translate(-50%, -50%) scale(0); }
-    50% { transform: translate(-50%, -50%) scale(1.2); }
-    100% { transform: translate(-50%, -50%) scale(1); }
+@keyframes levelUpSlideIn {
+    0% { transform: translateX(120%) scale(0.8); opacity: 0; }
+    50% { transform: translateX(-10%) scale(1.05); opacity: 1; }
+    100% { transform: translateX(0) scale(1); opacity: 1; }
 }
 
 .level-up-notification h2 {
     color: #ffff00;
-    font-size: 36px;
-    margin: 0 0 20px 0;
+    font-size: 24px;
+    margin: 0 0 15px 0;
     text-shadow: 0 0 20px rgba(255,255,0,0.8);
     animation: glow 1s ease infinite;
 }
@@ -4024,14 +4024,14 @@ body {
 
 .level-info {
     color: #00ffff;
-    font-size: 20px;
-    margin-bottom: 15px;
+    font-size: 16px;
+    margin-bottom: 10px;
 }
 
 .rewards {
     color: #00ff00;
-    font-size: 16px;
-    margin-bottom: 20px;
+    font-size: 14px;
+    margin-bottom: 15px;
 }
 
 .rewards div {

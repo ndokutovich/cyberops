@@ -721,6 +721,11 @@ CyberOpsGame.prototype.initMission = function() {
 
         this.updateSquadHealth();
         this.centerCameraOnAgents();
+
+        // Sync camera back to engine
+        if (window.gameEngine) {
+            window.gameEngine.setCamera(this.cameraX, this.cameraY, this.zoom);
+        }
 }
 
 // Enhanced enemy spawning system with variety and better positioning
@@ -945,12 +950,22 @@ CyberOpsGame.prototype.centerCameraOnAgents = function() {
         const screenPos = this.worldToIsometric(avgX, avgY);
         this.cameraX = this.canvas.width / 2 - screenPos.x * this.zoom;
         this.cameraY = this.canvas.height / 2 - screenPos.y * this.zoom;
+
+        // Sync camera back to engine
+        if (window.gameEngine) {
+            window.gameEngine.setCamera(this.cameraX, this.cameraY, this.zoom);
+        }
 }
 
 CyberOpsGame.prototype.centerCameraOnAgent = function(agent) {
         const screenPos = this.worldToIsometric(agent.x, agent.y);
         this.cameraX = this.canvas.width / 2 - screenPos.x * this.zoom;
         this.cameraY = this.canvas.height / 2 - screenPos.y * this.zoom;
+
+        // Sync camera back to engine
+        if (window.gameEngine) {
+            window.gameEngine.setCamera(this.cameraX, this.cameraY, this.zoom);
+        }
 }
 
 CyberOpsGame.prototype.updateSquadHealth = function() {

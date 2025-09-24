@@ -715,3 +715,175 @@ Object.defineProperty(CyberOpsGame.prototype, 'completedQuests', {
     enumerable: true,
     configurable: true
 });
+
+// ============================================
+// METHOD STUBS - Backward compatibility layer
+// These were in game-loop.js, now moved here for compatibility
+// ============================================
+
+// Mission-related stubs that delegate to MissionService
+CyberOpsGame.prototype.checkMissionStatus = function() {
+    if (this.gameServices && this.gameServices.missionService) {
+        this.gameServices.missionService.checkMissionStatus(this);
+    }
+};
+
+CyberOpsGame.prototype.checkExtractionPoint = function() {
+    if (this.gameServices && this.gameServices.missionService) {
+        this.gameServices.missionService.checkExtractionPoint(this);
+    }
+};
+
+CyberOpsGame.prototype.endMission = function(victory) {
+    if (this.gameServices && this.gameServices.missionService) {
+        this.gameServices.missionService.endMission(this, victory);
+    }
+};
+
+CyberOpsGame.prototype.unlockIntelReport = function() {
+    const totalIntel = this.totalIntelCollected || 0;
+    if (this.gameServices && this.gameServices.missionService) {
+        const unlocked = this.gameServices.missionService.unlockIntelReports(totalIntel, this.unlockedIntelReports);
+        if (unlocked && unlocked.length > 0) {
+            this.unlockedIntelReports = this.unlockedIntelReports || [];
+            for (const report of unlocked) {
+                if (!this.unlockedIntelReports.includes(report)) {
+                    this.unlockedIntelReports.push(report);
+                }
+            }
+        }
+    }
+};
+
+CyberOpsGame.prototype.generateFinalWords = function(agentName) {
+    if (this.gameServices && this.gameServices.missionService) {
+        return this.gameServices.missionService.generateFinalWords(agentName);
+    }
+    return "";
+};
+
+CyberOpsGame.prototype.generateNewAgentsForHire = function() {
+    const agentPool = this.agentGeneration || window.ContentLoader?.getContent('agents') || null;
+    const completedMissionCount = this.completedMissions ? this.completedMissions.length : 0;
+    const currentAgentCount = this.availableAgents ? this.availableAgents.length : 0;
+
+    if (this.gameServices && this.gameServices.missionService) {
+        const newAgents = this.gameServices.missionService.generateNewAgentsForHire(
+            agentPool,
+            completedMissionCount,
+            currentAgentCount
+        );
+
+        if (newAgents && newAgents.length > 0) {
+            if (!this.availableAgents) this.availableAgents = [];
+            this.availableAgents.push(...newAgents);
+
+            if (this.logEvent && newAgents.length > 0) {
+                this.logEvent(`🆕 ${newAgents.length} new agents are available for hire at the Hub!`, 'system');
+            }
+        }
+    }
+};
+
+// Item-related stubs that delegate to ItemService
+CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
+    if (!this.gameServices || !this.gameServices.itemService) return;
+
+    const context = {
+        missionId: this.currentMission ? this.currentMission.id : null,
+        difficulty: this.currentDifficulty || 1,
+        averageHealth: this.calculateAverageHealth(),
+        lowAmmo: this.isLowOnAmmo()
+    };
+
+    const result = this.gameServices.itemService.handleCollectablePickup(agent, item, context);
+
+    if (result && result.notifications) {
+        result.notifications.forEach(msg => this.addNotification(msg));
+    }
+
+    if (result && result.success) {
+        const effect = this.gameServices.itemService.createPickupEffect(item.x, item.y, item.type);
+        this.effects.push(effect);
+    }
+
+    if (result && result.effects && result.effects.keycardType) {
+        this.keycards = this.keycards || [];
+        this.keycards.push(result.effects.keycardType);
+    }
+};
+
+CyberOpsGame.prototype.handleCollectableEffects = function(agent, item) {
+    if (!this.gameServices || !this.gameServices.itemService) return;
+
+    const context = {
+        missionId: this.currentMission ? this.currentMission.id : null,
+        difficulty: this.currentDifficulty || 1,
+        averageHealth: this.calculateAverageHealth(),
+        lowAmmo: this.isLowOnAmmo()
+    };
+
+    this.gameServices.itemService.handleCollectableEffects(agent, item, context);
+};
+
+CyberOpsGame.prototype.calculateAverageHealth = function() {
+    if (this.gameServices && this.gameServices.itemService) {
+        return this.gameServices.itemService.calculateAverageHealth(this.agents);
+    }
+    return 100;
+};
+
+CyberOpsGame.prototype.isLowOnAmmo = function() {
+    if (this.gameServices && this.gameServices.itemService) {
+        return this.gameServices.itemService.isTeamLowOnAmmo(this.agents);
+    }
+    return false;
+};
+
+// Speed control stubs that delegate to GameController
+CyberOpsGame.prototype.setGameSpeed = function(speed) {
+    if (this.gameController) {
+        this.gameController.setGameSpeed(speed);
+    }
+};
+
+CyberOpsGame.prototype.cycleGameSpeed = function() {
+    if (this.gameController) {
+        this.gameController.cycleGameSpeed();
+    }
+};
+
+CyberOpsGame.prototype.checkAutoSlowdown = function() {
+    if (this.gameController) {
+        this.gameController.checkAutoSlowdown();
+    }
+};
+
+// FPS update stub that delegates to GameEngine
+CyberOpsGame.prototype.updateFPS = function() {
+    if (this.gameEngine && this.gameEngine.updateFPS) {
+        this.gameEngine.updateFPS();
+    }
+};
+
+// Movement validation stubs that delegate to GameFacade
+CyberOpsGame.prototype.isWalkable = function(x, y) {
+    if (window.gameFacade) {
+        return window.gameFacade.isWalkable(x, y);
+    }
+    return false;
+};
+
+CyberOpsGame.prototype.canMoveTo = function(fromX, fromY, toX, toY) {
+    if (window.gameFacade) {
+        return window.gameFacade.canMoveTo(fromX, fromY, toX, toY);
+    }
+    return false;
+};
+
+CyberOpsGame.prototype.isDoorBlocking = function(x, y) {
+    if (window.gameFacade) {
+        return window.gameFacade.isDoorBlocking(x, y);
+    }
+    return false;
+};
