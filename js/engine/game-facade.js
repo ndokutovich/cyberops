@@ -27,31 +27,31 @@ class GameFacade {
         // Game state
         this.currentScreen = 'splash';
         this.isPaused = false;
-        this.gameSpeed = 1;
-        this.targetGameSpeed = 1;
-        this.autoSlowdownRange = 10;
-        this.speedIndicatorFadeTime = 0;
+        // REMOVED: this.gameSpeed - will be computed property!
+        // REMOVED: this.targetGameSpeed - will be computed property!
+        // REMOVED: this.autoSlowdownRange - will be computed property!
+        // REMOVED: this.speedIndicatorFadeTime - will be computed property!
 
         // Mission state
         this.currentMission = null;
-        this.currentMap = null;
-        this.missionObjectives = [];
-        // REMOVED: this.extractionEnabled - will be computed property instead!
+        // REMOVED: this.currentMap - will be computed property instead!
+        // REMOVED: this.missionObjectives - already a computed property!
+        // REMOVED: this.extractionEnabled - already a computed property!
 
         // Entity state
-        this.agents = [];
-        this.enemies = [];
-        this.npcs = [];
-        this.projectiles = [];
+        // REMOVED: this.agents - will be computed property!
+        // REMOVED: this.enemies - will be computed property!
+        // REMOVED: this.npcs - will be computed property!
+        // REMOVED: this.projectiles - will be computed property!
         this.effects = [];
         this.items = [];
 
         // Selection state
-        this.selectedAgent = null;
+        // REMOVED: this.selectedAgent - will be computed property!
         this.selectedTarget = null;
 
         // Combat state
-        this.turnBasedMode = false;
+        // REMOVED: this.turnBasedMode - will be computed property!
         this.currentTurn = null;
         this.turnOrder = [];
         this.actionPoints = new Map();
@@ -88,6 +88,191 @@ class GameFacade {
         this.initializeDefaultState();
 
         if (this.logger) this.logger.info('GameFacade initialized');
+    }
+
+    // ============================================
+    // COMPUTED PROPERTIES - Single Source of Truth
+    // ============================================
+
+    /**
+     * Game Speed - reads from legacy game
+     */
+    get gameSpeed() {
+        if (this.legacyGame && this.legacyGame.gameSpeed !== undefined) {
+            return this.legacyGame.gameSpeed;
+        }
+        return 1;
+    }
+
+    set gameSpeed(value) {
+        if (this.legacyGame) {
+            this.legacyGame.gameSpeed = value;
+        }
+    }
+
+    /**
+     * Target Game Speed - reads from legacy game
+     */
+    get targetGameSpeed() {
+        if (this.legacyGame && this.legacyGame.targetGameSpeed !== undefined) {
+            return this.legacyGame.targetGameSpeed;
+        }
+        return 1;
+    }
+
+    set targetGameSpeed(value) {
+        if (this.legacyGame) {
+            this.legacyGame.targetGameSpeed = value;
+        }
+    }
+
+    /**
+     * Auto Slowdown Range - reads from legacy game
+     */
+    get autoSlowdownRange() {
+        if (this.legacyGame && this.legacyGame.autoSlowdownRange !== undefined) {
+            return this.legacyGame.autoSlowdownRange;
+        }
+        return 10;
+    }
+
+    set autoSlowdownRange(value) {
+        if (this.legacyGame) {
+            this.legacyGame.autoSlowdownRange = value;
+        }
+    }
+
+    /**
+     * Speed Indicator Fade Time - reads from legacy game
+     */
+    get speedIndicatorFadeTime() {
+        if (this.legacyGame && this.legacyGame.speedIndicatorFadeTime !== undefined) {
+            return this.legacyGame.speedIndicatorFadeTime;
+        }
+        return 0;
+    }
+
+    set speedIndicatorFadeTime(value) {
+        if (this.legacyGame) {
+            this.legacyGame.speedIndicatorFadeTime = value;
+        }
+    }
+
+    /**
+     * Turn-Based Mode - reads from legacy game
+     */
+    get turnBasedMode() {
+        if (this.legacyGame && this.legacyGame.turnBasedMode !== undefined) {
+            return this.legacyGame.turnBasedMode;
+        }
+        return false;
+    }
+
+    set turnBasedMode(value) {
+        if (this.legacyGame) {
+            this.legacyGame.turnBasedMode = value;
+        }
+    }
+
+    /**
+     * Agents - reads from legacy game
+     */
+    get agents() {
+        if (this.legacyGame && this.legacyGame.agents) {
+            return this.legacyGame.agents;
+        }
+        return [];
+    }
+
+    set agents(value) {
+        if (this.legacyGame) {
+            this.legacyGame.agents = value;
+        }
+    }
+
+    /**
+     * Enemies - reads from legacy game
+     */
+    get enemies() {
+        if (this.legacyGame && this.legacyGame.enemies) {
+            return this.legacyGame.enemies;
+        }
+        return [];
+    }
+
+    set enemies(value) {
+        if (this.legacyGame) {
+            this.legacyGame.enemies = value;
+        }
+    }
+
+    /**
+     * NPCs - reads from legacy game
+     */
+    get npcs() {
+        if (this.legacyGame && this.legacyGame.npcs) {
+            return this.legacyGame.npcs;
+        }
+        return [];
+    }
+
+    set npcs(value) {
+        if (this.legacyGame) {
+            this.legacyGame.npcs = value;
+        }
+    }
+
+    /**
+     * Projectiles - reads from legacy game
+     */
+    get projectiles() {
+        if (this.legacyGame && this.legacyGame.projectiles) {
+            return this.legacyGame.projectiles;
+        }
+        return [];
+    }
+
+    set projectiles(value) {
+        if (this.legacyGame) {
+            this.legacyGame.projectiles = value;
+        }
+    }
+
+    /**
+     * Selected Agent - reads from legacy game
+     */
+    get selectedAgent() {
+        if (this.legacyGame && this.legacyGame._selectedAgent) {
+            return this.legacyGame._selectedAgent;
+        }
+        return null;
+    }
+
+    set selectedAgent(value) {
+        if (this.legacyGame) {
+            this.legacyGame._selectedAgent = value;
+        }
+    }
+
+    /**
+     * SINGLE SOURCE OF TRUTH for current map
+     * Always reads from legacy game, never stores locally
+     */
+    get currentMap() {
+        // ALWAYS read from legacy game (single source of truth)
+        if (this.legacyGame && this.legacyGame.map) {
+            return this.legacyGame.map;
+        }
+        return null;
+    }
+
+    /**
+     * Setter redirects to legacy game to maintain single source of truth
+     */
+    set currentMap(value) {
+        if (this.legacyGame) {
+            this.legacyGame.map = value;
+        }
     }
 
     /**
@@ -223,12 +408,15 @@ class GameFacade {
      * Load mission map
      */
     loadMap(mapData) {
+        let map;
         if (mapData.embedded) {
-            this.currentMap = this.parseEmbeddedMap(mapData.embedded);
+            map = this.parseEmbeddedMap(mapData.embedded);
         } else {
             if (this.logger) this.logger.error('No embedded map data');
-            this.currentMap = this.generateEmptyMap(40, 40);
+            map = this.generateEmptyMap(40, 40);
         }
+        // Set via setter which redirects to legacy game
+        this.currentMap = map;
     }
 
     /**
@@ -288,13 +476,36 @@ class GameFacade {
 
     /**
      * Setup mission objectives
+     * @deprecated - Objectives are now handled by MissionService
      */
     setupObjectives(objectives) {
-        this.missionObjectives = objectives.map(obj => ({
-            ...obj,
-            completed: false,
-            progress: 0
-        }));
+        // NO LONGER store objectives locally - MissionService is single source of truth
+        // MissionService.startMission already sets up objectives
+        if (this.logger) this.logger.debug('📋 Objectives setup delegated to MissionService');
+    }
+
+    /**
+     * SINGLE SOURCE OF TRUTH for mission objectives
+     * Always reads from MissionService, never stores locally
+     */
+    get missionObjectives() {
+        // ALWAYS read from MissionService (single source of truth)
+        if (this.gameServices && this.gameServices.missionService) {
+            return this.gameServices.missionService.objectives;
+        }
+        // Fallback to legacy game if service not available
+        if (this.legacyGame && this.legacyGame.currentMissionDef && this.legacyGame.currentMissionDef.objectives) {
+            return this.legacyGame.currentMissionDef.objectives;
+        }
+        return [];
+    }
+
+    /**
+     * Setter redirects to MissionService to maintain single source of truth
+     */
+    set missionObjectives(value) {
+        if (this.logger) this.logger.warn('⚠️ Attempted to set missionObjectives - use MissionService instead');
+        // Don't store locally - MissionService is the source of truth
     }
 
     /**
@@ -567,10 +778,11 @@ class GameFacade {
      */
     onEntityDeath(entity) {
         if (entity.id.startsWith('enemy_')) {
-            // Update objective counters
-            const eliminateObjective = this.missionObjectives.find(obj => obj.type === 'eliminate');
-            if (eliminateObjective) {
-                eliminateObjective.progress++;
+            // Track through MissionService (single source of truth)
+            if (this.gameServices && this.gameServices.missionService) {
+                this.gameServices.missionService.trackEvent('eliminate', {
+                    type: entity.type || 'unknown'
+                });
             }
         }
     }

@@ -258,10 +258,12 @@ CyberOpsGame.prototype.useActionAbility = function(agent) {
 
     let actionPerformed = false;
 
-    // Check each objective to see what actions are available
-    if (!this.currentMissionDef.objectives) return false;
+    // SINGLE SOURCE: Check MissionService objectives to see what actions are available
+    if (!this.gameServices || !this.gameServices.missionService) return false;
+    const objectives = this.gameServices.missionService.objectives;
+    if (!objectives || objectives.length === 0) return false;
 
-    this.currentMissionDef.objectives.forEach(obj => {
+    objectives.forEach(obj => {
         if (actionPerformed) return; // Only perform one action
         if (obj.completed) return; // Skip completed objectives
 
@@ -537,19 +539,20 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
     let allRequiredComplete = true;
     let anyIncomplete = false;
 
-    // Get objectives from MissionService if available
-    let objectives;
-    if (this.gameServices && this.gameServices.missionService && this.gameServices.missionService.objectives.length > 0) {
-        objectives = this.gameServices.missionService.objectives;
-        // Use TRACE level to avoid spam
-        if (this.logger) this.logger.trace('📋 Using MissionService objectives');
-    } else if (this.currentMissionDef && this.currentMissionDef.objectives) {
-        objectives = this.currentMissionDef.objectives;
-        if (this.logger) this.logger.trace('📋 Using currentMissionDef objectives');
-    } else {
-        if (this.logger) this.logger.warn('⚠️ No objectives available');
+    // SINGLE SOURCE: Always use MissionService objectives
+    if (!this.gameServices || !this.gameServices.missionService) {
+        if (this.logger) this.logger.warn('⚠️ MissionService not available');
         return;
     }
+
+    const objectives = this.gameServices.missionService.objectives;
+    if (!objectives || objectives.length === 0) {
+        if (this.logger) this.logger.warn('⚠️ No objectives in MissionService');
+        return;
+    }
+
+    // Use TRACE level to avoid spam
+    if (this.logger) this.logger.trace('📋 Using MissionService objectives (single source of truth)');
 
     // Ensure objectives have required properties
     objectives.forEach(obj => {
@@ -659,15 +662,14 @@ CyberOpsGame.prototype.updateObjectiveDisplay = function() {
         displayText = tbInfo;
     }
 
-    // Get objectives from MissionService if available, otherwise from currentMissionDef
-    let objectives;
-    if (this.gameServices && this.gameServices.missionService && this.gameServices.missionService.objectives.length > 0) {
-        // Use MissionService's objectives (single source of truth)
-        objectives = this.gameServices.missionService.objectives;
-    } else if (this.currentMissionDef && this.currentMissionDef.objectives) {
-        // Fallback to currentMissionDef if MissionService not available
-        objectives = this.currentMissionDef.objectives;
-    } else {
+    // SINGLE SOURCE: Always use MissionService objectives
+    if (!this.gameServices || !this.gameServices.missionService) {
+        tracker.textContent = displayText + 'Mission service loading...';
+        return;
+    }
+
+    const objectives = this.gameServices.missionService.objectives;
+    if (!objectives || objectives.length === 0) {
         tracker.textContent = displayText + 'Mission objectives loading...';
         return;
     }

@@ -47,29 +47,22 @@ class GameController {
         // Track screen changes
         const prevScreen = this.facade.currentScreen;
 
-        // Sync game state
+        // Sync only non-computed properties
         this.facade.currentScreen = game.currentScreen;
         this.facade.isPaused = game.isPaused;
-        this.facade.gameSpeed = game.gameSpeed;
-        this.facade.targetGameSpeed = game.targetGameSpeed || 1;
-        this.facade.autoSlowdownRange = game.autoSlowdownRange || 10;
-        this.facade.speedIndicatorFadeTime = game.speedIndicatorFadeTime || 0;
+        // Game speed properties are now computed - no sync needed!
+        // Turn-based mode is now computed - no sync needed!
 
         // Log screen transitions
         if (prevScreen !== this.facade.currentScreen) {
             if (this.logger) this.logger.info(`📺 Screen transition: ${prevScreen} → ${this.facade.currentScreen}`);
         }
 
-        // Sync entities
-        if (game.agents) this.facade.agents = game.agents;
-        if (game.enemies) this.facade.enemies = game.enemies;
-        if (game.npcs) this.facade.npcs = game.npcs;
-        if (game.projectiles) this.facade.projectiles = game.projectiles;
+        // Entities are now computed properties - no sync needed!
 
-        // Sync mission state
+        // Mission state - most are computed properties now
         if (game.currentMissionDef) this.facade.currentMission = game.currentMissionDef;
-        if (game.map) this.facade.currentMap = game.map;
-        if (game.missionObjectives) this.facade.missionObjectives = game.missionObjectives;
+        // Map and objectives are computed properties - no sync needed!
 
         // Sync fog of war state
         if (game.fogOfWar) this.facade.fogOfWar = game.fogOfWar;
@@ -78,8 +71,7 @@ class GameController {
         // Sync 3D mode state
         if (game.is3DMode !== undefined) this.facade.is3DMode = game.is3DMode;
 
-        // Sync turn-based mode
-        if (game.turnBasedMode !== undefined) this.facade.turnBasedMode = game.turnBasedMode;
+        // Turn-based mode is now computed - no sync needed!
 
         // Sync other important state
         if (game.agentWaypoints) this.facade.agentWaypoints = game.agentWaypoints;
@@ -94,8 +86,7 @@ class GameController {
         // Sync camera
         this.engine.setCamera(game.cameraX, game.cameraY, game.zoom || 1);
 
-        // Sync selection
-        if (game._selectedAgent) this.facade.selectedAgent = game._selectedAgent;
+        // Selected agent is now computed - no sync needed!
     }
 
     /**
@@ -104,25 +95,16 @@ class GameController {
     syncBack() {
         const game = this.legacyGame;
 
-        // Sync game state
+        // Sync only non-computed properties back
         game.currentScreen = this.facade.currentScreen;
         game.isPaused = this.facade.isPaused;
-        game.gameSpeed = this.facade.gameSpeed;
-        game.targetGameSpeed = this.facade.targetGameSpeed;
-        game.autoSlowdownRange = this.facade.autoSlowdownRange;
-        game.speedIndicatorFadeTime = this.facade.speedIndicatorFadeTime;
+        // Game speed properties are computed - no reverse sync needed!
 
-        // Sync entities
-        game.agents = this.facade.agents;
-        game.enemies = this.facade.enemies;
-        game.npcs = this.facade.npcs;
-        game.projectiles = this.facade.projectiles;
+        // Entities are computed properties - no reverse sync needed!
 
-        // Sync mission state
+        // Mission state - only sync what's not computed
         game.currentMissionDef = this.facade.currentMission;
-        game.map = this.facade.currentMap;
-        game.missionObjectives = this.facade.missionObjectives;
-        game.extractionEnabled = this.facade.extractionEnabled;
+        // Map, objectives, extraction are computed - no reverse sync needed!
 
         // Sync fog of war state
         game.fogOfWar = this.facade.fogOfWar;
@@ -146,8 +128,7 @@ class GameController {
         game.cameraY = this.engine.cameraY;
         game.zoom = this.engine.zoom;
 
-        // Sync selection
-        game._selectedAgent = this.facade.selectedAgent;
+        // Selected agent is computed - no reverse sync needed!
     }
 
     /**
