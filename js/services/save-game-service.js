@@ -260,11 +260,27 @@ class SaveGameService {
 
             // Resource data
             if (services.resourceService) {
-                saveData.resources = {
-                    credits: services.resourceService.getCredits(),
-                    researchPoints: services.resourceService.getResearchPoints(),
-                    worldControl: services.resourceService.getWorldControl()
-                };
+                // Check if methods exist before calling
+                if (typeof services.resourceService.getCredits === 'function' &&
+                    typeof services.resourceService.getResearchPoints === 'function' &&
+                    typeof services.resourceService.getWorldControl === 'function') {
+
+                    saveData.resources = {
+                        credits: services.resourceService.getCredits(),
+                        researchPoints: services.resourceService.getResearchPoints(),
+                        worldControl: services.resourceService.getWorldControl()
+                    };
+                } else {
+                    if (this.logger) {
+                        this.logger.error('ResourceService methods not available', {
+                            hasGetCredits: typeof services.resourceService.getCredits,
+                            hasGetResearchPoints: typeof services.resourceService.getResearchPoints,
+                            hasGetWorldControl: typeof services.resourceService.getWorldControl,
+                            serviceType: typeof services.resourceService,
+                            serviceKeys: Object.keys(services.resourceService || {})
+                        });
+                    }
+                }
             }
 
             // Agent data
@@ -272,7 +288,7 @@ class SaveGameService {
                 saveData.agents = {
                     available: services.agentService.getAvailableAgents(),
                     active: services.agentService.getActiveAgents(),
-                    memorial: services.agentService.getMemorialAgents()
+                    fallen: services.agentService.getFallenAgents()
                 };
             }
 
@@ -334,7 +350,14 @@ class SaveGameService {
             if (services.resourceService && saveData.resources) {
                 services.resourceService.setCredits(saveData.resources.credits);
                 services.resourceService.setResearchPoints(saveData.resources.researchPoints);
-                services.resourceService.setWorldControl(saveData.resources.worldControl);
+                // Note: setWorldControl doesn't exist, use add/spend pattern
+                const currentWorldControl = services.resourceService.getWorldControl();
+                const diff = saveData.resources.worldControl - currentWorldControl;
+                if (diff > 0) {
+                    services.resourceService.add('worldControl', diff, 'load save');
+                } else if (diff < 0) {
+                    services.resourceService.spend('worldControl', -diff, 'load save');
+                }
             }
 
             // Restore agents

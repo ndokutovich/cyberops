@@ -559,10 +559,37 @@ class MissionService {
      * Enable extraction
      */
     enableExtraction() {
-        if (this.extractionEnabled) return;
+        if (this.extractionEnabled) {
+            // Already enabled, don't spam
+            return;
+        }
 
         this.extractionEnabled = true;
         this.extractionTimer = 0;
+
+        // Log detailed extraction enablement
+        if (this.logger) {
+            this.logger.info('🚁 EXTRACTION POINT ACTIVATED!');
+            this.logger.info('📋 All required objectives completed!');
+
+            // Log which objectives are complete
+            const completedObjs = this.objectives.filter(obj => obj.status === 'completed' || obj.completed);
+            const requiredComplete = completedObjs.filter(obj => obj.required !== false);
+            const optionalComplete = completedObjs.filter(obj => obj.required === false);
+
+            if (requiredComplete.length > 0) {
+                this.logger.info(`✅ Required objectives complete (${requiredComplete.length}): ${requiredComplete.map(obj => obj.description).join(', ')}`);
+            }
+            if (optionalComplete.length > 0) {
+                this.logger.info(`🎁 Optional objectives complete (${optionalComplete.length}): ${optionalComplete.map(obj => obj.description).join(', ')}`);
+            }
+
+            // Log remaining objectives if any
+            const incompleteObjs = this.objectives.filter(obj => obj.status !== 'completed' && !obj.completed);
+            if (incompleteObjs.length > 0) {
+                this.logger.debug(`⏳ Optional objectives remaining: ${incompleteObjs.map(obj => obj.description).join(', ')}`);
+            }
+        }
 
         // Log event
         if (this.eventLogService) {
@@ -574,8 +601,6 @@ class MissionService {
             point: this.extractionPoint,
             autoExtraction: this.config.autoExtraction
         });
-
-        if (this.logger) this.logger.info('🚁 Extraction point activated!');
     }
 
     /**
@@ -1286,7 +1311,11 @@ class MissionService {
 
         // Check if extraction is enabled
         if (!this.extractionEnabled && !game.extractionEnabled) {
-            if (this.logger) this.logger.debug('❌ Extraction not enabled');
+            // Only log once per second to avoid spam
+            if (!this._lastExtractionDisabledLog || Date.now() - this._lastExtractionDisabledLog > 1000) {
+                if (this.logger) this.logger.debug('❌ Extraction not enabled yet (objectives incomplete?)');
+                this._lastExtractionDisabledLog = Date.now();
+            }
             return;
         }
 
@@ -1299,21 +1328,61 @@ class MissionService {
         const extractionX = game.map.extraction.x;
         const extractionY = game.map.extraction.y;
 
+        // Log extraction point location once
+        if (!this._extractionPointLogged) {
+            if (this.logger) this.logger.info(`🎯 Extraction point location: (${extractionX}, ${extractionY})`);
+            this._extractionPointLogged = true;
+        }
+
+        // Find closest agent and check all agents
+        let closestAgent = null;
+        let closestDist = Infinity;
+        let agentsNearExtraction = [];
+
         const atExtraction = game.agents.some(agent => {
             if (!agent.alive) return false;
+
             const dist = Math.sqrt(
                 Math.pow(agent.x - extractionX, 2) +
                 Math.pow(agent.y - extractionY, 2)
             );
-            // Log distance for closest agent
-            if (dist < 10 && this.logger) {
-                this.logger.debug(`📏 Agent ${agent.name} distance to extraction: ${dist.toFixed(2)}`);
+
+            // Track closest agent
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestAgent = agent;
             }
-            return dist < 2;
+
+            // Log all agents within reasonable distance
+            if (dist < 10) {
+                agentsNearExtraction.push({name: agent.name, dist: dist.toFixed(2)});
+            }
+
+            // Check if within extraction radius
+            const withinRadius = dist < 2;
+            if (withinRadius && this.logger) {
+                this.logger.info(`🎉 Agent ${agent.name} IS AT EXTRACTION! Distance: ${dist.toFixed(2)}`);
+            }
+
+            return withinRadius;
         });
 
+        // Log closest agent periodically (every second)
+        if (!this._lastClosestLog || Date.now() - this._lastClosestLog > 1000) {
+            if (closestAgent && this.logger) {
+                this.logger.debug(`📍 Closest to extraction: ${closestAgent.name} at (${closestAgent.x.toFixed(1)}, ${closestAgent.y.toFixed(1)}) - Distance: ${closestDist.toFixed(2)} units`);
+                if (agentsNearExtraction.length > 0) {
+                    this.logger.debug(`👥 Agents near extraction (<10 units): ${agentsNearExtraction.map(a => `${a.name}(${a.dist})`).join(', ')}`);
+                }
+            }
+            this._lastClosestLog = Date.now();
+        }
+
         if (atExtraction) {
-            if (this.logger) this.logger.info('✅ Agent at extraction point! Ending mission...');
+            if (this.logger) {
+                this.logger.info('✅ EXTRACTION TRIGGERED! Agent reached extraction point!');
+                this.logger.info(`📊 Final status - MissionStatus: ${this.missionStatus}, Closest: ${closestAgent?.name} at ${closestDist.toFixed(2)} units`);
+            }
             // Set status immediately to prevent re-entry
             this.missionStatus = 'extracting';
             this.completeMission(true);

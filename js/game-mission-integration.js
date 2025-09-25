@@ -230,13 +230,26 @@ CyberOpsGame.prototype.updateMissionObjectives = function() {
     this.lastUpdateTime = Date.now();
 
     // Check if agents reached extraction point
-    if (this.extractionEnabled || (this.gameServices?.missionService?.extractionEnabled)) {
-        // Add debug log to see if this is running
+    const extractionEnabledLocal = this.extractionEnabled;
+    const extractionEnabledService = this.gameServices?.missionService?.extractionEnabled;
+
+    if (extractionEnabledLocal || extractionEnabledService) {
+        // Add debug log to see if this is running (once per second)
         if (!this._lastExtractionCheck || Date.now() - this._lastExtractionCheck > 1000) {
-            if (this.logger) this.logger.debug(`🚁 Checking extraction: extractionEnabled=${this.extractionEnabled}, missionService=${this.gameServices?.missionService?.extractionEnabled}`);
+            if (this.logger) {
+                this.logger.debug(`🚁 Extraction check active - Local: ${extractionEnabledLocal}, Service: ${extractionEnabledService}`);
+            }
             this._lastExtractionCheck = Date.now();
         }
         this.checkExtractionPoint();
+    } else {
+        // Log once per 5 seconds when extraction is not enabled
+        if (!this._lastExtractionNotEnabledLog || Date.now() - this._lastExtractionNotEnabledLog > 5000) {
+            if (this.logger) {
+                this.logger.trace(`⏳ Extraction not yet enabled - waiting for objectives completion`);
+            }
+            this._lastExtractionNotEnabledLog = Date.now();
+        }
     }
 };
 
