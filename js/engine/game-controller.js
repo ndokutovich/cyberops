@@ -60,28 +60,13 @@ class GameController {
 
         // Entities are now computed properties - no sync needed!
 
-        // Mission state - most are computed properties now
-        if (game.currentMissionDef) this.facade.currentMission = game.currentMissionDef;
-        // Map and objectives are computed properties - no sync needed!
+        // Mission state - all are computed properties now!
+        // currentMission, currentMap, objectives, extraction - no sync needed!
 
-        // Sync fog of war state
-        if (game.fogOfWar) this.facade.fogOfWar = game.fogOfWar;
-        if (game.fogEnabled !== undefined) this.facade.fogEnabled = game.fogEnabled;
-
-        // Sync 3D mode state
-        if (game.is3DMode !== undefined) this.facade.is3DMode = game.is3DMode;
-
-        // Turn-based mode is now computed - no sync needed!
-
-        // Sync other important state
-        if (game.agentWaypoints) this.facade.agentWaypoints = game.agentWaypoints;
-        if (game.destinationIndicators) this.facade.destinationIndicators = game.destinationIndicators;
-        if (game.squadSelectEffect) this.facade.squadSelectEffect = game.squadSelectEffect;
-        if (game.showPaths !== undefined) this.facade.showPaths = game.showPaths;
-        if (game.debugMode !== undefined) this.facade.debugMode = game.debugMode;
-        if (game.usePathfinding !== undefined) this.facade.usePathfinding = game.usePathfinding;
-        if (game.activeQuests) this.facade.activeQuests = game.activeQuests;
-        if (game.npcActiveQuests) this.facade.npcActiveQuests = game.npcActiveQuests;
+        // All these are now computed properties - no sync needed!
+        // fogOfWar, fogEnabled, is3DMode, agentWaypoints, destinationIndicators,
+        // squadSelectEffect, showPaths, debugMode, usePathfinding,
+        // activeQuests, npcActiveQuests
 
         // Sync camera
         this.engine.setCamera(game.cameraX, game.cameraY, game.zoom || 1);
@@ -102,26 +87,13 @@ class GameController {
 
         // Entities are computed properties - no reverse sync needed!
 
-        // Mission state - only sync what's not computed
-        game.currentMissionDef = this.facade.currentMission;
-        // Map, objectives, extraction are computed - no reverse sync needed!
+        // Mission state - all computed properties now!
+        // No reverse sync needed!
 
-        // Sync fog of war state
-        game.fogOfWar = this.facade.fogOfWar;
-        game.fogEnabled = this.facade.fogEnabled;
-
-        // Sync 3D mode state
-        game.is3DMode = this.facade.is3DMode;
-
-        // Sync other important state
-        game.agentWaypoints = this.facade.agentWaypoints;
-        game.destinationIndicators = this.facade.destinationIndicators;
-        game.squadSelectEffect = this.facade.squadSelectEffect;
-        game.showPaths = this.facade.showPaths;
-        game.debugMode = this.facade.debugMode;
-        game.usePathfinding = this.facade.usePathfinding;
-        game.activeQuests = this.facade.activeQuests;
-        game.npcActiveQuests = this.facade.npcActiveQuests;
+        // All these are now computed properties - no reverse sync needed!
+        // fogOfWar, fogEnabled, is3DMode, agentWaypoints, destinationIndicators,
+        // squadSelectEffect, showPaths, debugMode, usePathfinding,
+        // activeQuests, npcActiveQuests
 
         // Sync camera
         game.cameraX = this.engine.cameraX;
@@ -186,10 +158,7 @@ class GameController {
                 // Only update these in real-time mode (outside loop like original)
                 if (this.legacyGame.checkAutoSlowdown) {
                     this.legacyGame.checkAutoSlowdown();
-                    // Re-sync game speed after auto-slowdown might have changed it
-                    this.facade.gameSpeed = this.legacyGame.gameSpeed;
-                    this.facade.targetGameSpeed = this.legacyGame.targetGameSpeed;
-                    this.facade.speedIndicatorFadeTime = this.legacyGame.speedIndicatorFadeTime;
+                    // Game speed is now computed - no re-sync needed!
                 }
 
                 // Update music system based on game state
@@ -314,18 +283,11 @@ class GameController {
         }
 
         if (this.facade.gameSpeed !== speed) {
-            // Update facade speed
-            this.facade.gameSpeed = speed;
-            this.facade.targetGameSpeed = speed;
-
-            // Update legacy game speed
+            // Only update legacy game - facade reads from it via computed properties
             this.legacyGame.gameSpeed = speed;
             this.legacyGame.targetGameSpeed = speed;
             this.legacyGame.lastSpeedChangeTime = Date.now();
             this.legacyGame.speedIndicatorFadeTime = 3000; // Show indicator for 3 seconds
-
-            // Update facade indicator
-            this.facade.speedIndicatorFadeTime = 3000;
 
             if (this.logger) this.logger.debug(`⚡ Game speed changed to ${speed}x`);
             return true;
@@ -363,7 +325,7 @@ class GameController {
 
             // Update target speed for smooth transition
             if (this.facade.targetGameSpeed !== effectiveSpeed) {
-                this.facade.targetGameSpeed = effectiveSpeed;
+                // Only update legacy game - facade reads from it
                 this.legacyGame.targetGameSpeed = effectiveSpeed;
                 if (this.logger) this.logger.trace(`Auto-slowdown: ${this.facade.gameSpeed}x → ${effectiveSpeed}x (enemies nearby)`);
             }
@@ -374,7 +336,7 @@ class GameController {
             effectiveSpeed = Math.min(effectiveSpeed, 2);
 
             if (this.facade.targetGameSpeed !== effectiveSpeed) {
-                this.facade.targetGameSpeed = effectiveSpeed;
+                // Only update legacy game - facade reads from it
                 this.legacyGame.targetGameSpeed = effectiveSpeed;
                 if (this.logger) this.logger.trace(`Combat slowdown: ${this.facade.gameSpeed}x → ${effectiveSpeed}x`);
             }
@@ -420,16 +382,15 @@ class GameController {
         if (enemyNearby && currentSpeed > 1) {
             // Slow down to 1x when enemies are near
             this.setGameSpeed(1);
-            this.facade.targetGameSpeed = targetSpeed; // Preserve original target
+            // Preserve original target in legacy game only
+            this.legacyGame.targetGameSpeed = targetSpeed;
             if (this.logger) this.logger.debug('⚠️ Enemy detected - slowing to 1x speed');
             this.legacyGame.speedIndicatorFadeTime = 2000;
-            this.facade.speedIndicatorFadeTime = 2000;
         } else if (!enemyNearby && targetSpeed > 1 && currentSpeed === 1) {
             // Speed back up when enemies are gone
             this.setGameSpeed(targetSpeed);
             if (this.logger) this.logger.info(`✅ Area clear - resuming ${targetSpeed}x speed`);
             this.legacyGame.speedIndicatorFadeTime = 2000;
-            this.facade.speedIndicatorFadeTime = 2000;
         }
     }
 

@@ -33,8 +33,8 @@ class GameFacade {
         // REMOVED: this.speedIndicatorFadeTime - will be computed property!
 
         // Mission state
-        this.currentMission = null;
-        // REMOVED: this.currentMap - will be computed property instead!
+        // REMOVED: this.currentMission - will be computed property!
+        // REMOVED: this.currentMap - already a computed property!
         // REMOVED: this.missionObjectives - already a computed property!
         // REMOVED: this.extractionEnabled - already a computed property!
 
@@ -72,17 +72,10 @@ class GameFacade {
         this.npcConversations = new Map();
 
         // Rendering-related state (needed by GameEngine)
-        this.fogEnabled = false;
-        this.fogOfWar = null;
-        this.showPaths = false;
-        this.debugMode = false;
-        this.usePathfinding = true;
-        this.agentWaypoints = {};
-        this.destinationIndicators = [];
-        this.squadSelectEffect = null;
-        this.activeQuests = null;
-        this.npcActiveQuests = [];
-        this.is3DMode = false;
+        // REMOVED: All of these are now computed properties!
+        // this.fogEnabled, this.fogOfWar, this.showPaths, this.debugMode,
+        // this.usePathfinding, this.agentWaypoints, this.destinationIndicators,
+        // this.squadSelectEffect, this.activeQuests, this.npcActiveQuests, this.is3DMode
 
         // Initialize subsystems
         this.initializeDefaultState();
@@ -251,6 +244,198 @@ class GameFacade {
     set selectedAgent(value) {
         if (this.legacyGame) {
             this.legacyGame._selectedAgent = value;
+        }
+    }
+
+    /**
+     * Fog of War - reads from legacy game
+     */
+    get fogOfWar() {
+        if (this.legacyGame && this.legacyGame.fogOfWar) {
+            return this.legacyGame.fogOfWar;
+        }
+        return null;
+    }
+
+    set fogOfWar(value) {
+        if (this.legacyGame) {
+            this.legacyGame.fogOfWar = value;
+        }
+    }
+
+    /**
+     * Fog Enabled - reads from legacy game
+     */
+    get fogEnabled() {
+        if (this.legacyGame && this.legacyGame.fogEnabled !== undefined) {
+            return this.legacyGame.fogEnabled;
+        }
+        return false;
+    }
+
+    set fogEnabled(value) {
+        if (this.legacyGame) {
+            this.legacyGame.fogEnabled = value;
+        }
+    }
+
+    /**
+     * 3D Mode - reads from legacy game
+     */
+    get is3DMode() {
+        if (this.legacyGame && this.legacyGame.is3DMode !== undefined) {
+            return this.legacyGame.is3DMode;
+        }
+        return false;
+    }
+
+    set is3DMode(value) {
+        if (this.legacyGame) {
+            this.legacyGame.is3DMode = value;
+        }
+    }
+
+    /**
+     * Agent Waypoints - reads from legacy game
+     */
+    get agentWaypoints() {
+        if (this.legacyGame && this.legacyGame.agentWaypoints) {
+            return this.legacyGame.agentWaypoints;
+        }
+        return {};
+    }
+
+    set agentWaypoints(value) {
+        if (this.legacyGame) {
+            this.legacyGame.agentWaypoints = value;
+        }
+    }
+
+    /**
+     * Use Pathfinding - reads from legacy game
+     */
+    get usePathfinding() {
+        if (this.legacyGame && this.legacyGame.usePathfinding !== undefined) {
+            return this.legacyGame.usePathfinding;
+        }
+        return true;
+    }
+
+    set usePathfinding(value) {
+        if (this.legacyGame) {
+            this.legacyGame.usePathfinding = value;
+        }
+    }
+
+    /**
+     * Destination Indicators - reads from legacy game
+     */
+    get destinationIndicators() {
+        if (this.legacyGame && this.legacyGame.destinationIndicators) {
+            return this.legacyGame.destinationIndicators;
+        }
+        return [];
+    }
+
+    set destinationIndicators(value) {
+        if (this.legacyGame) {
+            this.legacyGame.destinationIndicators = value;
+        }
+    }
+
+    /**
+     * Squad Select Effect - reads from legacy game
+     */
+    get squadSelectEffect() {
+        if (this.legacyGame && this.legacyGame.squadSelectEffect) {
+            return this.legacyGame.squadSelectEffect;
+        }
+        return null;
+    }
+
+    set squadSelectEffect(value) {
+        if (this.legacyGame) {
+            this.legacyGame.squadSelectEffect = value;
+        }
+    }
+
+    /**
+     * Show Paths - reads from legacy game
+     */
+    get showPaths() {
+        if (this.legacyGame && this.legacyGame.showPaths !== undefined) {
+            return this.legacyGame.showPaths;
+        }
+        return false;
+    }
+
+    set showPaths(value) {
+        if (this.legacyGame) {
+            this.legacyGame.showPaths = value;
+        }
+    }
+
+    /**
+     * Debug Mode - reads from legacy game
+     */
+    get debugMode() {
+        if (this.legacyGame && this.legacyGame.debugMode !== undefined) {
+            return this.legacyGame.debugMode;
+        }
+        return false;
+    }
+
+    set debugMode(value) {
+        if (this.legacyGame) {
+            this.legacyGame.debugMode = value;
+        }
+    }
+
+    /**
+     * Active Quests - reads from legacy game
+     */
+    get activeQuests() {
+        if (this.legacyGame && this.legacyGame.activeQuests) {
+            return this.legacyGame.activeQuests;
+        }
+        return {};
+    }
+
+    set activeQuests(value) {
+        if (this.legacyGame) {
+            this.legacyGame.activeQuests = value;
+        }
+    }
+
+    /**
+     * NPC Active Quests - reads from legacy game
+     */
+    get npcActiveQuests() {
+        if (this.legacyGame && this.legacyGame.npcActiveQuests) {
+            return this.legacyGame.npcActiveQuests;
+        }
+        return [];
+    }
+
+    set npcActiveQuests(value) {
+        if (this.legacyGame) {
+            this.legacyGame.npcActiveQuests = value;
+        }
+    }
+
+    /**
+     * Current Mission - reads from legacy game
+     */
+    get currentMission() {
+        if (this.legacyGame && this.legacyGame.currentMissionDef) {
+            return this.legacyGame.currentMissionDef;
+        }
+        return null;
+    }
+
+    set currentMission(value) {
+        if (this.legacyGame) {
+            this.legacyGame.currentMissionDef = value;
         }
     }
 
