@@ -140,14 +140,20 @@ CyberOpsGame.prototype.getFormattedTime = function() {
 };
 
 // Log combat events
-CyberOpsGame.prototype.logCombatHit = function(attacker, target, damage) {
+CyberOpsGame.prototype.logCombatHit = function(attacker, target, damage, killed = false) {
     const attackerName = attacker.name || (attacker.type === 'enemy' ? `Enemy ${attacker.id}` : 'Unknown');
     const targetName = target.name || (target.type === 'enemy' ? `Enemy ${target.id}` : 'Unknown');
 
+    // Build message with kill confirmation if applicable
+    let message = `${attackerName} hit ${targetName} for ${damage} damage`;
+    if (killed) {
+        message += ' (KILLED!)';
+    }
+
     if (attacker.type === 'agent') {
-        this.logEvent(`${attackerName} hit ${targetName} for ${damage} damage`, 'combat');
+        this.logEvent(message, 'combat');
     } else {
-        this.logEvent(`${attackerName} hit ${targetName} for ${damage} damage`, 'enemy');
+        this.logEvent(message, 'enemy');
     }
 };
 

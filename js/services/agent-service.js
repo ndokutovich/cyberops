@@ -332,7 +332,7 @@ class AgentService {
     }
 
     /**
-     * Select agents for mission
+     * Select agents for mission - NO AUTO-SELECTION
      */
     selectAgentsForMission(agentIds) {
         this.selectedAgents = [];
@@ -349,8 +349,40 @@ class AgentService {
         // Notify listeners
         this.notifyListeners('select', { agents: this.selectedAgents });
 
-        if (this.logger) this.logger.info(`👥 Selected ${this.selectedAgents.length} agents for mission`);
+        if (this.logger) this.logger.info(`👥 Selected ${this.selectedAgents.length} agents for mission (user's exact choice)`);
         return this.selectedAgents;
+    }
+
+    /**
+     * Toggle agent selection for mission
+     */
+    toggleAgentSelection(agentId) {
+        const currentIds = this.selectedAgents.map(a => a.id || a.originalId);
+        const index = currentIds.indexOf(agentId);
+
+        let newSelection;
+        if (index > -1) {
+            // Remove agent
+            newSelection = currentIds.filter(id => id !== agentId);
+        } else if (currentIds.length < 4) {
+            // Add agent (max 4)
+            newSelection = [...currentIds, agentId];
+        } else {
+            // Max reached
+            if (this.logger) this.logger.warn('⚠️ Maximum 4 agents can be selected');
+            return this.selectedAgents;
+        }
+
+        // Update selection
+        return this.selectAgentsForMission(newSelection);
+    }
+
+    /**
+     * Reset selection state (for new mission selection)
+     */
+    resetSelection() {
+        this.selectedAgents = [];
+        if (this.logger) this.logger.debug('🔄 Reset agent selection state');
     }
 
     /**

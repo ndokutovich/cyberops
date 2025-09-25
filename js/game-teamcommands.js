@@ -179,16 +179,28 @@ CyberOpsGame.prototype.autoFireAtEnemy = function(agent, enemy) {
     const currentTime = Date.now();
     if (currentTime - agent.lastAutoFire < 1000) return; // 1 second cooldown
 
-    // Create projectile
+    // Calculate damage using GameServices for equipped weapon bonuses
+    let damage = agent.damage || 10;
+    if (window.GameServices && window.GameServices.calculateAttackDamage) {
+        damage = window.GameServices.calculateAttackDamage(
+            agent,
+            enemy,
+            { distance: this.getDistance(agent, enemy) }
+        );
+    }
+
+    // Create projectile with proper agent references for logging
     this.projectiles.push({
         x: agent.x,
         y: agent.y,
         targetX: enemy.x,
         targetY: enemy.y,
         targetEnemy: enemy,
-        damage: agent.damage || 10,
+        damage: damage,  // Use calculated damage with equipment
         speed: 0.3,
         owner: agent.id,
+        shooter: agent,  // Added for combat logging
+        agent: agent,    // Added for logCombatHit compatibility
         hostile: false
     });
 

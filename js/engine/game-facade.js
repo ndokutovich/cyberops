@@ -913,8 +913,12 @@ class GameFacade {
             // Create visual projectile
             this.createProjectile(attacker, target);
 
-            // Update target health locally for immediate feedback
-            target.health -= result.damage;
+            // UNIDIRECTIONAL: Get updated health from CombatService
+            const updatedTarget = this.services.combatService.getCombatant(target.id);
+            if (updatedTarget && updatedTarget.entity) {
+                target.health = updatedTarget.entity.health;
+                target.alive = updatedTarget.entity.health > 0;
+            }
             if (result.killed) {
                 target.alive = false;
                 this.onEntityDeath(target);
@@ -1698,17 +1702,18 @@ class GameFacade {
                             } else {
                                 // Use FormulaService to apply damage
                                 const damageResult = window.GameServices.formulaService.applyDamage(closestAgent, actualDamage);
+
+                                // Log hit with kill information
+                                if (game.logCombatHit) {
+                                    const attacker = proj.owner ?
+                                        this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy', type: 'enemy' } :
+                                        { name: 'Enemy', type: 'enemy' };
+                                    game.logCombatHit(attacker, closestAgent, actualDamage, damageResult.isDead);
+                                }
+
                                 if (damageResult.isDead) {
-                                    // Log agent death
-                                    if (game.logDeath) game.logDeath(closestAgent);
-                                } else {
-                                    // Log hit - use projectile owner or generic enemy
-                                    if (game.logCombatHit) {
-                                        const attacker = proj.owner ?
-                                            this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
-                                            { name: 'Enemy' };
-                                        game.logCombatHit(attacker, closestAgent, actualDamage);
-                                    }
+                                    // Additional death logging if needed
+                                    // if (game.logDeath) game.logDeath(closestAgent);
                                 }
                             }
                             // Play hit sound
@@ -1733,6 +1738,17 @@ class GameFacade {
 
                             // Use FormulaService to apply damage
                             const damageResult = window.GameServices.formulaService.applyDamage(enemy, actualDamage);
+
+                            // Log combat hit with kill information
+                            if (game.logCombatHit) {
+                                game.logCombatHit(
+                                    proj.agent || proj.shooter || { name: 'Agent', type: 'agent' },
+                                    enemy,
+                                    actualDamage,
+                                    damageResult.isDead  // Pass killed status
+                                );
+                            }
+
                             if (damageResult.isDead) {
                                 game.totalEnemiesDefeated++;
 
@@ -1747,16 +1763,6 @@ class GameFacade {
                                 if (game.onEnemyEliminated) {
                                     if (this.logger) this.logger.info('🎯 Calling onEnemyEliminated...');
                                     game.onEnemyEliminated(enemy);
-                                } else {
-                                    if (this.logger) this.logger.error('❌ CRITICAL: onEnemyEliminated NOT FOUND on game!');
-
-                                    // FALLBACK: Track directly through MissionService
-                                    if (this.gameServices && this.gameServices.missionService) {
-                                        if (this.logger) this.logger.warn('🔧 Using fallback: Tracking elimination directly through MissionService');
-                                        this.gameServices.missionService.trackEvent('eliminate', {
-                                            type: enemy.type || 'unknown'
-                                        });
-                                    }
                                 }
 
                                 // Grant XP for kills!
@@ -1766,11 +1772,8 @@ class GameFacade {
                                     game.onEntityDeath(enemy, killer);
                                 }
 
-                                // Log enemy death
-                                if (game.logDeath) game.logDeath(enemy);
-                            } else {
-                                // Log hit
-                                if (game.logCombatHit) game.logCombatHit(proj.agent || { name: 'Agent' }, enemy, actualDamage);
+                                // Don't log death separately since we already logged it with the hit
+                                // if (game.logDeath) game.logDeath(enemy);
                             }
                             // Play hit sound
                             game.playSound('hit', 0.3);
@@ -1803,15 +1806,26 @@ class GameFacade {
 
                             // Use FormulaService to apply damage
                             const damageResult = window.GameServices.formulaService.applyDamage(closestEnemy, actualDamage);
+
+                            // Log combat hit with kill information
+                            if (game.logCombatHit) {
+                                const attacker = proj.agent || proj.shooter || { name: 'Agent', type: 'agent' };
+                                game.logCombatHit(attacker, closestEnemy, actualDamage, damageResult.isDead);
+                            }
+
                             if (damageResult.isDead) {
                                 game.totalEnemiesDefeated++;
-                                // Log enemy death
-                                if (game.logDeath) game.logDeath(closestEnemy);
-                            } else {
-                                // Log hit
-                                if (game.logCombatHit) {
-                                    const attacker = proj.agent || { name: 'Agent' };
-                                    game.logCombatHit(attacker, closestEnemy, actualDamage);
+
+                                // Track enemy elimination for mission objectives
+                                if (game.onEnemyEliminated) {
+                                    if (this.logger) this.logger.info('🎯 Calling onEnemyEliminated (fallback path)...');
+                                    game.onEnemyEliminated(closestEnemy);
+                                }
+
+                                // Grant XP for kills
+                                const killer = proj.shooter || proj.agent || null;
+                                if (game.onEntityDeath && killer) {
+                                    game.onEntityDeath(closestEnemy, killer);
                                 }
                             }
                             // Play hit sound

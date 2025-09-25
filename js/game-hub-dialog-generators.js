@@ -150,7 +150,13 @@ CyberOpsGame.prototype.generateTrainingContent = function() {
                     const stat = e.target.dataset.program;
                     const cost = parseInt(e.target.dataset.cost);
                     if (this.credits >= cost) {
-                        this.credits -= cost;
+                        // UNIDIRECTIONAL: Use ResourceService for spending
+                        if (this.gameServices && this.gameServices.resourceService) {
+                            this.gameServices.resourceService.spend('credits', cost, `training: ${stat}`);
+                        } else {
+                            // Property proxy handles this
+                            this.credits -= cost;
+                        }
                         this.activeAgents.forEach(agent => {
                             // Use FormulaService to modify stats properly
                             const formulaService = window.GameServices.formulaService;

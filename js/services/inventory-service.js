@@ -185,8 +185,14 @@ class InventoryService {
             if (this.logger) this.logger.info(`🔫 Weapon picked up: ${weaponEntry.name} (Owned: ${weaponEntry.owned})`);
 
             // Auto-equip ONLY if agent has no weapon equipped
-            // Use originalId for loadout management (this is the hub ID like "Alex 'Shadow' Chen")
-            const loadoutId = agent.originalId || agent.name || agent.id;
+            // Try multiple ID formats since agent IDs can vary between hub and mission
+            // In mission: agent.originalId = numeric (1,2,3,4), agent.id = "agent_0", etc
+            const possibleIds = [
+                agent.originalId,
+                String(agent.originalId),  // Try as string too
+                agent.id,
+                agent.name
+            ].filter(id => id != null);
 
             // Debug: log what ID we're using
             if (this.logger) {
@@ -194,14 +200,30 @@ class InventoryService {
                     originalId: agent.originalId,
                     id: agent.id,
                     name: agent.name,
-                    loadoutId: loadoutId
+                    possibleIds: possibleIds,
+                    availableLoadouts: Object.keys(this.agentLoadouts)
                 });
             }
 
-            // Check if agent already has a weapon in their loadout
-            const currentLoadout = this.agentLoadouts[loadoutId];
+            // Try each possible ID to find the loadout
+            let currentLoadout = null;
+            let loadoutId = null;
+            for (const id of possibleIds) {
+                if (this.agentLoadouts[id]) {
+                    currentLoadout = this.agentLoadouts[id];
+                    loadoutId = id;
+                    if (this.logger) this.logger.debug(`✅ Found loadout using ID: ${id}`);
+                    break;
+                }
+            }
 
             if (!currentLoadout || !currentLoadout.weapon) {
+                // If no loadout found at all, use the first possible ID (preferably originalId)
+                if (!loadoutId) {
+                    loadoutId = possibleIds[0] || agent.id;
+                    if (this.logger) this.logger.debug(`📝 Creating new loadout with ID: ${loadoutId}`);
+                }
+
                 // Ensure loadout exists
                 if (!this.agentLoadouts[loadoutId]) {
                     this.agentLoadouts[loadoutId] = {
@@ -726,17 +748,33 @@ class InventoryService {
 
     /**
      * Get item by type and ID
-     * @param {string} type - Item type ('weapon', 'armor', or 'equipment')
+     * @param {string} type - Item type ('weapon', 'armor', 'utility', or 'equipment')
      * @param {string} itemId - Item ID
      * @returns {Object|null} Item data or null if not found
      */
     getItemById(type, itemId) {
+        // Ensure arrays exist
+        if (!this.inventory.weapons) this.inventory.weapons = [];
+        if (!this.inventory.armor) this.inventory.armor = [];
+        if (!this.inventory.utility) this.inventory.utility = [];
+
         if (type === 'weapon') {
             return this.inventory.weapons.find(w => w.id === itemId) || null;
         } else if (type === 'armor') {
-            return this.inventory.equipment.find(e => e.id === itemId && e.protection) || null;
+            // Look in armor array, not equipment
+            return this.inventory.armor.find(e => e.id === itemId) || null;
+        } else if (type === 'utility') {
+            // Look in utility array
+            return this.inventory.utility.find(e => e.id === itemId) || null;
+        } else if (type === 'equipment') {
+            // For generic 'equipment' type, check both armor and utility
+            return this.inventory.armor.find(e => e.id === itemId) ||
+                   this.inventory.utility.find(e => e.id === itemId) || null;
         } else {
-            return this.inventory.equipment.find(e => e.id === itemId) || null;
+            // Fallback - check all categories
+            return this.inventory.weapons.find(e => e.id === itemId) ||
+                   this.inventory.armor.find(e => e.id === itemId) ||
+                   this.inventory.utility.find(e => e.id === itemId) || null;
         }
     }
 

@@ -260,12 +260,14 @@ CyberOpsGame.prototype.onMilestoneComplete = function(milestone) {
         this.showNotification(message, 'success');
     }
 
-    // Grant rewards
+    // UNIDIRECTIONAL: Grant rewards through services or property proxies
     if (milestone.reward) {
         if (milestone.reward.credits) {
+            // Property proxy handles service delegation
             this.credits += milestone.reward.credits;
         }
         if (milestone.reward.research) {
+            // Property proxy handles service delegation
             this.researchPoints += milestone.reward.research;
         }
         if (milestone.reward.item) {

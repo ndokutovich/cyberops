@@ -49,7 +49,8 @@ class ItemService {
 
         // Add item to inventory service
         if (this.inventoryService) {
-            const pickupResult = this.inventoryService.pickupItem(item, agent.originalId || agent.id || agent.name);
+            // Pass agent object, not just ID - InventoryService expects (agent, item)
+            const pickupResult = this.inventoryService.pickupItem(agent, item);
 
             if (pickupResult) {
                 // Handle weapon-specific logic

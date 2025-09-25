@@ -174,16 +174,16 @@ CyberOpsGame.prototype.initMissionUpdated = function() {
     }
 
     // Start mission through MissionService AFTER everything is set up
-    if (this.gameServices && this.gameServices.missionService && this.currentMissionDef) {
+    if (window.GameServices && window.GameServices.missionService && this.currentMissionDef) {
         if (this.logger) this.logger.info('📋 BEFORE MissionService.startMission - objectives?', !!this.currentMissionDef.objectives);
-        this.gameServices.missionService.startMission(this.currentMissionDef);
+        window.GameServices.missionService.startMission(this.currentMissionDef);
 
         // IMPORTANT: Keep a reference to MissionService objectives for backward compatibility
         // This ensures the game can find objectives even if code checks currentMissionDef.objectives
-        this.currentMissionDef.objectives = this.gameServices.missionService.objectives;
+        this.currentMissionDef.objectives = window.GameServices.missionService.objectives;
         if (this.logger) this.logger.info('🔗 Linked MissionService objectives to currentMissionDef');
         if (this.logger) this.logger.info('📋 AFTER linking - objectives count:', this.currentMissionDef.objectives ? this.currentMissionDef.objectives.length : 0);
-    } else if (!this.gameServices || !this.gameServices.missionService) {
+    } else if (!window.GameServices || !window.GameServices.missionService) {
         if (this.logger) this.logger.warn('⚠️ MissionService not available, objectives may not track properly');
     }
 
@@ -195,8 +195,8 @@ CyberOpsGame.prototype.initMissionUpdated = function() {
         if (this.logger) this.logger.error('❌ CRITICAL: No objectives at end of initMissionUpdated!', {
             hasDef: !!this.currentMissionDef,
             hasObjectives: !!(this.currentMissionDef && this.currentMissionDef.objectives),
-            missionService: !!(this.gameServices && this.gameServices.missionService),
-            serviceObjectives: this.gameServices && this.gameServices.missionService ? this.gameServices.missionService.objectives.length : 0
+            missionService: !!(window.GameServices && window.GameServices.missionService),
+            serviceObjectives: window.GameServices && window.GameServices.missionService ? window.GameServices.missionService.objectives.length : 0
         });
     }
 };
@@ -212,6 +212,27 @@ if (!CyberOpsGame.prototype.initMissionOriginal) {
 
 // Update the game loop to check objectives
 CyberOpsGame.prototype.updateMissionObjectives = function() {
+    // CRITICAL: Process enemy eliminations from CombatService (unidirectional data flow)
+    if (window.GameServices && window.GameServices.combatService) {
+        const eliminated = window.GameServices.combatService.getAndClearEliminatedEnemies();
+        if (eliminated && eliminated.length > 0) {
+            if (this.logger) this.logger.info(`🎯 Processing ${eliminated.length} queued enemy eliminations from CombatService`);
+            eliminated.forEach(elimination => {
+                if (this.onEnemyEliminated) {
+                    if (this.logger) this.logger.debug(`🎯 Processing enemy: ${elimination.entityId}`);
+                    this.onEnemyEliminated(elimination.entity);
+                } else {
+                    if (this.logger) this.logger.error(`❌ onEnemyEliminated function not found!`);
+                }
+            });
+        }
+    } else {
+        if (!this._combatServiceWarningShown) {
+            if (this.logger) this.logger.warn(`⚠️ CombatService not available in updateMissionObjectives`);
+            this._combatServiceWarningShown = true;
+        }
+    }
+
     // Check mission objectives each frame
     if (this.checkMissionObjectives) {
         this.checkMissionObjectives();
@@ -231,7 +252,7 @@ CyberOpsGame.prototype.updateMissionObjectives = function() {
 
     // Check if agents reached extraction point
     const extractionEnabledLocal = this.extractionEnabled;
-    const extractionEnabledService = this.gameServices?.missionService?.extractionEnabled;
+    const extractionEnabledService = window.GameServices?.missionService?.extractionEnabled;
 
     if (extractionEnabledLocal || extractionEnabledService) {
         // Add debug log to see if this is running (once per second)
@@ -315,8 +336,8 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
         nearestTerminal.hacked = true;
 
         // Track ONLY through MissionService
-        if (this.gameServices && this.gameServices.missionService) {
-            this.gameServices.missionService.trackEvent('terminal', {
+        if (window.GameServices && window.GameServices.missionService) {
+            window.GameServices.missionService.trackEvent('terminal', {
                 id: nearestTerminal.id || 'unknown'
             });
         }

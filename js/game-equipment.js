@@ -20,6 +20,9 @@ CyberOpsGame.prototype.initializeEquipmentSystem = function() {
                 utility: null,
                 special: null
             };
+            if (this.logger) {
+                this.logger.debug(`📦 Initialized loadout for agent with ID: ${agent.id}, name: ${agent.name}`);
+            }
         }
     });
 
@@ -1052,6 +1055,7 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
     }
 
     // Clear all loadouts in InventoryService
+    if (logger) logger.debug(`📋 Existing loadout keys before clear: ${Object.keys(invService.agentLoadouts).join(', ')}`);
     Object.keys(invService.agentLoadouts).forEach(agentId => {
         // Unequip all items for each agent
         if (invService.agentLoadouts[agentId].weapon) {
@@ -1067,8 +1071,13 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
 
     // Initialize empty loadouts for all active agents
     this.activeAgents.forEach(agent => {
-        if (!invService.agentLoadouts[agent.id]) {
-            invService.agentLoadouts[agent.id] = {
+        // Use originalId if in mission, otherwise use regular id
+        const loadoutId = agent.originalId || agent.id;
+        if (logger) {
+            logger.debug(`🎯 Creating loadout for agent "${agent.name}" with loadout ID: ${loadoutId} (originalId: ${agent.originalId}, id: ${agent.id})`);
+        }
+        if (!invService.agentLoadouts[loadoutId]) {
+            invService.agentLoadouts[loadoutId] = {
                 weapon: null,
                 armor: null,
                 utility: null
@@ -1103,8 +1112,13 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
     // Assign best weapons to agents
     this.activeAgents.forEach((agent, index) => {
         if (index < weaponPool.length) {
+            // Use originalId if in mission, otherwise use regular id
+            const loadoutId = agent.originalId || agent.id;
+            if (logger) {
+                logger.info(`🔫 Equipping weapon ${weaponPool[index].name} (ID: ${weaponPool[index].id}) to agent "${agent.name}" (loadout ID: ${loadoutId})`);
+            }
             // ONLY use InventoryService to equip
-            invService.equipItem(agent.id, 'weapon', weaponPool[index].id);
+            invService.equipItem(loadoutId, 'weapon', weaponPool[index].id);
         }
     });
 
@@ -1134,9 +1148,12 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
 
     // Assign armor and utility to agents
     this.activeAgents.forEach((agent, index) => {
+        // Use originalId if in mission, otherwise use regular id
+        const loadoutId = agent.originalId || agent.id;
+
         // Assign armor if available
         if (index < armorPool.length) {
-            invService.equipItem(agent.id, 'armor', armorPool[index].id);
+            invService.equipItem(loadoutId, 'armor', armorPool[index].id);
         }
 
         // Assign utility based on specialization or availability
@@ -1146,21 +1163,21 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         if (agent.specialization === 'hacker') {
             const hackKit = utilityPool.find(item => item.hackBonus && !item.assigned);
             if (hackKit) {
-                invService.equipItem(agent.id, 'utility', hackKit.id);
+                invService.equipItem(loadoutId, 'utility', hackKit.id);
                 hackKit.assigned = true;
                 assigned = true;
             }
         } else if (agent.specialization === 'stealth') {
             const stealthSuit = utilityPool.find(item => item.stealthBonus && !item.assigned);
             if (stealthSuit) {
-                invService.equipItem(agent.id, 'utility', stealthSuit.id);
+                invService.equipItem(loadoutId, 'utility', stealthSuit.id);
                 stealthSuit.assigned = true;
                 assigned = true;
             }
         } else if (agent.specialization === 'demolition') {
             const explosives = utilityPool.find(item => item.damage && !item.assigned);
             if (explosives) {
-                invService.equipItem(agent.id, 'utility', explosives.id);
+                invService.equipItem(loadoutId, 'utility', explosives.id);
                 explosives.assigned = true;
                 assigned = true;
             }
@@ -1170,7 +1187,7 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         if (!assigned) {
             const anyUtility = utilityPool.find(item => !item.assigned);
             if (anyUtility) {
-                invService.equipItem(agent.id, 'utility', anyUtility.id);
+                invService.equipItem(loadoutId, 'utility', anyUtility.id);
                 anyUtility.assigned = true;
             }
         }
@@ -1183,6 +1200,17 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
 
     // Sync loadouts back from InventoryService
     this.agentLoadouts = invService.agentLoadouts;
+
+    if (logger) {
+        logger.info(`✅ Optimization complete. Final loadout keys: ${Object.keys(invService.agentLoadouts).join(', ')}`);
+        Object.keys(invService.agentLoadouts).forEach(key => {
+            const loadout = invService.agentLoadouts[key];
+            if (loadout.weapon) {
+                const weapon = invService.getItemById('weapon', loadout.weapon);
+                logger.debug(`  - Agent[${key}]: ${weapon ? weapon.name : 'Unknown weapon'} (ID: ${loadout.weapon})`);
+            }
+        });
+    }
 
     // Force complete UI refresh
     this.updateAgentList();

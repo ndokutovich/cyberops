@@ -232,9 +232,11 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         '0': () => {
             if (this.currentScreen === 'game') {
                 if (this.logger) this.logger.info('🔧 DEBUG: Force-enabling extraction point for testing');
-                this.extractionEnabled = true;
+                // UNIDIRECTIONAL: Only set through MissionService
                 if (this.gameServices && this.gameServices.missionService) {
-                    this.gameServices.missionService.extractionEnabled = true;
+                    this.gameServices.missionService.enableExtraction();
+                } else {
+                    if (this.logger) this.logger.error('❌ MissionService not available for extraction!');
                 }
                 this.addNotification('DEBUG: Extraction enabled!');
             }

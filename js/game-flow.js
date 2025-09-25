@@ -101,7 +101,10 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
 
         const squadSel = document.getElementById('squadSelection');
         squadSel.innerHTML = '';
-        this.selectedAgents = [];
+        // Reset selection through AgentService
+        if (this.gameServices && this.gameServices.agentService) {
+            this.gameServices.agentService.resetSelection();
+        }
 
         // Calculate max agents for this mission
         // Use mission-specific settings if available, otherwise use defaults
@@ -193,36 +196,16 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
 }
 
 CyberOpsGame.prototype.startMission = function() {
-        // Debug agent state
+        // NO AUTO-SELECTION - Use exactly what user selected
         if (this.logger) this.logger.debug('🔍 startMission called:');
         if (this.logger) this.logger.debug('  - this.selectedAgents:', this.selectedAgents?.length || 0);
         if (this.logger) this.logger.debug('  - this.activeAgents:', this.activeAgents?.length || 0);
-        if (this.logger) this.logger.debug('  - this.activeAgents[0]:', this.activeAgents?.[0]);
 
-        // Auto-select agents if none selected
-        if (this.selectedAgents.length === 0) {
-            if (this.logger) this.logger.debug('⚠️ No agents selected, auto-selecting available agents');
-
-            // Auto-select up to 4 active agents
-            const maxAgents = 4;
-            // Active agents might not have 'alive' property yet, default to true
-            const availableAgents = this.activeAgents.filter(a => a.alive !== false);
-
-            if (this.logger) this.logger.debug(`🔍 Checking activeAgents:`, this.activeAgents?.length || 0, 'agents');
-            if (this.logger) this.logger.debug(`🔍 Available agents after filter:`, availableAgents.length, 'agents');
-
-            if (availableAgents.length === 0) {
-                this.showHudDialog(
-                    'DEPLOYMENT ERROR',
-                    '⚠️ No agents available!<br><br>You need at least one agent to start a mission.',
-                    [{ text: 'UNDERSTOOD', action: 'close' }]
-                );
-                return;
-            }
-
-            // Auto-select agents
-            this.selectedAgents = availableAgents.slice(0, Math.min(maxAgents, availableAgents.length));
-            if (this.logger) this.logger.info('✅ Auto-selected agents:', this.selectedAgents.map(a => a.name));
+        // Just log what's being used - no auto-selection
+        if (this.selectedAgents?.length === 0) {
+            if (this.logger) this.logger.warn('⚠️ Starting mission with 0 agents (user choice)');
+        } else {
+            if (this.logger) this.logger.info(`✅ Starting mission with ${this.selectedAgents?.length || 0} agents`);
         }
 
         // Auto-save before mission if enabled
@@ -248,6 +231,21 @@ CyberOpsGame.prototype.startMission = function() {
                 // Re-initialize to ensure all data is synced
                 this.gameServices.inventoryService.initializeFromGame(this);
                 if (this.logger) this.logger.info(`📦 Re-initialized InventoryService with game state`);
+            }
+
+            // Debug: Log agent loadouts status
+            if (this.logger && this.agentLoadouts) {
+                const loadoutKeys = Object.keys(this.agentLoadouts);
+                this.logger.debug(`📋 Agent loadouts available: ${loadoutKeys.length} agents`);
+                if (loadoutKeys.length > 0) {
+                    this.logger.debug(`   Loadout IDs: ${loadoutKeys.join(', ')}`);
+                    // Log first loadout as example
+                    const firstKey = loadoutKeys[0];
+                    const firstLoadout = this.agentLoadouts[firstKey];
+                    if (firstLoadout && firstLoadout.weapon) {
+                        this.logger.debug(`   Agent ${firstKey} has weapon: ${firstLoadout.weapon}`);
+                    }
+                }
             }
         }
 
@@ -486,16 +484,18 @@ CyberOpsGame.prototype.initMission = function() {
         // Use all hired agents up to the mission limit
         const availableForMission = this.activeAgents ? this.activeAgents.slice(0, maxAgentsForMission) : [];
 
-        // If we have selectedAgents, prioritize them, otherwise use all available
+        // ALWAYS use exactly what was selected - no auto-selection
         let baseAgents;
-        if (this.selectedAgents && this.selectedAgents.length > 0) {
+
+        if (this.selectedAgents) {
             if (this.logger) this.logger.debug('📝 Selected agents structure:', this.selectedAgents);
             if (this.logger) this.logger.debug('  First selected agent:', this.selectedAgents[0]);
+            if (this.logger) this.logger.debug('  Available agents for matching:', this.activeAgents?.map(a => ({id: a.id, name: a.name})));
 
             // Add selected agents first
             baseAgents = this.selectedAgents.map(selectedAgent => {
-                // selectedAgent might be just an ID number OR a full agent object
-                const isJustId = typeof selectedAgent === 'number';
+                // selectedAgent might be just an ID (string or number) OR a full agent object
+                const isJustId = typeof selectedAgent === 'number' || typeof selectedAgent === 'string';
                 const agentInfo = isJustId ? `ID ${selectedAgent}` : (selectedAgent.name || selectedAgent.id || 'unknown');
                 if (this.logger) this.logger.debug('  Mapping selected agent:', agentInfo, '(type:', typeof selectedAgent, ')');
 
@@ -503,13 +503,19 @@ CyberOpsGame.prototype.initMission = function() {
                     // Try to match by different criteria depending on what we have
                     let found;
                     if (isJustId) {
-                        // If selectedAgent is just an ID number, match by ID
-                        found = this.activeAgents.find(a => a.id === selectedAgent);
+                        // If selectedAgent is just an ID, match by ID
+                        // Convert both to string for comparison since IDs might be stored as strings
+                        const idToMatch = String(selectedAgent);
+                        found = this.activeAgents.find(a => {
+                            const agentId = String(a.id);
+                            if (this.logger) this.logger.trace(`    Comparing ${agentId} === ${idToMatch}`);
+                            return agentId === idToMatch;
+                        });
                     } else {
                         // If it's an object, try to match by name, id, or object reference
                         found = this.activeAgents.find(a =>
                             a.name === selectedAgent.name ||
-                            a.id === selectedAgent.id ||
+                            String(a.id) === String(selectedAgent.id) ||
                             a === selectedAgent
                         );
                     }
@@ -518,29 +524,29 @@ CyberOpsGame.prototype.initMission = function() {
                         if (this.logger) this.logger.info('    ✅ Found match in activeAgents:', found.name);
                         return found;
                     } else {
-                        if (this.logger) this.logger.debug('    ⚠️ No match found, using selectedAgent as-is');
+                        if (this.logger) this.logger.warn('    ⚠️ No match found for selected agent:', agentInfo);
+                        if (this.logger) this.logger.debug('    Available IDs:', this.activeAgents.map(a => a.id));
                         return isJustId ? null : selectedAgent;
                     }
                 }
                 return isJustId ? null : selectedAgent;
             }).filter(agent => agent !== null);  // Remove any nulls from failed ID lookups
 
-            // Add more hired agents if we have room
-            const additionalAgents = availableForMission.filter(
-                agent => !baseAgents.find(a => a.name === agent.name)
-            );
-            baseAgents = [...baseAgents, ...additionalAgents].slice(0, maxAgentsForMission);
+            if (this.logger) this.logger.info(`🎯 Selected ${baseAgents.length} agents from selection`);
+
+            // Use EXACTLY what user selected - no modifications
+            if (this.logger) {
+                this.logger.info(`✅ Using exact selection of ${baseAgents.length} agents`);
+            }
         } else {
-            baseAgents = availableForMission;
+            // No selection made - use empty array (no auto-selection)
+            baseAgents = [];
+            if (this.logger) this.logger.warn('⚠️ No agents selected - starting with 0 agents');
         }
 
-        // Safety check: if no agents available, log error
-        if (!baseAgents || baseAgents.length === 0) {
-            if (this.logger) this.logger.error('❌ No agents available for mission!');
-            if (this.logger) this.logger.debug('  - activeAgents:', this.activeAgents);
-            if (this.logger) this.logger.debug('  - selectedAgents:', this.selectedAgents);
-            // Don't continue with empty agents array
-            return;
+        // Allow mission to start with 0 agents if that's what was selected
+        if (baseAgents.length === 0) {
+            if (this.logger) this.logger.warn('🚨 Starting mission with NO AGENTS - this may result in mission failure!');
         }
 
         if (this.logger) this.logger.debug(`🎯 Mission ${this.currentMissionIndex + 1}: Deploying ${baseAgents.length} agents (max: ${maxAgentsForMission})`);
@@ -591,9 +597,18 @@ CyberOpsGame.prototype.initMission = function() {
             // Store original ID for loadout lookup
             const originalId = agent.id || agent.name;
 
+            if (this.logger) {
+                this.logger.debug(`🔄 Agent ID transformation for ${agent.name}:`, {
+                    originalId: originalId,
+                    newId: 'agent_' + idx,
+                    name: agent.name
+                });
+            }
+
             // Add mission-specific properties
             agent.id = 'agent_' + idx;
             agent.originalId = originalId; // Preserve for loadout lookup
+            agent.type = 'agent'; // Add type for combat logging
             // IMPORTANT: Preserve the agent name!
             if (!agent.name && originalId) {
                 agent.name = originalId;
@@ -602,7 +617,10 @@ CyberOpsGame.prototype.initMission = function() {
             agent.y = spawn.y + Math.floor(idx / 2);
             agent.targetX = spawn.x + idx % 2;
             agent.targetY = spawn.y + Math.floor(idx / 2);
-            if (this.logger) this.logger.debug(`🎯 Agent ${idx+1} (${agent.name}) placed at (${agent.x}, ${agent.y})`);
+            if (this.logger) {
+                this.logger.debug(`🎯 Agent ${idx+1} (${agent.name}) placed at (${agent.x}, ${agent.y})`);
+                this.logger.debug(`   Original ID: ${originalId}, Mission ID: ${agent.id}`);
+            }
             agent.selected = idx === 0;
             agent.alive = true;
             agent.cooldowns = [0, 0, 0, 0, 0];
@@ -1273,14 +1291,22 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
                     speed: 0.5,
                     owner: agent.id,
                     shooter: agent,
+                    agent: agent,  // Added for logCombatHit compatibility
                     weaponType: agent.weapon?.type || 'rifle'
                 });
 
-                // Update health locally (CombatService tracks internally but we need visual sync)
+                // UNIDIRECTIONAL: CombatService already updated health internally
+                // Just sync the visual state from the service
                 if (result.hit && result.damage) {
-                    nearest.health -= result.damage;
-                    if (result.killed) {
+                    // Get updated state from CombatService
+                    const updatedEnemy = window.GameServices.combatService.getCombatant(targetId);
+                    if (updatedEnemy && updatedEnemy.entity) {
+                        nearest.health = updatedEnemy.entity.health;
+                        nearest.alive = updatedEnemy.entity.health > 0;
+                    } else if (result.killed) {
+                        // Fallback if entity not found
                         nearest.alive = false;
+                        nearest.health = 0;
                     }
                 }
 

@@ -276,26 +276,16 @@
 
         // Loadout actions
         engine.registerAction('toggleAgent', function(agentId) {
-            if (game && !game.selectedAgents) {
-                game.selectedAgents = [];
+            // Only use AgentService - no fallback
+            if (game && game.gameServices && game.gameServices.agentService) {
+                game.gameServices.agentService.toggleAgentSelection(agentId);
+                // Refresh the loadout display
+                this.navigateTo('loadout-select', null, true);
             }
-
-            const index = game.selectedAgents.indexOf(agentId);
-            if (index > -1) {
-                game.selectedAgents.splice(index, 1);
-            } else if (game.selectedAgents.length < 4) {
-                game.selectedAgents.push(agentId);
-            }
-
-            // Refresh the loadout display
-            this.navigateTo('loadout-select', null, true);
         });
 
         engine.registerAction('startMissionWithLoadout', function() {
-            if (!game || !game.selectedAgents || game.selectedAgents.length === 0) {
-                // Show error - need at least one agent
-                return;
-            }
+            // NO AUTO-SELECTION - Just use what was selected
 
             this.closeAll();
 

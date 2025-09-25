@@ -113,17 +113,75 @@ class GameServices {
         }
         // Otherwise check for real-time equipped weapon from loadout
         else if (this.inventoryService) {
-            const agentId = attacker.originalId || attacker.id || attacker.name;
-            const loadout = this.inventoryService.getAgentLoadout(agentId);
+            // Debug log attacker info
+            if (this.logger) {
+                this.logger.debug(`🎯 Looking up equipment for attacker:`, {
+                    id: attacker.id,
+                    originalId: attacker.originalId,
+                    name: attacker.name,
+                    hasWeapon: !!attacker.weapon
+                });
+            }
+
+            // Try multiple ID formats since agent IDs can vary between hub and mission
+            const possibleIds = [
+                attacker.originalId,
+                String(attacker.originalId),  // Try as string too
+                attacker.id,
+                attacker.name
+            ].filter(id => id != null);
+
+            if (this.logger) {
+                this.logger.debug(`🔍 Trying IDs for loadout lookup: ${possibleIds.join(', ')}`);
+
+                // Debug: Show all existing loadouts
+                const allLoadouts = this.inventoryService.getAllLoadouts();
+                const loadoutKeys = Object.keys(allLoadouts);
+                this.logger.debug(`📦 Existing loadout keys in InventoryService: ${loadoutKeys.join(', ')}`);
+
+                // Show loadout contents for each key
+                loadoutKeys.forEach(key => {
+                    const loadout = allLoadouts[key];
+                    if (loadout && loadout.weapon) {
+                        this.logger.debug(`  - Loadout[${key}]: weapon=${loadout.weapon}`);
+                    }
+                });
+            }
+
+            // Try each possible ID to find the loadout
+            let loadout = null;
+            let foundId = null;
+            for (const agentId of possibleIds) {
+                loadout = this.inventoryService.getAgentLoadout(agentId);
+                if (this.logger) {
+                    this.logger.debug(`  Checking ID '${agentId}': ${loadout ? 'Found loadout' : 'No loadout'}, weapon: ${loadout?.weapon || 'none'}`);
+                }
+                if (loadout && loadout.weapon) {
+                    foundId = agentId;
+                    break;
+                }
+            }
 
             if (loadout && loadout.weapon) {
                 // Find the actual weapon from the loadout
                 const equippedWeapon = this.inventoryService.getItemById('weapon', loadout.weapon);
                 if (equippedWeapon) {
                     weaponBonus = equippedWeapon.damage || 0;
-                    if (this.formulaService && this.formulaService.logger) {
-                        this.formulaService.logger.debug(`🔫 Using loadout weapon damage: ${weaponBonus} from ${equippedWeapon.name}`);
+                    if (this.logger) {
+                        this.logger.info(`✅ Found equipped weapon: ${equippedWeapon.name} with damage ${weaponBonus} (using ID: ${foundId})`);
                     }
+                    if (this.formulaService && this.formulaService.logger) {
+                        this.formulaService.logger.debug(`🔫 Using loadout weapon damage: ${weaponBonus} from ${equippedWeapon.name} (agent ID: ${foundId})`);
+                    }
+                } else if (this.logger) {
+                    this.logger.warn(`⚠️ Loadout has weapon ID ${loadout.weapon} but weapon not found in inventory`);
+                }
+            } else {
+                if (this.logger) {
+                    this.logger.warn(`⚠️ No weapon loadout found for agent. Tried IDs: ${possibleIds.join(', ')}`);
+                }
+                if (this.formulaService && this.formulaService.logger) {
+                    this.formulaService.logger.debug(`⚠️ No weapon loadout found for agent. Tried IDs: ${possibleIds.join(', ')}`);
                 }
             }
         }

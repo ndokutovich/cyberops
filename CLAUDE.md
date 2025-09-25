@@ -126,7 +126,7 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 ### Service Layer (js/services/ directory)
 - **logger-service.js**: Centralized logging system with timestamp and source tracking
 - **resource-service.js**: Centralized resource management (credits, research points, world control)
-- **agent-service.js**: Complete agent lifecycle management (hire, kill, revive, damage, selection)
+- **agent-service.js**: Complete agent lifecycle management (hire, kill, revive, damage, user selection tracking)
 - **mission-service.js**: SINGLE SOURCE OF TRUTH for all mission tracking and objectives
 - **game-state-service.js**: Game state management and auto-save functionality
 - **event-log-service.js**: Event history and logging for gameplay events
@@ -173,7 +173,7 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
   - Event-triggered changes based on game state
   - Fully configurable via JSON without code changes
 - **Resource Management**: Credits, research points, world control percentage
-- **Agent System**: Agent selection, abilities, equipment, movement, and combat
+- **Agent System**: User-controlled agent selection (no auto-selection), abilities, equipment, movement, and combat
 - **NPC System**: Interactive NPCs with dialog trees, quest system, context-sensitive actions
 - **RPG System**: Comprehensive character progression with:
   - **Character Classes**: Soldier, Infiltrator, Tech Specialist, Medic, Heavy Weapons, Recon
@@ -516,9 +516,10 @@ python -m http.server 8000
 - Camera position stored in `cameraX`, `cameraY` with zoom support
 - Canvas automatically resizes to window dimensions
 
-### Agent Selection Protection
-- The game implements selection protection (`selectionProtection` flag) to prevent accidental deselection during gameplay
-- Selected agent tracked via `_selectedAgent` with getter/setter pattern
+### Agent Selection System
+- Agents are selected for missions using the loadout screen
+- The game respects exact user selection (including 0 agents)
+- No auto-selection or fallback logic - user choice is always honored
 
 ### Audio Initialization
 - Audio requires user interaction to enable (click/touch)
@@ -605,9 +606,9 @@ class RPGService {
 - **Clean Dependencies**: ShopManager receives managers via constructor, not game reference
 - **Experience Ownership**: RPGManager owns XP progression (not duplicate of service)
 - **Equipment Access**: Hub loadouts accessed via computed properties from InventoryService
-- **Combat Enhancement**: RPG stats affect damage, critical hits, dodge, and armor
+- **Combat Enhancement**: RPG stats and equipment bonuses affect damage, critical hits, dodge, and armor
 - **Stat Bonuses**: Equipment provides visible bonuses displayed with "+" notation
-- **Backward Compatibility**: RPG features enhance but don't break existing systems
+- **Service Integration**: All systems work exclusively through GameServices
 
 ## Campaign and Mission Architecture
 

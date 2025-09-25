@@ -74,6 +74,7 @@ class CombatService {
             this.combatants.set(entity.id, {
                 entity: entity,
                 faction: friendlies.includes(entity) ? 'friendly' : 'hostile',
+                team: friendlies.includes(entity) ? 'agent' : 'enemy',  // Added team property for elimination tracking
                 kills: 0,
                 damageDealt: 0,
                 damageTaken: 0,
@@ -162,14 +163,21 @@ class CombatService {
         }
 
         // Calculate hit chance
+        const distance = this.getDistance(attacker.entity, target.entity);
+        // FormulaService expects (distance, baseAccuracy, modifiers) not (attacker, target, distance)
+        const baseAccuracy = attacker.entity.accuracy || 0.7;  // Default 70% base accuracy
         const hitChance = this.formulaService.calculateHitChance(
-            attacker.entity,
-            target.entity,
-            this.getDistance(attacker.entity, target.entity)
+            distance,
+            baseAccuracy,
+            {}  // No modifiers for now
         );
 
         const hitRoll = Math.random();
         const isHit = hitRoll < hitChance;
+
+        if (this.logger) {
+            this.logger.debug(`🎲 Attack roll: ${hitRoll.toFixed(3)} vs ${hitChance.toFixed(3)} (distance: ${distance.toFixed(1)})`);
+        }
 
         // Track shot fired
         attacker.shotsFired++;
@@ -187,14 +195,36 @@ class CombatService {
             // Track hit
             attacker.shotsHit++;
 
-            // Calculate damage
-            const weaponDamage = attacker.entity.weaponDamage || 0;
-            const baseDamage = this.formulaService.calculateDamage(
-                attacker.entity.damage || 10,
-                weaponDamage,
-                attacker.entity.damageBonus || 0,
-                target.entity.protection || 0
-            );
+            // Calculate damage using GameServices for proper equipment handling
+            let baseDamage;
+            if (window.GameServices && window.GameServices.calculateAttackDamage) {
+                // Debug: Check what we're passing
+                if (this.logger) {
+                    this.logger.debug(`🎯 Attacker entity:`, {
+                        id: attacker.entity.id,
+                        originalId: attacker.entity.originalId,
+                        name: attacker.entity.name,
+                        damage: attacker.entity.damage
+                    });
+                }
+                // Use GameServices which properly handles equipment loadouts
+                baseDamage = window.GameServices.calculateAttackDamage(
+                    attacker.entity,
+                    target.entity,
+                    { isRanged: true }
+                );
+                if (this.logger) this.logger.debug(`Using GameServices damage calculation: ${baseDamage}`);
+            } else {
+                // Fallback to basic calculation
+                const weaponDamage = attacker.entity.weaponDamage || 0;
+                baseDamage = this.formulaService.calculateDamage(
+                    attacker.entity.damage || 10,
+                    weaponDamage,
+                    attacker.entity.damageBonus || 0,
+                    target.entity.protection || 0
+                );
+                if (this.logger) this.logger.warn(`Using fallback damage calculation (no equipment bonus): ${baseDamage}`);
+            }
 
             // Check for critical hit
             const critChance = attacker.entity.critChance || 0.1;
@@ -485,6 +515,38 @@ class CombatService {
         this.activeEffects.delete(entityId);
 
         if (this.logger) this.logger.info(`${entityId} died in combat`);
+
+        // CRITICAL: Store death event for game to retrieve
+        // Game will check this during its update cycle (unidirectional flow)
+        if (this.logger) this.logger.debug(`🔍 Checking elimination queue for ${entityId}: team=${combatant.team}, faction=${combatant.faction}`);
+        if (combatant.team === 'enemy') {
+            if (!this.eliminatedEnemies) {
+                this.eliminatedEnemies = [];
+            }
+            this.eliminatedEnemies.push({
+                entity: combatant.entity,
+                timestamp: Date.now(),
+                entityId: entityId
+            });
+            if (this.logger) this.logger.info(`🎯 Enemy elimination queued for processing: ${entityId} (total queued: ${this.eliminatedEnemies.length})`);
+        } else {
+            if (this.logger) this.logger.debug(`⚠️ Not queuing ${entityId} for elimination - team is '${combatant.team}', not 'enemy'`);
+        }
+    }
+
+    /**
+     * Get and clear eliminated enemies queue (for game to process)
+     * This maintains unidirectional data flow - game pulls from service
+     */
+    getAndClearEliminatedEnemies() {
+        if (!this.eliminatedEnemies || this.eliminatedEnemies.length === 0) {
+            return [];
+        }
+
+        if (this.logger) this.logger.debug(`📤 Retrieving ${this.eliminatedEnemies.length} queued eliminations`);
+        const eliminated = [...this.eliminatedEnemies];
+        this.eliminatedEnemies = [];
+        return eliminated;
     }
 
     /**

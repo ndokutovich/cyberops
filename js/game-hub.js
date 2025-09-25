@@ -384,12 +384,17 @@ CyberOpsGame.prototype.startResearch = function(projectId) {
             return;
         }
         
-        // Complete research - spend research points via service
-        if (this.gameServices && this.gameServices.resourceService) {
-            this.gameServices.resourceService.spend('researchPoints', project.cost, `research: ${project.name}`);
-        } else {
-            this.researchPoints -= project.cost; // Fallback
+        // UNIDIRECTIONAL: Only use ResourceService - no fallback
+        if (!this.gameServices || !this.gameServices.resourceService) {
+            if (this.logger) this.logger.error('❌ ResourceService not available for research!');
+            this.showHudDialog(
+                '⚠️ ERROR',
+                'Service initialization error. Please refresh the game.',
+                [{ text: 'OK' }]
+            );
+            return;
         }
+        this.gameServices.resourceService.spend('researchPoints', project.cost, `research: ${project.name}`);
         this.completedResearch.push(projectId);
         
         // Apply research benefits
@@ -486,14 +491,9 @@ CyberOpsGame.prototype.getStealthDetectionRange = function(agent) {
     // Fix missing medical healing call after mission completion
 CyberOpsGame.prototype.completeMissionRewards = function(victory) {
         if (victory && this.currentMission.rewards) {
-            // Apply mission rewards via ResourceService
+            // UNIDIRECTIONAL: Apply mission rewards via ResourceService only
             if (this.gameServices && this.gameServices.resourceService) {
                 this.gameServices.resourceService.applyMissionRewards(this.currentMission.rewards);
-            } else {
-                // Fallback
-                this.credits += this.currentMission.rewards.credits || 0;
-                this.researchPoints += this.currentMission.rewards.researchPoints || 0;
-                this.worldControl += this.currentMission.rewards.worldControl || 0;
             }
             
             // Apply medical healing if researched
@@ -714,20 +714,18 @@ CyberOpsGame.prototype.hireAgent = function(agentId) {
         const currentCredits = this.gameServices?.resourceService?.get('credits') || this.credits;
         if (!agent || agent.hired || currentCredits < agent.cost) return;
 
-        // Deduct credits via AgentService if available, otherwise use ResourceService
-        if (this.gameServices && this.gameServices.agentService) {
-            const success = this.gameServices.agentService.hireAgent(agentId);
-            if (!success) return;
-        } else {
-            // Fallback to manual handling
-            if (this.gameServices && this.gameServices.resourceService) {
-                this.gameServices.resourceService.spend('credits', agent.cost, `hired ${agent.name}`);
-            } else {
-                this.credits -= agent.cost;
-            }
-            agent.hired = true;
-            this.activeAgents.push(agent);
+        // UNIDIRECTIONAL: Only use AgentService for hiring
+        if (!this.gameServices || !this.gameServices.agentService) {
+            if (this.logger) this.logger.error('❌ AgentService not available for hiring!');
+            this.showHudDialog(
+                '⚠️ ERROR',
+                'Service initialization error. Please refresh the game.',
+                [{ text: 'OK' }]
+            );
+            return;
         }
+        const success = this.gameServices.agentService.hireAgent(agentId);
+        if (!success) return;
         
         this.showHudDialog(
             '✅ AGENT HIRED',
@@ -1062,9 +1060,6 @@ CyberOpsGame.prototype.selectRegion = function(regionId) {
             region: regionId,
             missions: regionMissions
         });
-    } else if (this.showMissionsFromHub) {
-        // Fallback to direct mission display
-        this.showMissionsFromHub(regionMissions);
     }
 };
 
