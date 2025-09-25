@@ -769,6 +769,7 @@ class GameEngine {
 
         // Render extraction point
         if (map.extraction && this.shouldRenderInFog(map.extraction.x, map.extraction.y)) {
+            // SINGLE SOURCE OF TRUTH: Facade's getter always reads from MissionService
             const extractionEnabled = this.facade.extractionEnabled || false;
             this.renderingHelpers.renderExtractionPoint(map.extraction.x, map.extraction.y, extractionEnabled, this.ctx, (x, y) => this.worldToIsometric(x, y));
         }

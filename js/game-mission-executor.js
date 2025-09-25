@@ -1104,6 +1104,11 @@ CyberOpsGame.prototype.loadMapFromEmbeddedTiles = function(mapDef) {
         enemySpawns: mapDef.enemySpawns || []
     };
 
+    // DEBUG: Log spawn and extraction to verify they're not swapped
+    if (this.logger) {
+        this.logger.info(`🎯 MAP LOADING - Spawn: (${map.spawn?.x}, ${map.spawn?.y}), Extraction: (${map.extraction?.x}, ${map.extraction?.y})`);
+    }
+
     // Parse embedded tiles from 2D array format
     const tilesData = mapDef.embedded.tiles;
 

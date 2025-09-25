@@ -36,7 +36,7 @@ class GameFacade {
         this.currentMission = null;
         this.currentMap = null;
         this.missionObjectives = [];
-        this.extractionEnabled = false;
+        // REMOVED: this.extractionEnabled - will be computed property instead!
 
         // Entity state
         this.agents = [];
@@ -88,6 +88,33 @@ class GameFacade {
         this.initializeDefaultState();
 
         if (this.logger) this.logger.info('GameFacade initialized');
+    }
+
+    /**
+     * SINGLE SOURCE OF TRUTH for extraction state
+     * Always reads from MissionService, never stores locally
+     */
+    get extractionEnabled() {
+        // ALWAYS read from MissionService (single source of truth)
+        if (this.gameServices && this.gameServices.missionService) {
+            return this.gameServices.missionService.extractionEnabled;
+        }
+        // Fallback to legacy game if service not available
+        if (this.legacyGame && this.legacyGame.extractionEnabled !== undefined) {
+            return this.legacyGame.extractionEnabled;
+        }
+        return false;
+    }
+
+    /**
+     * Setter redirects to MissionService to maintain single source of truth
+     */
+    set extractionEnabled(value) {
+        if (this.gameServices && this.gameServices.missionService) {
+            this.gameServices.missionService.extractionEnabled = value;
+        } else if (this.legacyGame) {
+            this.legacyGame.extractionEnabled = value;
+        }
     }
 
     /**
@@ -165,7 +192,7 @@ class GameFacade {
 
         // Reset mission state
         this.currentMission = mission;
-        this.extractionEnabled = false;
+        // extractionEnabled is now computed from MissionService
         this.projectiles = [];
         this.items = [];
 
@@ -327,6 +354,13 @@ class GameFacade {
      */
     update(deltaTime) {
         if (this.currentScreen !== 'game' || this.isPaused) {
+            // Log why we're not updating
+            if (!this._lastUpdateSkipLog || Date.now() - this._lastUpdateSkipLog > 5000) {
+                if (this.logger && (this.currentScreen !== 'game' || this.isPaused)) {
+                    this.logger.trace(`⏸️ Update skipped - Screen: ${this.currentScreen}, Paused: ${this.isPaused}`);
+                }
+                this._lastUpdateSkipLog = Date.now();
+            }
             return;
         }
 
@@ -547,16 +581,13 @@ class GameFacade {
     updateObjectives() {
         // Delegate to MissionService if available - it's the source of truth
         const game = this.legacyGame;
+
+        // NO SYNCING NEEDED - extractionEnabled is now a computed property
+        // that always reads from MissionService directly
+
+        // Just check objectives if available
         if (game && game.checkMissionObjectives) {
             game.checkMissionObjectives();
-
-            // Sync extraction state from MissionService
-            if (game.gameServices && game.gameServices.missionService) {
-                this.extractionEnabled = game.gameServices.missionService.extractionEnabled;
-            } else {
-                // Fallback to game's extraction state
-                this.extractionEnabled = game.extractionEnabled || false;
-            }
         }
     }
 
@@ -564,10 +595,69 @@ class GameFacade {
      * Check mission completion
      */
     checkMissionCompletion() {
-        // Delegate to legacy game's extraction checking
         const game = this.legacyGame;
-        if (game && game.checkExtractionPoint) {
-            game.checkExtractionPoint();
+
+        // Add a log to verify this is being called
+        if (!this._lastMissionCheckLog || Date.now() - this._lastMissionCheckLog > 5000) {
+            if (this.logger) {
+                const missionDef = game?.currentMissionDef;
+                const objectives = game?.gameServices?.missionService?.objectives || missionDef?.objectives;
+                this.logger.debug(`🎯 Mission check - Game: ${!!game}, MissionDef: ${!!missionDef}, Objectives: ${objectives?.length || 0}`);
+
+                if (objectives && objectives.length > 0) {
+                    const completed = objectives.filter(o => o.status === 'completed' || o.completed).length;
+                    this.logger.debug(`📋 Objectives progress: ${completed}/${objectives.length} completed`);
+                }
+            }
+            this._lastMissionCheckLog = Date.now();
+        }
+
+        // Check if extraction is enabled (from either source)
+        const extractionEnabledLocal = game?.extractionEnabled;
+        const extractionEnabledService = game?.gameServices?.missionService?.extractionEnabled;
+
+        // Log extraction state periodically
+        if (!this._lastExtractionStateLog || Date.now() - this._lastExtractionStateLog > 3000) {
+            if (this.logger && (extractionEnabledLocal !== undefined || extractionEnabledService !== undefined)) {
+                this.logger.debug(`🚁 Extraction state - Local: ${extractionEnabledLocal}, Service: ${extractionEnabledService}`);
+            }
+            this._lastExtractionStateLog = Date.now();
+        }
+
+        if (extractionEnabledLocal || extractionEnabledService) {
+            // Log extraction check (once per second)
+            if (!this._lastExtractionCheck || Date.now() - this._lastExtractionCheck > 1000) {
+                if (this.logger) {
+                    this.logger.debug(`🚁 Extraction check active - Local: ${extractionEnabledLocal}, Service: ${extractionEnabledService}`);
+                }
+                this._lastExtractionCheck = Date.now();
+            }
+
+            // Check if agents reached extraction point
+            if (game && game.checkExtractionPoint) {
+                game.checkExtractionPoint();
+            }
+        } else {
+            // Log once per 5 seconds when extraction is not enabled
+            if (!this._lastExtractionNotEnabledLog || Date.now() - this._lastExtractionNotEnabledLog > 5000) {
+                if (this.logger) {
+                    this.logger.trace(`⏳ Extraction not yet enabled - waiting for objectives completion`);
+                }
+                this._lastExtractionNotEnabledLog = Date.now();
+            }
+        }
+
+        // Also check quest completion and survival timers
+        if (game && game.checkQuestCompletion) {
+            game.checkQuestCompletion();
+        }
+
+        if (game && game.updateSurvivalTimers && game.lastUpdateTime) {
+            const deltaTime = (Date.now() - game.lastUpdateTime) / 1000;
+            game.updateSurvivalTimers(deltaTime);
+            game.lastUpdateTime = Date.now();
+        } else if (game) {
+            game.lastUpdateTime = Date.now();
         }
     }
 
@@ -774,6 +864,12 @@ class GameFacade {
         // Access legacy game for transition period
         const game = this.legacyGame;
         if (!game) return;
+
+        // Log update call periodically to debug extraction issue
+        if (!this._lastUpdateLog || Date.now() - this._lastUpdateLog > 5000) {
+            if (this.logger) this.logger.debug('🔄 GameFacade.update() running...');
+            this._lastUpdateLog = Date.now();
+        }
 
         // Update visual effects FIRST (including freeze timers)
         if (game.updateVisualEffects) {
@@ -1252,7 +1348,18 @@ class GameFacade {
 
                                 // Track enemy elimination for mission objectives
                                 if (game.onEnemyEliminated) {
+                                    if (this.logger) this.logger.info('🎯 Calling onEnemyEliminated...');
                                     game.onEnemyEliminated(enemy);
+                                } else {
+                                    if (this.logger) this.logger.error('❌ CRITICAL: onEnemyEliminated NOT FOUND on game!');
+
+                                    // FALLBACK: Track directly through MissionService
+                                    if (this.gameServices && this.gameServices.missionService) {
+                                        if (this.logger) this.logger.warn('🔧 Using fallback: Tracking elimination directly through MissionService');
+                                        this.gameServices.missionService.trackEvent('eliminate', {
+                                            type: enemy.type || 'unknown'
+                                        });
+                                    }
                                 }
 
                                 // Grant XP for kills!
@@ -1335,7 +1442,15 @@ class GameFacade {
             game.updateCooldownDisplay();
         }
 
-        game.checkMissionStatus();
+        // Call the comprehensive mission update that handles objectives AND extraction
+        if (game.updateMissionObjectives) {
+            game.updateMissionObjectives();
+        } else {
+            // Fallback to simple status check if new system not available
+            if (game.checkMissionStatus) {
+                game.checkMissionStatus();
+            }
+        }
     }
 
     // ============================================

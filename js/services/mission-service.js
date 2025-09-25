@@ -237,8 +237,8 @@ class MissionService {
             }
         }
 
-        // Check win/lose conditions
-        this.checkMissionStatus();
+        // Note: checkMissionStatus is called from game's updateMissionObjectives
+        // We don't call it here since it needs the game instance
     }
 
     /**
@@ -489,6 +489,14 @@ class MissionService {
         objective.progress = objective.maxProgress;
         this.completedObjectives.add(objectiveId);
 
+        if (this.logger) {
+            this.logger.info(`📋 Objective marked complete: ${objective.description}`);
+            this.logger.debug(`  Status: ${objective.status}, Required: ${objective.required !== false}`);
+        }
+
+        // Immediately check if this enables extraction
+        this.checkExtractionEligibility();
+
         // Apply rewards if any
         if (objective.rewards && this.resourceService) {
             this.resourceService.applyMissionRewards(objective.rewards);
@@ -547,10 +555,21 @@ class MissionService {
         if (this.extractionEnabled) return;
 
         // Check if all required objectives are complete
-        const requiredObjectives = this.objectives.filter(o => o.required);
-        const completedRequired = requiredObjectives.every(o => o.status === 'completed');
+        const requiredObjectives = this.objectives.filter(o => o.required !== false); // Treat undefined as required
+        const completedRequired = requiredObjectives.every(o => o.status === 'completed' || o.completed === true);
 
-        if (completedRequired) {
+        // Debug logging for objective completion
+        if (!this._lastCompletionState && completedRequired) {
+            if (this.logger) {
+                this.logger.info(`✅ All required objectives complete!`);
+                requiredObjectives.forEach(o => {
+                    this.logger.debug(`  - ${o.description}: ${o.status || (o.completed ? 'completed' : 'incomplete')}`);
+                });
+            }
+        }
+        this._lastCompletionState = completedRequired;
+
+        if (completedRequired && !this.extractionEnabled) {
             this.enableExtraction();
         }
     }
@@ -566,6 +585,16 @@ class MissionService {
 
         this.extractionEnabled = true;
         this.extractionTimer = 0;
+
+        // SINGLE SOURCE OF TRUTH: Only set on MissionService
+        // GameFacade will read from here via getter
+        // Legacy game still needs to be set for backward compatibility
+        if (window.game && window.game.extractionEnabled !== undefined) {
+            window.game.extractionEnabled = true;
+            if (this.logger) {
+                this.logger.info('🔄 Set legacy game.extractionEnabled = true for backward compatibility');
+            }
+        }
 
         // Log detailed extraction enablement
         if (this.logger) {
@@ -1353,13 +1382,18 @@ class MissionService {
                 closestAgent = agent;
             }
 
+            // Log detailed position for very close agents
+            if (dist < 5) {
+                if (this.logger) this.logger.info(`📍 Agent ${agent.name} at (${agent.x.toFixed(1)}, ${agent.y.toFixed(1)}) - dist to extraction (${extractionX}, ${extractionY}): ${dist.toFixed(2)}`);
+            }
+
             // Log all agents within reasonable distance
             if (dist < 10) {
                 agentsNearExtraction.push({name: agent.name, dist: dist.toFixed(2)});
             }
 
-            // Check if within extraction radius
-            const withinRadius = dist < 2;
+            // Check if within extraction radius - increase radius to 3 for better detection
+            const withinRadius = dist < 3;
             if (withinRadius && this.logger) {
                 this.logger.info(`🎉 Agent ${agent.name} IS AT EXTRACTION! Distance: ${dist.toFixed(2)}`);
             }
@@ -1370,9 +1404,10 @@ class MissionService {
         // Log closest agent periodically (every second)
         if (!this._lastClosestLog || Date.now() - this._lastClosestLog > 1000) {
             if (closestAgent && this.logger) {
-                this.logger.debug(`📍 Closest to extraction: ${closestAgent.name} at (${closestAgent.x.toFixed(1)}, ${closestAgent.y.toFixed(1)}) - Distance: ${closestDist.toFixed(2)} units`);
+                // Always log at INFO level to make sure we see it
+                this.logger.info(`📍 Closest to extraction: ${closestAgent.name} at (${closestAgent.x.toFixed(1)}, ${closestAgent.y.toFixed(1)}) - Distance: ${closestDist.toFixed(2)} units from (${extractionX}, ${extractionY})`);
                 if (agentsNearExtraction.length > 0) {
-                    this.logger.debug(`👥 Agents near extraction (<10 units): ${agentsNearExtraction.map(a => `${a.name}(${a.dist})`).join(', ')}`);
+                    this.logger.info(`👥 Agents near extraction (<10 units): ${agentsNearExtraction.map(a => `${a.name}(${a.dist})`).join(', ')}`);
                 }
             }
             this._lastClosestLog = Date.now();

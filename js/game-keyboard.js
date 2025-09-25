@@ -226,7 +226,19 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
 
         // Speed Control
         'Z': () => this.cycleGameSpeed(),
-        'z': () => this.cycleGameSpeed()
+        'z': () => this.cycleGameSpeed(),
+
+        // DEBUG: Force enable extraction for testing
+        '0': () => {
+            if (this.currentScreen === 'game') {
+                if (this.logger) this.logger.info('🔧 DEBUG: Force-enabling extraction point for testing');
+                this.extractionEnabled = true;
+                if (this.gameServices && this.gameServices.missionService) {
+                    this.gameServices.missionService.extractionEnabled = true;
+                }
+                this.addNotification('DEBUG: Extraction enabled!');
+            }
+        }
     };
 
     // Movement keys for 3D mode (handled separately)
