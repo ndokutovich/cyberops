@@ -50,7 +50,8 @@
       "Bash(findstr:*)",
       "Bash(start test-mission-fix.html)",
       "Bash(start test-direct.html)",
-      "Read(//w/**)"
+      "Read(//w/**)",
+      "Bash(npm test)"
     ],
     "deny": [],
     "ask": []

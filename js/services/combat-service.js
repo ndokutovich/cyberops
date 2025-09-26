@@ -705,3 +705,8 @@ class CombatService {
 if (typeof window !== 'undefined') {
     window.CombatService = CombatService;
 }
+
+// Export for Node.js
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = CombatService;
+}

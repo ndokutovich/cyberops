@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberOps Game - Test Runner</title>
+    <title>CyberOps Game - Test Runner (Browser + Console Tests)</title>
     <style>
         body {
             font-family: 'Courier New', monospace;
@@ -196,6 +196,7 @@
 
     <div id="controls">
         <button id="btn-run-all">🚀 RUN ALL TESTS</button>
+        <button id="btn-run-universal" style="background: #002200;">🌐 UNIVERSAL TESTS</button>
         <button id="btn-run-dialogs">💬 TEST DIALOGS</button>
         <button id="btn-run-state">🔄 TEST STATE MACHINE</button>
         <button id="btn-run-audit">🔍 AUDIT STATES</button>
@@ -346,6 +347,11 @@
     <!-- Don't include game-init.js - we'll initialize manually for testing -->
 
     <!-- Test framework and suites -->
+    <!-- Universal Test Framework and Loader -->
+    <script src="tests/universal-test-framework.js"></script>
+    <script src="tests/test-loader.js"></script>
+
+    <!-- Legacy test framework for backward compatibility -->
     <script src="js/test-framework.js"></script>
     <script src="tests/diagnostic-test.js"></script>
     <script src="tests/simple-test-suite.js"></script>
@@ -790,8 +796,41 @@
             a.click();
         }
 
+        // Run universal tests
+        async function runUniversalTests() {
+            clearOutput();
+            logToOutput('🌐 Running Universal Tests (Console-Compatible)...', 'log-suite');
+            logToOutput('='.repeat(60), 'log-test');
+
+            if (!window.UniversalTestFramework) {
+                logToOutput('❌ Universal Test Framework not loaded!', 'log-error');
+                return;
+            }
+
+            // Run tests through universal framework
+            const results = await window.UniversalTestFramework.run({
+                verbose: document.getElementById('verbose-mode').checked
+            });
+
+            // Show results
+            logToOutput('\n' + '='.repeat(60), 'log-test');
+            logToOutput(`Test Results: ${results.passed}/${results.total} passed`,
+                       results.failed > 0 ? 'log-error' : 'log-pass');
+            logToOutput(`Time: ${results.time}ms`, 'log-test');
+
+            if (results.failed > 0) {
+                logToOutput('\nFailed Tests:', 'log-error');
+                results.results.filter(r => r.status === 'failed').forEach(r => {
+                    logToOutput(`  • ${r.suite} > ${r.test}: ${r.error}`, 'log-fail');
+                });
+            }
+
+            showSummary();
+        }
+
         // Event listeners
         document.getElementById('btn-run-all').addEventListener('click', runAllTests);
+        document.getElementById('btn-run-universal').addEventListener('click', runUniversalTests);
         document.getElementById('btn-run-dialogs').addEventListener('click', runDialogTests);
         document.getElementById('btn-run-state').addEventListener('click', runStateMachineTests);
         document.getElementById('btn-run-audit').addEventListener('click', runAuditTests);

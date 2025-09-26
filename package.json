@@ -1,0 +1,44 @@
+{
+  "name": "cyberops-game",
+  "version": "1.0.0",
+  "description": "CyberOps: Syndicate - A browser-based cyberpunk tactical game",
+  "main": "index.html",
+  "scripts": {
+    "test": "node tests/console-runner.js",
+    "test:watch": "node tests/console-runner.js --watch",
+    "test:verbose": "node tests/console-runner.js --verbose",
+    "test:services": "node tests/console-runner.js services",
+    "test:browser": "echo 'Open test-runner.html in your browser'",
+    "serve": "python -m http.server 8000 || python3 -m http.server 8000",
+    "start": "npm run serve"
+  },
+  "keywords": [
+    "game",
+    "cyberpunk",
+    "tactical",
+    "browser",
+    "html5",
+    "canvas",
+    "threejs"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": "",
+  "notes": {
+    "testing": "This project uses a dual-mode testing system:",
+    "console": "Run 'npm test' for console tests (no browser needed)",
+    "browser": "Open test-runner.html in browser for GUI tests",
+    "universal": "Tests ending with .test.js work in both environments"
+  }
+}
