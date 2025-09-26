@@ -779,18 +779,54 @@ CyberOpsGame.prototype.findAgentForRPG = function(agentId) {
 
 // Stat allocation dialog
 CyberOpsGame.prototype.showStatAllocation = function(agentId) {
+    const logger = window.Logger ? new window.Logger('RPG-UI') : null;
+    if (logger) logger.debug('showStatAllocation called with agentId:', agentId);
+
     const agent = this.findAgentForRPG(agentId);
+    if (logger) logger.debug('Found agent:', agent ? agent.name : 'null');
+
+    // Debug: Log the full agent object structure
+    if (logger && agent) {
+        logger.debug('Agent details:', {
+            id: agent.id,
+            name: agent.name,
+            hasRpgEntity: !!agent.rpgEntity,
+            rpgEntity: agent.rpgEntity
+        });
+    }
 
     if (!agent || !agent.rpgEntity) {
-        console.error('Cannot find agent or RPG entity for stat allocation:', agentId);
+        if (logger) logger.error('Cannot find agent or RPG entity for stat allocation:', agentId);
         return;
     }
 
     const rpg = agent.rpgEntity;
-    if (rpg.unspentStatPoints <= 0) return;
+    if (logger) logger.debug('RPG Entity details:', {
+        level: rpg.level,
+        unspentStatPoints: rpg.unspentStatPoints,
+        stats: rpg.stats
+    });
+
+    if (logger) logger.debug('Unspent stat points:', rpg.unspentStatPoints);
+
+    if (rpg.unspentStatPoints <= 0) {
+        if (logger) logger.warn('No unspent stat points available');
+        return;
+    }
+
+    if (logger) logger.info('✅ Creating stat allocation dialog with', rpg.unspentStatPoints, 'points');
+
+    // Remove any existing stat allocation dialog
+    const existingDialog = document.querySelector('.stat-allocation');
+    if (existingDialog) {
+        existingDialog.remove();
+    }
 
     const dialog = document.createElement('div');
-    dialog.className = 'hud-dialog stat-allocation';
+    // Don't use hud-dialog class as it has display:none by default
+    dialog.className = 'stat-allocation';
+    // Ensure high z-index to appear above other dialogs
+    dialog.style.zIndex = '30000';
     dialog.innerHTML = `
         <div class="dialog-header">
             <h2>Allocate Stat Points</h2>
@@ -820,7 +856,19 @@ CyberOpsGame.prototype.showStatAllocation = function(agentId) {
     `;
 
     dialog.dataset.pendingChanges = '{}';
+
+    if (logger) logger.info('📊 Adding stat allocation dialog to DOM');
     document.body.appendChild(dialog);
+
+    // Check if dialog was actually added
+    const addedDialog = document.querySelector('.stat-allocation');
+    if (logger) {
+        if (addedDialog) {
+            logger.info('✅ Stat allocation dialog successfully added to DOM');
+        } else {
+            logger.error('❌ Failed to add stat allocation dialog to DOM');
+        }
+    }
 };
 
 // Handle stat allocation
@@ -866,7 +914,15 @@ CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
     // Apply changes
     Object.entries(pending).forEach(([stat, points]) => {
         if (points > 0) {
-            agent.rpgEntity.stats[stat] += points;
+            // Get current stat value (handle object or number format)
+            let currentValue = agent.rpgEntity.stats[stat];
+            if (typeof currentValue === 'object' && currentValue !== null) {
+                currentValue = currentValue.value || currentValue.base || 0;
+            }
+            // Ensure it's a number and add points
+            currentValue = (typeof currentValue === 'number' ? currentValue : 0) + points;
+            // Store as simple number
+            agent.rpgEntity.stats[stat] = currentValue;
         }
     });
 

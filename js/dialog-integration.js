@@ -59,8 +59,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 // Get weapon info if needed
                 let weaponInfo = '';
                 if (showWeapon) {
-                    // Use originalId for loadout lookup in missions, regular id otherwise
-                    const loadoutId = agent.originalId || agent.id;
+                    // Use agent ID directly - unified ID system
+                    const loadoutId = agent.id;
                     const loadout = game.agentLoadouts?.[loadoutId] || {};
                     const weaponName = loadout.weapon && game.getItemById ? game.getItemById('weapon', loadout.weapon)?.name : 'None';
                     weaponInfo = `
@@ -418,6 +418,19 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Character Sheet - RPG system
     engine.registerGenerator('generateCharacterSheet', function() {
+        // In mission context, filter to only mission agents
+        if (this.currentScreen === 'game' && window.GameServices?.agentService) {
+            const serviceAgents = window.GameServices.agentService.getActiveAgents();
+            if (serviceAgents && serviceAgents.length > 0 && this.agents) {
+                // Filter to only the agents in the current mission
+                this.activeAgents = serviceAgents.filter(sa =>
+                    this.agents.some(a => a.id === sa.id || a.name === sa.name)
+                );
+                const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+                if (logger) logger.debug('📊 Character sheet using mission agents only:', this.activeAgents.length);
+            }
+        }
+
         let html = '<div class="character-sheet-content" style="display: grid; grid-template-columns: 250px 1fr; gap: 20px; height: 100%;">';
 
         // Left Panel - Agent Roster
@@ -475,8 +488,16 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         if (rpg.stats) {
             Object.entries(rpg.stats).forEach(([stat, value]) => {
-                let statValue = typeof value === 'object' ?
-                    (value.value || value.base || value.baseValue || 10) : value;
+                // Handle both object and number formats
+                let statValue;
+                if (typeof value === 'object' && value !== null) {
+                    statValue = value.value || value.base || value.baseValue || 10;
+                } else {
+                    statValue = value || 0;
+                }
+
+                // Ensure it's a number
+                statValue = typeof statValue === 'number' ? statValue : 10;
 
                 html += `
                     <div style="display: flex; justify-content: space-between; margin: 5px 0;">
@@ -488,10 +509,22 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         }
 
         if (rpg.unspentStatPoints > 0) {
+            const agentIdForAllocation = agent.id || agent.name;
+            const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+            if (logger) logger.debug('Creating Allocate Points button for agent:', agentIdForAllocation);
+
             html += `
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);">
                     <div style="color: #00ff00; margin-bottom: 10px;">${rpg.unspentStatPoints} stat points available</div>
-                    <button class="dialog-button" onclick="game.showStatAllocation('${agent.id || agent.originalId || agent.name}')">
+                    <button class="dialog-button" onclick="(function() {
+                        const logger = window.Logger ? new window.Logger('AllocateButton') : null;
+                        if (logger) logger.debug('Allocate button clicked for:', '${agentIdForAllocation}');
+                        if (window.game && window.game.showStatAllocation) {
+                            window.game.showStatAllocation('${agentIdForAllocation}');
+                        } else {
+                            if (logger) logger.error('game.showStatAllocation not available');
+                        }
+                    })()">
                         Allocate Points
                     </button>
                 </div>
@@ -661,7 +694,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 // Filter to only the agents in the current mission
                 this.activeAgents = this.agents ?
                     serviceAgents.filter(sa => this.agents.some(a =>
-                        a.id === sa.id || a.originalId === sa.originalId || a.name === sa.name
+                        a.id === sa.id || a.name === sa.name
                     )) : serviceAgents;
                 const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
                 if (logger) logger.debug('📦 Using AgentService agents:', this.activeAgents.length);
@@ -673,8 +706,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         if (!this.selectedEquipmentAgent && this.activeAgents && this.activeAgents.length > 0) {
             // In game mode, try to use the currently selected agent
             if (this.currentScreen === 'game' && this._selectedAgent) {
-                // In missions, use the agent's current ID (e.g., agent_0), not originalId
-                this.selectedEquipmentAgent = this._selectedAgent.id || this._selectedAgent.originalId || this._selectedAgent.name;
+                // Use the agent's ID directly - unified ID system
+                this.selectedEquipmentAgent = this._selectedAgent.id || this._selectedAgent.name;
             } else {
                 this.selectedEquipmentAgent = this.activeAgents[0].id;
             }
@@ -716,11 +749,10 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 this.logger.debug('All loadouts:', Object.keys(this.agentLoadouts || {}));
             }
             const agent = this.activeAgents.find(a =>
-                String(a.id) === String(this.selectedEquipmentAgent) ||
-                String(a.originalId) === String(this.selectedEquipmentAgent)
+                String(a.id) === String(this.selectedEquipmentAgent)
             );
-            // For loadouts, use originalId in missions, regular id otherwise
-            const loadoutId = agent ? (agent.originalId || agent.id) : this.selectedEquipmentAgent;
+            // Use agent ID directly - unified ID system
+            const loadoutId = agent ? agent.id : this.selectedEquipmentAgent;
             const loadout = this.agentLoadouts[loadoutId] || {};
 
             if (agent) {
@@ -2336,8 +2368,6 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         if (game.currentScreen === 'game' && game.agents) {
             // Try to find the mission agent using various ID formats
             const missionAgent = game.agents.find(a =>
-                a.originalId === agentId ||
-                a.originalId === agent?.name ||
                 a.name === agentId ||
                 String(a.id) === String(agentId)
             );

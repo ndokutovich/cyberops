@@ -594,31 +594,23 @@ CyberOpsGame.prototype.initMission = function() {
                 specialization: agent.specialization
             });
 
-            // Store original ID for loadout lookup
-            const originalId = agent.id || agent.name;
-
+            // Keep original ID - no transformation needed!
             if (this.logger) {
-                this.logger.debug(`🔄 Agent ID transformation for ${agent.name}:`, {
-                    originalId: originalId,
-                    newId: 'agent_' + idx,
-                    name: agent.name
-                });
+                this.logger.debug(`✅ Keeping original agent ID for ${agent.name}: ${agent.id}`);
             }
 
             // Add mission-specific properties
-            agent.id = 'agent_' + idx;
-            agent.originalId = originalId; // Preserve for loadout lookup
             agent.type = 'agent'; // Add type for combat logging
             // IMPORTANT: Preserve the agent name!
-            if (!agent.name && originalId) {
-                agent.name = originalId;
+            if (!agent.name && agent.id) {
+                agent.name = agent.id;
             }
 
-            // Re-index agent in AgentService with new mission ID
+            // Re-index agent in AgentService with original ID
             if (window.GameServices && window.GameServices.agentService) {
                 window.GameServices.agentService.indexAgent(agent);
                 if (this.logger) {
-                    this.logger.debug(`📇 Re-indexed agent in AgentService with mission ID: ${agent.id}, originalId: ${agent.originalId}`);
+                    this.logger.debug(`📇 Re-indexed agent in AgentService with ID: ${agent.id}`);
                 }
             }
             agent.x = spawn.x + idx % 2;
@@ -627,7 +619,7 @@ CyberOpsGame.prototype.initMission = function() {
             agent.targetY = spawn.y + Math.floor(idx / 2);
             if (this.logger) {
                 this.logger.debug(`🎯 Agent ${idx+1} (${agent.name}) placed at (${agent.x}, ${agent.y})`);
-                this.logger.debug(`   Original ID: ${originalId}, Mission ID: ${agent.id}`);
+                this.logger.debug(`   Agent ID: ${agent.id}`);
             }
             agent.selected = idx === 0;
             agent.alive = true;
@@ -649,7 +641,7 @@ CyberOpsGame.prototype.initMission = function() {
             // Initialize RPG entity for agent if not already present
             // IMPORTANT: Check if this agent already has a persistent RPG entity
             const persistentAgent = this.activeAgents?.find(a =>
-                a.name === agent.name || a.originalId === agent.originalId
+                a.name === agent.name || a.id === agent.id
             );
 
             if (persistentAgent?.rpgEntity) {

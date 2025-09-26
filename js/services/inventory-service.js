@@ -185,56 +185,36 @@ class InventoryService {
             if (this.logger) this.logger.info(`🔫 Weapon picked up: ${weaponEntry.name} (Owned: ${weaponEntry.owned})`);
 
             // Auto-equip ONLY if agent has no weapon equipped
-            // Try multiple ID formats since agent IDs can vary between hub and mission
-            // In mission: agent.originalId = numeric (1,2,3,4), agent.id = "agent_0", etc
-            const possibleIds = [
-                agent.originalId,
-                String(agent.originalId),  // Try as string too
-                agent.id,
-                agent.name
-            ].filter(id => id != null);
+            // Use unified ID system - no more dual IDs
+            const agentId = agent.id;
 
             // Debug: log what ID we're using
             if (this.logger) {
-                this.logger.debug(`🔍 Agent ID resolution for ${agent.name}:`, {
-                    originalId: agent.originalId,
-                    id: agent.id,
-                    name: agent.name,
-                    possibleIds: possibleIds,
+                this.logger.debug(`🔍 Agent ID for ${agent.name}: ${agentId}`, {
                     availableLoadouts: Object.keys(this.agentLoadouts)
                 });
             }
 
-            // Try each possible ID to find the loadout
-            let currentLoadout = null;
-            let loadoutId = null;
-            for (const id of possibleIds) {
-                if (this.agentLoadouts[id]) {
-                    currentLoadout = this.agentLoadouts[id];
-                    loadoutId = id;
-                    if (this.logger) this.logger.debug(`✅ Found loadout using ID: ${id}`);
-                    break;
-                }
-            }
+            // Get loadout directly with unified ID
+            const currentLoadout = this.agentLoadouts[agentId];
 
             if (!currentLoadout || !currentLoadout.weapon) {
-                // If no loadout found at all, use the first possible ID (preferably originalId)
-                if (!loadoutId) {
-                    loadoutId = possibleIds[0] || agent.id;
-                    if (this.logger) this.logger.debug(`📝 Creating new loadout with ID: ${loadoutId}`);
+                // Create loadout if doesn't exist
+                if (!currentLoadout) {
+                    if (this.logger) this.logger.debug(`📝 Creating new loadout with ID: ${agentId}`);
                 }
 
                 // Ensure loadout exists
-                if (!this.agentLoadouts[loadoutId]) {
-                    this.agentLoadouts[loadoutId] = {
+                if (!this.agentLoadouts[agentId]) {
+                    this.agentLoadouts[agentId] = {
                         weapon: null,
                         armor: null,
                         utility: null
                     };
                 }
 
-                // Equip using the loadout ID (hub ID)
-                this.equipItem(loadoutId, 'weapon', item.weapon);
+                // Equip using the agent ID
+                this.equipItem(agentId, 'weapon', item.weapon);
 
                 // Apply weapon to agent immediately
                 agent.weapon = {

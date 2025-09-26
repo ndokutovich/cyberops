@@ -510,7 +510,7 @@ class GameFacade {
         const availableAgents = this.services.agentService.getAvailableAgents();
         this.agents = availableAgents.slice(0, 4).map((agent, index) => ({
             ...agent,
-            id: `agent_${index}`,
+            // Keep original ID - no transformation!
             x: 0,
             y: 0,
             alive: true,
