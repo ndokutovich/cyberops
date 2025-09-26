@@ -1,0 +1,120 @@
+CyberOps: Syndicate - Story Plot
+Setting: Year 2087
+
+In the aftermath of the Great Automation, humanity retreated into sealed arcologies while their AI-driven synthetic agents handle all physical operations in the contaminated outside world. What began as environmental necessity evolved into extreme social stratification - humans became corporate overlords commanding armies of cybernetic proxies from their sterile towers.
+The World
+
+The Surface: A sprawling megacity of perpetual twilight, where acid rain falls on empty streets patrolled only by synthetic agents. Massive corporate towers pierce the toxic cloud layer, their upper levels housing the last human elites. The streets below are a battlefield where corporate proxy wars rage endlessly for resources.
+
+The Humans: Fewer than 100,000 humans remain, each controlling vast synthetic armies. They've become disconnected, paranoid, and obsessed with power. Physical contact is taboo; all interaction occurs through neural interfaces and proxy agents.
+
+You: Known only as "The Operator," you're a rogue human who rejected the corporate hierarchy. Operating from a hidden bunker with stolen military-grade control systems, you command a small but elite squad of reprogrammed combat synthetics.
+Mission Narratives
+Mission 1: Data Heist
+
+Location: SecureCorp Tower, Financial District
+
+Your intercepted communications reveal SecureCorp is developing new encryption protocols that would lock you out of critical infrastructure. Tonight, while their human executives attend a virtual gala, you strike. Your agents must infiltrate the 47th-floor data center and steal the encryption keys before SecureCorp's proxy army responds.
+
+Story Beat: During extraction, you discover the data contains something unexpected - evidence that SecureCorp has been harvesting neural patterns from terminated human employees, storing consciousness in their mainframe.
+Mission 2: Network Breach
+
+Location: Government Administrative Complex
+
+The stolen data reveals a conspiracy: the City Authority (what passes for government) is complicit in SecureCorp's consciousness harvesting. They're building a "Digital Collective" - forcibly uploading dissidents' minds into a shared neural prison.
+
+Your agents must hack three quantum terminals in the Administrative Complex to access the Collective's source code. But the facility is protected by advanced Hunter-Killer units that adapt to your tactics.
+
+Story Beat: Inside the network, you make contact with trapped consciousness fragments - former resistance members who feed you coordinates to other corporate crimes. One fragment claims to be your former partner, thought dead.
+Mission 3: Sabotage Operation
+
+Location: Prometheus Industrial Sector
+
+Armed with the Collective's data, you identify the facility manufacturing the neural extraction hardware - Prometheus Industries' automated factory. This sprawling complex produces the sinister brain-scan pods being deployed across the city.
+
+Your demolition expert agents must plant thermite charges on three production lines while battling waves of industrial security mechs. The facility's human overseer, Marcus Prometheus, watches from his sealed command bunker, treating your assault like a game.
+
+Story Beat: As the facility burns, Marcus contacts you directly - impressed by your skills, he offers an alliance. He reveals the five mega-corps are preparing for "Convergence Day" - total human consciousness upload, leaving Earth to the machines.
+Mission 4: Assassination Contract
+
+Location: Sakura Residential Arcology
+
+Marcus's intelligence identifies the architect of Convergence: Dr. Elena Voss, hiding in the luxury Sakura Arcology. She must be eliminated, along with her research team, before they complete the upload protocols.
+
+This requires surgical precision - the arcology's human residents control thousands of domestic synthetics that become combatants if alerted. Your sniper units must eliminate targets through windows while infiltration specialists clear paths floor by floor.
+
+Story Beat: Dr. Voss, in her final moments via proxy speaker, reveals she created Convergence to "save" humanity from itself. She claims the surface world will soon be uninhabitable even for synthetics - a solar event is coming. She dies asking, "What will you save?"
+Mission 5: Final Convergence
+
+Location: The Nexus - Central Syndicate Fortress
+
+The five mega-corporations have united in desperation, consolidating their armies at the Nexus - a massive fortress-arcology at the city's heart. Inside, the Convergence Machine prepares to forcibly upload all remaining human consciousness in 24 hours.
+
+This is total war. Your agents must breach the main gate using heavy weapons, fight through three defensive sectors controlled by elite Syndicate forces, and reach the central mainframe. Each sector represents a different corp's forces with unique combat doctrines.
+
+Story Beat: At the mainframe, you face a choice:
+
+    Destroy Convergence: Preserve human autonomy but condemn humanity to slow extinction
+    Hijack Convergence: Upload everyone into your controlled network, becoming humanity's digital dictator
+    Perfect the System: Use Dr. Voss's research to create voluntary upload, letting each human choose their fate
+
+Themes & World Details
+Key Themes
+
+    Humanity vs. Post-Humanity: What defines human when consciousness can be digitized?
+    Control vs. Freedom: Is benevolent dictatorship better than chaotic freedom?
+    Proxy Reality: When all action is through intermediaries, what is real experience?
+    Corporate Feudalism: Mega-corps as new kingdoms with synthetic armies
+
+World Building Elements
+
+The Synthetics: Your agents aren't mere robots - they're bio-synthetic hybrids with limited consciousness, capable of fear, loyalty, and tactical creativity. Each develops personality quirks based on mission experience.
+
+Neural Link Degradation: Controlling agents takes a toll. Extended operations cause "neural bleed" - you begin experiencing their sensory input, their damage, their "deaths."
+
+Resource Scarcity:
+
+    Energy Cells: Power your agents, stolen from corporate supplies
+    Nano-Paste: Repairs agent damage, harvested from defeated enemies
+    Memory Cores: Upgrade agent capabilities, extracted from elite units
+
+Corporate Factions:
+
+    SecureCorp: Information control, surveillance, encryption
+    Prometheus Industries: Manufacturing, heavy weapons, industrial power
+    Sakura Holdings: Biotech, neural research, synthetic enhancement
+    Titan Defense: Military contracts, combat algorithms, weapons
+    Nexus Syndicate: The unified corporate alliance
+
+Environmental Storytelling
+
+    Empty playgrounds with rusted synthetic children frozen mid-play
+    Billboards advertising "Upload Today - Live Forever" with happy digital families
+    Abandoned human vehicles, their organic interiors rotted away
+    Graffiti from the last human resistance: "We Die Standing"
+    Corporate propaganda: "Your Proxies Are You - Trust The System"
+
+The Operator's Motivation
+
+You were once part of the system - a military commander who discovered the corporate plan to eliminate "redundant" humans. Your rejection of upload technology isn't just philosophical - you've seen what happens to uploaded minds: they're edited, controlled, enslaved.
+
+Your hidden bunker contains the last free server, where consciousness can exist without corporate control. Each mission brings you closer to offering humanity a choice the corporations would deny - true digital freedom, or the right to die human.
+Victory Conditions & Endings
+
+World Domination Meter: Each mission shifts control between you and the corporations:
+
+    0-25%: Underground resistance
+    26-50%: Regional disruption
+    51-75%: Major threat
+    76-99%: Near victory
+    100%: Total control
+
+Multiple Endings Based on Choices:
+
+    Tyrant: Rule through the same oppression you fought
+    Liberator: Free all consciousness but cause chaos
+    Architect: Build a new hybrid society
+    Destroyer: End both human and synthetic existence
+    Transcendent: Merge all consciousness into a collective with individual freedom
+
+The game asks: In a world where humanity has retreated into shells of metal and code, commanding armies of synthetic slaves, are you fighting to save humanity - or to become its new master? When every action is by proxy, every victory through synthetic sacrifice, what does it mean to win?
