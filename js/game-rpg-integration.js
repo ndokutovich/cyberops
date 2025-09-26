@@ -176,6 +176,48 @@ class RPGManager {
         return rpgEnemy;
     }
 
+    // Learn a skill for an entity (unidirectional flow)
+    learnSkill(entityId, skillId) {
+        const entity = this.entities.get(entityId);
+        if (!entity) {
+            if (this.logger) this.logger.error(`Entity not found: ${entityId}`);
+            return false;
+        }
+
+        // Check if entity has unspent skill points
+        if (!entity.unspentSkillPoints || entity.unspentSkillPoints <= 0) {
+            if (this.logger) this.logger.warn(`No skill points available for ${entityId}`);
+            return false;
+        }
+
+        // Get skill config
+        const skillConfig = this.config?.skills?.[skillId];
+        if (!skillConfig) {
+            if (this.logger) this.logger.error(`Skill not found: ${skillId}`);
+            return false;
+        }
+
+        // Check current level
+        const currentLevel = entity.skills?.[skillId] || 0;
+        const maxLevel = skillConfig.maxLevel || 5;
+
+        if (currentLevel >= maxLevel) {
+            if (this.logger) this.logger.warn(`Skill ${skillId} already at max level`);
+            return false;
+        }
+
+        // Learn the skill (modify entity managed by RPGManager)
+        if (!entity.skills) entity.skills = {};
+        entity.skills[skillId] = currentLevel + 1;
+        entity.unspentSkillPoints--;
+
+        if (this.logger) {
+            this.logger.info(`✨ ${entityId} learned ${skillConfig.name} (Level ${entity.skills[skillId]})`);
+        }
+
+        return true;
+    }
+
     createRPGNPC(baseNPC) {
         const rpgNPC = new RPGNPC({
             ...baseNPC,

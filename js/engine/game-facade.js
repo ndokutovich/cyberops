@@ -562,6 +562,7 @@ class GameFacade {
 
         // Reset mission state
         this.currentMission = mission;
+        this.missionFailed = false;  // Reset mission failure flag
         // extractionEnabled is now computed from MissionService
         this.projectiles = [];
         this.items = [];
@@ -997,6 +998,34 @@ class GameFacade {
      */
     checkMissionCompletion() {
         const game = this.legacyGame;
+
+        // CRITICAL: Check for mission failure - all agents dead
+        if (this.agents && this.agents.length > 0) {
+            const aliveAgents = this.agents.filter(a => a.alive).length;
+            if (aliveAgents === 0) {
+                // All agents are dead - mission failed!
+                if (!this.missionFailed) {
+                    this.missionFailed = true;
+                    if (this.logger) this.logger.info('☠️ MISSION FAILED - All agents eliminated');
+
+                    // Switch to defeat screen
+                    if (game && game.currentScreen === 'game') {
+                        game.currentScreen = 'defeat';
+
+                        // Log the defeat event
+                        if (game.logEvent) {
+                            game.logEvent('MISSION FAILED - All operatives lost', 'death', true);
+                        }
+
+                        // Play defeat music if available
+                        if (game.playMusic) {
+                            game.playMusic('defeat');
+                        }
+                    }
+                }
+                return; // Don't check for victory if mission failed
+            }
+        }
 
         // Add a log to verify this is being called
         if (!this._lastMissionCheckLog || Date.now() - this._lastMissionCheckLog > 5000) {

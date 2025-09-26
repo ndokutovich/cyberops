@@ -247,6 +247,35 @@ const DIALOG_CONFIG = {
             }
         },
 
+        // ========== SKILL TREE (Level 2 - Child of Character) ==========
+        'skill-tree': {
+            type: 'dialog',
+            level: 2,
+            parent: 'character',
+            title: '🎯 SKILL TREE',
+            layout: 'large-layout',
+            content: {
+                type: 'dynamic',
+                generator: 'generateSkillTree'
+            },
+            buttons: {
+                type: 'static',
+                items: [
+                    { text: 'CLOSE', action: { type: 'back' } }
+                ]
+            },
+            transitions: {
+                enter: { animation: 'fade-in', sound: 'dialog-open' },
+                exit: { animation: 'fade-out', sound: 'dialog-close' }
+            },
+            styles: {
+                width: '700px',
+                maxWidth: '90vw',
+                height: '80vh',
+                maxHeight: '80vh'
+            }
+        },
+
         // ========== ARSENAL/EQUIPMENT (Level 1) ==========
         'arsenal': {
             type: 'dialog',

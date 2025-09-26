@@ -54,7 +54,11 @@
       "Bash(npm test)",
       "Bash(start test-allocate-points.html)",
       "Bash(npm run test:console:*)",
-      "Bash(start test-allocate-simple.html)"
+      "Bash(start test-allocate-simple.html)",
+      "Bash(for func in \"startMissionFromHub\" \"startResearch\" \"showSkillTree\" \"showPerkSelection\" \"allocateStatDeclarative\" \"resetSettings\" \"saveGameWithName\" \"loadSaveSlot\")",
+      "Bash(do echo \"=== $func ===\")",
+      "Bash(for action in \"continueFromVictory\" \"returnToHub\" \"startMissionWithLoadout\" \"skipSplash\" \"startNewCampaign\" \"loadLastSave\" \"performHack\" \"onHackComplete\" \"performReturnToHub\" \"confirmSave\" \"confirmLoad\" \"confirmDelete\" \"confirmSurrender\" \"proceedToNextMission\" \"completeCampaign\" \"returnToHubFromVictory\" \"retryMission\" \"returnToHubFromDefeat\")",
+      "Bash(do echo -n \"$action: \")"
     ],
     "deny": [],
     "ask": []

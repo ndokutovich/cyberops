@@ -2539,6 +2539,136 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
             game.confirmStatAllocation(agentId);
         }
     });
+
+    // Generate skill tree content
+    engine.registerGenerator('generateSkillTree', function() {
+        // 'this' is game, but we can access dialog engine via _dialogEngineContext
+        const dialogEngine = this._dialogEngineContext || this.dialogEngine;
+        if (this.logger) this.logger.debug(`🎯 generateSkillTree called, stateData:`, dialogEngine?.stateData);
+
+        const agentId = dialogEngine?.stateData?.agentId;
+        if (!agentId) {
+            if (this.logger) this.logger.error(`❌ No agentId in stateData:`, dialogEngine?.stateData);
+            return '<p style="color: #ff0000;">No agent selected</p>';
+        }
+
+        if (this.logger) this.logger.debug(`🎯 Looking for agent with ID: ${agentId}`);
+        const agent = this.findAgentForRPG(agentId);
+        if (!agent || !agent.rpgEntity) {
+            if (this.logger) this.logger.error(`❌ Agent not found or no RPG entity for ID: ${agentId}`);
+            return '<p style="color: #ff0000;">Agent not found or has no RPG entity</p>';
+        }
+
+        const rpg = agent.rpgEntity;
+        const rpgConfig = this.getRPGConfig ? this.getRPGConfig() : null;
+        if (!rpgConfig?.skills) {
+            return '<p style="color: #ff0000;">No skills configuration available</p>';
+        }
+
+        // Build skill tree HTML
+        let html = `
+            <div class="skill-tree-container" style="max-height: 500px; overflow-y: auto;">
+                <div style="margin-bottom: 20px; padding: 10px; background: rgba(0,255,0,0.1); border-radius: 5px;">
+                    <h3 style="color: #00ff00; margin: 0;">Agent: ${agent.name}</h3>
+                    <p style="color: #00ff00; margin: 5px 0;">Available Skill Points: ${rpg.unspentSkillPoints || 0}</p>
+                </div>
+        `;
+
+        // Group skills by category
+        const skillCategories = {
+            combat: [],
+            stealth: [],
+            tech: [],
+            support: []
+        };
+
+        // Categorize skills
+        Object.entries(rpgConfig.skills).forEach(([skillId, skill]) => {
+            if (skillId.includes('stealth') || skillId.includes('silent')) {
+                skillCategories.stealth.push({ id: skillId, ...skill });
+            } else if (skillId.includes('hack') || skillId.includes('tech') || skillId.includes('cyber')) {
+                skillCategories.tech.push({ id: skillId, ...skill });
+            } else if (skillId.includes('medic') || skillId.includes('heal') || skillId.includes('support')) {
+                skillCategories.support.push({ id: skillId, ...skill });
+            } else {
+                skillCategories.combat.push({ id: skillId, ...skill });
+            }
+        });
+
+        // Render each category
+        Object.entries(skillCategories).forEach(([category, skills]) => {
+            if (skills.length === 0) return;
+
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #ffaa00; text-transform: capitalize; margin-bottom: 10px;">
+                        ${category} Skills
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+            `;
+
+            skills.forEach(skill => {
+                const currentLevel = rpg.skills?.[skill.id] || 0;
+                const maxLevel = skill.maxLevel || 5;
+                const canLearn = rpg.unspentSkillPoints > 0 && currentLevel < maxLevel;
+
+                html += `
+                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px;
+                                border: 1px solid ${canLearn ? '#00ff00' : '#666'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h5 style="color: #00ffff; margin: 0;">${skill.name}</h5>
+                                <p style="color: #aaa; margin: 5px 0; font-size: 0.9em;">${skill.description}</p>
+                                <div style="color: #ffaa00;">
+                                    Level: ${currentLevel} / ${maxLevel}
+                                    ${skill.effect ? ` | Effect: +${currentLevel * (skill.perLevel || 1)} ${skill.effect}` : ''}
+                                </div>
+                            </div>
+                            <div>
+                                ${canLearn ? `
+                                    <button class="dialog-button primary"
+                                            onclick="window.declarativeDialogEngine.executeAction('execute:learnSkill:${agentId}:${skill.id}')"
+                                            style="padding: 5px 15px;">
+                                        Learn (+1)
+                                    </button>
+                                ` : currentLevel >= maxLevel ? `
+                                    <span style="color: #00ff00;">MAXED</span>
+                                ` : `
+                                    <span style="color: #666;">No Points</span>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        return html;
+    });
+
+    // Learn skill action
+    engine.registerAction('learnSkill', function(params) {
+        const parts = params.split(':');
+        const agentId = parts[0];
+        const skillId = parts[1];
+
+        if (game.learnSkill) {
+            const success = game.learnSkill(agentId, skillId);
+            if (success) {
+                // Re-set the agentId in state data for refresh
+                this.stateData = this.stateData || {};
+                this.stateData.agentId = agentId;
+                // Refresh the dialog
+                this.navigateTo('skill-tree', null, true);
+            }
+        }
+    });
 };
 
 // Override hub dialog methods to use declarative system

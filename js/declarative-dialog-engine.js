@@ -299,7 +299,11 @@ class DeclarativeDialogEngine {
                 const generator = this.generatorRegistry.get(contentConfig.generator);
                 if (generator) {
                     const game = window.game;
-                    return generator.call(game, params);
+                    // Pass game as context but provide dialog engine via property
+                    game._dialogEngineContext = this;
+                    const result = generator.call(game, params);
+                    delete game._dialogEngineContext;
+                    return result;
                 }
                 return `<p>Generator not found: ${contentConfig.generator}</p>`;
 
@@ -531,6 +535,11 @@ class DeclarativeDialogEngine {
     /**
      * Handle action execution
      */
+    // Public method for executing actions from HTML onclick handlers
+    executeAction(actionString, context) {
+        return this.handleAction(actionString, context || {});
+    }
+
     handleAction(actionString, context) {
         if (this.logger) this.logger.debug('🎮 Handling action:', actionString);
 
