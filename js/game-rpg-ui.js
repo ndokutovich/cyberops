@@ -282,11 +282,7 @@ CyberOpsGame.prototype.showInventory = function(agentIdOrName) {
     }
 
     // Find agent - check both ID and name
-    const agent = this.agents.find(a =>
-        a.id === agentIdOrName ||
-        a.name === agentIdOrName ||
-        a.originalId === agentIdOrName
-    );
+    const agent = this.findAgentForRPG(agentIdOrName);
     if (!agent) {
         if (this.logger) this.logger.warn('Agent not found:', agentIdOrName);
         return;
@@ -769,10 +765,26 @@ CyberOpsGame.prototype.showLevelUpNotification = function(agent) {
     }, 5000);
 };
 
+// Helper function to find agent - ONLY use AgentService (NO FALLBACKS)
+CyberOpsGame.prototype.findAgentForRPG = function(agentId) {
+    // AgentService is the ONLY source of truth for agents
+    if (window.GameServices && window.GameServices.agentService) {
+        return window.GameServices.agentService.getAgent(agentId);
+    }
+
+    // NO FALLBACKS - Services must be available
+    console.error('AgentService not available - cannot find agent');
+    return null;
+};
+
 // Stat allocation dialog
 CyberOpsGame.prototype.showStatAllocation = function(agentId) {
-    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
-    if (!agent || !agent.rpgEntity) return;
+    const agent = this.findAgentForRPG(agentId);
+
+    if (!agent || !agent.rpgEntity) {
+        console.error('Cannot find agent or RPG entity for stat allocation:', agentId);
+        return;
+    }
 
     const rpg = agent.rpgEntity;
     if (rpg.unspentStatPoints <= 0) return;
@@ -832,8 +844,10 @@ CyberOpsGame.prototype.allocateStat = function(agentId, stat, change) {
     document.getElementById(`change-${stat}`).textContent = `+${pending[stat]}`;
 
     const totalUsed = Object.values(pending).reduce((sum, val) => sum + val, 0);
-    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
-    document.getElementById('points-left').textContent = agent.rpgEntity.unspentStatPoints - totalUsed;
+    const agent = this.findAgentForRPG(agentId);
+    if (agent && agent.rpgEntity) {
+        document.getElementById('points-left').textContent = agent.rpgEntity.unspentStatPoints - totalUsed;
+    }
 };
 
 // Confirm stat allocation
@@ -841,8 +855,11 @@ CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
     const dialog = document.querySelector('.stat-allocation');
     if (!dialog) return;
 
-    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
-    if (!agent || !agent.rpgEntity) return;
+    const agent = this.findAgentForRPG(agentId);
+    if (!agent || !agent.rpgEntity) {
+        console.error('Cannot find agent for stat confirmation:', agentId);
+        return;
+    }
 
     const pending = JSON.parse(dialog.dataset.pendingChanges || '{}');
 
@@ -944,7 +961,7 @@ CyberOpsGame.prototype.initRPGSystem = function() {
 
 // Show skill tree dialog
 CyberOpsGame.prototype.showSkillTree = function(agentId) {
-    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    const agent = this.findAgentForRPG(agentId);
     if (!agent) return;
 
     // For now, show a placeholder dialog
@@ -959,7 +976,7 @@ CyberOpsGame.prototype.showSkillTree = function(agentId) {
 
 // Show perk selection dialog
 CyberOpsGame.prototype.showPerkSelection = function(agentId) {
-    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    const agent = this.findAgentForRPG(agentId);
     if (!agent) return;
 
     // For now, show a placeholder dialog
@@ -974,7 +991,7 @@ CyberOpsGame.prototype.showPerkSelection = function(agentId) {
 
 // Use health pack
 CyberOpsGame.prototype.useHealthPack = function(agentId) {
-    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    const agent = this.findAgentForRPG(agentId);
     if (!agent) return;
 
     // Check if agent has health packs
@@ -1009,7 +1026,7 @@ CyberOpsGame.prototype.useHealthPack = function(agentId) {
 
 // Drop item from inventory
 CyberOpsGame.prototype.dropItem = function(agentId, itemId) {
-    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    const agent = this.findAgentForRPG(agentId);
     if (!agent || !agent.inventory) return;
 
     const itemIndex = agent.inventory.findIndex(item => item.id === itemId);
@@ -1031,7 +1048,7 @@ CyberOpsGame.prototype.dropItem = function(agentId, itemId) {
 
 // Use item from inventory
 CyberOpsGame.prototype.useItem = function(agentId, itemId) {
-    const agent = this.agents.find(a => a.id === agentId || a.name === agentId);
+    const agent = this.findAgentForRPG(agentId);
     if (!agent || !agent.inventory) return;
 
     const item = agent.inventory.find(i => i.id === itemId);

@@ -11,6 +11,8 @@
     const testFiles = [
         // Universal tests (work in both Node and Browser)
         'services.test.js',
+        'services-console.test.js',
+        'facade-architecture.test.js',
 
         // Browser-only tests (require DOM)
         'campaign-system-tests.js',
@@ -24,6 +26,7 @@
         'logger-tests.js',
         'modal-dialog-tests.js',
         'rpg-managers-tests.js',
+        'rpg-stat-allocation.test.js',  // New test
         'screen-dialog-tests.js',
         'screen-layer-tests.js',
         'screen-manager-tests.js',

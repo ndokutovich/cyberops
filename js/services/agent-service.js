@@ -126,6 +126,24 @@ class AgentService {
             this.agentById.set(agent.originalId, agent);
             this.agentById.set(String(agent.originalId), agent);
         }
+
+        // Ensure agent is in activeAgents if not already there
+        // This is important for mission agents that get re-indexed with new IDs
+        if (!this.activeAgents.includes(agent)) {
+            // Check if we already have this agent with different ID
+            const existingIndex = this.activeAgents.findIndex(a =>
+                (a.originalId && a.originalId === agent.originalId) ||
+                a.name === agent.name
+            );
+
+            if (existingIndex >= 0) {
+                // Replace existing agent with the re-indexed one
+                this.activeAgents[existingIndex] = agent;
+            } else if (agent.hired !== false) {
+                // Add new agent if it's hired (not in availableAgents)
+                this.activeAgents.push(agent);
+            }
+        }
     }
 
     /**

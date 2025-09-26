@@ -613,6 +613,14 @@ CyberOpsGame.prototype.initMission = function() {
             if (!agent.name && originalId) {
                 agent.name = originalId;
             }
+
+            // Re-index agent in AgentService with new mission ID
+            if (window.GameServices && window.GameServices.agentService) {
+                window.GameServices.agentService.indexAgent(agent);
+                if (this.logger) {
+                    this.logger.debug(`📇 Re-indexed agent in AgentService with mission ID: ${agent.id}, originalId: ${agent.originalId}`);
+                }
+            }
             agent.x = spawn.x + idx % 2;
             agent.y = spawn.y + Math.floor(idx / 2);
             agent.targetX = spawn.x + idx % 2;

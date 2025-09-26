@@ -59,7 +59,9 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 // Get weapon info if needed
                 let weaponInfo = '';
                 if (showWeapon) {
-                    const loadout = game.agentLoadouts?.[agent.id] || {};
+                    // Use originalId for loadout lookup in missions, regular id otherwise
+                    const loadoutId = agent.originalId || agent.id;
+                    const loadout = game.agentLoadouts?.[loadoutId] || {};
                     const weaponName = loadout.weapon && game.getItemById ? game.getItemById('weapon', loadout.weapon)?.name : 'None';
                     weaponInfo = `
                         <div style="color: #ffa500; font-size: 0.85em; margin-top: 5px;">
@@ -489,7 +491,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             html += `
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);">
                     <div style="color: #00ff00; margin-bottom: 10px;">${rpg.unspentStatPoints} stat points available</div>
-                    <button class="dialog-button" onclick="game.showStatAllocation('${agent.id || agent.name}')">
+                    <button class="dialog-button" onclick="game.showStatAllocation('${agent.id || agent.originalId || agent.name}')">
                         Allocate Points
                     </button>
                 </div>
@@ -647,28 +649,32 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         // Properties are handled by getters/setters that route to services
         // No need to initialize empty arrays
 
-        // Services are the single source of truth
+        // Services are the single source of truth - NO FALLBACKS
         // The getters will return service data, no syncing needed
 
-        // In mission context, populate activeAgents from mission agents
-        if (this.currentScreen === 'game' && this.agents && this.agents.length > 0) {
-            // Use mission agents but with their hub IDs for consistency
-            this.activeAgents = this.agents.map(agent => ({
-                id: agent.originalId || agent.name,  // Use hub ID for consistency
-                name: agent.name,
-                health: agent.health,
-                maxHealth: agent.maxHealth,
-                damage: agent.damage
-            }));
-            const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
-            if (logger) logger.debug('📦 Populated activeAgents from mission agents:', this.activeAgents);
+        // In mission context, get agents from AgentService (single source of truth)
+        if (this.currentScreen === 'game' && window.GameServices?.agentService) {
+            // Get the mission agents from AgentService
+            // They were already re-indexed when the mission started
+            const serviceAgents = window.GameServices.agentService.getActiveAgents();
+            if (serviceAgents && serviceAgents.length > 0) {
+                // Filter to only the agents in the current mission
+                this.activeAgents = this.agents ?
+                    serviceAgents.filter(sa => this.agents.some(a =>
+                        a.id === sa.id || a.originalId === sa.originalId || a.name === sa.name
+                    )) : serviceAgents;
+                const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+                if (logger) logger.debug('📦 Using AgentService agents:', this.activeAgents.length);
+            }
         }
+        // NO FALLBACK - AgentService is the ONLY source of truth
 
         // Auto-select first agent if none selected
         if (!this.selectedEquipmentAgent && this.activeAgents && this.activeAgents.length > 0) {
             // In game mode, try to use the currently selected agent
             if (this.currentScreen === 'game' && this._selectedAgent) {
-                this.selectedEquipmentAgent = this._selectedAgent.originalId || this._selectedAgent.id || this._selectedAgent.name;
+                // In missions, use the agent's current ID (e.g., agent_0), not originalId
+                this.selectedEquipmentAgent = this._selectedAgent.id || this._selectedAgent.originalId || this._selectedAgent.name;
             } else {
                 this.selectedEquipmentAgent = this.activeAgents[0].id;
             }
@@ -709,8 +715,13 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 this.logger.debug('Selected agent ID:', this.selectedEquipmentAgent);
                 this.logger.debug('All loadouts:', Object.keys(this.agentLoadouts || {}));
             }
-            const agent = this.activeAgents.find(a => String(a.id) === String(this.selectedEquipmentAgent));
-            const loadout = this.agentLoadouts[this.selectedEquipmentAgent] || {};
+            const agent = this.activeAgents.find(a =>
+                String(a.id) === String(this.selectedEquipmentAgent) ||
+                String(a.originalId) === String(this.selectedEquipmentAgent)
+            );
+            // For loadouts, use originalId in missions, regular id otherwise
+            const loadoutId = agent ? (agent.originalId || agent.id) : this.selectedEquipmentAgent;
+            const loadout = this.agentLoadouts[loadoutId] || {};
 
             if (agent) {
                 if (this.logger) this.logger.debug('Found agent:', agent.name);
@@ -733,7 +744,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                         <button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
                                 onclick="(function() {
                                     if (game.unequipItem) {
-                                        game.unequipItem('${this.selectedEquipmentAgent}', 'weapon');
+                                        game.unequipItem('${loadoutId}', 'weapon');
                                         game.dialogEngine.navigateTo('arsenal');
                                     }
                                 })()">
@@ -763,7 +774,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                         <button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
                                 onclick="(function() {
                                     if (game.unequipItem) {
-                                        game.unequipItem('${this.selectedEquipmentAgent}', 'armor');
+                                        game.unequipItem('${loadoutId}', 'armor');
                                         game.dialogEngine.navigateTo('arsenal');
                                     }
                                 })()">
@@ -797,7 +808,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                         <button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
                                 onclick="(function() {
                                     if (game.unequipItem) {
-                                        game.unequipItem('${this.selectedEquipmentAgent}', 'utility');
+                                        game.unequipItem('${loadoutId}', 'utility');
                                         game.dialogEngine.navigateTo('arsenal');
                                     }
                                 })()">
