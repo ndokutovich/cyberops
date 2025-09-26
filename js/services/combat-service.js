@@ -246,18 +246,25 @@ class CombatService {
             if (target.entity.health <= 0) {
                 result.killed = true;
                 attacker.kills++;
-                this.onEntityDeath(targetId);
+                this.onEntityDeath(targetId, attackerId);  // Pass killer ID for XP
             }
         }
 
         // Set cooldown
         this.setCooldown(attackerId, 'attack', this.config.baseCooldown);
 
-        // Log combat event
+        // Log combat event with full details for game to display
         this.logCombatEvent({
             type: 'attack',
             timestamp: Date.now(),
-            ...result
+            attackerId: attackerId,
+            targetId: targetId,
+            attacker: attacker.entity,  // Include full entity for name/type
+            target: target.entity,       // Include full entity for name/type
+            damage: result.damage || 0,
+            hit: result.hit,
+            critical: result.critical,
+            killed: result.killed
         });
 
         // Trigger overwatch reactions
@@ -489,7 +496,7 @@ class CombatService {
     /**
      * Handle entity death
      */
-    onEntityDeath(entityId) {
+    onEntityDeath(entityId, killerId = null) {
         const combatant = this.getCombatant(entityId);
         if (!combatant) return;
 
@@ -523,12 +530,16 @@ class CombatService {
             if (!this.eliminatedEnemies) {
                 this.eliminatedEnemies = [];
             }
+            // Get killer entity for XP grant
+            const killer = killerId ? this.getCombatant(killerId) : null;
             this.eliminatedEnemies.push({
                 entity: combatant.entity,
                 timestamp: Date.now(),
-                entityId: entityId
+                entityId: entityId,
+                killerId: killerId,
+                killerEntity: killer ? killer.entity : null
             });
-            if (this.logger) this.logger.info(`🎯 Enemy elimination queued for processing: ${entityId} (total queued: ${this.eliminatedEnemies.length})`);
+            if (this.logger) this.logger.info(`🎯 Enemy elimination queued for processing: ${entityId} killed by ${killerId} (total queued: ${this.eliminatedEnemies.length})`);
         } else {
             if (this.logger) this.logger.debug(`⚠️ Not queuing ${entityId} for elimination - team is '${combatant.team}', not 'enemy'`);
         }
@@ -631,6 +642,19 @@ class CombatService {
         if (this.combatLog.length > 1000) {
             this.combatLog.shift();
         }
+    }
+
+    /**
+     * Get and clear pending combat events for game to process
+     * CRITICAL: Part of unidirectional data flow - game pulls events from service
+     */
+    getAndClearCombatEvents() {
+        if (this.combatLog.length === 0) return [];
+
+        // Return events and clear the log
+        const events = [...this.combatLog];
+        this.combatLog = [];
+        return events;
     }
 
     /**

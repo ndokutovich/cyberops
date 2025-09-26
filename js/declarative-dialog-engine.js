@@ -423,6 +423,22 @@ class DeclarativeDialogEngine {
             buttonsConfig.forEach((btn, index) => {
                 html += this.createButton(btn, index, stateId);
             });
+        } else if (buttonsConfig.type === 'static' && buttonsConfig.items) {
+            // Static buttons with items array
+            buttonsConfig.items.forEach((btn, index) => {
+                html += this.createButton(btn, index, stateId);
+            });
+        } else if (buttonsConfig.type === 'dynamic' && buttonsConfig.generator) {
+            // Dynamic buttons - call generator function
+            const generatorFunc = this.generatorRegistry.get(buttonsConfig.generator);
+            if (generatorFunc) {
+                const buttons = generatorFunc.call(this.game);
+                if (Array.isArray(buttons)) {
+                    buttons.forEach((btn, index) => {
+                        html += this.createButton(btn, index, stateId);
+                    });
+                }
+            }
         } else if (buttonsConfig.template) {
             // Template-based buttons
             const template = this.config.buttonTemplates?.[buttonsConfig.template];
@@ -433,6 +449,11 @@ class DeclarativeDialogEngine {
                     html += this.createButton(btn, index, stateId);
                 });
             }
+        } else if (buttonsConfig.items) {
+            // Fallback - just use items if available
+            buttonsConfig.items.forEach((btn, index) => {
+                html += this.createButton(btn, index, stateId);
+            });
         }
 
         html += '</div>';
@@ -444,12 +465,28 @@ class DeclarativeDialogEngine {
      */
     createButton(button, index, stateId) {
         const classes = ['dialog-button'];
-        if (button.primary) classes.push('primary');
-        if (button.danger) classes.push('danger');
+        if (button.primary || button.style === 'primary') classes.push('primary');
+        if (button.danger || button.style === 'danger') classes.push('danger');
+
+        // Convert action object to string format
+        let actionString = button.action;
+        if (typeof button.action === 'object' && button.action.type) {
+            if (button.action.type === 'execute' && button.action.handler) {
+                actionString = `execute:${button.action.handler}`;
+            } else if (button.action.type === 'navigate' && button.action.state) {
+                actionString = `navigate:${button.action.state}`;
+            } else if (button.action.type === 'back') {
+                actionString = 'back';
+            } else if (button.action.type === 'close') {
+                actionString = 'close';
+            } else {
+                actionString = button.action.type;
+            }
+        }
 
         return `
             <button class="${classes.join(' ')}"
-                    data-action="${button.action}"
+                    data-action="${actionString}"
                     data-state="${stateId}"
                     data-index="${index}">
                 ${button.icon ? `<span class="button-icon">${button.icon}</span>` : ''}
@@ -927,10 +964,11 @@ class DeclarativeDialogEngine {
             const actualFuncName = parts[0];
             const params = parts.slice(1).join(':');
 
-            // First check if there's a registered action handler
+            // First check if there's a registered action handler (but not 'execute' to avoid recursion)
             const registeredHandler = this.actionRegistry.get(actualFuncName);
-            if (registeredHandler) {
-                registeredHandler.call(this, params || context);
+            if (registeredHandler && actualFuncName !== 'execute') {
+                // Call the registered handler with proper context
+                registeredHandler.call(this, params, context);
                 return;
             }
 

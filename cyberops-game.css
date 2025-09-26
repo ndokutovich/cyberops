@@ -2839,6 +2839,13 @@ body {
     max-height: 70vh;
 }
 
+/* Specific override for stat allocation to match character dialog height */
+.declarative-dialog.level-2#dialog-stat-allocation {
+    height: auto !important;
+    min-height: 500px !important;
+    max-height: 70vh !important;
+}
+
 .declarative-dialog.level-3 {
     min-width: 400px;
     max-width: 600px;

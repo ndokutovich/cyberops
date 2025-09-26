@@ -1280,7 +1280,7 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
             const result = window.GameServices.combatService.performAttack(attackerId, targetId);
 
             if (result) {
-                // Create projectile for visual feedback
+                // Create projectile for visual feedback ONLY - damage already applied by CombatService
                 this.projectiles.push({
                     x: agent.x,
                     y: agent.y,
@@ -1292,7 +1292,8 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
                     owner: agent.id,
                     shooter: agent,
                     agent: agent,  // Added for logCombatHit compatibility
-                    weaponType: agent.weapon?.type || 'rifle'
+                    weaponType: agent.weapon?.type || 'rifle',
+                    visualOnly: true  // CRITICAL: Don't apply damage on hit - CombatService already did!
                 });
 
                 // UNIDIRECTIONAL: CombatService already updated health internally

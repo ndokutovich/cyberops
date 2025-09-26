@@ -210,6 +210,43 @@ const DIALOG_CONFIG = {
             }
         },
 
+        // ========== STAT ALLOCATION (Level 2 - Child of Character) ==========
+        'stat-allocation': {
+            type: 'dialog',
+            level: 2,
+            parent: 'character',
+            title: '📈 ALLOCATE STAT POINTS',
+            layout: 'medium-layout',
+            content: {
+                type: 'dynamic',
+                generator: 'generateStatAllocation'
+            },
+            buttons: {
+                type: 'static',
+                items: [
+                    {
+                        text: 'CONFIRM',
+                        action: { type: 'execute', handler: 'confirmStatAllocation' },
+                        style: 'primary'
+                    },
+                    {
+                        text: 'CANCEL',
+                        action: { type: 'back' }
+                    }
+                ]
+            },
+            transitions: {
+                enter: { animation: 'fade-in', sound: 'dialog-open' },
+                exit: { animation: 'fade-out', sound: 'dialog-close' }
+            },
+            styles: {
+                width: '500px',
+                maxWidth: '90vw',
+                height: '80vh',
+                maxHeight: '80vh'
+            }
+        },
+
         // ========== ARSENAL/EQUIPMENT (Level 1) ==========
         'arsenal': {
             type: 'dialog',

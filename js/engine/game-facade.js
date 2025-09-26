@@ -1727,24 +1727,35 @@ class GameFacade {
                         const enemy = proj.targetEnemy;
                         if (enemy && enemy.alive) {
                             // Use GameServices to calculate actual damage if available
+                            // Check if this is a visual-only projectile (damage already applied by CombatService)
+                            let damageResult = { isDead: false };
                             let actualDamage = proj.damage;
-                            if (window.GameServices && window.GameServices.calculateAttackDamage) {
-                                actualDamage = window.GameServices.calculateAttackDamage(
-                                    proj.agent || { damage: proj.damage },
-                                    enemy,
-                                    { distance: 0 }
-                                );
+
+                            if (!proj.visualOnly) {
+                                // Apply damage only if NOT visual-only
+                                if (window.GameServices && window.GameServices.calculateAttackDamage) {
+                                    actualDamage = window.GameServices.calculateAttackDamage(
+                                        proj.agent || { damage: proj.damage },
+                                        enemy,
+                                        { distance: 0 }
+                                    );
+                                }
+
+                                // Use FormulaService to apply damage
+                                damageResult = window.GameServices.formulaService.applyDamage(enemy, actualDamage);
+                            } else {
+                                // Visual-only projectile - damage was already applied by CombatService
+                                // Check if enemy is already dead from that damage
+                                damageResult.isDead = enemy.health <= 0;
                             }
 
-                            // Use FormulaService to apply damage
-                            const damageResult = window.GameServices.formulaService.applyDamage(enemy, actualDamage);
-
-                            // Log combat hit with kill information
-                            if (game.logCombatHit) {
+                            // Only log hits for non-visual projectiles
+                            // Visual-only projectiles are from CombatService which logs its own hits
+                            if (!proj.visualOnly && game.logCombatHit) {
                                 game.logCombatHit(
                                     proj.agent || proj.shooter || { name: 'Agent', type: 'agent' },
                                     enemy,
-                                    actualDamage,
+                                    actualDamage || proj.damage,
                                     damageResult.isDead  // Pass killed status
                                 );
                             }
@@ -1794,23 +1805,32 @@ class GameFacade {
                         });
 
                         if (closestEnemy) {
-                            // Use GameServices to calculate actual damage if available
+                            // Check if this is a visual-only projectile
+                            let damageResult = { isDead: false };
                             let actualDamage = proj.damage;
-                            if (window.GameServices && window.GameServices.calculateAttackDamage) {
-                                actualDamage = window.GameServices.calculateAttackDamage(
-                                    proj.agent || { damage: proj.damage },
-                                    closestEnemy,
-                                    { distance: 0 }
-                                );
+
+                            if (!proj.visualOnly) {
+                                // Apply damage only if NOT visual-only
+                                if (window.GameServices && window.GameServices.calculateAttackDamage) {
+                                    actualDamage = window.GameServices.calculateAttackDamage(
+                                        proj.agent || { damage: proj.damage },
+                                        closestEnemy,
+                                        { distance: 0 }
+                                    );
+                                }
+
+                                // Use FormulaService to apply damage
+                                damageResult = window.GameServices.formulaService.applyDamage(closestEnemy, actualDamage);
+                            } else {
+                                // Visual-only projectile - damage was already applied by CombatService
+                                damageResult.isDead = closestEnemy.health <= 0;
                             }
 
-                            // Use FormulaService to apply damage
-                            const damageResult = window.GameServices.formulaService.applyDamage(closestEnemy, actualDamage);
-
-                            // Log combat hit with kill information
-                            if (game.logCombatHit) {
+                            // Only log hits for non-visual projectiles
+                            // Visual-only projectiles are from CombatService which logs its own hits
+                            if (!proj.visualOnly && game.logCombatHit) {
                                 const attacker = proj.agent || proj.shooter || { name: 'Agent', type: 'agent' };
-                                game.logCombatHit(attacker, closestEnemy, actualDamage, damageResult.isDead);
+                                game.logCombatHit(attacker, closestEnemy, actualDamage || proj.damage, damageResult.isDead);
                             }
 
                             if (damageResult.isDead) {

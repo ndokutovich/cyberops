@@ -212,8 +212,20 @@ if (!CyberOpsGame.prototype.initMissionOriginal) {
 
 // Update the game loop to check objectives
 CyberOpsGame.prototype.updateMissionObjectives = function() {
-    // CRITICAL: Process enemy eliminations from CombatService (unidirectional data flow)
+    // CRITICAL: Process combat events from CombatService (unidirectional data flow)
     if (window.GameServices && window.GameServices.combatService) {
+        // Process combat events for logging
+        const combatEvents = window.GameServices.combatService.getAndClearCombatEvents();
+        if (combatEvents && combatEvents.length > 0) {
+            combatEvents.forEach(event => {
+                if (event.type === 'attack' && event.hit && this.logCombatHit) {
+                    // Log the combat hit using game's logging system
+                    this.logCombatHit(event.attacker, event.target, event.damage, event.killed);
+                }
+            });
+        }
+
+        // Process enemy eliminations
         const eliminated = window.GameServices.combatService.getAndClearEliminatedEnemies();
         if (eliminated && eliminated.length > 0) {
             if (this.logger) this.logger.info(`🎯 Processing ${eliminated.length} queued enemy eliminations from CombatService`);
@@ -223,6 +235,12 @@ CyberOpsGame.prototype.updateMissionObjectives = function() {
                     this.onEnemyEliminated(elimination.entity);
                 } else {
                     if (this.logger) this.logger.error(`❌ onEnemyEliminated function not found!`);
+                }
+
+                // Grant XP for the kill!
+                if (this.onEntityDeath && elimination.killerEntity) {
+                    if (this.logger) this.logger.debug(`💰 Granting XP: ${elimination.entityId} killed by ${elimination.killerId}`);
+                    this.onEntityDeath(elimination.entity, elimination.killerEntity);
                 }
             });
         }

@@ -519,10 +519,18 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                     <button class="dialog-button" onclick="(function() {
                         const logger = window.Logger ? new window.Logger('AllocateButton') : null;
                         if (logger) logger.debug('Allocate button clicked for:', '${agentIdForAllocation}');
-                        if (window.game && window.game.showStatAllocation) {
-                            window.game.showStatAllocation('${agentIdForAllocation}');
+                        if (game.dialogEngine) {
+                            // Store agent ID and reset pending changes in state data
+                            game.dialogEngine.stateData = {
+                                agentId: '${agentIdForAllocation}',
+                                pendingChanges: {}
+                            };
+                            game.dialogEngine.navigateTo('stat-allocation');
                         } else {
-                            if (logger) logger.error('game.showStatAllocation not available');
+                            // Fallback to old method
+                            if (window.game && window.game.showStatAllocation) {
+                                window.game.showStatAllocation('${agentIdForAllocation}');
+                            }
                         }
                     })()">
                         Allocate Points
@@ -661,6 +669,83 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         html += '</div>'; // Close perks panel
         html += '</div>'; // Close character-details
         html += '</div>'; // Close character-sheet-content
+
+        return html;
+    });
+
+    // Stat Allocation Generator
+    engine.registerGenerator('generateStatAllocation', function() {
+        const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+
+        // Get the agent ID from the dialog state data
+        const agentId = this.dialogEngine?.stateData?.agentId;
+        if (!agentId) {
+            return '<div style="color: #ff6666; text-align: center; padding: 40px;">Error: No agent selected for stat allocation</div>';
+        }
+
+        const agent = this.findAgentForRPG ? this.findAgentForRPG(agentId) : null;
+        if (!agent || !agent.rpgEntity) {
+            return '<div style="color: #ff6666; text-align: center; padding: 40px;">Error: Agent not found or has no RPG entity</div>';
+        }
+
+        const rpg = agent.rpgEntity;
+        if (rpg.unspentStatPoints <= 0) {
+            return '<div style="color: #888; text-align: center; padding: 40px;">No unspent stat points available</div>';
+        }
+
+        // Initialize pending changes if not set
+        if (!this.dialogEngine.stateData.pendingChanges) {
+            this.dialogEngine.stateData.pendingChanges = {};
+        }
+        const pending = this.dialogEngine.stateData.pendingChanges;
+
+        let html = '<div class="stat-allocation-content" style="padding: 20px;">';
+
+        // Points remaining
+        const totalUsed = Object.values(pending).reduce((sum, val) => sum + val, 0);
+        const pointsLeft = rpg.unspentStatPoints - totalUsed;
+
+        html += `
+            <div class="points-remaining" style="text-align: center; padding: 15px; background: rgba(255,255,0,0.1); color: #ffff00; font-size: 20px; font-weight: bold; margin-bottom: 20px; border-radius: 5px;">
+                Points Remaining: <span id="points-left">${pointsLeft}</span>
+            </div>
+        `;
+
+        // Stat allocation rows
+        html += '<div class="stat-allocation-list">';
+
+        Object.keys(rpg.stats).forEach(stat => {
+            const currentValue = typeof rpg.stats[stat] === 'object' ?
+                (rpg.stats[stat].value || rpg.stats[stat].base || 10) : rpg.stats[stat];
+            const pendingValue = pending[stat] || 0;
+
+            html += `
+                <div class="stat-allocation-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; margin: 5px 0; background: rgba(0,255,255,0.05); border-radius: 5px;">
+                    <span class="stat-name" style="color: #00ffff; font-weight: bold; width: 120px;">
+                        ${stat.charAt(0).toUpperCase() + stat.slice(1)}
+                    </span>
+                    <span class="stat-current" style="color: #fff; width: 50px; text-align: center;">
+                        ${currentValue}
+                    </span>
+                    <button class="dialog-button" style="width: 30px; height: 30px; padding: 0;"
+                            onclick="game.allocateStatDeclarative('${agentId}', '${stat}', -1)"
+                            ${pendingValue <= 0 ? 'disabled' : ''}>
+                        -
+                    </button>
+                    <span class="stat-change" id="change-${stat}" style="color: #00ff00; width: 50px; text-align: center;">
+                        ${pendingValue > 0 ? '+' + pendingValue : ''}
+                    </span>
+                    <button class="dialog-button" style="width: 30px; height: 30px; padding: 0;"
+                            onclick="game.allocateStatDeclarative('${agentId}', '${stat}', 1)"
+                            ${pointsLeft <= 0 ? 'disabled' : ''}>
+                        +
+                    </button>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        html += '</div>';
 
         return html;
     });
@@ -2443,6 +2528,15 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         if (game.loadGame) {
             game.loadGame('quicksave');
             this.closeAll();
+        }
+    });
+
+    // Confirm stat allocation
+    engine.registerAction('confirmStatAllocation', function() {
+        if (game.confirmStatAllocation) {
+            // Get agentId from state data
+            const agentId = this.stateData?.agentId;
+            game.confirmStatAllocation(agentId);
         }
     });
 };

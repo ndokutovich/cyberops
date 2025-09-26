@@ -871,7 +871,34 @@ CyberOpsGame.prototype.showStatAllocation = function(agentId) {
     }
 };
 
-// Handle stat allocation
+// Handle stat allocation (declarative version)
+CyberOpsGame.prototype.allocateStatDeclarative = function(agentId, stat, change) {
+    if (!this.dialogEngine || !this.dialogEngine.stateData) return;
+
+    const pending = this.dialogEngine.stateData.pendingChanges || {};
+    const current = pending[stat] || 0;
+    const newValue = current + change;
+
+    // Get agent to check bounds
+    const agent = this.findAgentForRPG(agentId);
+    if (!agent || !agent.rpgEntity) return;
+
+    const totalUsed = Object.values(pending).reduce((sum, val) => sum + val, 0);
+    const pointsLeft = agent.rpgEntity.unspentStatPoints - totalUsed;
+
+    // Check bounds
+    if (change > 0 && pointsLeft <= 0) return;
+    if (change < 0 && current <= 0) return;
+
+    // Update pending changes
+    pending[stat] = Math.max(0, newValue);
+    this.dialogEngine.stateData.pendingChanges = pending;
+
+    // Refresh the dialog to update UI
+    this.dialogEngine.navigateTo('stat-allocation', null, true);
+};
+
+// Handle stat allocation (old standalone version - kept for compatibility)
 CyberOpsGame.prototype.allocateStat = function(agentId, stat, change) {
     const dialog = document.querySelector('.stat-allocation');
     if (!dialog) return;
@@ -898,8 +925,76 @@ CyberOpsGame.prototype.allocateStat = function(agentId, stat, change) {
     }
 };
 
-// Confirm stat allocation
+// Confirm stat allocation (declarative version)
 CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
+    // If called from declarative system, get agentId from state data
+    if (!agentId && this.dialogEngine?.stateData?.agentId) {
+        agentId = this.dialogEngine.stateData.agentId;
+    }
+
+    // For declarative system, get pending changes from state data
+    let pending;
+    if (this.dialogEngine?.stateData?.pendingChanges) {
+        pending = this.dialogEngine.stateData.pendingChanges;
+    } else {
+        // Fallback for old standalone dialog
+        const dialog = document.querySelector('.stat-allocation');
+        if (!dialog) return;
+        pending = JSON.parse(dialog.dataset.pendingChanges || '{}');
+    }
+
+    const agent = this.findAgentForRPG(agentId);
+    if (!agent || !agent.rpgEntity) {
+        console.error('Cannot find agent for stat confirmation:', agentId);
+        return;
+    }
+
+    // Apply changes
+    Object.entries(pending).forEach(([stat, points]) => {
+        if (points > 0) {
+            // Get current stat value (handle object or number format)
+            let currentValue = agent.rpgEntity.stats[stat];
+            if (typeof currentValue === 'object' && currentValue !== null) {
+                currentValue = currentValue.value || currentValue.base || 0;
+            }
+            // Ensure it's a number and add points
+            currentValue = (typeof currentValue === 'number' ? currentValue : 0) + points;
+            // Store as simple number
+            agent.rpgEntity.stats[stat] = currentValue;
+        }
+    });
+
+    // Update unspent points
+    const totalUsed = Object.values(pending).reduce((sum, val) => sum + val, 0);
+    agent.rpgEntity.unspentStatPoints -= totalUsed;
+
+    // Recalculate derived stats
+    const derived = this.rpgManager.calculateDerivedStats(agent.rpgEntity);
+    agent.maxHealth = derived.maxHealth;
+    agent.maxAP = derived.maxAP;
+
+    // Close dialog and refresh character sheet
+    if (this.dialogEngine?.currentState === 'stat-allocation') {
+        // Declarative system - go back to character sheet
+        this.dialogEngine.back();
+        // Refresh character sheet
+        setTimeout(() => {
+            this.dialogEngine.navigateTo('character', null, true);
+        }, 100);
+    } else {
+        // Old standalone dialog
+        const dialog = document.querySelector('.stat-allocation');
+        if (dialog) dialog.remove();
+        this.showCharacterSheet(agentId);
+    }
+
+    if (this.logEvent) {
+        this.logEvent(`${agent.name} allocated stat points!`, 'progression');
+    }
+};
+
+// Old confirmStatAllocation backup (for reference)
+CyberOpsGame.prototype.confirmStatAllocationOld = function(agentId) {
     const dialog = document.querySelector('.stat-allocation');
     if (!dialog) return;
 
