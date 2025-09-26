@@ -1113,15 +1113,198 @@ CyberOpsGame.prototype.initRPGSystem = function() {
 // Show skill tree dialog
 CyberOpsGame.prototype.showSkillTree = function(agentId) {
     const agent = this.findAgentForRPG(agentId);
-    if (!agent) return;
+    if (!agent || !agent.rpgEntity) {
+        if (this.logger) this.logger.error(`Cannot show skill tree - agent not found: ${agentId}`);
+        return;
+    }
 
-    // For now, show a placeholder dialog
+    const rpg = agent.rpgEntity;
+    const rpgConfig = window.ContentLoader?.getContent('rpgConfig') || window.RPG_CONFIG;
+    if (!rpgConfig?.skills) {
+        if (this.logger) this.logger.error('No skills configuration found');
+        return;
+    }
+
+    // Build skill tree HTML
+    let html = `
+        <div class="skill-tree-container" style="max-height: 500px; overflow-y: auto;">
+            <div style="margin-bottom: 20px; padding: 10px; background: rgba(0,255,0,0.1); border-radius: 5px;">
+                <h3 style="color: #00ff00; margin: 0;">Agent: ${agent.name}</h3>
+                <p style="color: #00ff00; margin: 5px 0;">Available Skill Points: ${rpg.unspentSkillPoints || 0}</p>
+            </div>
+    `;
+
+    // Group skills by category
+    const skillCategories = {
+        combat: [],
+        stealth: [],
+        tech: [],
+        support: []
+    };
+
+    // Categorize skills
+    Object.entries(rpgConfig.skills).forEach(([skillId, skill]) => {
+        if (skillId.includes('stealth') || skillId.includes('silent')) {
+            skillCategories.stealth.push({ id: skillId, ...skill });
+        } else if (skillId.includes('hack') || skillId.includes('tech') || skillId.includes('cyber')) {
+            skillCategories.tech.push({ id: skillId, ...skill });
+        } else if (skillId.includes('medic') || skillId.includes('heal') || skillId.includes('support')) {
+            skillCategories.support.push({ id: skillId, ...skill });
+        } else {
+            skillCategories.combat.push({ id: skillId, ...skill });
+        }
+    });
+
+    // Render each category
+    Object.entries(skillCategories).forEach(([category, skills]) => {
+        if (skills.length === 0) return;
+
+        html += `
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #ffaa00; text-transform: capitalize; margin-bottom: 10px;">
+                    ${category} Skills
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+        `;
+
+        skills.forEach(skill => {
+            const currentLevel = rpg.skills?.[skill.id] || 0;
+            const maxLevel = skill.maxLevel || 5;
+            const canLearn = rpg.unspentSkillPoints > 0 && currentLevel < maxLevel;
+
+            html += `
+                <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px;
+                            border: 1px solid ${canLearn ? '#00ff00' : '#666'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h5 style="color: #00ffff; margin: 0;">${skill.name}</h5>
+                            <p style="color: #aaa; margin: 5px 0; font-size: 0.9em;">${skill.description}</p>
+                            <div style="color: #ffaa00;">
+                                Level: ${currentLevel} / ${maxLevel}
+                                ${skill.effect ? ` | Effect: +${currentLevel * (skill.perLevel || 1)} ${skill.effect}` : ''}
+                            </div>
+                        </div>
+                        <div>
+                            ${canLearn ? `
+                                <button class="dialog-button primary"
+                                        onclick="game.learnSkill('${agentId}', '${skill.id}')"
+                                        style="padding: 5px 15px;">
+                                    Learn (+1)
+                                </button>
+                            ` : currentLevel >= maxLevel ? `
+                                <span style="color: #00ff00;">MAXED</span>
+                            ` : `
+                                <span style="color: #666;">No Points</span>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+
+    // Show dialog
     if (this.showHudDialog) {
         this.showHudDialog(
-            'Skill Tree',
-            `Skill tree for ${agent.name} - Coming soon!`,
-            [{ text: 'OK', action: 'close' }]
+            `🎯 Skill Tree - ${agent.name}`,
+            html,
+            [{ text: 'Close', action: 'close' }]
         );
+    }
+};
+
+// Learn a skill for an agent
+CyberOpsGame.prototype.learnSkill = function(agentId, skillId) {
+    const agent = this.findAgentForRPG(agentId);
+    if (!agent || !agent.rpgEntity) {
+        if (this.logger) this.logger.error(`Cannot learn skill - agent not found: ${agentId}`);
+        return;
+    }
+
+    const rpg = agent.rpgEntity;
+    const rpgConfig = window.ContentLoader?.getContent('rpgConfig') || window.RPG_CONFIG;
+    const skillConfig = rpgConfig?.skills?.[skillId];
+
+    if (!skillConfig) {
+        if (this.logger) this.logger.error(`Skill not found: ${skillId}`);
+        return;
+    }
+
+    // Check if agent has skill points
+    if (!rpg.unspentSkillPoints || rpg.unspentSkillPoints <= 0) {
+        if (this.logEvent) this.logEvent(`${agent.name} has no skill points available`, 'system');
+        return;
+    }
+
+    // Check if skill is at max level
+    const currentLevel = rpg.skills?.[skillId] || 0;
+    const maxLevel = skillConfig.maxLevel || 5;
+
+    if (currentLevel >= maxLevel) {
+        if (this.logEvent) this.logEvent(`${skillConfig.name} is already at max level`, 'system');
+        return;
+    }
+
+    // Learn the skill
+    if (!rpg.skills) rpg.skills = {};
+    rpg.skills[skillId] = currentLevel + 1;
+    rpg.unspentSkillPoints--;
+
+    // Apply skill effects (if any immediate effects)
+    this.applySkillEffects(agent, skillId, skillConfig);
+
+    // Log the event
+    if (this.logEvent) {
+        this.logEvent(`${agent.name} learned ${skillConfig.name} (Level ${rpg.skills[skillId]})`, 'system');
+    }
+
+    // Refresh the skill tree dialog
+    this.showSkillTree(agentId);
+};
+
+// Apply skill effects
+CyberOpsGame.prototype.applySkillEffects = function(agent, skillId, skillConfig) {
+    if (!agent.rpgEntity || !skillConfig) return;
+
+    const skillLevel = agent.rpgEntity.skills?.[skillId] || 0;
+    if (skillLevel === 0) return;
+
+    const effect = skillConfig.effect;
+    const perLevel = skillConfig.perLevel || 1;
+    const totalEffect = skillLevel * perLevel;
+
+    // Apply different effects based on skill type
+    switch (effect) {
+        case 'damage':
+            agent.damageBonus = (agent.damageBonus || 0) + perLevel;
+            break;
+        case 'accuracy':
+            agent.accuracyBonus = (agent.accuracyBonus || 0) + perLevel;
+            break;
+        case 'defense':
+            agent.defenseBonus = (agent.defenseBonus || 0) + perLevel;
+            break;
+        case 'health':
+            agent.maxHealth = (agent.maxHealth || agent.health) + perLevel;
+            agent.health = Math.min(agent.health + perLevel, agent.maxHealth);
+            break;
+        case 'speed':
+            agent.speed = (agent.speed || 0.2) + (perLevel * 0.01);
+            break;
+        case 'detection':
+            agent.detectionRadius = (agent.detectionRadius || 10) + perLevel;
+            break;
+    }
+
+    if (this.logger) {
+        this.logger.debug(`Applied ${skillConfig.name} effect: +${totalEffect} ${effect} to ${agent.name}`);
     }
 };
 
