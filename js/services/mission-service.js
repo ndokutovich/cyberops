@@ -587,14 +587,8 @@ class MissionService {
         this.extractionTimer = 0;
 
         // SINGLE SOURCE OF TRUTH: Only set on MissionService
-        // GameFacade will read from here via getter
-        // Legacy game still needs to be set for backward compatibility
-        if (window.game && window.game.extractionEnabled !== undefined) {
-            window.game.extractionEnabled = true;
-            if (this.logger) {
-                this.logger.info('🔄 Set legacy game.extractionEnabled = true for backward compatibility');
-            }
-        }
+        // Game should read from window.GameServices.missionService.extractionEnabled
+        // NO DIRECT SETTING - maintains unidirectional data flow
 
         // Log detailed extraction enablement
         if (this.logger) {

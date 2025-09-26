@@ -251,14 +251,14 @@ CyberOpsGame.prototype.updateMissionObjectives = function() {
     this.lastUpdateTime = Date.now();
 
     // Check if agents reached extraction point
-    const extractionEnabledLocal = this.extractionEnabled;
-    const extractionEnabledService = window.GameServices?.missionService?.extractionEnabled;
+    // UNIDIRECTIONAL: Only read from MissionService, never from game
+    const extractionEnabled = window.GameServices?.missionService?.extractionEnabled;
 
-    if (extractionEnabledLocal || extractionEnabledService) {
+    if (extractionEnabled) {
         // Add debug log to see if this is running (once per second)
         if (!this._lastExtractionCheck || Date.now() - this._lastExtractionCheck > 1000) {
             if (this.logger) {
-                this.logger.debug(`🚁 Extraction check active - Local: ${extractionEnabledLocal}, Service: ${extractionEnabledService}`);
+                this.logger.debug(`🚁 Extraction check active from MissionService: ${extractionEnabled}`);
             }
             this._lastExtractionCheck = Date.now();
         }

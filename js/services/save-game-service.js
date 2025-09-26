@@ -50,10 +50,17 @@ class SaveGameService {
     /**
      * Create a new save
      */
-    async createSave(slotId, name = null, isAutosave = false) {
+    /**
+     * Create a new save
+     * @param {Object} game - Game instance passed as parameter (unidirectional)
+     * @param {string} slotId - Save slot ID
+     * @param {string} name - Save name
+     * @param {boolean} isAutosave - Whether this is an autosave
+     */
+    async createSave(game, slotId, name = null, isAutosave = false) {
         try {
-            // Gather game state from all services
-            const saveData = await this.gatherSaveData();
+            // Gather game state from all services - pass game parameter
+            const saveData = await this.gatherSaveData(game);
 
             // Create save object
             const save = {
@@ -61,7 +68,7 @@ class SaveGameService {
                 timestamp: Date.now(),
                 name: name || this.generateSaveName(isAutosave),
                 isAutosave: isAutosave,
-                playTime: this.calculatePlayTime(),
+                playTime: this.calculatePlayTime(game?.totalCampaignTime || 0),
                 data: saveData,
                 metadata: this.createSaveMetadata(saveData)
             };
@@ -102,7 +109,12 @@ class SaveGameService {
     /**
      * Load a save
      */
-    async loadSave(slotId) {
+    /**
+     * Load a save
+     * @param {Object} game - Game instance passed as parameter (unidirectional)
+     * @param {string} slotId - Save slot ID
+     */
+    async loadSave(game, slotId) {
         try {
             // Get save from storage
             let save = this.saveSlots.get(slotId);
@@ -126,8 +138,8 @@ class SaveGameService {
                 saveData = await this.decompressSaveData(saveData);
             }
 
-            // Apply save data to game
-            await this.applySaveData(saveData);
+            // Apply save data to game - pass game parameter
+            await this.applySaveData(game, saveData);
 
             this.currentSlot = slotId;
 
@@ -179,27 +191,30 @@ class SaveGameService {
 
     /**
      * Quick save
+     * @param {Object} game - Game instance passed as parameter (unidirectional)
      */
-    async quickSave() {
-        return await this.createSave('quicksave', 'Quick Save', false);
+    async quickSave(game) {
+        return await this.createSave(game, 'quicksave', 'Quick Save', false);
     }
 
     /**
      * Quick load
+     * @param {Object} game - Game instance passed as parameter (unidirectional)
      */
-    async quickLoad() {
-        return await this.loadSave('quicksave');
+    async quickLoad(game) {
+        return await this.loadSave(game, 'quicksave');
     }
 
     /**
      * Autosave
+     * @param {Object} game - Game instance passed as parameter (unidirectional)
      */
-    async autosave() {
+    async autosave(game) {
         // Rotate through autosave slots
         const slotId = `autosave_${this.autosaveIndex}`;
         this.autosaveIndex = (this.autosaveIndex + 1) % this.config.autosaveSlots;
 
-        const result = await this.createSave(slotId, null, true);
+        const result = await this.createSave(game, slotId, null, true);
 
         if (this.logger) this.logger.debug(`Autosave to ${slotId}`, result);
 
@@ -214,9 +229,9 @@ class SaveGameService {
             clearInterval(this.autosaveTimer);
         }
 
-        this.autosaveTimer = setInterval(() => {
-            this.autosave();
-        }, this.autosaveInterval);
+        // NOTE: Autosave timer needs game instance - should be started by game
+        // For now, disable automatic timer to avoid window.game access
+        if (this.logger) this.logger.warn('Autosave timer not started - requires game instance');
     }
 
     /**
@@ -231,18 +246,19 @@ class SaveGameService {
 
     /**
      * Gather save data from all game systems
+     * @param {Object} game - Game instance passed as parameter (unidirectional)
      */
-    async gatherSaveData() {
+    async gatherSaveData(game) {
         const saveData = {};
 
-        // Get game state from GameStateService
-        if (this.gameStateService && window.game) {
-            saveData.gameState = this.gameStateService.collectGameState(window.game);
+        // Get game state from GameStateService - use parameter instead of window.game
+        if (this.gameStateService && game) {
+            saveData.gameState = this.gameStateService.collectGameState(game);
         }
 
-        // Get data from GameFacade if available
-        if (window.game?.gameController?.facade) {
-            const facade = window.game.gameController.facade;
+        // Get data from GameFacade if available - use parameter
+        if (game?.gameController?.facade) {
+            const facade = game.gameController.facade;
             saveData.facade = {
                 currentScreen: facade.currentScreen,
                 currentMission: facade.currentMission,
@@ -329,16 +345,18 @@ class SaveGameService {
 
     /**
      * Apply save data to game systems
+     * @param {Object} game - Game instance passed as parameter (unidirectional)
+     * @param {Object} saveData - Save data to apply
      */
-    async applySaveData(saveData) {
-        // Apply to GameStateService
-        if (this.gameStateService && saveData.gameState && window.game) {
-            this.gameStateService.applyGameState(window.game, saveData.gameState);
+    async applySaveData(game, saveData) {
+        // Apply to GameStateService - use parameter
+        if (this.gameStateService && saveData.gameState && game) {
+            this.gameStateService.applyGameState(game, saveData.gameState);
         }
 
-        // Apply to GameFacade if available
-        if (window.game?.gameController?.facade && saveData.facade) {
-            const facade = window.game.gameController.facade;
+        // Apply to GameFacade if available - use parameter
+        if (game?.gameController?.facade && saveData.facade) {
+            const facade = game.gameController.facade;
             Object.assign(facade, saveData.facade);
         }
 
@@ -414,13 +432,11 @@ class SaveGameService {
 
     /**
      * Calculate play time
+     * @param {number} totalCampaignTime - Total campaign time passed as parameter (unidirectional)
      */
-    calculatePlayTime() {
-        // Get from game if available
-        if (window.game?.totalCampaignTime) {
-            return window.game.totalCampaignTime;
-        }
-        return 0;
+    calculatePlayTime(totalCampaignTime = 0) {
+        // Use parameter instead of accessing window.game directly
+        return totalCampaignTime || 0;
     }
 
     /**
