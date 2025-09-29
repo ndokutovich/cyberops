@@ -174,7 +174,56 @@ const SCREEN_CONFIG = {
         },
         content: () => `
             ${SPLASH_CONFIG.transition.whiteFlash ? '<div class="white-flash-overlay"></div>' : ''}
-            <div class="menu-container${SPLASH_CONFIG.transition.contentFadeIn ? ' fade-in-content' : ''}">
+
+            <!-- Background Effects (enhanced cyberpunk atmosphere) -->
+            <div class="menu-bg-effects">
+                <div class="menu-bg-grid"></div>
+                <div class="menu-bg-particles"></div>
+                <div class="menu-bg-sparks"></div>
+                <div class="menu-circuit-pattern"></div>
+                <div class="menu-hex-pattern"></div>
+                <div class="menu-scanning-lines"></div>
+                <div class="menu-glitch-overlay"></div>
+                <div class="menu-data-streams">
+                    <div class="menu-data-stream stream-1"></div>
+                    <div class="menu-data-stream stream-2"></div>
+                    <div class="menu-data-stream stream-3"></div>
+                    <div class="menu-data-stream stream-4"></div>
+                    <div class="menu-data-stream stream-5"></div>
+                </div>
+                <div class="menu-neon-pulses">
+                    <div class="neon-pulse pulse-1"></div>
+                    <div class="neon-pulse pulse-2"></div>
+                    <div class="neon-pulse pulse-3"></div>
+                </div>
+                <div class="menu-holo-shimmer"></div>
+                <div class="menu-status-indicators">
+                    <div class="status-indicator ind-1"></div>
+                    <div class="status-indicator ind-2"></div>
+                    <div class="status-indicator ind-3"></div>
+                </div>
+                <div class="menu-running-text">
+                    <div class="running-text-container">
+                        <div class="running-text-line" id="runningText">
+                            <span class="text-segment typing-text" data-text="NEXUS INTERACTIVE SYSTEMS">NEXUS INTERACTIVE SYSTEMS</span>
+                            <span class="text-separator"> • </span>
+                            <span class="text-segment typing-text" data-text="TACTICAL OPERATIONS NETWORK ONLINE">TACTICAL OPERATIONS NETWORK ONLINE</span>
+                            <span class="text-separator"> • </span>
+                            <span class="text-segment typing-text" data-text="SYNDICATE COMMAND INTERFACE v2.7">SYNDICATE COMMAND INTERFACE v2.7</span>
+                            <span class="text-separator"> • </span>
+                            <span class="text-segment typing-text" data-text="NEURAL LINK ESTABLISHED">NEURAL LINK ESTABLISHED</span>
+                            <span class="text-separator"> • </span>
+                            <span class="text-segment typing-text" data-text="QUANTUM ENCRYPTION ACTIVE">QUANTUM ENCRYPTION ACTIVE</span>
+                            <span class="text-separator"> • </span>
+                            <span class="text-segment typing-text" data-text="CYBER WARFARE PROTOCOLS LOADED">CYBER WARFARE PROTOCOLS LOADED</span>
+                            <span class="text-separator"> • </span>
+                        </div>
+                    </div>
+                    <div class="terminal-cursor"></div>
+                </div>
+            </div>
+
+            <div class="menu-container">
                 <h1 class="menu-title">CYBEROPS: SYNDICATE</h1>
                 <div class="menu-subtitle">Main Menu</div>
             </div>

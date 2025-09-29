@@ -235,7 +235,14 @@ class ScreenManager {
         // Create screen element
         const screenEl = document.createElement('div');
         screenEl.id = `screen-${screenId}`;
-        screenEl.className = 'game-screen generated-screen';
+
+        // Add fade-in class for main-menu if configured
+        let screenClasses = 'game-screen generated-screen';
+        if (screenId === 'main-menu' && window.SPLASH_CONFIG?.transition?.contentFadeIn) {
+            screenClasses += ' screen-fade-in';
+        }
+
+        screenEl.className = screenClasses;
         screenEl.style.cssText = `
             position: absolute;
             top: 0;
