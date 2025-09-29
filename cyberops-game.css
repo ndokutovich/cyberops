@@ -1609,7 +1609,7 @@ body {
     animation: fadeInFromFlash 2.5s ease-out forwards;
 }
 
-.menu-container {
+.menu-container.fade-in-content {
     animation: fadeInContent 2s ease-out;
 }
 

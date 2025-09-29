@@ -57,6 +57,9 @@ class ScreenManager {
             return;
         }
 
+        // Store previous screen for transitions
+        const previousScreen = this.currentScreen;
+
         // Clean up current screen
         if (this.currentScreen) {
             this.exitScreen(this.currentScreen);
@@ -65,6 +68,20 @@ class ScreenManager {
         // Show new screen
         this.currentScreen = screenId;
         this.enterScreen(screenId, screenConfig, params);
+
+        // Handle music transitions
+        if (previousScreen && previousScreen !== screenId && this.game?.transitionScreenMusic) {
+            // Use music transition system for screen-to-screen navigation
+            // This allows for continue, crossfade, skip, etc.
+            if (logger) logger.debug(`🎵 Transitioning music from ${previousScreen} to ${screenId}`);
+            this.game.transitionScreenMusic(previousScreen, screenId);
+        } else if (!previousScreen && screenConfig.music && this.game?.loadScreenMusic) {
+            // First screen load - start music if configured
+            if (logger) logger.debug(`🎵 Loading music for first screen: ${screenId}`);
+            this.game.loadScreenMusic(screenId);
+        } else {
+            if (logger) logger.debug(`🎵 No music action: prev=${previousScreen}, music=${screenConfig.music}, hasTransition=${!!this.game?.transitionScreenMusic}`);
+        }
 
         // Update game state
         if (this.game) {
@@ -104,10 +121,8 @@ class ScreenManager {
             }
         }
 
-        // Start screen-specific music
-        if (config.music && this.game?.loadScreenMusic) {
-            this.game.loadScreenMusic(screenId);
-        }
+        // Music is now handled in navigateTo with proper transitions
+        // (removed duplicate loadScreenMusic call)
     }
 
     /**

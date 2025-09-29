@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Splash Music Test - CyberOps: Syndicate</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0e1a;
+            color: #00ffff;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        h1 { color: #00ffff; }
+        .test-controls {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            background: #0a0e1a;
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        button:hover {
+            background: #00ffff;
+            color: #0a0e1a;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #444;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .log {
+            height: 300px;
+            overflow-y: scroll;
+            background: black;
+            padding: 10px;
+            border: 1px solid #00ffff;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+        }
+        .log-music { color: #ffff00; }
+        .log-screen { color: #00ff00; }
+        .log-skip { color: #ff00ff; }
+    </style>
+</head>
+<body>
+    <h1>🎮 Splash Music Test</h1>
+
+    <div class="test-controls">
+        <h2>Test Scenarios:</h2>
+
+        <h3>1. Full Splash Sequence (No Skip)</h3>
+        <button onclick="testFullSequence()">▶️ Start Full Sequence</button>
+        <p>Expected: Music starts at vendor splash, continues through all screens</p>
+
+        <h3>2. Skip at Vendor Splash</h3>
+        <button onclick="testSkipAtVendor()">⏩ Test Skip at Vendor</button>
+        <p>Expected: Music jumps to 10.6 seconds when menu loads</p>
+
+        <h3>3. Skip at Studio Splash</h3>
+        <button onclick="testSkipAtStudio()">⏩ Test Skip at Studio</button>
+        <p>Expected: Music continues normally (no skip)</p>
+
+        <h3>4. Music State Check</h3>
+        <button onclick="checkMusicState()">🎵 Check Music State</button>
+
+        <h3>5. Reset Test</h3>
+        <button onclick="resetTest()">🔄 Reset</button>
+    </div>
+
+    <div class="status">
+        <h3>Current Status:</h3>
+        <div id="currentScreen">Screen: None</div>
+        <div id="musicTime">Music Time: 0.0s</div>
+        <div id="splashSkipped">Splash Skipped: false</div>
+        <div id="musicFile">Music File: None</div>
+    </div>
+
+    <div class="log" id="log">
+        <div class="log-entry">Waiting for test to start...</div>
+    </div>
+
+    <script>
+        let logDiv = document.getElementById('log');
+        let testInterval = null;
+
+        function log(message, type = '') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const time = new Date().toLocaleTimeString();
+            entry.textContent = `[${time}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus() {
+            if (!window.game || !window.screenManager) return;
+
+            document.getElementById('currentScreen').textContent =
+                `Screen: ${window.screenManager.currentScreen || 'None'}`;
+
+            document.getElementById('splashSkipped').textContent =
+                `Splash Skipped: ${window.game.splashSkipped || false}`;
+
+            if (window.game.screenMusic && window.game.screenMusic.currentTrack) {
+                const track = window.game.screenMusic.currentTrack;
+                document.getElementById('musicTime').textContent =
+                    `Music Time: ${track.currentTime.toFixed(1)}s`;
+                document.getElementById('musicFile').textContent =
+                    `Music File: ${track.src.split('/').pop()}`;
+            }
+        }
+
+        function startMonitoring() {
+            if (testInterval) clearInterval(testInterval);
+            testInterval = setInterval(updateStatus, 100);
+        }
+
+        function testFullSequence() {
+            log('Starting full splash sequence test...', 'log-screen');
+
+            // Simulate game initialization
+            if (window.screenManager) {
+                window.game.splashSkipped = false;
+                window.screenManager.navigateTo('vendor-splash');
+                log('Navigated to vendor-splash', 'log-screen');
+                startMonitoring();
+
+                // Monitor transitions
+                setTimeout(() => {
+                    log(`After 3s: Screen = ${window.screenManager.currentScreen}`, 'log-screen');
+                    if (window.game.screenMusic && window.game.screenMusic.currentTrack) {
+                        log(`Music time: ${window.game.screenMusic.currentTrack.currentTime.toFixed(1)}s`, 'log-music');
+                    }
+                }, 3000);
+
+                setTimeout(() => {
+                    log(`After 6s: Screen = ${window.screenManager.currentScreen}`, 'log-screen');
+                    if (window.game.screenMusic && window.game.screenMusic.currentTrack) {
+                        log(`Music time: ${window.game.screenMusic.currentTrack.currentTime.toFixed(1)}s`, 'log-music');
+                    }
+                }, 6000);
+
+                setTimeout(() => {
+                    log(`After 8.5s: Screen = ${window.screenManager.currentScreen}`, 'log-screen');
+                    if (window.game.screenMusic && window.game.screenMusic.currentTrack) {
+                        log(`Music time: ${window.game.screenMusic.currentTrack.currentTime.toFixed(1)}s`, 'log-music');
+                    }
+                    log(`Splash skipped: ${window.game.splashSkipped}`, 'log-skip');
+                }, 8500);
+            }
+        }
+
+        function testSkipAtVendor() {
+            log('Testing skip at vendor splash...', 'log-skip');
+
+            if (window.screenManager && window.game) {
+                window.game.splashSkipped = false;
+                window.screenManager.navigateTo('vendor-splash');
+                log('Navigated to vendor-splash', 'log-screen');
+                startMonitoring();
+
+                // Simulate click after 500ms
+                setTimeout(() => {
+                    log('Simulating skip click...', 'log-skip');
+                    const container = document.getElementById('screen-vendor-splash');
+                    if (container) {
+                        container.click();
+
+                        setTimeout(() => {
+                            log(`Screen after skip: ${window.screenManager.currentScreen}`, 'log-screen');
+                            if (window.game.screenMusic && window.game.screenMusic.currentTrack) {
+                                const time = window.game.screenMusic.currentTrack.currentTime;
+                                log(`Music time after skip: ${time.toFixed(1)}s`, 'log-music');
+                                if (Math.abs(time - 10.6) < 0.5) {
+                                    log('✅ SUCCESS: Music jumped to 10.6s as expected!', 'log-music');
+                                } else {
+                                    log(`❌ ERROR: Music at ${time}s, expected ~10.6s`, 'log-music');
+                                }
+                            }
+                            log(`Splash skipped flag: ${window.game.splashSkipped}`, 'log-skip');
+                        }, 500);
+                    }
+                }, 500);
+            }
+        }
+
+        function testSkipAtStudio() {
+            log('Testing skip at studio splash...', 'log-skip');
+
+            if (window.screenManager && window.game) {
+                window.game.splashSkipped = false;
+                window.screenManager.navigateTo('vendor-splash');
+                startMonitoring();
+
+                // Wait for studio splash
+                setTimeout(() => {
+                    log('Now at studio-splash, clicking...', 'log-screen');
+                    const container = document.getElementById('screen-studio-splash');
+                    if (container) {
+                        container.click();
+
+                        setTimeout(() => {
+                            log(`Screen after skip: ${window.screenManager.currentScreen}`, 'log-screen');
+                            if (window.game.screenMusic && window.game.screenMusic.currentTrack) {
+                                const time = window.game.screenMusic.currentTrack.currentTime;
+                                log(`Music time: ${time.toFixed(1)}s (should continue normally)`, 'log-music');
+                            }
+                        }, 500);
+                    }
+                }, 3500);
+            }
+        }
+
+        function checkMusicState() {
+            if (!window.game) {
+                log('Game not initialized', 'log-music');
+                return;
+            }
+
+            log('=== Music State Check ===', 'log-music');
+            log(`Current screen: ${window.screenManager?.currentScreen}`, 'log-screen');
+            log(`Splash skipped: ${window.game.splashSkipped}`, 'log-skip');
+
+            if (window.game.screenMusic) {
+                const sm = window.game.screenMusic;
+                log(`Music screen: ${sm.currentScreen}`, 'log-music');
+                log(`Has track: ${!!sm.currentTrack}`, 'log-music');
+
+                if (sm.currentTrack) {
+                    log(`Track src: ${sm.currentTrack.src}`, 'log-music');
+                    log(`Current time: ${sm.currentTrack.currentTime.toFixed(1)}s`, 'log-music');
+                    log(`Volume: ${sm.currentTrack.volume}`, 'log-music');
+                    log(`Paused: ${sm.currentTrack.paused}`, 'log-music');
+                }
+            }
+
+            // Check config
+            if (window.getMusicConfigForScreen) {
+                const vendorConfig = window.getMusicConfigForScreen('vendor-splash');
+                log(`Vendor config exists: ${!!vendorConfig}`, 'log-music');
+                if (vendorConfig?.transitions?.toMenu) {
+                    log(`Skip transition type: ${vendorConfig.transitions.toMenu.type}`, 'log-music');
+                    log(`Skip time: ${vendorConfig.transitions.toMenu.skipTime}s`, 'log-music');
+                }
+            }
+        }
+
+        function resetTest() {
+            log('Resetting test...', 'log-screen');
+            if (testInterval) clearInterval(testInterval);
+
+            if (window.game) {
+                window.game.splashSkipped = false;
+                if (window.game.screenMusic && window.game.screenMusic.currentTrack) {
+                    window.game.screenMusic.currentTrack.pause();
+                    window.game.screenMusic.currentTrack.currentTime = 0;
+                }
+            }
+
+            if (window.screenManager) {
+                window.screenManager.navigateTo('main-menu');
+            }
+
+            updateStatus();
+            log('Test reset complete', 'log-screen');
+        }
+
+        // Wait for game to load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (window.game && window.screenManager) {
+                    log('✅ Game and ScreenManager loaded', 'log-screen');
+                    log('Ready for testing!', 'log-screen');
+                } else {
+                    log('❌ Game not loaded - include game scripts first', 'log-screen');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -4,54 +4,94 @@
  * These are NOT dialogs - they're the main game screens
  */
 
+// Splash Sequence Configuration - easily modify all splash aspects here
+const SPLASH_CONFIG = {
+    vendor: {
+        duration: 3000,
+        mainText: 'NEXUS INTERACTIVE',
+        subText: 'Presents'
+    },
+    studio: {
+        duration: 3000,
+        mainText: 'CYBER DYNAMICS',
+        subText: 'Game Studio'
+    },
+    game: {
+        duration: 2500,
+        title: 'CYBEROPS: SYNDICATE',
+        beamSweep: true,
+        infiniteLoadingBar: true,
+        glowEffect: true
+    },
+    transition: {
+        whiteFlash: true,
+        flashDuration: 1500,
+        contentFadeIn: true
+    }
+};
+
 const SCREEN_CONFIG = {
-    // Vendor Logo Splash (NEXUS INTERACTIVE)
+    // Vendor Logo Splash
     'vendor-splash': {
         type: 'generated',
         background: '#000',
+        music: true,  // Start music here at the beginning
         content: () => `
             <div class="logo-container">
-                <div class="company-name">NEXUS INTERACTIVE</div>
-                <div class="logo-subtitle">Presents</div>
+                <div class="company-name">${SPLASH_CONFIG.vendor.mainText}</div>
+                <div class="logo-subtitle">${SPLASH_CONFIG.vendor.subText}</div>
             </div>
         `,
         actions: [],
         onEnter: function() {
-            // Auto-advance after 3 seconds (original timing)
+            // Reset splash skipped flag at start
+            if (window.game) {
+                window.game.splashSkipped = false;
+            }
+
+            // Auto-advance after configured duration
             setTimeout(() => {
                 if (screenManager.currentScreen === 'vendor-splash') {
                     screenManager.navigateTo('studio-splash');
                 }
-            }, 3000);
+            }, SPLASH_CONFIG.vendor.duration);
 
             // Click to skip entire splash sequence
             const container = document.getElementById('screen-vendor-splash');
             if (container) {
                 container.addEventListener('click', () => {
-                    screenManager.navigateTo('splash');
+                    if (window.game) {
+                        window.game.splashSkipped = true;
+                        // Trigger the skip transition for music (pass actual screen ID)
+                        if (window.game.transitionScreenMusic) {
+                            window.game.transitionScreenMusic('vendor-splash', 'main-menu');
+                        }
+                    }
+                    // Navigate to main-menu screen
+                    screenManager.navigateTo('main-menu');
                 }, { once: true });
             }
         }
     },
 
-    // Studio Logo Splash (CYBER DYNAMICS)
+    // Studio Logo Splash
     'studio-splash': {
         type: 'generated',
         background: '#000',
         content: () => `
             <div class="logo-container">
-                <div class="studio-name">CYBER DYNAMICS</div>
-                <div class="logo-subtitle">Game Studio</div>
+                <div class="studio-name">${SPLASH_CONFIG.studio.mainText}</div>
+                <div class="logo-subtitle">${SPLASH_CONFIG.studio.subText}</div>
             </div>
         `,
         actions: [],
         onEnter: function() {
-            // Auto-advance after 3 seconds (original timing)
+            // Auto-advance after configured duration
             setTimeout(() => {
                 if (screenManager.currentScreen === 'studio-splash') {
                     screenManager.navigateTo('splash');
                 }
-            }, 3000);
+            }, SPLASH_CONFIG.studio.duration);
 
             // Click to skip to game splash
             const container = document.getElementById('screen-studio-splash');
@@ -63,27 +103,29 @@ const SCREEN_CONFIG = {
         }
     },
 
-    // Game Splash Screen (with beam sweep effect)
+    // Game Splash Screen (with configurable effects)
     'splash': {
         type: 'generated',
         background: '#0a0e1a',
-        music: true,
+        // music: true,  // Music continues from vendor-splash, don't restart
         content: () => `
             <div class="loading-screen" style="display: flex;">
-                <h1 class="game-title beam-sweep">CYBEROPS: SYNDICATE</h1>
-                <div class="loading-bar">
-                    <div class="loading-progress"></div>
-                </div>
+                <h1 class="game-title${SPLASH_CONFIG.game.beamSweep ? ' beam-sweep' : ''}">${SPLASH_CONFIG.game.title}</h1>
+                ${SPLASH_CONFIG.game.infiniteLoadingBar ? `
+                    <div class="loading-bar">
+                        <div class="loading-progress"></div>
+                    </div>
+                ` : ''}
             </div>
         `,
         actions: [],
         onEnter: function() {
-            // Duration balanced for beam sweep effect visibility
+            // Auto-advance after configured duration
             setTimeout(() => {
                 if (screenManager.currentScreen === 'splash') {
                     screenManager.navigateTo('main-menu');
                 }
-            }, 2500); // 2.5 seconds - enough to see beam sweep animation
+            }, SPLASH_CONFIG.game.duration);
 
             // Click to skip
             const container = document.getElementById('screen-splash');
@@ -99,10 +141,10 @@ const SCREEN_CONFIG = {
     'main-menu': {
         type: 'generated',
         background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)',
-        music: true,
+        // music: true,  // Music continues from vendor-splash, don't restart
         content: () => `
-            <div class="white-flash-overlay"></div>
-            <div class="menu-container">
+            ${SPLASH_CONFIG.transition.whiteFlash ? '<div class="white-flash-overlay"></div>' : ''}
+            <div class="menu-container${SPLASH_CONFIG.transition.contentFadeIn ? ' fade-in-content' : ''}">
                 <h1 class="menu-title">CYBEROPS: SYNDICATE</h1>
                 <div class="menu-subtitle">Main Menu</div>
             </div>
@@ -121,7 +163,7 @@ const SCREEN_CONFIG = {
     'hub': {
         type: 'dom',
         elementId: 'syndicateHub',
-        music: true,
+        // music: true,  // Music continues from menu, don't restart
         onEnter: function() {
             const game = window.game;
             if (game) {

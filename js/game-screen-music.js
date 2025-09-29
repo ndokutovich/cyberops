@@ -257,45 +257,79 @@ CyberOpsGame.prototype.playProceduralScreenMusic = function(trackConfig, trackId
 
 // Handle screen transitions
 CyberOpsGame.prototype.transitionScreenMusic = function(fromScreen, toScreen) {
-    if (this.logger) this.logger.debug(`🎵 Music transition: ${fromScreen} → ${toScreen}, splashSkipped: ${this.splashSkipped}`);
+    // Map screen IDs to music config keys
+    const screenNameMap = {
+        'main-menu': 'menu',
+        'mission-briefing': 'briefing',
+        'mission-loadout': 'loadout'
+    };
+
+    // Use mapped names for music config lookups
+    const fromMusicKey = screenNameMap[fromScreen] || fromScreen;
+    const toMusicKey = screenNameMap[toScreen] || toScreen;
+
+    if (this.logger) this.logger.debug(`🎵 Music transition: ${fromScreen} → ${toScreen} (${fromMusicKey} → ${toMusicKey}), splashSkipped: ${this.splashSkipped}`);
 
     // Special case: splash to menu
-    if (fromScreen === 'splash' && toScreen === 'menu') {
+    if (fromMusicKey === 'splash' && toMusicKey === 'menu') {
         if (!this.splashSkipped) {
             if (this.logger) this.logger.debug('🎵 Natural splash→menu transition - continuing same track');
             // Don't reload, just update the current screen reference
-            this.screenMusic.currentScreen = 'menu';
-            const menuConfig = getMusicConfigForScreen ? getMusicConfigForScreen('menu') : null;
+            this.screenMusic.currentScreen = toMusicKey;
+            const menuConfig = getMusicConfigForScreen ? getMusicConfigForScreen(toMusicKey) : null;
             this.screenMusic.currentConfig = menuConfig;
             return;  // Music continues playing seamlessly
         } else {
             if (this.logger) this.logger.debug('🎵 Splash was SKIPPED - need to reload music with seek');
             // Fall through to load menu music with startTime applied
-            this.loadScreenMusic(toScreen);
+            this.loadScreenMusic(toMusicKey);
             return;
         }
     }
 
-    const fromConfig = getMusicConfigForScreen ? getMusicConfigForScreen(fromScreen) : null;
-    const transitionConfig = fromConfig?.transitions?.[`to${toScreen.charAt(0).toUpperCase() + toScreen.slice(1)}`];
+    const fromConfig = getMusicConfigForScreen ? getMusicConfigForScreen(fromMusicKey) : null;
+    // Use the exact screen name as key for simplicity (e.g., 'toStudio-splash')
+    const transitionKey = `to${toScreen.charAt(0).toUpperCase() + toScreen.slice(1)}`;
+    const transitionConfig = fromConfig?.transitions?.[transitionKey];
+
+    if (this.logger) this.logger.debug(`🎵 Transition config for ${transitionKey}: ${transitionConfig?.type || 'none'}`);
 
     if (transitionConfig) {
         switch (transitionConfig.type) {
             case 'crossfade':
-                this.crossfadeToScreen(toScreen, transitionConfig.duration);
+                this.crossfadeToScreen(toMusicKey, transitionConfig.duration);
                 break;
             case 'fadeOut':
                 this.fadeOutScreenTrack(this.screenMusic.currentTrack, transitionConfig.duration);
-                setTimeout(() => this.loadScreenMusic(toScreen), transitionConfig.duration);
+                setTimeout(() => this.loadScreenMusic(toMusicKey), transitionConfig.duration);
                 break;
             case 'ramp':
-                this.rampAndTransition(toScreen, transitionConfig);
+                this.rampAndTransition(toMusicKey, transitionConfig);
+                break;
+            case 'skip':
+                // Skip transition - jump to specific time
+                if (transitionConfig.skipTime !== undefined && this.screenMusic.currentTrack) {
+                    if (this.logger) this.logger.debug(`🎵 Skip transition - jumping to ${transitionConfig.skipTime} seconds`);
+                    this.screenMusic.currentTrack.currentTime = transitionConfig.skipTime;
+                    this.splashSkipped = true;  // Mark that we skipped
+                }
+                this.screenMusic.currentScreen = toMusicKey;
+                const skipToConfig = getMusicConfigForScreen ? getMusicConfigForScreen(toMusicKey) : null;
+                this.screenMusic.currentConfig = skipToConfig;
                 break;
             case 'continue':
                 // Don't stop or change music, just update screen
-                this.screenMusic.currentScreen = toScreen;
-                const toConfig = getMusicConfigForScreen ? getMusicConfigForScreen(toScreen) : null;
+                if (this.logger) this.logger.debug(`🎵 Continue transition - music keeps playing, updating screen to ${toMusicKey}`);
+                this.screenMusic.currentScreen = toMusicKey;
+                const toConfig = getMusicConfigForScreen ? getMusicConfigForScreen(toMusicKey) : null;
                 this.screenMusic.currentConfig = toConfig;
+
+                // Verify music is still playing
+                if (this.screenMusic.currentTrack) {
+                    if (this.logger) this.logger.debug(`🎵 Music still playing: ${!this.screenMusic.currentTrack.paused}, time: ${this.screenMusic.currentTrack.currentTime.toFixed(1)}s`);
+                } else {
+                    if (this.logger) this.logger.warn('🎵 WARNING: No current track during continue transition!');
+                }
 
                 // Handle optional volume adjustment
                 if (transitionConfig.volumeAdjust && this.screenMusic.currentTrack) {
@@ -304,11 +338,11 @@ CyberOpsGame.prototype.transitionScreenMusic = function(fromScreen, toScreen) {
                 }
                 break;
             default:
-                this.loadScreenMusic(toScreen);
+                this.loadScreenMusic(toMusicKey);
         }
     } else {
-        // Default transition
-        this.loadScreenMusic(toScreen);
+        // Default transition - no config found, just load new music
+        this.loadScreenMusic(toMusicKey);
     }
 };
 

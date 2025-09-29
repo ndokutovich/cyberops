@@ -14,28 +14,44 @@ const GAME_MUSIC_CONFIG = {
 
     // Screen-specific music configurations
     screens: {
-        // Initial splash screen
-        splash: {
+        // Vendor splash screen (NEXUS INTERACTIVE)
+        'vendor-splash': {
             tracks: {
                 main: {
-                    file: 'game-music.mp3',  // Same file as menu, starts from beginning
+                    file: 'game-music.mp3',  // Start music at vendor splash
                     fallback: 'music/global/menu.mp3',
                     volume: 0.5,
                     loop: true,
                     fadeIn: 1000,
-                    startTime: 0  // Play from beginning for splash (0-10.6 seconds)
+                    startTime: 0  // Always start from beginning
                 }
             },
-            events: [
-                {
-                    id: 'skip',
-                    trigger: 'user_input',
-                    action: 'transitionToMenu',
-                    markSkipped: true  // Sets splashSkipped flag
-                }
-            ],
             transitions: {
-                toMenu: {
+                'toStudio-splash': {
+                    type: 'continue'  // Continue to studio splash
+                },
+                'toMain-menu': {
+                    type: 'skip',  // When skipping, jump to menu
+                    skipTime: 10.6  // Jump to this time when skipping
+                }
+            }
+        },
+
+        // Studio splash screen (CYBER DYNAMICS)
+        'studio-splash': {
+            // No tracks defined - music continues from vendor-splash
+            transitions: {
+                'toSplash': {
+                    type: 'continue'  // Continue to game splash
+                }
+            }
+        },
+
+        // Game splash screen (with logo and effects)
+        splash: {
+            // No tracks defined - music continues from studio-splash
+            transitions: {
+                'toMain-menu': {
                     type: 'continue'  // Natural transition - same music file continues
                 }
             }
