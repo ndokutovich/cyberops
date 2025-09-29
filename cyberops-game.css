@@ -3189,6 +3189,44 @@ body {
     color: #00ffaa;
 }
 
+/* Logo Container for Vendor/Studio Splashes */
+.logo-container {
+    text-align: center;
+    animation: fadeInScale 2s ease-out;
+}
+
+.company-name, .studio-name {
+    font-size: 3em;
+    font-weight: bold;
+    background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 20px;
+    text-shadow: 0 0 30px rgba(0,255,255,0.5);
+}
+
+.logo-subtitle {
+    font-size: 1.2em;
+    color: #888;
+    font-style: italic;
+}
+
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 /* Splash screen specific */
 .splash-container {
     text-align: center;

@@ -194,10 +194,11 @@ CyberOpsGame.prototype.backToMainMenu = function() {
     }
 }
 
-// Initial screen (alias for splash)
+// Initial screen (now starts with vendor splash)
 CyberOpsGame.prototype.showInitialScreen = function() {
     if (window.screenManager) {
-        window.screenManager.navigateTo('splash');
+        // Start with vendor splash which will chain to studio → game splash → menu
+        window.screenManager.navigateTo('vendor-splash');
     } else {
         if (this.logger) this.logger.error('Screen manager not available for initial screen');
     }

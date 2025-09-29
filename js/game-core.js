@@ -384,20 +384,20 @@ CyberOpsGame.prototype.init = function() {
                 // Hide the initial screen
                 initialScreen.style.display = 'none';
 
-                // Start the ScreenManager flow with splash screen
+                // Start the ScreenManager flow with vendor splash screen
                 if (window.screenManager) {
-                    if (this.logger) this.logger.debug('📺 Navigating to splash screen');
-                    window.screenManager.navigateTo('splash');
+                    if (this.logger) this.logger.debug('📺 Navigating to vendor splash screen');
+                    window.screenManager.navigateTo('vendor-splash');
                 } else {
                     if (this.logger) this.logger.error('Screen manager not available!');
                 }
             };
         } else {
             // Fallback if initial screen not found
-            if (this.logger) this.logger.warn('⚠️ Initial screen not found, starting directly with splash');
+            if (this.logger) this.logger.warn('⚠️ Initial screen not found, starting directly with vendor splash');
             setTimeout(() => {
                 if (window.screenManager) {
-                    window.screenManager.navigateTo('splash');
+                    window.screenManager.navigateTo('vendor-splash');
                 }
             }, 100);
         }

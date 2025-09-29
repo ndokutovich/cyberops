@@ -5,7 +5,65 @@
  */
 
 const SCREEN_CONFIG = {
-    // Splash Screen
+    // Vendor Logo Splash (NEXUS INTERACTIVE)
+    'vendor-splash': {
+        type: 'generated',
+        background: '#000',
+        content: () => `
+            <div class="logo-container">
+                <div class="company-name">NEXUS INTERACTIVE</div>
+                <div class="logo-subtitle">Presents</div>
+            </div>
+        `,
+        actions: [],
+        onEnter: function() {
+            // Auto-advance after 3 seconds (original timing)
+            setTimeout(() => {
+                if (screenManager.currentScreen === 'vendor-splash') {
+                    screenManager.navigateTo('studio-splash');
+                }
+            }, 3000);
+
+            // Click to skip entire splash sequence
+            const container = document.getElementById('screen-vendor-splash');
+            if (container) {
+                container.addEventListener('click', () => {
+                    screenManager.navigateTo('splash');
+                }, { once: true });
+            }
+        }
+    },
+
+    // Studio Logo Splash (CYBER DYNAMICS)
+    'studio-splash': {
+        type: 'generated',
+        background: '#000',
+        content: () => `
+            <div class="logo-container">
+                <div class="studio-name">CYBER DYNAMICS</div>
+                <div class="logo-subtitle">Game Studio</div>
+            </div>
+        `,
+        actions: [],
+        onEnter: function() {
+            // Auto-advance after 3 seconds (original timing)
+            setTimeout(() => {
+                if (screenManager.currentScreen === 'studio-splash') {
+                    screenManager.navigateTo('splash');
+                }
+            }, 3000);
+
+            // Click to skip to game splash
+            const container = document.getElementById('screen-studio-splash');
+            if (container) {
+                container.addEventListener('click', () => {
+                    screenManager.navigateTo('splash');
+                }, { once: true });
+            }
+        }
+    },
+
+    // Game Splash Screen (current implementation - keep as is)
     'splash': {
         type: 'generated',
         background: 'radial-gradient(circle at center, #0a1628, #000000)',
@@ -22,12 +80,12 @@ const SCREEN_CONFIG = {
         `,
         actions: [],
         onEnter: function() {
-            // Auto-advance after 3 seconds
+            // Shorter duration since we now have vendor/studio screens before
             setTimeout(() => {
                 if (screenManager.currentScreen === 'splash') {
                     screenManager.navigateTo('main-menu');
                 }
-            }, 3000);
+            }, 1500); // Reduced from 3000 to 1500 (original loading screen timing)
 
             // Click to skip
             const container = document.getElementById('screen-splash');
@@ -341,9 +399,17 @@ const SCREEN_CONFIG = {
 
 // Register all screens when loaded
 if (window.screenManager) {
+    // Force re-registration of all screens
     Object.entries(SCREEN_CONFIG).forEach(([id, config]) => {
         window.screenManager.registerScreen(id, config);
     });
     const logger = window.Logger ? new window.Logger('ScreenConfig') : null;
     if (logger) logger.debug('📺 Registered', Object.keys(SCREEN_CONFIG).length, 'screens');
+    console.log('📺 SCREEN CONFIG LOADED - Version 2.0 with vendor/studio splashes');
+    console.log('📺 Registered screens:', Object.keys(SCREEN_CONFIG));
+    console.log('📺 Vendor splash registered:', SCREEN_CONFIG['vendor-splash'] ? 'YES' : 'NO');
+    console.log('📺 Studio splash registered:', SCREEN_CONFIG['studio-splash'] ? 'YES' : 'NO');
 }
+
+// Also expose to window for debugging
+window.SCREEN_CONFIG = SCREEN_CONFIG;
