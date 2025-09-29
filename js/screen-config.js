@@ -63,29 +63,27 @@ const SCREEN_CONFIG = {
         }
     },
 
-    // Game Splash Screen (current implementation - keep as is)
+    // Game Splash Screen (with beam sweep effect)
     'splash': {
         type: 'generated',
-        background: 'radial-gradient(circle at center, #0a1628, #000000)',
+        background: '#0a0e1a',
         music: true,
         content: () => `
-            <div class="splash-container">
-                <h1 class="game-title">CYBEROPS: SYNDICATE</h1>
-                <div class="game-subtitle">A Tactical Cyberpunk Experience</div>
+            <div class="loading-screen" style="display: flex;">
+                <h1 class="game-title beam-sweep">CYBEROPS: SYNDICATE</h1>
                 <div class="loading-bar">
                     <div class="loading-progress"></div>
                 </div>
-                <div class="splash-hint">Click anywhere to continue</div>
             </div>
         `,
         actions: [],
         onEnter: function() {
-            // Shorter duration since we now have vendor/studio screens before
+            // Duration balanced for beam sweep effect visibility
             setTimeout(() => {
                 if (screenManager.currentScreen === 'splash') {
                     screenManager.navigateTo('main-menu');
                 }
-            }, 1500); // Reduced from 3000 to 1500 (original loading screen timing)
+            }, 2500); // 2.5 seconds - enough to see beam sweep animation
 
             // Click to skip
             const container = document.getElementById('screen-splash');
@@ -103,6 +101,7 @@ const SCREEN_CONFIG = {
         background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)',
         music: true,
         content: () => `
+            <div class="white-flash-overlay"></div>
             <div class="menu-container">
                 <h1 class="menu-title">CYBEROPS: SYNDICATE</h1>
                 <div class="menu-subtitle">Main Menu</div>
