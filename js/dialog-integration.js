@@ -2627,7 +2627,7 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
                             <div>
                                 ${canLearn ? `
                                     <button class="dialog-button primary"
-                                            onclick="window.declarativeDialogEngine.executeAction('execute:learnSkill:${agentId}:${skill.id}')"
+                                            onclick="window.declarativeDialogEngine.executeAction('learnSkill:${agentId}:${skill.id}')"
                                             style="padding: 5px 15px;">
                                         Learn (+1)
                                     </button>
