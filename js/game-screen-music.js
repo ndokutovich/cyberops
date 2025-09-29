@@ -288,8 +288,8 @@ CyberOpsGame.prototype.transitionScreenMusic = function(fromScreen, toScreen) {
     }
 
     const fromConfig = getMusicConfigForScreen ? getMusicConfigForScreen(fromMusicKey) : null;
-    // Use the exact screen name as key for simplicity (e.g., 'toStudio-splash')
-    const transitionKey = `to${toScreen.charAt(0).toUpperCase() + toScreen.slice(1)}`;
+    // Build transition key using the music config key, not screen name
+    const transitionKey = `to${toMusicKey.charAt(0).toUpperCase() + toMusicKey.slice(1)}`;
     const transitionConfig = fromConfig?.transitions?.[transitionKey];
 
     if (this.logger) this.logger.debug(`🎵 Transition config for ${transitionKey}: ${transitionConfig?.type || 'none'}`);
@@ -337,12 +337,37 @@ CyberOpsGame.prototype.transitionScreenMusic = function(fromScreen, toScreen) {
                     this.fadeToVolume(this.screenMusic.currentTrack, newVolume, 500);
                 }
                 break;
+            case 'restart':
+                // Restart the current music from beginning
+                if (this.logger) this.logger.debug(`🎵 Restart transition - restarting music from beginning for ${toMusicKey}`);
+                if (this.screenMusic.currentTrack) {
+                    this.screenMusic.currentTrack.currentTime = 0;
+                    // Make sure it's playing
+                    if (this.screenMusic.currentTrack.paused) {
+                        this.screenMusic.currentTrack.play();
+                    }
+                }
+                this.screenMusic.currentScreen = toMusicKey;
+                const restartConfig = getMusicConfigForScreen ? getMusicConfigForScreen(toMusicKey) : null;
+                this.screenMusic.currentConfig = restartConfig;
+                break;
             default:
                 this.loadScreenMusic(toMusicKey);
         }
     } else {
-        // Default transition - no config found, just load new music
-        this.loadScreenMusic(toMusicKey);
+        // No transition config found - check if destination has music
+        const toConfig = getMusicConfigForScreen ? getMusicConfigForScreen(toMusicKey) : null;
+
+        if (toConfig && toConfig.tracks) {
+            // Destination has its own music - load it
+            if (this.logger) this.logger.debug(`🎵 No transition config, but ${toMusicKey} has tracks - loading new music`);
+            this.loadScreenMusic(toMusicKey);
+        } else {
+            // Destination has no music - continue current music
+            if (this.logger) this.logger.debug(`🎵 No transition config and ${toMusicKey} has no tracks - continuing current music`);
+            this.screenMusic.currentScreen = toMusicKey;
+            this.screenMusic.currentConfig = toConfig;
+        }
     }
 };
 

@@ -4,17 +4,18 @@ CyberOpsGame.prototype.startDemosceneIdleTimer = function() {
         if (this.logger) this.logger.debug('- currentScreen:', this.currentScreen);
         if (this.logger) this.logger.debug('- demosceneActive:', this.demosceneActive);
         if (this.logger) this.logger.debug('- DEMOSCENE_IDLE_TIMEOUT:', this.DEMOSCENE_IDLE_TIMEOUT);
-        
+
         // Clear existing timer
         this.clearDemosceneTimer();
-        
-        if (this.currentScreen === 'menu' && !this.demosceneActive) {
+
+        // Check for main-menu (new screen system name)
+        if (this.currentScreen === 'main-menu' && !this.demosceneActive) {
             if (this.logger) this.logger.info('✅ Starting demoscene idle timer (' + this.DEMOSCENE_IDLE_TIMEOUT + ' ms)');
             this.demosceneTimer = setTimeout(() => {
                 if (this.logger) this.logger.debug('⏰ Demoscene timer fired! Checking conditions...');
                 if (this.logger) this.logger.debug('- currentScreen at timeout:', this.currentScreen);
                 if (this.logger) this.logger.debug('- demosceneActive at timeout:', this.demosceneActive);
-                if (this.currentScreen === 'menu' && !this.demosceneActive) {
+                if (this.currentScreen === 'main-menu' && !this.demosceneActive) {
                     if (this.logger) this.logger.debug('🎬 Starting demoscene!');
                     this.showDemoscene();
                 } else {
@@ -23,7 +24,7 @@ CyberOpsGame.prototype.startDemosceneIdleTimer = function() {
             }, this.DEMOSCENE_IDLE_TIMEOUT);
         } else {
             if (this.logger) this.logger.debug('❌ Not starting demoscene timer - conditions not met');
-            if (this.logger) this.logger.debug('  - currentScreen === "menu":', this.currentScreen === 'menu');
+            if (this.logger) this.logger.debug('  - currentScreen === "main-menu":', this.currentScreen === 'main-menu');
             if (this.logger) this.logger.debug('  - !demosceneActive:', !this.demosceneActive);
         }
 }
@@ -36,18 +37,23 @@ CyberOpsGame.prototype.clearDemosceneTimer = function() {
 }
     
 CyberOpsGame.prototype.showDemoscene = function() {
-        if (this.currentScreen !== 'menu') return;
-        
+        if (this.currentScreen !== 'main-menu') return;
+
         if (this.logger) this.logger.debug('Starting demoscene attract mode');
         this.demosceneActive = true;
-        this.currentScreen = 'demoscene';
-        
-        // Hide main menu
-        document.getElementById('mainMenu').style.display = 'none';
-        
-        // Show demoscene
-        const demosceneScreen = document.getElementById('demoscene');
-        demosceneScreen.style.display = 'flex';
+
+        // Use screen manager to navigate to demoscene
+        if (window.screenManager) {
+            window.screenManager.navigateTo('demoscene');
+        } else {
+            // Fallback to direct manipulation
+            this.currentScreen = 'demoscene';
+            document.getElementById('mainMenu').style.display = 'none';
+
+            // Show demoscene
+            const demosceneScreen = document.getElementById('demoscene');
+            demosceneScreen.style.display = 'flex';
+        }
         
         // Add click handler to interrupt demoscene
         this.setupDemosceneInterrupt();
@@ -81,23 +87,30 @@ CyberOpsGame.prototype.setupDemosceneInterrupt = function() {
     
 CyberOpsGame.prototype.interruptDemoscene = function() {
         if (!this.demosceneActive) return;
-        
+
         if (this.logger) this.logger.debug('Demoscene interrupted, returning to main menu');
         this.demosceneActive = false;
-        this.currentScreen = 'menu';
-        
-        // Hide demoscene
-        document.getElementById('demoscene').style.display = 'none';
-        
-        // Show main menu
-        const mainMenu = document.getElementById('mainMenu');
-        mainMenu.style.display = 'flex';
-        
-        // Restart idle timer
-        this.startDemosceneIdleTimer();
-        
-        // Clean up interrupt handlers
-        this.removeDemosceneInterruptHandlers();
+
+        // Use screen manager to go back to main menu
+        if (window.screenManager) {
+            window.screenManager.navigateTo('main-menu');
+        } else {
+            // Fallback
+            this.currentScreen = 'main-menu';
+
+            // Hide demoscene
+            document.getElementById('demoscene').style.display = 'none';
+
+            // Show main menu
+            const mainMenu = document.getElementById('mainMenu');
+            mainMenu.style.display = 'flex';
+
+            // Restart idle timer
+            this.startDemosceneIdleTimer();
+
+            // Clean up interrupt handlers
+            this.removeDemosceneInterruptHandlers();
+        }
 }
     
 CyberOpsGame.prototype.removeDemosceneInterruptHandlers = function() {
@@ -137,7 +150,7 @@ CyberOpsGame.prototype.animateDemosceneElements = function() {
 
     // User Activity Detection (for resetting demoscene timer)
 CyberOpsGame.prototype.resetDemosceneTimer = function() {
-        if (this.currentScreen === 'menu' && !this.demosceneActive) {
+        if (this.currentScreen === 'main-menu' && !this.demosceneActive) {
             this.startDemosceneIdleTimer();
         }
 }

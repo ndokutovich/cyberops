@@ -142,6 +142,36 @@ const SCREEN_CONFIG = {
         type: 'generated',
         background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)',
         // music: true,  // Music continues from vendor-splash, don't restart
+        onEnter: function() {
+            // Start demoscene idle timer
+            if (window.game && window.game.startDemosceneIdleTimer) {
+                window.game.startDemosceneIdleTimer();
+            }
+
+            // Reset timer on any user activity
+            const resetTimer = () => {
+                if (window.game && window.game.resetDemosceneTimer) {
+                    window.game.resetDemosceneTimer();
+                }
+            };
+
+            // Add activity listeners
+            setTimeout(() => {
+                const menuContainer = document.getElementById('screen-main-menu');
+                if (menuContainer) {
+                    menuContainer.addEventListener('click', resetTimer);
+                    menuContainer.addEventListener('mousemove', resetTimer);
+                    menuContainer.addEventListener('keydown', resetTimer);
+                }
+            }, 100);
+        },
+        onExit: function() {
+            // Clean up activity listeners
+            const menuContainer = document.getElementById('screen-main-menu');
+            if (menuContainer) {
+                // Note: Can't remove anonymous functions, but they'll be garbage collected
+            }
+        },
         content: () => `
             ${SPLASH_CONFIG.transition.whiteFlash ? '<div class="white-flash-overlay"></div>' : ''}
             <div class="menu-container${SPLASH_CONFIG.transition.contentFadeIn ? ' fade-in-content' : ''}">
@@ -388,6 +418,29 @@ const SCREEN_CONFIG = {
             { text: 'RETURN TO HUB', action: 'navigate:hub' },
             { text: 'LOAD CHECKPOINT', action: 'execute:showLoadGame' }
         ]
+    },
+
+    // Demoscene Attract Mode
+    'demoscene': {
+        type: 'dom',
+        elementId: 'demoscene',
+        // music: true,  // Don't start new music, continue menu music
+        onEnter: function() {
+            const game = window.game;
+            if (game) {
+                game.demosceneActive = true;
+                // Setup interrupt handlers are already in showDemoscene
+            }
+        },
+        onExit: function() {
+            const game = window.game;
+            if (game) {
+                game.demosceneActive = false;
+                if (game.removeDemosceneInterruptHandlers) {
+                    game.removeDemosceneInterruptHandlers();
+                }
+            }
+        }
     },
 
     // Credits Screen

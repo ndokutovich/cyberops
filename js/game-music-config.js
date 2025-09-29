@@ -75,6 +75,9 @@ const GAME_MUSIC_CONFIG = {
                     type: 'continue',  // Continue same music, don't reload
                     volumeAdjust: 0.8  // Optional: slightly reduce volume in hub
                 },
+                toDemoscene: {
+                    type: 'continue'  // Continue same music in demoscene
+                },
                 toMission: {
                     type: 'fadeOut',
                     duration: 1000
@@ -198,12 +201,10 @@ const GAME_MUSIC_CONFIG = {
 
         // Demoscene (attract mode)
         demoscene: {
-            tracks: {
-                retro: {
-                    file: 'music/screens/demoscene.mp3',
-                    volume: 0.5,
-                    loop: true,
-                    fadeIn: 1000
+            // No tracks - continues menu music
+            transitions: {
+                'toMain-menu': {
+                    type: 'restart'  // Restart music when returning to menu
                 }
             }
         }
