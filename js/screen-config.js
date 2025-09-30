@@ -266,13 +266,15 @@ const SCREEN_CONFIG = {
             // Get active agents for squad selection
             const activeAgents = game?.activeAgents || [];
             const selectedAgents = game?.selectedAgents || [];
+            const maxAgents = mission?.agents?.max || 4; // Use mission's max agents
+            const requiredAgents = mission?.agents?.required || 1;
 
             const squadInfo = activeAgents.length > 0 ?
                 `<div class="squad-section">
-                    <h4 style="margin-top: 20px; color: #00ffff;">SELECT SQUAD (${selectedAgents.length}/4):</h4>
+                    <h4 style="margin-top: 20px; color: #00ffff;">SELECT SQUAD (${selectedAgents.length}/${maxAgents}):</h4>
                     <div class="selection-info" style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 5px; text-align: center;">
-                        ${selectedAgents.length === 0 ?
-                            '<span style="color: #ff6666;">⚠️ Select at least one agent to start the mission</span>' :
+                        ${selectedAgents.length < requiredAgents ?
+                            `<span style="color: #ff6666;">⚠️ Select at least ${requiredAgents} agent(s) to start the mission</span>` :
                             `<span style="color: #00ff00;">✓ ${selectedAgents.length} agent(s) selected - Ready to deploy!</span>`
                         }
                     </div>
@@ -335,14 +337,16 @@ const SCREEN_CONFIG = {
         },
         actions: function() {
             const game = window.game;
+            const mission = game?.currentMission;
             const hasAgents = game?.activeAgents?.length > 0;
-            const hasSelection = game?.selectedAgents?.length > 0;
+            const requiredAgents = mission?.agents?.required || 1;
+            const hasEnoughAgents = (game?.selectedAgents?.length || 0) >= requiredAgents;
 
             if (!hasAgents) {
                 return [
                     { text: 'HIRE AGENTS FIRST', action: 'navigate:hub', primary: true }
                 ];
-            } else if (hasSelection) {
+            } else if (hasEnoughAgents) {
                 return [
                     { text: 'START MISSION', action: 'execute:startMission', primary: true },
                     { text: 'BACK TO HUB', action: 'navigate:hub' }
@@ -354,12 +358,17 @@ const SCREEN_CONFIG = {
                 ];
             }
         },
-        onEnter: function() {
+        onEnter: function(params) {
             // Initialize selectedAgents array if not exists
             const game = window.game;
             if (game && !game.selectedAgents) {
                 game.selectedAgents = [];
             }
+
+            // Get mission parameters
+            const mission = params?.mission || game?.currentMission;
+            const maxAgents = mission?.agents?.max || 4;
+            const requiredAgents = mission?.agents?.required || 1;
 
             // Add click handlers for agent selection
             setTimeout(() => {
@@ -385,8 +394,8 @@ const SCREEN_CONFIG = {
                                 nameEl.style.color = '#00ffff';
                                 nameEl.textContent = nameEl.textContent.replace('✓ ', '');
                             }
-                        } else if (game.selectedAgents.length < 4) {
-                            // Select
+                        } else if (game.selectedAgents.length < maxAgents) {
+                            // Select (check against mission's max agents)
                             game.selectedAgents.push(agentId);
                             this.classList.add('selected');
                             this.style.background = 'rgba(0,255,0,0.15)';
@@ -405,25 +414,25 @@ const SCREEN_CONFIG = {
                         const infoEl = document.querySelector('.selection-info');
                         if (infoEl) {
                             const count = game.selectedAgents.length;
-                            infoEl.innerHTML = count === 0 ?
-                                '<span style="color: #ff6666;">⚠️ Select at least one agent to start the mission</span>' :
+                            infoEl.innerHTML = count < requiredAgents ?
+                                `<span style="color: #ff6666;">⚠️ Select at least ${requiredAgents} agent(s) to start the mission</span>` :
                                 `<span style="color: #00ff00;">✓ ${count} agent(s) selected - Ready to deploy!</span>`;
                         }
 
                         // Update squad count in header
                         const squadHeader = document.querySelector('.squad-section h4');
                         if (squadHeader) {
-                            squadHeader.textContent = `SELECT SQUAD (${game.selectedAgents.length}/4):`;
+                            squadHeader.textContent = `SELECT SQUAD (${game.selectedAgents.length}/${maxAgents}):`;
                         }
 
-                        // Update buttons
-                        const hasSelection = game.selectedAgents.length > 0;
+                        // Update buttons (check if we have enough agents selected)
+                        const hasEnoughAgents = game.selectedAgents.length >= requiredAgents;
                         const actionButtons = document.querySelectorAll('.screen-action');
                         actionButtons.forEach(btn => {
                             if (btn.textContent.includes('SELECT AGENTS') || btn.textContent === 'START MISSION') {
-                                btn.textContent = hasSelection ? 'START MISSION' : 'SELECT AGENTS TO START';
-                                btn.disabled = !hasSelection;
-                                if (hasSelection) {
+                                btn.textContent = hasEnoughAgents ? 'START MISSION' : 'SELECT AGENTS TO START';
+                                btn.disabled = !hasEnoughAgents;
+                                if (hasEnoughAgents) {
                                     btn.classList.add('primary');
                                     btn.dataset.action = 'execute:startMission';
                                 } else {
