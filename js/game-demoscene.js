@@ -46,13 +46,9 @@ CyberOpsGame.prototype.showDemoscene = function() {
         if (window.screenManager) {
             window.screenManager.navigateTo('demoscene');
         } else {
-            // Fallback to direct manipulation
+            // Fallback - shouldn't happen since screen manager should exist
             this.currentScreen = 'demoscene';
-            document.getElementById('mainMenu').style.display = 'none';
-
-            // Show demoscene
-            const demosceneScreen = document.getElementById('demoscene');
-            demosceneScreen.style.display = 'flex';
+            if (this.logger) this.logger.warn('Screen manager not available for demoscene');
         }
         
         // Add click handler to interrupt demoscene
@@ -68,19 +64,24 @@ CyberOpsGame.prototype.setupDemosceneInterrupt = function() {
     if (!this.logger) {
         this.logger = window.Logger ? new window.Logger('GameDemoscene') : null;
     }
-        const demosceneScreen = document.getElementById('demoscene');
-        
+        // Get the demoscene element from screen container
+        const screenContainer = document.getElementById('screen-container');
+        if (!screenContainer) return;
+
+        const demosceneScreen = screenContainer.querySelector('.demoscene-screen');
+        if (!demosceneScreen) return;
+
         const interruptHandler = (event) => {
             event.preventDefault();
             event.stopPropagation();
             this.interruptDemoscene();
         };
-        
+
         // Add listeners for any interaction
         demosceneScreen.addEventListener('click', interruptHandler, { once: true });
         demosceneScreen.addEventListener('touchstart', interruptHandler, { once: true });
         demosceneScreen.addEventListener('keydown', interruptHandler, { once: true });
-        
+
         // Store handler for cleanup
         this.demosceneInterruptHandler = interruptHandler;
 }
@@ -95,15 +96,9 @@ CyberOpsGame.prototype.interruptDemoscene = function() {
         if (window.screenManager) {
             window.screenManager.navigateTo('main-menu');
         } else {
-            // Fallback
+            // Fallback - shouldn't happen
             this.currentScreen = 'main-menu';
-
-            // Hide demoscene
-            document.getElementById('demoscene').style.display = 'none';
-
-            // Show main menu
-            const mainMenu = document.getElementById('mainMenu');
-            mainMenu.style.display = 'flex';
+            if (this.logger) this.logger.warn('Screen manager not available for demoscene interrupt');
 
             // Restart idle timer
             this.startDemosceneIdleTimer();
@@ -114,7 +109,11 @@ CyberOpsGame.prototype.interruptDemoscene = function() {
 }
     
 CyberOpsGame.prototype.removeDemosceneInterruptHandlers = function() {
-        const demosceneScreen = document.getElementById('demoscene');
+        // Get the demoscene element from screen container
+        const screenContainer = document.getElementById('screen-container');
+        if (!screenContainer) return;
+
+        const demosceneScreen = screenContainer.querySelector('.demoscene-screen');
         if (this.demosceneInterruptHandler && demosceneScreen) {
             demosceneScreen.removeEventListener('click', this.demosceneInterruptHandler);
             demosceneScreen.removeEventListener('touchstart', this.demosceneInterruptHandler);

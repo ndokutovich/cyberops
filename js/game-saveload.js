@@ -425,12 +425,10 @@ CyberOpsGame.prototype.returnToInitialScreen = function() {
         // Clear demoscene timer and hide demoscene
         this.clearDemosceneTimer();
         this.demosceneActive = false;
-        document.getElementById('demoscene').style.display = 'none';
 
-        // Hide all game screens (syndicateHub removed - using screen manager)
-        document.getElementById('mainMenu').style.display = 'none';
+        // Hide all game screens via screen manager
+        // (screens are now handled declaratively)
         document.getElementById('gameCompleteScreen').style.display = 'none';
-        document.getElementById('creditsScreen').style.display = 'none';
         document.querySelectorAll('.splash-screen').forEach(screen => {
             screen.style.display = 'none';
         });

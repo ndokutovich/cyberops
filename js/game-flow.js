@@ -249,7 +249,7 @@ CyberOpsGame.prototype.startMission = function() {
             }
         }
 
-        document.getElementById('missionBriefing').style.display = 'none';
+        // Mission briefing now handled by screen manager
         const gameHUD = document.getElementById('gameHUD');
         gameHUD.style.display = 'block';
         // Don't override CSS positioning - it's already correctly set as fixed
@@ -2286,8 +2286,10 @@ CyberOpsGame.prototype.performReturnToHub = function() {
 // Moved to game-settings.js
 
 CyberOpsGame.prototype.backToMenuFromBriefing = function() {
-        document.getElementById('missionBriefing').style.display = 'none';
-        document.getElementById('mainMenu').style.display = 'flex';
+        // Use screen manager to navigate back to main menu
+        if (window.screenManager) {
+            window.screenManager.navigateTo('main-menu');
+        }
 }
 
     // Removed - replaced by intermission dialog system

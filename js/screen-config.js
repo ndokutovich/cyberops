@@ -454,9 +454,8 @@ const SCREEN_CONFIG = {
 
     // Demoscene Attract Mode
     'demoscene': {
-        type: 'dom',
-        elementId: 'demoscene',
-        // music: true,  // Don't start new music, continue menu music
+        type: 'generated',
+        background: 'linear-gradient(135deg, #000000, #1a0a2e)',
         onEnter: function() {
             const game = window.game;
             if (game) {
@@ -472,7 +471,118 @@ const SCREEN_CONFIG = {
                     game.removeDemosceneInterruptHandlers();
                 }
             }
-        }
+        },
+        content: () => `
+            <div class="demoscene-screen" style="width: 100%; height: 100%; position: relative;">
+                <div class="demo-header">
+                    <div class="demo-title">CyberOps: Syndicate</div>
+                    <div class="demo-subtitle">--- CLASSIFIED INTEL BRIEFING ---</div>
+                </div>
+
+                <div class="demo-content">
+                    <div class="demo-panels">
+                        <!-- World Lore Panel -->
+                        <div class="demo-panel lore-panel">
+                            <div class="panel-title">WORLD STATE ANALYSIS</div>
+                            <div class="lore-text">
+                                <div class="lore-section">
+                                    <span class="lore-header">YEAR 2087:</span><br>
+                                    Mega-corporations rule the world through digital dominance.
+                                    The line between human and machine has blurred beyond recognition.
+                                </div>
+                                <div class="lore-section">
+                                    <span class="lore-header">THE SYNDICATE:</span><br>
+                                    An elite organization of cyber-operatives fighting for freedom
+                                    in a world controlled by algorithmic oppression.
+                                </div>
+                                <div class="lore-section">
+                                    <span class="lore-header">YOUR MISSION:</span><br>
+                                    Lead tactical operations to reclaim human autonomy from
+                                    the corporate digital overlords.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Game Features Panel -->
+                        <div class="demo-panel features-panel">
+                            <div class="panel-title">OPERATION PARAMETERS</div>
+                            <div class="features-list">
+                                <div class="feature-item">
+                                    <span class="feature-icon">⚡</span>
+                                    <span class="feature-text">Isometric Tactical Combat</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">🎯</span>
+                                    <span class="feature-text">Strategic Agent Management</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">🔬</span>
+                                    <span class="feature-text">Research & Development</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">💰</span>
+                                    <span class="feature-text">Resource Economy</span>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="feature-icon">🌍</span>
+                                    <span class="feature-text">World Liberation Campaign</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats Panel -->
+                        <div class="demo-panel stats-panel">
+                            <div class="panel-title">GLOBAL STATISTICS</div>
+                            <div class="global-stats">
+                                <div class="stat-row">
+                                    <span class="stat-label">Corporate Control:</span>
+                                    <div class="stat-bar">
+                                        <div class="stat-fill corporate-fill" id="corporateFill"></div>
+                                    </div>
+                                    <span class="stat-value">87%</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">Human Resistance:</span>
+                                    <div class="stat-bar">
+                                        <div class="stat-fill resistance-fill" id="resistanceFill"></div>
+                                    </div>
+                                    <span class="stat-value">13%</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">Active Syndicates:</span>
+                                    <div class="stat-bar">
+                                        <div class="stat-fill syndicate-fill" id="syndicateFill"></div>
+                                    </div>
+                                    <span class="stat-value">0.7%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-footer">
+                    <div class="demo-controls">
+                        <div class="control-hint">CLICK ANYWHERE TO ACCESS MAIN TERMINAL</div>
+                        <div class="demo-credits">
+                            <span class="credits-scroll">
+                                NEXUS INTERACTIVE PRESENTS • CYBER DYNAMICS GAME STUDIO •
+                                FEATURING ADVANCED AI TACTICAL SYSTEMS • PROCEDURAL MISSION GENERATION •
+                                DYNAMIC WORLD STATE SIMULATION •
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-effects">
+                    <div class="scanning-lines"></div>
+                    <div class="data-streams">
+                        <div class="data-stream stream-1"></div>
+                        <div class="data-stream stream-2"></div>
+                        <div class="data-stream stream-3"></div>
+                    </div>
+                </div>
+            </div>
+        `
     },
 
     // Syndicate Hub

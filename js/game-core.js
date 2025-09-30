@@ -355,8 +355,7 @@ CyberOpsGame.prototype.init = function() {
             this.initTurnBasedMode();
         }
 
-        // Hide all game screens initially
-        document.getElementById('mainMenu').style.display = 'none';
+        // Hide all legacy screens initially (most screens now handled by screen manager)
         document.querySelectorAll('.splash-screen').forEach(screen => {
             screen.style.display = 'none';
         });

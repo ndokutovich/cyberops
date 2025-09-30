@@ -409,9 +409,13 @@ CyberOpsGame.prototype.showCampaignSelect = function() {
     html += '</div>';
 
     // Show in UI (you may need to create a campaign select screen)
-    const container = document.getElementById('campaignSelectScreen') ||
-                     document.getElementById('mainMenu');
-    container.innerHTML = html;
+    const container = document.getElementById('campaignSelectScreen');
+    if (container) {
+        container.innerHTML = html;
+    } else {
+        // Log warning if no container found
+        if (this.logger) this.logger.warn('No campaign select screen container found');
+    }
 };
 
 // Select a campaign
