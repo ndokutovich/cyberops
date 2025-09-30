@@ -240,7 +240,7 @@
                     description: "+10% damage with ranged weapons",
                     icon: "🔫",
                     effects: { damageBonus: 0.1 },
-                    requirements: { level: 3, agility: 5 },
+                    requirements: { level: 1, agility: 5 },
                     category: "combat"
                 },
                 juggernaut: {
@@ -248,7 +248,7 @@
                     description: "Reduce incoming damage by 30%",
                     icon: "🛡️",
                     effects: { damageReduction: 0.3 },
-                    requirements: { level: 6, endurance: 7 },
+                    requirements: { level: 3, endurance: 7 },
                     category: "defense"
                 },
                 deadEye: {
@@ -256,7 +256,7 @@
                     description: "+25% critical hit chance",
                     icon: "🎯",
                     effects: { critChanceBonus: 25 },
-                    requirements: { level: 9, agility: 8 },
+                    requirements: { level: 6, agility: 8 },
                     category: "combat"
                 },
                 armorPiercing: {
@@ -264,7 +264,7 @@
                     description: "Ignore 50% of enemy armor",
                     icon: "⚔️",
                     effects: { armorPierce: 0.5 },
-                    requirements: { level: 12, strength: 9 },
+                    requirements: { level: 9, strength: 9 },
                     category: "combat"
                 },
 
@@ -274,7 +274,7 @@
                     description: "50% harder to detect when moving",
                     icon: "👤",
                     effects: { detectionReduction: 0.5 },
-                    requirements: { level: 3, agility: 6 },
+                    requirements: { level: 1, agility: 6 },
                     category: "stealth"
                 },
                 silentKiller: {
@@ -282,7 +282,7 @@
                     description: "+50% damage on stealth attacks",
                     icon: "🗡️",
                     effects: { stealthDamageBonus: 0.5 },
-                    requirements: { level: 6, agility: 7 },
+                    requirements: { level: 3, agility: 7 },
                     category: "stealth"
                 },
                 ghostWalk: {
@@ -290,7 +290,7 @@
                     description: "Move without triggering alerts",
                     icon: "👻",
                     effects: { silentMovement: true },
-                    requirements: { level: 9, agility: 9 },
+                    requirements: { level: 6, agility: 9 },
                     category: "stealth"
                 },
 
@@ -300,7 +300,7 @@
                     description: "Hack terminals 25% faster",
                     icon: "💻",
                     effects: { hackSpeedBonus: 0.25 },
-                    requirements: { level: 3, tech: 6, intelligence: 5 },
+                    requirements: { level: 1, tech: 6, intelligence: 5 },
                     category: "tech"
                 },
                 overcharge: {
@@ -308,7 +308,7 @@
                     description: "Tech weapons deal +30% damage",
                     icon: "⚡",
                     effects: { techDamageBonus: 0.3 },
-                    requirements: { level: 6, tech: 8 },
+                    requirements: { level: 3, tech: 8 },
                     category: "tech"
                 },
                 systemMaster: {
@@ -316,7 +316,7 @@
                     description: "Can hack from longer range",
                     icon: "🖥️",
                     effects: { hackRangeBonus: 5 },
-                    requirements: { level: 9, tech: 9, intelligence: 7 },
+                    requirements: { level: 6, tech: 9, intelligence: 7 },
                     category: "tech"
                 },
 
@@ -326,7 +326,7 @@
                     description: "Heal allies for +50% health",
                     icon: "🏥",
                     effects: { healingBonus: 0.5 },
-                    requirements: { level: 3, intelligence: 5 },
+                    requirements: { level: 1, intelligence: 5 },
                     category: "medical"
                 },
                 combatStims: {
@@ -334,7 +334,7 @@
                     description: "Use stimpacks instantly (no AP cost)",
                     icon: "💉",
                     effects: { instantStims: true },
-                    requirements: { level: 6, intelligence: 6 },
+                    requirements: { level: 3, intelligence: 6 },
                     category: "medical"
                 },
                 medicSupremacy: {
@@ -342,7 +342,7 @@
                     description: "Can revive fallen allies in combat",
                     icon: "⛑️",
                     effects: { combatRevive: true },
-                    requirements: { level: 12, intelligence: 9 },
+                    requirements: { level: 9, intelligence: 9 },
                     category: "medical"
                 },
 
@@ -352,7 +352,7 @@
                     description: "Nearby allies gain +10% accuracy",
                     icon: "📊",
                     effects: { leadershipBonus: 0.1, radius: 5 },
-                    requirements: { level: 6, charisma: 7 },
+                    requirements: { level: 3, charisma: 7 },
                     category: "leadership"
                 },
                 inspiringPresence: {
@@ -360,7 +360,7 @@
                     description: "Nearby allies gain +2 AP per turn",
                     icon: "🌟",
                     effects: { apBonus: 2, radius: 5 },
-                    requirements: { level: 9, charisma: 8 },
+                    requirements: { level: 6, charisma: 8 },
                     category: "leadership"
                 },
                 commandPresence: {
@@ -368,7 +368,7 @@
                     description: "All squad members gain +15% damage",
                     icon: "👑",
                     effects: { squadDamageBonus: 0.15 },
-                    requirements: { level: 15, charisma: 10 },
+                    requirements: { level: 12, charisma: 10 },
                     category: "leadership"
                 },
 
@@ -378,7 +378,7 @@
                     description: "+25 maximum health",
                     icon: "❤️",
                     effects: { maxHealthBonus: 25 },
-                    requirements: { level: 3, endurance: 6 },
+                    requirements: { level: 1, endurance: 6 },
                     category: "survival"
                 },
                 secondWind: {
@@ -386,7 +386,7 @@
                     description: "Automatically heal 25% health when below 20%",
                     icon: "🔄",
                     effects: { autoHeal: true, threshold: 0.2, amount: 0.25 },
-                    requirements: { level: 9, endurance: 8 },
+                    requirements: { level: 6, endurance: 8 },
                     category: "survival"
                 },
                 lastStand: {
@@ -394,7 +394,7 @@
                     description: "Cannot be killed for 5 seconds when health reaches 0",
                     icon: "⚡",
                     effects: { lastStandDuration: 5 },
-                    requirements: { level: 15, endurance: 10 },
+                    requirements: { level: 12, endurance: 10 },
                     category: "survival"
                 }
             },

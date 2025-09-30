@@ -673,8 +673,9 @@ CyberOpsGame.prototype.initMission = function() {
                         level: 1,
                         experience: 0,
                         stats: { strength: 10, agility: 10 },
-                        unspentStatPoints: 0,
-                        unspentSkillPoints: 0
+                        availableStatPoints: 0,
+                        availableSkillPoints: 0,
+                        availablePerkPoints: 0
                     };
                     if (this.logger) this.logger.warn(`⚠️ Created fallback RPG entity for agent: ${agent.name}`);
                 }

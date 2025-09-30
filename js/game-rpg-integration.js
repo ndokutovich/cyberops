@@ -128,7 +128,7 @@ class RPGManager {
             skills: this.getClassSkills(classType),
             perks: [],
             // Give starting points for customization
-            statPoints: 1,
+            statPoints: 3,
             skillPoints: 1,
             perkPoints: 1
         });
@@ -188,8 +188,8 @@ class RPGManager {
             return false;
         }
 
-        // Check if entity has unspent skill points
-        if (!entity.unspentSkillPoints || entity.unspentSkillPoints <= 0) {
+        // Check if entity has available skill points
+        if (!entity.availableSkillPoints || entity.availableSkillPoints <= 0) {
             if (this.logger) this.logger.warn(`No skill points available for ${entityId}`);
             return false;
         }
@@ -213,7 +213,7 @@ class RPGManager {
         // Learn the skill (modify entity managed by RPGManager)
         if (!entity.skills) entity.skills = {};
         entity.skills[skillId] = currentLevel + 1;
-        entity.unspentSkillPoints--;
+        entity.availableSkillPoints--;
 
         if (this.logger) {
             this.logger.info(`✨ ${entityId} learned ${skillConfig.name} (Level ${entity.skills[skillId]})`);
@@ -358,18 +358,18 @@ class RPGManager {
         const statPoints = classConfig?.statPointsPerLevel || 3;
         const skillPoints = classConfig?.skillPointsPerLevel || 1;
 
-        entity.unspentStatPoints = (entity.unspentStatPoints || 0) + statPoints;
-        entity.unspentSkillPoints = (entity.unspentSkillPoints || 0) + skillPoints;
+        entity.availableStatPoints = (entity.availableStatPoints || 0) + statPoints;
+        entity.availableSkillPoints = (entity.availableSkillPoints || 0) + skillPoints;
 
         if (this.logger) this.logger.debug(`   Rewards:`);
-        if (this.logger) this.logger.debug(`   +${statPoints} Stat Points (Total unspent: ${entity.unspentStatPoints})`);
-        if (this.logger) this.logger.debug(`   +${skillPoints} Skill Points (Total unspent: ${entity.unspentSkillPoints})`);
+        if (this.logger) this.logger.debug(`   +${statPoints} Stat Points (Total: ${entity.availableStatPoints})`);
+        if (this.logger) this.logger.debug(`   +${skillPoints} Skill Points (Total: ${entity.availableSkillPoints})`);
 
         // Check for new perks
         const availablePerks = this.getAvailablePerks(entity);
         if (availablePerks.length > 0 && entity.level % 3 === 0) {
-            entity.unspentPerkPoints = (entity.unspentPerkPoints || 0) + 1;
-            if (this.logger) this.logger.debug(`   +1 Perk Point! (Total unspent: ${entity.unspentPerkPoints})`);
+            entity.availablePerkPoints = (entity.availablePerkPoints || 0) + 1;
+            if (this.logger) this.logger.debug(`   +1 Perk Point! (Total: ${entity.availablePerkPoints})`);
         }
 
         // Heal on level up
@@ -387,7 +387,7 @@ class RPGManager {
         const rewards = {
             statPoints,
             skillPoints,
-            perkPoints: entity.unspentPerkPoints || 0
+            perkPoints: entity.availablePerkPoints || 0
         };
         this.levelUpCallbacks.forEach(callback => {
             try {

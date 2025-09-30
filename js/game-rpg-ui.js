@@ -538,9 +538,9 @@ CyberOpsGame.prototype.showLevelUpNotification = function(agent) {
                 ${agent.name} reached Level ${agent.rpgEntity.level}!
             </div>
             <div class="rewards">
-                <div>+${agent.rpgEntity.unspentStatPoints || 0} Stat Points</div>
-                <div>+${agent.rpgEntity.unspentSkillPoints || 0} Skill Points</div>
-                ${agent.rpgEntity.unspentPerkPoints > 0 ? `<div>+1 Perk Point</div>` : ''}
+                <div>+${agent.rpgEntity.availableStatPoints || 0} Stat Points</div>
+                <div>+${agent.rpgEntity.availableSkillPoints || 0} Skill Points</div>
+                ${agent.rpgEntity.availablePerkPoints > 0 ? `<div>+1 Perk Point</div>` : ''}
             </div>
             <button onclick="game._selectedAgent = game.agents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}') || game.activeAgents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}'); game.dialogEngine?.navigateTo('character'); this.parentElement.parentElement.remove()">
                 Open Character Sheet
@@ -598,7 +598,7 @@ CyberOpsGame.prototype.allocateStatDeclarative = function(agentId, stat, change)
     if (!agent || !agent.rpgEntity) return;
 
     const totalUsed = Object.values(pending).reduce((sum, val) => sum + val, 0);
-    const pointsLeft = agent.rpgEntity.unspentStatPoints - totalUsed;
+    const pointsLeft = agent.rpgEntity.availableStatPoints - totalUsed;
 
     // Check bounds
     if (change > 0 && pointsLeft <= 0) return;
@@ -651,9 +651,9 @@ CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
         }
     });
 
-    // Update unspent points
+    // Update available points
     const totalUsed = Object.values(pending).reduce((sum, val) => sum + val, 0);
-    agent.rpgEntity.unspentStatPoints -= totalUsed;
+    agent.rpgEntity.availableStatPoints -= totalUsed;
 
     // Recalculate derived stats
     const derived = this.rpgManager.calculateDerivedStats(agent.rpgEntity);
