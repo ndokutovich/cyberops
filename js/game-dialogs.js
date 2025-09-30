@@ -102,6 +102,12 @@ CyberOpsGame.prototype.transitionDialog = function(targetFunction) {
 }
 
 CyberOpsGame.prototype.closeDialog = function() {
+    // Close declarative dialog engine dialogs if any exist
+    if (this.dialogEngine && this.dialogEngine.stateStack && this.dialogEngine.stateStack.length > 0) {
+        this.dialogEngine.close();
+        return;
+    }
+
     // Close ALL modal engine dialogs if any exist
     if (window.modalEngine && window.modalEngine.activeModals && window.modalEngine.activeModals.length > 0) {
         window.modalEngine.closeAll();
