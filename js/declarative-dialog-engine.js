@@ -1119,6 +1119,7 @@ class DeclarativeDialogEngine {
             const stateKeyboard = currentState.keyboard?.[e.key];
             if (stateKeyboard) {
                 e.preventDefault();
+                e.stopImmediatePropagation(); // Prevent game handler from seeing this event
                 this.handleAction(stateKeyboard, { key: e.key });
                 return;
             }
@@ -1127,6 +1128,7 @@ class DeclarativeDialogEngine {
             const globalKeyboard = this.config.keyboard?.global?.[e.key];
             if (globalKeyboard) {
                 e.preventDefault();
+                e.stopImmediatePropagation(); // Prevent game handler from seeing this event
                 this.handleAction(globalKeyboard, { key: e.key });
             }
         });

@@ -220,7 +220,14 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
                 this.togglePause();
             }
         },
-        'Escape': () => this.dialogEngine.navigateTo('pause-menu'),
+        'Escape': () => {
+            // If a dialog is open, don't open pause menu (dialog will handle closing itself)
+            if (this.dialogEngine && this.dialogEngine.stateStack && this.dialogEngine.stateStack.length > 0) {
+                return; // Let dialog system handle it
+            }
+            // No dialog open, show pause menu
+            this.dialogEngine.navigateTo('pause-menu');
+        },
 
         // Turn-based controls
         'Y': () => {
