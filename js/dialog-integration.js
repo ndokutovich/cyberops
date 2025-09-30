@@ -597,24 +597,27 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 <h3 style="color: #00aaff; margin-bottom: 10px;">Skills</h3>
         `;
 
-        if (rpg.skills && rpg.skills.length > 0) {
+        // Skills is an object: { skillId: level }
+        const learnedSkills = rpg.skills && typeof rpg.skills === 'object' ? Object.keys(rpg.skills) : [];
+        if (learnedSkills.length > 0) {
             html += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
-            rpg.skills.forEach(skillId => {
-                const skill = window.RPG_CONFIG?.skills?.[skillId];
-                if (skill) {
+            learnedSkills.forEach(skillId => {
+                const skillLevel = rpg.skills[skillId];
+                const skillConfig = window.RPG_CONFIG?.skills?.[skillId];
+                if (skillConfig) {
                     html += `
                         <div style="background: rgba(0,255,255,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(0,255,255,0.3);"
-                             title="${skill.description || ''}">
-                            <span style="margin-right: 5px;">${skill.icon || '⚡'}</span>
-                            <span>${skill.name}</span>
-                            <span style="color: #888; margin-left: 5px;">Lvl ${skill.level || 1}</span>
+                             title="${skillConfig.description || ''}">
+                            <span style="margin-right: 5px;">${skillConfig.icon || '⚡'}</span>
+                            <span>${skillConfig.name}</span>
+                            <span style="color: #00ff00; margin-left: 5px;">Lvl ${skillLevel}</span>
                         </div>
                     `;
                 }
             });
             html += '</div>';
         } else {
-            html += '<div style="color: #888;">No skills learned</div>';
+            html += '<div style="color: #888;">No skills learned yet</div>';
         }
 
         if (rpg.availableSkillPoints > 0) {
@@ -636,23 +639,38 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 <h3 style="color: #ffaa00; margin-bottom: 10px;">Perks</h3>
         `;
 
-        if (rpg.perks && rpg.perks.length > 0) {
+        // Perks is an array of objects: [{ id, name, effects, cooldown }]
+        const acquiredPerks = Array.isArray(rpg.perks) ? rpg.perks : [];
+        if (acquiredPerks.length > 0) {
             html += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
-            rpg.perks.forEach(perkId => {
-                const perk = window.RPG_CONFIG?.perks?.[perkId];
-                if (perk) {
+            acquiredPerks.forEach(perk => {
+                // Get full config for description and icon
+                const perkConfig = window.RPG_CONFIG?.perks?.[perk.id];
+                if (perkConfig) {
+                    // Show perk effects if available
+                    let effectsText = '';
+                    if (perk.effects) {
+                        const effects = Object.entries(perk.effects).map(([key, value]) => {
+                            if (typeof value === 'number') {
+                                return `${key}: ${value > 0 ? '+' : ''}${(value * 100).toFixed(0)}%`;
+                            }
+                            return `${key}: ${value}`;
+                        }).join(', ');
+                        effectsText = `\\n${effects}`;
+                    }
+
                     html += `
                         <div style="background: rgba(255,170,0,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(255,170,0,0.3);"
-                             title="${perk.description || ''}">
-                            <span style="margin-right: 5px;">${perk.icon || '🌟'}</span>
-                            <span>${perk.name}</span>
+                             title="${perkConfig.description || ''}${effectsText}">
+                            <span style="margin-right: 5px;">${perkConfig.icon || '🌟'}</span>
+                            <span style="color: #ffaa00;">${perk.name || perkConfig.name}</span>
                         </div>
                     `;
                 }
             });
             html += '</div>';
         } else {
-            html += '<div style="color: #888;">No perks acquired</div>';
+            html += '<div style="color: #888;">No perks acquired yet</div>';
         }
 
         if (rpg.availablePerkPoints > 0) {
@@ -3087,8 +3105,24 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
                 // Re-set the agentId in state data for refresh
                 this.stateData = this.stateData || {};
                 this.stateData.agentId = agentId;
-                // Refresh the dialog
-                this.navigateTo('skill-tree', null, true);
+
+                // Check if agent still has skill points
+                const agent = game.findAgentForRPG ? game.findAgentForRPG(agentId) : null;
+                const hasMorePoints = agent?.rpgEntity?.availableSkillPoints > 0;
+
+                if (hasMorePoints) {
+                    // Still have skill points, refresh skill tree
+                    this.navigateTo('skill-tree', null, true);
+                } else {
+                    // No more skill points, go back to character sheet
+                    this.back();
+                    // Refresh character sheet to show new skills
+                    setTimeout(() => {
+                        if (this.currentState === 'character') {
+                            this.navigateTo('character', null, true);
+                        }
+                    }, 100);
+                }
             }
         }
     });
