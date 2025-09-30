@@ -46,62 +46,15 @@ CyberOpsGame.prototype.initializeEquipmentSystem = function() {
 
 // Open equipment management dialog
 CyberOpsGame.prototype.showEquipmentManagement = function() {
-    // If declarative dialog system is available, use it
+    // Use declarative dialog system
     if (this.dialogEngine) {
         if (this.logger) this.logger.debug('🔫 Redirecting to declarative Arsenal dialog');
         this.dialogEngine.navigateTo('arsenal');
         return;
     }
 
-    // Initialize if needed
-    if (!this.agentLoadouts) {
-        this.initializeEquipmentSystem();
-    }
-
-    // Auto-select first available agent if none selected
-    let needsRefresh = false;
-    if (!this.selectedEquipmentAgent && this.activeAgents && this.activeAgents.length > 0) {
-        // In game mode, try to use the currently selected agent
-        if (this.currentScreen === 'game' && this._selectedAgent) {
-            this.selectedEquipmentAgent = this._selectedAgent.originalId || this._selectedAgent.id || this._selectedAgent.name;
-        } else {
-            // Otherwise select the first active agent
-            this.selectedEquipmentAgent = this.activeAgents[0].id;
-        }
-        if (this.logger) this.logger.debug('Auto-selected agent for equipment:', this.selectedEquipmentAgent);
-        needsRefresh = true; // Mark that we need to refresh UI
-    }
-
-    // Use declarative dialog system for equipment management
-    if (this.dialogEngine && this.dialogEngine.navigateTo) {
-        this.dialogEngine.navigateTo('arsenal');
-        // Refresh will happen after navigation
-        if (needsRefresh) {
-            setTimeout(() => this.refreshEquipmentUI(), 100);
-        }
-        return;
-    }
-
-
-
-    // Refresh UI - this will update all displays
-    // If we auto-selected an agent, this will show their inventory
-    this.refreshEquipmentUI();
-
-    // Force show weapon inventory immediately if agent is selected
-    // This ensures the inventory tab is populated on open
-    if (this.selectedEquipmentAgent) {
-        // Call immediately to populate
-        this.showWeaponInventory();
-
-        // Also call with delay in case DOM needs time
-        setTimeout(() => {
-            if (!document.getElementById('inventoryList').innerHTML.includes('WEAPONS')) {
-                if (this.logger) this.logger.debug('📦 Inventory was empty, populating now...');
-                this.showWeaponInventory();
-            }
-        }, 50);
-    }
+    // No fallback - declarative system is required
+    if (this.logger) this.logger.error('❌ DeclarativeDialogEngine is required for equipment management');
 };
 
 // Close equipment dialog
@@ -139,127 +92,26 @@ CyberOpsGame.prototype.refreshEquipmentUI = function() {
         }
     }
 
-    // Otherwise use traditional update methods
-    this.updateAgentList();
-    this.updateInventoryDisplay();
-    this.updateCreditsDisplay();
-
-    if (this.selectedEquipmentAgent) {
-        this.updateLoadoutDisplay(this.selectedEquipmentAgent);
-        this.updateStatsPreview(this.selectedEquipmentAgent);
-    }
+    // No fallback - declarative system is required
+    if (this.logger) this.logger.warn('⚠️ Arsenal dialog not found, cannot refresh equipment UI');
 };
 
-// Update inventory display in equipment screen
-CyberOpsGame.prototype.updateInventoryDisplay = function() {
-    // This function updates the weapon inventory display
-    // Since we handle inventory in the shop tab, this can be a placeholder
-    // or we can add a quick inventory summary here if needed
-    if (this.logger) this.logger.debug('Inventory updated:', {
-        weapons: this.weapons.filter(w => w.owned > 0).length,
-        totalWeapons: this.weapons.reduce((sum, w) => sum + (w.owned || 0), 0)
-    });
-};
-
-// Update agent list in equipment screen
-CyberOpsGame.prototype.updateAgentList = function() {
-    const listEl = document.getElementById('equipmentAgentList');
-    listEl.innerHTML = '';
-
-    this.activeAgents.forEach(agent => {
-        const agentDiv = document.createElement('div');
-        const isSelected = this.selectedEquipmentAgent === agent.id;
-
-        agentDiv.className = 'equipment-agent-card';
-        agentDiv.style.cssText = `
-            background: ${isSelected ? 'rgba(0,255,255,0.2)' : 'rgba(0,255,255,0.05)'};
-            border: 2px solid ${isSelected ? '#00ffff' : 'transparent'};
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
-        `;
-
-        const loadout = this.agentLoadouts[agent.id] || {};
-        const weaponName = loadout.weapon ? this.getItemById('weapon', loadout.weapon).name : 'None';
-
-        agentDiv.innerHTML = `
-            <div style="font-weight: bold; color: #fff;">${agent.name}</div>
-            <div style="color: #888; font-size: 0.9em;">${agent.specialization}</div>
-            <div style="color: #ffa500; font-size: 0.85em; margin-top: 5px;">
-                🔫 ${weaponName}
-            </div>
-        `;
-
-        agentDiv.onclick = () => this.selectAgentForEquipment(agent.id);
-        agentDiv.onmouseover = () => { if (!isSelected) agentDiv.style.background = 'rgba(0,255,255,0.1)'; };
-        agentDiv.onmouseout = () => { if (!isSelected) agentDiv.style.background = 'rgba(0,255,255,0.05)'; };
-
-        listEl.appendChild(agentDiv);
-    });
-};
+// Legacy fallback functions removed - now using declarative dialog system only
+// Deleted: updateInventoryDisplay(), updateAgentList()
 
 // Select agent for equipment management
 CyberOpsGame.prototype.selectAgentForEquipment = function(agentId) {
     this.selectedEquipmentAgent = agentId;
 
-    // If using declarative dialog, refresh it
+    // Refresh declarative dialog
     if (this.dialogEngine && this.dialogEngine.currentState && this.dialogEngine.currentState.id === 'arsenal') {
         this.dialogEngine.navigateTo('arsenal');
-    } else {
-        // Otherwise use traditional update methods
-        this.updateAgentList();
-        this.updateLoadoutDisplay(agentId);
-        this.showWeaponInventory(); // Default to weapons tab
+    } else if (this.logger) {
+        this.logger.warn('⚠️ Arsenal dialog not active, cannot refresh agent selection');
     }
 };
 
-// Update loadout display for selected agent
-CyberOpsGame.prototype.updateLoadoutDisplay = function(agentId) {
-    const agent = this.activeAgents.find(a => a.id === agentId);
-    if (!agent) return;
-
-    // ONLY use InventoryService if available
-    const loadout = (this.gameServices && this.gameServices.inventoryService)
-        ? this.gameServices.inventoryService.agentLoadouts[agentId] || {}
-        : this.agentLoadouts[agentId] || {};
-    // Sync back to game for consistency
-    this.agentLoadouts[agentId] = loadout;
-
-    const loadoutEl = document.getElementById('currentLoadout');
-
-    loadoutEl.innerHTML = `
-        <h4 style="color: #fff; margin-bottom: 15px;">${agent.name}'s Loadout</h4>
-
-        <div style="margin-bottom: 15px;">
-            <div style="color: #888; font-size: 0.9em; margin-bottom: 5px;">PRIMARY WEAPON</div>
-            <div class="loadout-slot" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
-                ${this.getLoadoutSlotHTML(loadout.weapon, 'weapon')}
-                ${loadout.weapon ? `<button class="menu-button" style="padding: 5px 10px; font-size: 0.9em;" onclick="game.unequipItem('${agentId}', 'weapon')">UNEQUIP</button>` : ''}
-            </div>
-        </div>
-
-        <div style="margin-bottom: 15px;">
-            <div style="color: #888; font-size: 0.9em; margin-bottom: 5px;">ARMOR</div>
-            <div class="loadout-slot" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
-                ${this.getLoadoutSlotHTML(loadout.armor, 'armor')}
-                ${loadout.armor ? `<button class="menu-button" style="padding: 5px 10px; font-size: 0.9em;" onclick="game.unequipItem('${agentId}', 'armor')">UNEQUIP</button>` : ''}
-            </div>
-        </div>
-
-        <div style="margin-bottom: 15px;">
-            <div style="color: #888; font-size: 0.9em; margin-bottom: 5px;">UTILITY</div>
-            <div class="loadout-slot" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
-                ${this.getLoadoutSlotHTML(loadout.utility, 'utility')}
-                ${loadout.utility ? `<button class="menu-button" style="padding: 5px 10px; font-size: 0.9em;" onclick="game.unequipItem('${agentId}', 'utility')">UNEQUIP</button>` : ''}
-            </div>
-        </div>
-    `;
-
-    // Update stats preview
-    this.updateStatsPreview(agentId);
-};
+// Deleted: updateLoadoutDisplay() - legacy fallback function removed
 
 // Get HTML for loadout slot
 CyberOpsGame.prototype.getLoadoutSlotHTML = function(itemId, type) {
@@ -286,49 +138,7 @@ CyberOpsGame.prototype.getLoadoutSlotHTML = function(itemId, type) {
     `;
 };
 
-// Update stats preview
-CyberOpsGame.prototype.updateStatsPreview = function(agentId) {
-    const agent = this.activeAgents.find(a => a.id === agentId);
-    if (!agent) return;
-
-    // Calculate stats with current loadout
-    const loadout = this.agentLoadouts[agentId] || {};
-    let totalDamage = agent.damage || 10;
-    let totalProtection = agent.protection || 0;
-    let totalHack = agent.hackBonus || 0;
-    let totalStealth = agent.stealthBonus || 0;
-
-    // Add weapon stats
-    if (loadout.weapon) {
-        const weapon = this.getItemById('weapon', loadout.weapon);
-        if (weapon && weapon.damage) totalDamage += weapon.damage;
-    }
-
-    // Add armor stats
-    if (loadout.armor) {
-        const armor = this.getItemById('armor', loadout.armor);
-        if (armor && armor.protection) totalProtection += armor.protection;
-    }
-
-    // Add utility stats
-    if (loadout.utility) {
-        const utility = this.getItemById('equipment', loadout.utility);
-        if (utility) {
-            if (utility.hackBonus) totalHack += utility.hackBonus;
-            if (utility.stealthBonus) totalStealth += utility.stealthBonus;
-        }
-    }
-
-    const statsEl = document.getElementById('statsPreview');
-    statsEl.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div>⚔️ Damage: <span style="color: #fff;">${totalDamage}</span></div>
-            <div>🛡️ Protection: <span style="color: #fff;">${totalProtection}</span></div>
-            <div>💻 Hacking: <span style="color: #fff;">+${totalHack}</span></div>
-            <div>👁️ Stealth: <span style="color: #fff;">+${totalStealth}</span></div>
-        </div>
-    `;
-};
+// Deleted: updateStatsPreview() - legacy fallback function removed
 
 // Show weapon inventory
 CyberOpsGame.prototype.showWeaponInventory = function() {
@@ -1205,22 +1015,7 @@ CyberOpsGame.prototype.saveLoadouts = function() {
     );
 };
 
-// Update credits display
-CyberOpsGame.prototype.updateCreditsDisplay = function() {
-    const creditsEl = document.getElementById('equipCredits');
-    const currentCredits = this.gameServices.resourceService.get('credits');
-    if (creditsEl) creditsEl.textContent = currentCredits.toLocaleString();
-
-    // Calculate inventory value
-    if (window.GameServices) {
-        const inventoryValue = window.GameServices.formulaService.calculateInventoryValue({
-            weapons: this.weapons,
-            equipment: this.equipment
-        });
-        const valueEl = document.getElementById('inventoryValue');
-        if (valueEl) valueEl.textContent = inventoryValue.toLocaleString();
-    }
-};
+// Deleted: updateCreditsDisplay() - legacy fallback function removed
 
 // Get item by ID
 CyberOpsGame.prototype.getItemById = function(type, itemId) {
@@ -1275,77 +1070,8 @@ CyberOpsGame.prototype.showShopInterface = function() {
         return;
     }
 
-    // Original implementation for old equipment dialog
-    const inventoryEl = document.getElementById('inventoryList');
-    if (!inventoryEl) {
-        if (this.logger) this.logger.error('inventoryList element not found');
-        return;
-    }
-    inventoryEl.innerHTML = '<h4 style="color: #2e7d32; margin-bottom: 10px;">🛒 SHOP - BUY ITEMS</h4>';
-
-    // Show all available items from services
-    const allItems = [];
-
-    // Get weapons from service
-    if (window.GameServices && window.GameServices.equipmentService) {
-        const serviceWeapons = window.GameServices.equipmentService.getAllWeapons();
-        serviceWeapons.forEach(w => {
-            const owned = this.weapons.find(weapon => weapon.id === w.id);
-            allItems.push({
-                ...w,
-                type: 'weapon',
-                owned: owned ? owned.owned : 0
-            });
-        });
-
-        const serviceEquipment = window.GameServices.equipmentService.getAllEquipment();
-        serviceEquipment.forEach(e => {
-            const owned = this.equipment.find(item => item.id === e.id);
-            allItems.push({
-                ...e,
-                type: 'equipment',
-                owned: owned ? owned.owned : 0
-            });
-        });
-    }
-
-    allItems.forEach(item => {
-        const canAfford = this.gameServices.resourceService.canAfford('credits', item.cost);
-
-        const itemDiv = document.createElement('div');
-        itemDiv.style.cssText = `
-            background: ${canAfford ? 'rgba(46,125,50,0.1)' : 'rgba(128,128,128,0.1)'};
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            opacity: ${canAfford ? '1' : '0.6'};
-        `;
-
-        let stats = '';
-        if (item.damage) stats += `DMG: ${item.damage} `;
-        if (item.protection) stats += `DEF: ${item.protection} `;
-        if (item.hackBonus) stats += `HACK: +${item.hackBonus} `;
-        if (item.stealthBonus) stats += `STEALTH: +${item.stealthBonus} `;
-
-        itemDiv.innerHTML = `
-            <div>
-                <div style="color: #fff; font-weight: bold;">${item.name}</div>
-                <div style="color: #888; font-size: 0.85em;">
-                    ${stats}| Cost: ${item.cost} credits | Owned: ${item.owned}
-                </div>
-            </div>
-            <button class="menu-button"
-                    style="padding: 5px 10px; font-size: 0.9em; background: ${canAfford ? '#2e7d32' : '#555'};"
-                    ${canAfford ? `onclick="game.buyItemFromShop('${item.type}', ${item.id})"` : 'disabled'}>
-                ${canAfford ? 'BUY' : 'INSUFFICIENT FUNDS'}
-            </button>
-        `;
-
-        inventoryEl.appendChild(itemDiv);
-    });
+    // No fallback - declarative system is required
+    if (this.logger) this.logger.error('❌ DeclarativeDialogEngine is required for shop interface');
 };
 
 // Buy item from shop
@@ -1416,10 +1142,8 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
             dialogEngine.navigateTo('arsenal');
             if (this.logger) this.logger.info('✅ Arsenal UI refreshed after buy');
         }
-    } else {
-        // Original refresh for old UI
-        this.showShopInterface();
-        this.updateCreditsDisplay();
+    } else if (this.logger) {
+        this.logger.warn('⚠️ Arsenal dialog not found, cannot refresh after purchase');
     }
 
     // Show confirmation
@@ -1436,54 +1160,6 @@ CyberOpsGame.prototype.showSellInterface = function() {
         return;
     }
 
-    // Original implementation for old equipment dialog
-    const inventoryEl = document.getElementById('inventoryList');
-    if (!inventoryEl) {
-        if (this.logger) this.logger.error('inventoryList element not found');
-        return;
-    }
-    inventoryEl.innerHTML = '<h4 style="color: #8b4513; margin-bottom: 10px;">💰 SELL ITEMS</h4>';
-
-    // Show all sellable items
-    const allItems = [
-        ...this.weapons.map(w => ({ ...w, type: 'weapon' })),
-        ...this.equipment.map(e => ({ ...e, type: 'equipment' }))
-    ];
-
-    allItems.forEach(item => {
-        const available = this.getAvailableCount(item.type, item.id);
-        if (available > 0) {
-            const sellPrice = window.GameServices ?
-                window.GameServices.formulaService.calculateSellPrice(item, 0.9) :
-                Math.floor(item.cost * 0.6);
-
-            const itemDiv = document.createElement('div');
-            itemDiv.style.cssText = `
-                background: rgba(139,69,19,0.1);
-                padding: 10px;
-                margin: 5px 0;
-                border-radius: 5px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            `;
-
-            itemDiv.innerHTML = `
-                <div>
-                    <div style="color: #fff; font-weight: bold;">${item.name}</div>
-                    <div style="color: #888; font-size: 0.85em;">
-                        Available: ${available} | Sell Price: ${sellPrice} credits
-                    </div>
-                </div>
-                <button class="menu-button" style="padding: 5px 10px; font-size: 0.9em; background: #8b4513;"
-                 onclick="game.sellItem('${item.type}', ${item.id})">SELL</button>
-            `;
-
-            inventoryEl.appendChild(itemDiv);
-        }
-    });
-
-    if (inventoryEl.children.length === 1) {
-        inventoryEl.innerHTML += '<div style="color: #888; text-align: center; padding: 20px;">No items available to sell (unequip items first)</div>';
-    }
+    // No fallback - declarative system is required
+    if (this.logger) this.logger.error('❌ DeclarativeDialogEngine is required for sell interface');
 };
