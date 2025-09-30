@@ -77,7 +77,7 @@
             generator: 'generateBriefingContent'
         },
         buttons: [
-            { text: 'PROCEED TO LOADOUT', action: 'navigate:loadout-select', primary: true },
+            { text: 'START MISSION', action: 'execute:startMissionFromBriefing', primary: true },
             { text: 'BACK TO HUB', action: 'execute:returnToHub' }
         ],
         transitions: {
@@ -86,30 +86,8 @@
         }
     };
 
-    // ========== LOADOUT SELECTION ==========
-
-    dialogConfig.states['loadout-select'] = {
-        type: 'dialog',
-        level: 2,
-        parent: 'mission-briefing',
-        title: 'AGENT LOADOUT',
-        layout: 'large-layout',
-        content: {
-            type: 'dynamic',
-            generator: 'generateLoadoutContent'
-        },
-        buttons: [
-            { text: 'START MISSION', action: 'execute:startMissionWithLoadout', primary: true, danger: true },
-            { text: 'BACK TO BRIEFING', action: 'back' }
-        ],
-        validation: {
-            startMission: 'validateLoadoutSelection'
-        },
-        transitions: {
-            enter: { animation: 'slide-left', duration: 300 },
-            exit: { animation: 'slide-right', duration: 300 }
-        }
-    };
+    // ========== LOADOUT SELECTION REMOVED ==========
+    // Loadout functionality merged into mission-briefing screen
 
     // ========== HUB SCREEN ==========
 
@@ -634,54 +612,7 @@
         </div>
     `;
 
-    dialogConfig.templates['loadout-selection'] = `
-        <div class="loadout-content">
-            <div class="agent-selection">
-                <h3>Select Agents for Mission</h3>
-                <div class="agent-roster">
-                    {{#each availableAgents}}
-                        <div class="agent-card {{#if selected}}selected{{/if}}" data-agent-id="{{id}}">
-                            <div class="agent-name">{{name}}</div>
-                            <div class="agent-class">{{class}}</div>
-                            <div class="agent-stats">
-                                HP: {{health}} | DMG: {{damage}} | SPD: {{speed}}
-                            </div>
-                            <div class="agent-equipment">
-                                <span class="weapon">{{weapon}}</span>
-                                <span class="armor">{{armor}}</span>
-                            </div>
-                            <button class="select-btn" data-action="execute:toggleAgent" data-agent="{{id}}">
-                                {{#if selected}}DESELECT{{else}}SELECT{{/if}}
-                            </button>
-                        </div>
-                    {{/each}}
-                </div>
-
-                <div class="selection-summary" style="margin-top: 20px; padding: 15px; background: rgba(0,255,255,0.1);">
-                    <h4>Selected Team ({{selectedCount}}/{{maxAgents}})</h4>
-                    {{#if insufficientAgents}}
-                        <div style="color: #ff6666;">⚠️ Select at least 1 agent to continue</div>
-                    {{/if}}
-                </div>
-            </div>
-
-            <div class="equipment-check">
-                <h3>Equipment Overview</h3>
-                <div class="equipment-summary">
-                    <div>Total Firepower: {{totalDamage}}</div>
-                    <div>Average Health: {{avgHealth}}</div>
-                    <div>Team Speed: {{teamSpeed}}</div>
-                </div>
-
-                <div class="consumables" style="margin-top: 15px;">
-                    <h4>Available Consumables</h4>
-                    <div>Medkits: {{medkits}}</div>
-                    <div>Grenades: {{grenades}}</div>
-                    <div>Smoke Bombs: {{smokeBombs}}</div>
-                </div>
-            </div>
-        </div>
-    `;
+    // loadout-selection template removed - functionality merged into mission briefing screen
 
     // Export config
     window.DIALOG_CONFIG = dialogConfig;

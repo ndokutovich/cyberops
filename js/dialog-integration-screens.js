@@ -151,50 +151,7 @@
         });
 
         // Loadout content generator
-        engine.registerGenerator('generateLoadoutContent', function() {
-            if (!game || !game.activeAgents) {
-                return '<p>No agents available</p>';
-            }
-
-            const selectedAgents = game.selectedAgents || [];
-            const maxAgents = 4; // Maximum agents per mission
-
-            const data = {
-                availableAgents: game.activeAgents.map(agent => ({
-                    id: agent.id,
-                    name: agent.name,
-                    class: agent.class || 'Soldier',
-                    health: agent.health,
-                    damage: agent.damage,
-                    speed: agent.speed,
-                    weapon: agent.weapon || 'Assault Rifle',
-                    armor: agent.armor || 'Standard',
-                    selected: selectedAgents.includes(agent.id)
-                })),
-                selectedCount: selectedAgents.length,
-                maxAgents: maxAgents,
-                insufficientAgents: selectedAgents.length === 0,
-                totalDamage: selectedAgents.reduce((sum, id) => {
-                    const agent = game.activeAgents.find(a => a.id === id);
-                    return sum + (agent?.damage || 0);
-                }, 0),
-                avgHealth: selectedAgents.length > 0 ?
-                    Math.round(selectedAgents.reduce((sum, id) => {
-                        const agent = game.activeAgents.find(a => a.id === id);
-                        return sum + (agent?.health || 0);
-                    }, 0) / selectedAgents.length) : 0,
-                teamSpeed: selectedAgents.length > 0 ?
-                    Math.round(selectedAgents.reduce((sum, id) => {
-                        const agent = game.activeAgents.find(a => a.id === id);
-                        return sum + (agent?.speed || 0);
-                    }, 0) / selectedAgents.length) : 0,
-                medkits: game.inventory?.medkits || 3,
-                grenades: game.inventory?.grenades || 5,
-                smokeBombs: game.inventory?.smokeBombs || 2
-            };
-
-            return engine.renderTemplate('loadout-selection', data);
-        });
+        // generateLoadoutContent removed - functionality merged into mission briefing screen
 
         // Hub content generator
         engine.registerGenerator('generateHubContent', function() {
@@ -275,36 +232,25 @@
         });
 
         // Loadout actions
-        engine.registerAction('toggleAgent', function(agentId) {
-            // Only use AgentService - no fallback
-            if (game && game.gameServices && game.gameServices.agentService) {
-                game.gameServices.agentService.toggleAgentSelection(agentId);
-                // Refresh the loadout display
-                this.navigateTo('loadout-select', null, true);
-            }
-        });
+        // toggleAgent removed - agent selection now handled directly in mission-briefing screen
 
-        engine.registerAction('startMissionWithLoadout', function() {
-            // NO AUTO-SELECTION - Just use what was selected
+        // startMissionWithLoadout and validateLoadoutSelection removed - functionality merged into mission briefing screen
 
+        // New action for starting mission from briefing (with agent selection in briefing)
+        engine.registerAction('startMissionFromBriefing', function() {
             this.closeAll();
 
-            // Apply selected loadout
-            if (game.activeAgents && game.selectedAgents) {
+            // Apply selected agents
+            if (game.activeAgents && game.selectedAgents && game.selectedAgents.length > 0) {
                 game.agents = game.activeAgents.filter(agent =>
                     game.selectedAgents.includes(agent.id)
                 );
-            }
 
-            // Start the mission
-            if (game.startMission) {
-                game.startMission(game.currentMissionIndex);
+                // Start the mission
+                if (game.startMission) {
+                    game.startMission(game.currentMissionIndex);
+                }
             }
-        });
-
-        // Validation
-        engine.registerValidator('validateLoadoutSelection', function() {
-            return game && game.selectedAgents && game.selectedAgents.length > 0;
         });
 
         // Hub initialization

@@ -3539,22 +3539,7 @@ body {
 }
 
 /* Loadout screen specific */
-.loadout-container {
-    max-width: 1000px;
-    width: 100%;
-}
-
-.loadout-title {
-    font-size: 32px;
-    color: #00ffff;
-    margin-bottom: 10px;
-}
-
-.loadout-subtitle {
-    font-size: 18px;
-    color: #888;
-    margin-bottom: 40px;
-}
+/* Loadout styles removed - functionality merged into mission briefing */
 
 .agents-grid {
     display: grid;
