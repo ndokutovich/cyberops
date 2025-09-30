@@ -239,6 +239,10 @@ class ContentLoader {
             };
         });
 
+        // Also set campaignEnemyTypes for backward compatibility with spawnMissionEnemies
+        game.campaignEnemyTypes = this.currentCampaign.enemies;
+        if (logger) logger.info(`✅ Set campaignEnemyTypes: ${game.campaignEnemyTypes.length} enemy types`);
+
         this.contentCache.set('enemyTypes', game.enemyTypes);
     }
 

@@ -130,8 +130,26 @@ class RPGPawn {
                 formula = () => derivedConfig.base || 0;
             }
 
+            // Create property that applies formula + perk bonuses
             Object.defineProperty(this.derivedStats, statName, {
-                get: () => formula(this.stats)
+                get: () => {
+                    let baseValue = formula(this.stats);
+
+                    // Apply perk bonuses for this stat
+                    if (this.perks && Array.isArray(this.perks)) {
+                        this.perks.forEach(perk => {
+                            if (perk.effects) {
+                                // Check for direct bonus (e.g., maxHealthBonus for maxHealth)
+                                const bonusKey = statName + 'Bonus';
+                                if (perk.effects[bonusKey] !== undefined) {
+                                    baseValue += perk.effects[bonusKey];
+                                }
+                            }
+                        });
+                    }
+
+                    return baseValue;
+                }
             });
         }
     }

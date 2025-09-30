@@ -225,8 +225,10 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
             if (this.dialogEngine && this.dialogEngine.stateStack && this.dialogEngine.stateStack.length > 0) {
                 return; // Let dialog system handle it
             }
-            // No dialog open, show pause menu
-            this.dialogEngine.navigateTo('pause-menu');
+            // Only open pause menu if in game screen
+            if (this.currentScreen === 'game') {
+                this.dialogEngine.navigateTo('pause-menu');
+            }
         },
 
         // Turn-based controls

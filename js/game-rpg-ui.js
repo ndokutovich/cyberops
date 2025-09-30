@@ -718,6 +718,14 @@ CyberOpsGame.prototype.selectPerkDeclarative = function(agentId, perkId) {
             this.logEvent(`${agent.name} unlocked ${perkName}!`, 'progression');
         }
 
+        // Update agent's derived stats (maxHealth, maxAP, etc.)
+        if (this.rpgManager && rpg.derivedStats) {
+            const derived = this.rpgManager.calculateDerivedStats(rpg);
+            agent.maxHealth = derived.maxHealth;
+            agent.maxAP = derived.maxAP || agent.maxAP;
+            if (logger) logger.debug(`Updated agent stats: maxHealth=${agent.maxHealth}, maxAP=${agent.maxAP}`);
+        }
+
         // Refresh the dialog to show updated perk points and unlocked perks
         if (this.dialogEngine) {
             // If no more perk points, go back to character sheet

@@ -63,6 +63,7 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
 
         if (content) {
             if (this.logger) this.logger.info('✅ Campaign content loaded (legacy), applying to game...');
+            if (this.logger) this.logger.debug(`📦 Content has enemyTypes? ${!!content.enemyTypes}, count: ${content.enemyTypes?.length || 0}`);
 
             // Apply starting resources if this is a new game
             if (!this.campaignStarted) {
@@ -119,6 +120,8 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
             if (content.enemyTypes) {
                 this.campaignEnemyTypes = content.enemyTypes;
                 if (this.logger) this.logger.info(`✅ Loaded ${content.enemyTypes.length} enemy types`);
+            } else {
+                if (this.logger) this.logger.warn('⚠️ No enemyTypes found in campaign content');
             }
 
             // Store research tree

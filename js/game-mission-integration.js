@@ -104,6 +104,9 @@ CyberOpsGame.prototype.useAbilityForAllSelected = CyberOpsGame.prototype.useAbil
 CyberOpsGame.prototype.initMissionUpdated = function() {
     if (this.logger) this.logger.info('🚀 initMissionUpdated STARTED');
 
+    // Reset mission failure flag
+    this.missionFailed = false;
+
     // Call the original init for basic setup
     if (this.initMissionOriginal) {
         if (this.logger) this.logger.info('📞 Calling initMissionOriginal');
@@ -212,6 +215,31 @@ if (!CyberOpsGame.prototype.initMissionOriginal) {
 
 // Update the game loop to check objectives
 CyberOpsGame.prototype.updateMissionObjectives = function() {
+    // CRITICAL: Check for mission failure - all agents dead
+    if (this.agents && this.agents.length > 0) {
+        const aliveAgents = this.agents.filter(a => a.alive).length;
+        if (aliveAgents === 0) {
+            // All agents are dead - mission failed!
+            if (!this.missionFailed) {
+                this.missionFailed = true;
+                this.isPaused = true; // Pause game to prevent pause menu from showing
+                if (this.logger) this.logger.info('☠️ MISSION FAILED - All agents eliminated');
+
+                // Switch to defeat screen using ScreenManager
+                window.screenManager.navigateTo('defeat');
+
+                // Stop music and play defeat sound
+                if (this.audioInitialized && this.musicContext) {
+                    this.fadeOutMusic(1000);
+                }
+                if (this.playSound) {
+                    this.playSound('defeat', 0.7);
+                }
+            }
+            return; // Don't check objectives if mission failed
+        }
+    }
+
     // CRITICAL: Process combat events from CombatService (unidirectional data flow)
     if (window.GameServices && window.GameServices.combatService) {
         // Process combat events for logging
