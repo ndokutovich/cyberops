@@ -853,57 +853,7 @@ CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
     }
 };
 
-// Old confirmStatAllocation backup (for reference)
-CyberOpsGame.prototype.confirmStatAllocationOld = function(agentId) {
-    const dialog = document.querySelector('.stat-allocation');
-    if (!dialog) return;
-
-    const agent = this.findAgentForRPG(agentId);
-    if (!agent || !agent.rpgEntity) {
-        console.error('Cannot find agent for stat confirmation:', agentId);
-        return;
-    }
-
-    const pending = JSON.parse(dialog.dataset.pendingChanges || '{}');
-
-    // Apply changes
-    Object.entries(pending).forEach(([stat, points]) => {
-        if (points > 0) {
-            // Get current stat value (handle object or number format)
-            let currentValue = agent.rpgEntity.stats[stat];
-            if (typeof currentValue === 'object' && currentValue !== null) {
-                currentValue = currentValue.value || currentValue.base || 0;
-            }
-            // Ensure it's a number and add points
-            currentValue = (typeof currentValue === 'number' ? currentValue : 0) + points;
-            // Store as simple number
-            agent.rpgEntity.stats[stat] = currentValue;
-        }
-    });
-
-    // Update unspent points
-    const totalUsed = Object.values(pending).reduce((sum, val) => sum + val, 0);
-    agent.rpgEntity.unspentStatPoints -= totalUsed;
-
-    // Recalculate derived stats
-    const derived = this.rpgManager.calculateDerivedStats(agent.rpgEntity);
-    agent.maxHealth = derived.maxHealth;
-    agent.maxAP = derived.maxAP;
-
-    // Close dialog and refresh character sheet
-    dialog.remove();
-
-    // Set selected agent and open character sheet
-    this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
-                         (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
-    if (this.dialogEngine && this.dialogEngine.navigateTo) {
-        this.dialogEngine.navigateTo('character');
-    }
-
-    if (this.logEvent) {
-        this.logEvent(`${agent.name} allocated stat points!`, 'progression');
-    }
-};
+// confirmStatAllocationOld removed - now using confirmStatAllocation which handles declarative system
 
 // Switch shop tabs
 CyberOpsGame.prototype.switchShopTab = function(button, tab) {

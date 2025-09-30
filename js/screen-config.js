@@ -697,7 +697,7 @@ const SCREEN_CONFIG = {
                         <div class="hub-panel operations-panel">
                             <div class="panel-header">🎯 OPERATIONS</div>
                             <div class="panel-content">
-                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('mission-select-hub'); } else if(game.showMissionsFromHub) { game.showMissionsFromHub(); } else { console.error('No mission selection available'); }">
+                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('mission-select-hub'); } else { console.error('Dialog engine not available'); }">
                                     <div class="card-icon">🎭</div>
                                     <div class="card-title">MISSIONS</div>
                                     <div class="card-desc">Launch new operations</div>
@@ -776,7 +776,7 @@ const SCREEN_CONFIG = {
                         <div class="hub-panel resources-panel">
                             <div class="panel-header">🛡️ RESOURCES</div>
                             <div class="panel-content">
-                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('arsenal'); } else if(game.showEquipmentManagement) { game.showEquipmentManagement(); } else { alert('Arsenal not available'); }">
+                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('arsenal'); } else { alert('Dialog engine not available'); }">
                                     <div class="card-icon">🔫</div>
                                     <div class="card-title">ARSENAL</div>
                                     <div class="card-desc">Manage equipment</div>
@@ -797,7 +797,7 @@ const SCREEN_CONFIG = {
                                     <div class="card-status" id="characterStatus">Level 1</div>
                                 </div>
 
-                                <div class="hub-card" onclick="if(game.showWorldMap) { game.showWorldMap(); } else { alert('World map coming soon!'); }">
+                                <div class="hub-card" onclick="if(game.showWorldMap) { game.showWorldMap(); } else { console.warn('World map not yet implemented'); }">
                                     <div class="card-icon">🗺️</div>
                                     <div class="card-title">WORLD MAP</div>
                                     <div class="card-desc">Global operations</div>

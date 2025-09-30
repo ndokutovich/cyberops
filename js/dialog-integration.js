@@ -2707,32 +2707,8 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
     });
 };
 
-// Override hub dialog methods to use declarative system
-CyberOpsGame.prototype.showAgentManagementDeclarative = function() {
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('agent-management');
-    }
-};
-
-CyberOpsGame.prototype.showEquipmentDeclarative = function() {
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('equipment-arsenal');
-    }
-};
-
-CyberOpsGame.prototype.showResearchLabDeclarative = function() {
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('research-lab');
-    }
-};
-
-CyberOpsGame.prototype.showIntelDeclarative = function() {
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('intel-missions');
-    } else {
-        this.showIntelligence();
-    }
-};
+// Declarative wrapper functions removed - call dialogEngine.navigateTo() directly
+// Old functions: showAgentManagementDeclarative, showEquipmentDeclarative, showResearchLabDeclarative, showIntelDeclarative
 
 // Helper to check if declarative system is ready
 CyberOpsGame.prototype.useDeclarativeDialogs = function() {
