@@ -718,7 +718,7 @@ const SCREEN_CONFIG = {
                                     <div class="card-status" id="researchStatus">2 Active</div>
                                 </div>
 
-                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('hall-of-glory'); } else if(game.showHallOfGlory) { game.showHallOfGlory(); } else { alert('Hall of Glory not available'); }">
+                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('hall-of-glory'); } else { alert('Dialog engine not available'); }">
                                     <div class="card-icon">⚰️</div>
                                     <div class="card-title">HALL OF GLORY</div>
                                     <div class="card-desc">Remember the fallen</div>
@@ -790,7 +790,7 @@ const SCREEN_CONFIG = {
                                     <div class="card-status" id="intelStatus">3 Reports</div>
                                 </div>
 
-                                <div class="hub-card" onclick="if(game.dialogEngine && game.dialogEngine.navigateTo) { game.dialogEngine.navigateTo('character'); } else if(game.showCharacterSheet) { game.showCharacterSheet(); } else { alert('Character sheet not available'); }">
+                                <div class="hub-card" onclick="if(game.dialogEngine && game.dialogEngine.navigateTo) { game.dialogEngine.navigateTo('character'); } else { alert('Dialog engine not available'); }">
                                     <div class="card-icon">📊</div>
                                     <div class="card-title">CHARACTER</div>
                                     <div class="card-desc">View RPG stats</div>

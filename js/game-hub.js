@@ -173,7 +173,7 @@ CyberOpsGame.prototype.startNextMission = function() {
             The city is safe thanks to your efforts!<br><br>
             <div style="color: #ffa500;">Total Missions Completed: ${this.completedMissions.length}/${this.missions.length}</div>`,
             [
-                { text: 'VIEW ACHIEVEMENTS', action: () => { this.closeDialog(); this.showHallOfGlory(); } },
+                { text: 'VIEW ACHIEVEMENTS', action: () => { this.closeDialog(); if (this.dialogEngine) { this.dialogEngine.navigateTo('hall-of-glory'); } } },
                 { text: 'OK', action: 'close' }
             ]
         );
@@ -196,16 +196,8 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
         window.screenManager.navigateTo('mission-briefing', { selectedMission: mission });
 }
     
-CyberOpsGame.prototype.showHallOfGlory = function() {
-    // Navigation handled by screen manager - no need to hide hub
-
-    // Use the declarative dialog system
-    if (this.dialogEngine && this.dialogEngine.navigateTo) {
-        this.dialogEngine.navigateTo('hall-of-glory');
-    } else {
-        if (this.logger) this.logger.error('Dialog engine not available for Hall of Glory');
-    }
-}
+// showHallOfGlory removed - now using declarative dialog system
+// All calls replaced with: this.dialogEngine.navigateTo('hall-of-glory');
 
 // Return to hub from declarative dialog
 CyberOpsGame.prototype.returnToHub = function() {
@@ -236,100 +228,11 @@ CyberOpsGame.prototype.returnToHub = function() {
     this.dialogReturnScreen = null;
 }
 
-// Agent Management - Now uses declarative dialog
-CyberOpsGame.prototype.showAgentManagement = function() {
-    if (window.dialogManager && window.dialogManager.open) {
-        window.dialogManager.open('agent-management');
-    }
-}
-// Content generators moved to declarative dialog system
-    
-// Arsenal - Now uses declarative dialog
-CyberOpsGame.prototype.showArsenal = function() {
-    if (window.dialogManager && window.dialogManager.open) {
-        window.dialogManager.open('equipment-arsenal');
-    }
-}
-// Content generators moved to declarative dialog system
-    
-// Research Lab - Now uses declarative dialog
-CyberOpsGame.prototype.showResearchLab = function() {
-    if (window.dialogManager && window.dialogManager.open) {
-        window.dialogManager.open('research-lab');
-    }
-}
+// showAgentManagement, showArsenal, showResearchLab removed - now using declarative dialog system
+// All calls replaced with: this.dialogEngine.navigateTo('agent-management' / 'arsenal' / 'research-lab');
 
-// DEPRECATED - Old implementation kept for reference only
-CyberOpsGame.prototype.showResearchLabOld = function() {
-        let content = '<div style="max-height: 400px; overflow-y: auto;">';
-        content += `<div style="color: #00ffff; margin-bottom: 20px; text-align: center;">Available Research Points: ${this.researchPoints.toLocaleString()}</div>`;
-        
-        content += '<h3 style="color: #00ffff; margin-bottom: 15px;">ACTIVE RESEARCH</h3>';
-        content += `<div style="background: rgba(0,0,0,0.3); padding: 15px; border-left: 3px solid #00ffff; margin: 10px 0;">
-            <strong style="color: #00ffff;">CYBER WARFARE ENHANCEMENT</strong><br>
-            Progress: 75% | Est. Completion: 2 missions<br>
-            Benefit: +15% hacking success rate
-        </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-left: 3px solid #ff00ff; margin: 10px 0;">
-            <strong style="color: #ff00ff;">ADVANCED COMBAT TRAINING</strong><br>
-            Progress: 45% | Est. Completion: 4 missions<br>
-            Benefit: +10 damage for all agents
-        </div>`;
-        
-        content += '<h3 style="color: #ff00ff; margin: 30px 0 15px 0;">AVAILABLE RESEARCH</h3>';
-        
-        const researchProjects = [
-            { id: 1, name: 'Weapon Upgrades', cost: 150, description: '+5 damage to all weapons', category: 'combat' },
-            { id: 2, name: 'Stealth Technology', cost: 200, description: '+20% stealth success rate', category: 'stealth' },
-            { id: 3, name: 'Combat Systems', cost: 175, description: '+15 health to all agents', category: 'combat' },
-            { id: 4, name: 'Hacking Protocols', cost: 225, description: '+25% hacking speed', category: 'tech' },
-            { id: 5, name: 'Medical Systems', cost: 300, description: 'Auto-heal 20% health between missions', category: 'support' },
-            { id: 6, name: 'Advanced Tactics', cost: 250, description: '+1 movement speed to all agents', category: 'tactical' }
-        ];
-        
-        researchProjects.forEach(project => {
-            const canAfford = this.researchPoints >= project.cost;
-            const completed = this.completedResearch && this.completedResearch.includes(project.id);
-            
-            content += `
-                <div style="background: ${completed ? 'rgba(0,255,0,0.1)' : canAfford ? 'rgba(255,0,255,0.1)' : 'rgba(128,128,128,0.1)'}; 
-                           padding: 15px; margin: 10px 0; border-radius: 8px; 
-                           border: 1px solid ${completed ? '#00ff00' : canAfford ? '#ff00ff' : '#666'};">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-weight: bold; color: ${completed ? '#00ff00' : canAfford ? '#fff' : '#999'};">
-                                ${project.name} ${completed ? '✅' : ''}
-                            </div>
-                            <div style="color: #ccc; font-size: 0.9em; margin: 5px 0;">
-                                ${project.description}<br>
-                                Category: ${project.category}
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="color: #ff00ff; font-weight: bold; margin-bottom: 5px;">${project.cost} RP</div>
-                            <button onclick="game.startResearch(${project.id})" 
-                                    style="background: ${completed ? '#006600' : canAfford ? '#1e3c72' : '#666'}; 
-                                           color: ${completed ? '#fff' : canAfford ? '#fff' : '#999'}; 
-                                           border: 1px solid ${completed ? '#00ff00' : canAfford ? '#ff00ff' : '#888'}; 
-                                           padding: 8px 15px; border-radius: 4px; cursor: ${completed ? 'not-allowed' : canAfford ? 'pointer' : 'not-allowed'};"
-                                    ${completed || !canAfford ? 'disabled' : ''}>
-                                ${completed ? 'COMPLETED' : canAfford ? 'RESEARCH' : 'INSUFFICIENT RP'}
-                            </button>
-                        </div>
-                    </div>
-                </div>`;
-        });
-        
-        content += '</div>';
-        
-        this.showHudDialog(
-            '🔬 RESEARCH LABORATORY',
-            content,
-            [
-                { text: 'BACK', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }
-            ]
-        );
-}
+// showResearchLabOld removed - now using declarative dialog system
+// All calls replaced with: this.dialogEngine.navigateTo('research-lab');
     
 CyberOpsGame.prototype.startResearch = function(projectId) {
         const researchProjects = [
@@ -352,7 +255,7 @@ CyberOpsGame.prototype.startResearch = function(projectId) {
             this.showHudDialog(
                 '⚠️ RESEARCH COMPLETE',
                 `${project.name} has already been researched!`,
-                [{ text: 'OK', action: () => this.showResearchLab() }]
+                [{ text: 'OK', action: () => { if (this.dialogEngine) { this.dialogEngine.navigateTo('research-lab'); } } }]
             );
             return;
         }
@@ -585,7 +488,7 @@ CyberOpsGame.prototype.showIntelligenceOld = function() {
         '📡 INTELLIGENCE NETWORK',
         content,
         [
-            { text: 'RESEARCH LAB', action: () => { this.transitionDialog(() => this.showResearchLab()); } },
+            { text: 'RESEARCH LAB', action: () => { this.transitionDialog(() => { if (this.dialogEngine) { this.dialogEngine.navigateTo('research-lab'); } }); } },
             { text: 'BACK', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }
         ]
     );
@@ -654,7 +557,7 @@ CyberOpsGame.prototype.showHiringDialog = function() {
             '👥 HIRE AGENTS',
             content,
             [
-                { text: 'BACK TO AGENTS', action: () => { this.transitionDialog(() => this.showAgentManagement()); } },
+                { text: 'BACK TO AGENTS', action: () => { this.transitionDialog(() => { if (this.dialogEngine) { this.dialogEngine.navigateTo('agent-management'); } }); } },
                 { text: 'CLOSE', action: () => { this.closeDialog(); } }
             ]
         );
@@ -872,7 +775,7 @@ CyberOpsGame.prototype.showShopDialogOld = function() {
             '🛒 EQUIPMENT SHOP',
             content,
             [
-                { text: 'BACK', action: () => { this.closeDialog(); this.showArsenal(); } }
+                { text: 'BACK', action: () => { this.closeDialog(); if (this.dialogEngine) { this.dialogEngine.navigateTo('arsenal'); } } }
             ]
         );
 }

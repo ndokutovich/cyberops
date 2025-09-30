@@ -999,18 +999,8 @@ CyberOpsGame.prototype.showQuickDialog = function(title, content, buttons) {
     });
 };
 
-// Helper for NPC dialogs
-CyberOpsGame.prototype.showNPCDialog = function(npcData) {
-    return window.modalEngine.show({
-        type: 'npc',
-        position: 'bottom',
-        avatar: npcData.avatar,
-        name: npcData.name,
-        text: npcData.text,
-        choices: npcData.choices,
-        closeButton: false
-    });
-};
+// showNPCDialog removed - now using declarative dialog system
+// All NPC interactions now use: this.dialogEngine.navigateTo('npc-interaction');
 
 // Helper for equipment dialogs
 CyberOpsGame.prototype.showEquipmentModal = function(sections, buttons) {

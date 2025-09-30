@@ -113,8 +113,19 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
             }
 
             if (agentToShow) {
-                // Use the existing showCharacterSheet function
-                this.showCharacterSheet(agentToShow.id || agentToShow.name || agentToShow);
+                // Set selected agent for character sheet display
+                const agentId = agentToShow.id || agentToShow.name || agentToShow;
+                if (typeof agentId === 'string') {
+                    this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
+                                         (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
+                } else if (agentId && typeof agentId === 'object') {
+                    this._selectedAgent = agentId;
+                }
+
+                // Open character sheet using declarative dialog
+                if (this.dialogEngine && this.dialogEngine.navigateTo) {
+                    this.dialogEngine.navigateTo('character');
+                }
             } else {
                 if (this.logger) this.logger.warn('No agent available for character sheet');
             }
@@ -134,8 +145,19 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
             }
 
             if (agentToShow) {
-                // Use the existing showCharacterSheet function
-                this.showCharacterSheet(agentToShow.id || agentToShow.name || agentToShow);
+                // Set selected agent for character sheet display
+                const agentId = agentToShow.id || agentToShow.name || agentToShow;
+                if (typeof agentId === 'string') {
+                    this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
+                                         (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
+                } else if (agentId && typeof agentId === 'object') {
+                    this._selectedAgent = agentId;
+                }
+
+                // Open character sheet using declarative dialog
+                if (this.dialogEngine && this.dialogEngine.navigateTo) {
+                    this.dialogEngine.navigateTo('character');
+                }
             } else {
                 if (this.logger) this.logger.warn('No agent available for character sheet');
             }

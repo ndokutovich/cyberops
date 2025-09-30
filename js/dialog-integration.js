@@ -2711,25 +2711,18 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
 CyberOpsGame.prototype.showAgentManagementDeclarative = function() {
     if (this.dialogEngine) {
         this.dialogEngine.navigateTo('agent-management');
-    } else {
-        // Fallback to old system
-        this.showAgentManagement();
     }
 };
 
 CyberOpsGame.prototype.showEquipmentDeclarative = function() {
     if (this.dialogEngine) {
         this.dialogEngine.navigateTo('equipment-arsenal');
-    } else {
-        this.showArsenal();
     }
 };
 
 CyberOpsGame.prototype.showResearchLabDeclarative = function() {
     if (this.dialogEngine) {
         this.dialogEngine.navigateTo('research-lab');
-    } else {
-        this.showResearchLab();
     }
 };
 

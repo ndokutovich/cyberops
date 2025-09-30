@@ -5,154 +5,8 @@
  */
 
 // Character Sheet UI - Now uses declarative dialog system when available
-CyberOpsGame.prototype.showCharacterSheet = function(agentIdOrName) {
-    if (this.logger) this.logger.debug('showCharacterSheet called with:', agentIdOrName);
-
-    // Use declarative dialog system if available
-    if (this.dialogEngine && this.dialogEngine.navigateTo) {
-        if (this.logger) this.logger.debug('📊 Using declarative dialog system for character sheet');
-
-        // Store the selected agent for the dialog generator
-        if (agentIdOrName) {
-            if (typeof agentIdOrName === 'string') {
-                this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentIdOrName || a.name === agentIdOrName)) ||
-                                     (this.activeAgents && this.activeAgents.find(a => a.id === agentIdOrName || a.name === agentIdOrName));
-            } else if (agentIdOrName && typeof agentIdOrName === 'object') {
-                this._selectedAgent = agentIdOrName;
-            }
-        }
-
-        this.dialogEngine.navigateTo('character');
-        return;
-    }
-
-    // Fallback to original implementation
-    if (this.logger) this.logger.debug('📊 Fallback to original character sheet implementation');
-
-    // Find agent by ID or name
-    let agent;
-    if (typeof agentIdOrName === 'string') {
-        // Check both in-game agents and hub active agents
-        agent = (this.agents && this.agents.find(a => a.id === agentIdOrName || a.name === agentIdOrName)) ||
-                (this.activeAgents && this.activeAgents.find(a => a.id === agentIdOrName || a.name === agentIdOrName));
-    } else if (agentIdOrName && typeof agentIdOrName === 'object') {
-        agent = agentIdOrName;
-    } else {
-        // If no parameter, try to get selected or first available
-        agent = this._selectedAgent ||
-                (this.agents && this.agents[0]) ||
-                (this.activeAgents && this.activeAgents[0]);
-    }
-
-    if (!agent) {
-        if (this.logger) this.logger.warn('Agent not found:', agentIdOrName);
-        return;
-    }
-
-    // Initialize RPG entity if not present
-    if (!agent.rpgEntity) {
-        if (this.logger) this.logger.debug('Creating RPG entity for agent:', agent.name);
-        if (this.rpgManager) {
-            agent.rpgEntity = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
-        } else {
-            if (this.logger) this.logger.warn('RPG manager not initialized');
-            return;
-        }
-    }
-
-    const rpg = agent.rpgEntity;
-    const derived = this.rpgManager.calculateDerivedStats(rpg);
-
-    // Create character sheet dialog
-    const dialog = document.createElement('div');
-    dialog.className = 'character-sheet'; // Remove hud-dialog class that hides it
-    dialog.innerHTML = `
-        <div class="dialog-header">
-            <h2>${agent.name} - Level ${rpg.level || 1} ${rpg.class || 'Soldier'}</h2>
-            <button class="close-button" onclick="this.parentElement.parentElement.remove()">×</button>
-        </div>
-
-        <div class="dialog-content">
-            <div class="stats-panel">
-                <h3>Primary Stats</h3>
-                <div class="stat-list">
-                    ${this.renderStatList(rpg.stats)}
-                </div>
-
-                ${rpg.unspentStatPoints > 0 ? `
-                <div class="stat-points-available">
-                    <span>${rpg.unspentStatPoints} stat points available</span>
-                    <button onclick="game.showStatAllocation('${agent.id || agent.name}')">Allocate</button>
-                </div>
-                ` : ''}
-            </div>
-
-            <div class="derived-panel">
-                <h3>Derived Stats</h3>
-                <div class="derived-list">
-                    <div class="derived-stat">
-                        <span>Max Health:</span>
-                        <span>${derived.maxHealth}</span>
-                    </div>
-                    <div class="derived-stat">
-                        <span>Max AP:</span>
-                        <span>${derived.maxAP}</span>
-                    </div>
-                    <div class="derived-stat">
-                        <span>Crit Chance:</span>
-                        <span>${derived.critChance.toFixed(1)}%</span>
-                    </div>
-                    <div class="derived-stat">
-                        <span>Dodge:</span>
-                        <span>${derived.dodge.toFixed(1)}%</span>
-                    </div>
-                    <div class="derived-stat">
-                        <span>Carry Weight:</span>
-                        <span>${derived.carryWeight} kg</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="xp-panel">
-                <h3>Experience</h3>
-                <div class="xp-bar">
-                    <div class="xp-fill" style="width: ${this.calculateXPPercent(rpg)}%"></div>
-                    <span class="xp-text">${rpg.experience || 0} / ${this.rpgManager.experienceTable[rpg.level + 1]} XP</span>
-                </div>
-            </div>
-
-            <div class="skills-panel">
-                <h3>Skills</h3>
-                <div class="skill-list">
-                    ${this.renderSkillList(rpg.skills || [])}
-                </div>
-
-                ${rpg.unspentSkillPoints > 0 ? `
-                <div class="skill-points-available">
-                    <span>${rpg.unspentSkillPoints} skill points available</span>
-                    <button onclick="game.showSkillTree('${agent.id || agent.name}')">Learn Skills</button>
-                </div>
-                ` : ''}
-            </div>
-
-            <div class="perks-panel">
-                <h3>Perks</h3>
-                <div class="perk-list">
-                    ${this.renderPerkList(rpg.perks || [])}
-                </div>
-
-                ${rpg.unspentPerkPoints > 0 ? `
-                <div class="perk-points-available">
-                    <span>${rpg.unspentPerkPoints} perk points available</span>
-                    <button onclick="game.showPerkSelection('${agent.id || agent.name}')">Choose Perks</button>
-                </div>
-                ` : ''}
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(dialog);
-};
+// showCharacterSheet removed - now using declarative dialog system
+// All calls replaced with: this._selectedAgent = agent; this.dialogEngine.navigateTo('character');
 
 // Render stat list
 CyberOpsGame.prototype.renderStatList = function(stats) {
@@ -749,7 +603,7 @@ CyberOpsGame.prototype.showLevelUpNotification = function(agent) {
                 <div>+${agent.rpgEntity.unspentSkillPoints || 0} Skill Points</div>
                 ${agent.rpgEntity.unspentPerkPoints > 0 ? `<div>+1 Perk Point</div>` : ''}
             </div>
-            <button onclick="game.showCharacterSheet('${agent.id || agent.name}'); this.parentElement.parentElement.remove()">
+            <button onclick="game._selectedAgent = game.agents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}') || game.activeAgents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}'); game.dialogEngine?.navigateTo('character'); this.parentElement.parentElement.remove()">
                 Open Character Sheet
             </button>
         </div>
@@ -985,7 +839,13 @@ CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
         // Old standalone dialog
         const dialog = document.querySelector('.stat-allocation');
         if (dialog) dialog.remove();
-        this.showCharacterSheet(agentId);
+
+        // Set selected agent and open character sheet
+        this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
+                             (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
+        if (this.dialogEngine && this.dialogEngine.navigateTo) {
+            this.dialogEngine.navigateTo('character');
+        }
     }
 
     if (this.logEvent) {
@@ -1032,7 +892,13 @@ CyberOpsGame.prototype.confirmStatAllocationOld = function(agentId) {
 
     // Close dialog and refresh character sheet
     dialog.remove();
-    this.showCharacterSheet(agentId);
+
+    // Set selected agent and open character sheet
+    this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
+                         (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
+    if (this.dialogEngine && this.dialogEngine.navigateTo) {
+        this.dialogEngine.navigateTo('character');
+    }
 
     if (this.logEvent) {
         this.logEvent(`${agent.name} allocated stat points!`, 'progression');
@@ -1250,7 +1116,12 @@ CyberOpsGame.prototype.useHealthPack = function(agentId) {
     // Refresh UI if character sheet is open
     const dialog = document.querySelector('.rpg-character-sheet');
     if (dialog) {
-        this.showCharacterSheet(agentId);
+        // Set selected agent and open character sheet
+        this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
+                             (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
+        if (this.dialogEngine && this.dialogEngine.navigateTo) {
+            this.dialogEngine.navigateTo('character');
+        }
     }
 };
 
@@ -1307,7 +1178,12 @@ CyberOpsGame.prototype.useItem = function(agentId, itemId) {
     // Refresh UI if character sheet is open
     const dialog = document.querySelector('.rpg-character-sheet');
     if (dialog) {
-        this.showCharacterSheet(agentId);
+        // Set selected agent and open character sheet
+        this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
+                             (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
+        if (this.dialogEngine && this.dialogEngine.navigateTo) {
+            this.dialogEngine.navigateTo('character');
+        }
     }
 };
 

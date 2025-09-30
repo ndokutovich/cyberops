@@ -2184,7 +2184,18 @@ CyberOpsGame.prototype.togglePause = function() {
                 document.exitPointerLock();
             }
 
-            this.showPauseMenu();
+            // Store mission status for the pause menu dialog
+            this.pauseMenuData = {
+                missionTitle: this.currentMission?.title || 'Unknown',
+                missionTime: `${Math.floor(this.missionTimer / 60)}:${String(this.missionTimer % 60).padStart(2, '0')}`,
+                agentsAlive: this.agents.filter(a => a.alive).length,
+                totalAgents: this.agents.length,
+                enemiesRemaining: this.enemies.filter(e => e.alive).length,
+                totalEnemies: this.enemies.length
+            };
+            if (this.dialogEngine) {
+                this.dialogEngine.navigateTo('pause-menu');
+            }
         } else {
             pauseButton.textContent = '⏸';
             this.resumeLevelMusic();
@@ -2192,21 +2203,8 @@ CyberOpsGame.prototype.togglePause = function() {
         }
 }
 
-CyberOpsGame.prototype.showPauseMenu = function() {
-    // Always use declarative dialog system
-    // Store mission status for the dialog to display
-    this.pauseMenuData = {
-        missionTitle: this.currentMission?.title || 'Unknown',
-        missionTime: `${Math.floor(this.missionTimer / 60)}:${String(this.missionTimer % 60).padStart(2, '0')}`,
-        agentsAlive: this.agents.filter(a => a.alive).length,
-        totalAgents: this.agents.length,
-        enemiesRemaining: this.enemies.filter(e => e.alive).length,
-        totalEnemies: this.enemies.length
-    };
-    this.dialogEngine.navigateTo('pause-menu');
-
-    // OLD CODE REMOVED - Now always uses declarative system
-}
+// showPauseMenu removed - now using declarative dialog system
+// All calls replaced with inline pauseMenuData setup + this.dialogEngine.navigateTo('pause-menu');
 
 CyberOpsGame.prototype.closePauseMenu = function() {
         this.closeDialog();
