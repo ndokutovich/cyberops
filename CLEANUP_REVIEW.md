@@ -209,10 +209,11 @@ Many show* functions exist that may or may not need conversion:
 | Close method calls | 27 | ✅ 20 (unified) | 0 | ~~MEDIUM~~ DONE |
 | Equipment show functions | 7 | ✅ 7 (audited) | 0 | ~~MEDIUM~~ DONE |
 | Equipment fallback code | 11 | ✅ 11 (removed) | 0 | ~~MEDIUM~~ DONE |
+| Mission list dialog (J key) | 1 | ✅ 1 (converted) | 0 | ~~MEDIUM~~ DONE |
 | showHudDialog usages | 40 | 0 (doc only) | 40 | 🟡 MEDIUM-LOW |
 | Direct modalEngine calls | 24 | 0 (keep) | N/A | 🟢 LOW (document) |
 | Other show* functions | 50+ | 0 | 50+ | 🟢 LOW |
-| **COMPLETED** | **55** | **55** | **0** | **✅ DONE** |
+| **COMPLETED** | **56** | **56** | **0** | **✅ DONE** |
 | **REMAINING (audit)** | **114+** | **0** | **90+** | **Needs audit** |
 
 ---
@@ -275,11 +276,30 @@ Many show* functions exist that may or may not need conversion:
 
 ---
 
-### Phase 5: showHudDialog Documentation (2-4 hours) - RECOMMENDED
-15. Document the dual-system architecture (Modal vs Declarative)
-16. Create decision tree for when to use which system
-17. Audit complex showHudDialog uses (not all 40)
-18. Convert only truly misplaced uses
+### ✅ Phase 5: Mission List Dialog Conversion - COMPLETE (30 min)
+15. ✅ Extract mission list content into generator function
+16. ✅ Create declarative dialog state for mission-progress
+17. ✅ Update showMissionList to use declarative system
+18. ✅ Fix dialog height to match original (90vh)
+
+**Status:** ✅ COMPLETE
+**Time Spent:** ~30 minutes
+**Results:**
+- Converted showMissionList (J key) to declarative system
+- Created generateMissionProgress generator function (140 lines)
+- Added 'mission-progress' dialog state with keyboard shortcuts (J/Esc)
+- Removed ~142 lines from showMissionList() function
+- Added CSS override for proper height (90vh)
+- Mission list now uses DeclarativeDialogEngine instead of ModalEngine
+- Tested and verified working
+
+---
+
+### Phase 6: showHudDialog Documentation (2-4 hours) - RECOMMENDED
+19. Document the dual-system architecture (Modal vs Declarative)
+20. Create decision tree for when to use which system
+21. Audit complex showHudDialog uses (not all 40)
+22. Convert only truly misplaced uses
 
 **Status:** NOT STARTED
 **Priority:** MEDIUM-LOW

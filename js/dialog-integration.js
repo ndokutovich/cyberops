@@ -2111,6 +2111,145 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
+    // Mission progress content generator (J key)
+    engine.registerGenerator('generateMissionProgress', function() {
+        // Gather comprehensive mission data (same as completion modal)
+        const missionSummary = this.gatherMissionSummary ? this.gatherMissionSummary(false) : {
+            mainObjectives: [],
+            sideQuests: [],
+            rewards: [],
+            itemsCollected: {},
+            completedMainObjectives: 0,
+            totalMainObjectives: 0,
+            intelCollected: 0,
+            totalCredits: 0,
+            totalResearchPoints: 0
+        };
+
+        // Build content with comprehensive layout
+        let content = `
+            <!-- Mission Header Info -->
+            <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,255,255,0.1); border-radius: 5px;">
+                <h3 style="color: #ffff00; margin-bottom: 10px;">🎯 ${this.currentMission ? this.currentMission.title : 'Current Mission'}</h3>
+                <div style="color: #ccc; display: flex; justify-content: space-around; flex-wrap: wrap;">
+                    <div>⏱️ Time: ${Math.floor(this.missionTimer / 60)}:${String(this.missionTimer % 60).padStart(2, '0')}</div>
+                    <div>👥 Squad: ${this.agents.filter(a => a.alive).length}/${this.agents.length}</div>
+                    <div>🎯 Enemies: ${this.enemies.filter(e => !e.alive).length}/${this.enemies.length} eliminated</div>
+                </div>
+            </div>
+
+            <!-- Primary Objectives -->
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #ffff00; margin-bottom: 10px;">📋 PRIMARY OBJECTIVES (${missionSummary.completedMainObjectives}/${missionSummary.totalMainObjectives})</h3>
+                <div style="padding-left: 20px;">
+        `;
+
+        // Show primary objectives with detailed status
+        if (missionSummary.mainObjectives.length > 0) {
+            missionSummary.mainObjectives.forEach(obj => {
+                const icon = obj.completed ? '✅' : obj.required ? '⬜' : '⭕';
+                const color = obj.completed ? '#00ff00' : obj.required ? '#ffffff' : '#ffaa00';
+                content += `
+                    <div style="margin-bottom: 8px; color: ${color};">
+                        ${icon} ${obj.description || obj.name}
+                        ${obj.progress ? ` <span style="color: #00ffff;">[${obj.progress}]</span>` : ''}
+                        ${!obj.required ? ' <span style="color: #888;">(Optional)</span>' : ''}
+                    </div>
+                `;
+            });
+        } else {
+            content += '<div style="color: #888;">No objectives available</div>';
+        }
+
+        content += '</div></div>';
+
+        // Side quests with comprehensive status
+        content += `
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #ff00ff; margin-bottom: 10px;">📜 SIDE QUESTS</h3>
+                <div style="padding-left: 20px;">
+        `;
+
+        if (missionSummary.sideQuests.length > 0) {
+            missionSummary.sideQuests.forEach(quest => {
+                let icon, color, status;
+                if (!quest.discovered) {
+                    icon = '❓';
+                    color = '#666666';
+                    status = 'Not discovered';
+                } else if (quest.completed && quest.rewardClaimed) {
+                    icon = '✅';
+                    color = '#00ff00';
+                    status = 'Completed';
+                } else if (quest.completed && !quest.rewardClaimed) {
+                    icon = '🎁';
+                    color = '#ffd700';
+                    status = 'Ready to claim';
+                } else if (quest.failed) {
+                    icon = '❌';
+                    color = '#ff6666';
+                    status = 'Failed';
+                } else {
+                    icon = '🔄';
+                    color = '#ffff00';
+                    status = 'In progress';
+                }
+
+                content += `
+                    <div style="margin-bottom: 8px; color: ${color}; ${!quest.discovered ? 'opacity: 0.5;' : ''}">
+                        ${icon} ${quest.discovered ? quest.name : '???'} - ${status}
+                        ${quest.discovered && quest.reward ? ` <span style="color: #ffd700;">(${quest.reward})</span>` : ''}
+                    </div>
+                `;
+            });
+        } else {
+            content += '<div style="color: #888;">No quests discovered</div>';
+        }
+
+        content += '</div></div>';
+
+        // Current Progress & Rewards
+        content += `
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #ffa500; margin-bottom: 10px;">💰 CURRENT PROGRESS</h3>
+                <div style="padding-left: 20px; color: #ffffff;">
+                    <div>💰 Credits earned: ${missionSummary.totalCredits || 0}</div>
+                    <div>🔬 Research Points: ${missionSummary.totalResearchPoints || 0}</div>
+                    <div>📄 Intel collected: ${missionSummary.intelCollected || 0}</div>
+        `;
+
+        // Show items collected
+        if (missionSummary.itemsCollected && Object.keys(missionSummary.itemsCollected).length > 0) {
+            const itemIcons = {
+                health: '❤️',
+                ammo: '🔫',
+                armor: '🛡️',
+                keycard: '🗝️',
+                explosives: '💣'
+            };
+
+            for (let item in missionSummary.itemsCollected) {
+                const count = missionSummary.itemsCollected[item];
+                if (count > 0) {
+                    content += `<div>${itemIcons[item] || '📦'} ${item}: ${count}</div>`;
+                }
+            }
+        }
+
+        content += '</div></div>';
+
+        // Extraction Status
+        content += `
+            <div style="margin-bottom: 20px; padding: 15px; background: ${this.extractionEnabled ? 'rgba(0,255,0,0.1)' : 'rgba(255,255,0,0.1)'}; border-radius: 5px;">
+                <div style="color: ${this.extractionEnabled ? '#00ff00' : '#ffff00'}; text-align: center; font-weight: bold;">
+                    ${this.extractionEnabled ? '✅ EXTRACTION POINT ACTIVE - Head to extraction!' : '⏳ Complete objectives to activate extraction'}
+                </div>
+            </div>
+        `;
+
+        return content;
+    });
+
     // Save/Load UI generator
     engine.registerGenerator('generateSaveLoadUI', function() {
         let html = '<div class="save-load-ui">';

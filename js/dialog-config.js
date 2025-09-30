@@ -406,6 +406,26 @@ const DIALOG_CONFIG = {
             }
         },
 
+        'mission-progress': {
+            type: 'dialog',
+            level: 1,
+            parent: 'game',
+            title: '📊 MISSION PROGRESS',
+            layout: 'dialog-layout',
+            content: {
+                type: 'dynamic',
+                generator: 'generateMissionProgress'
+            },
+            buttons: [
+                { text: '← BACK TO GAME', action: 'close', primary: true }
+            ],
+            keyboard: {
+                'Escape': 'close',
+                'J': 'close',
+                'j': 'close'
+            }
+        },
+
         // Level 2: Settings (from pause menu)
         'settings': {
             type: 'dialog',
