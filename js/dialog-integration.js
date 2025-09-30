@@ -750,6 +750,150 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
+    // Perk Selection Generator
+    engine.registerGenerator('generatePerkSelection', function() {
+        const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+
+        // Get the agent ID from the dialog state data
+        const agentId = this.dialogEngine?.stateData?.agentId;
+        if (!agentId) {
+            return '<div style="color: #ff6666; text-align: center; padding: 40px;">Error: No agent selected for perk selection</div>';
+        }
+
+        const agent = this.findAgentForRPG ? this.findAgentForRPG(agentId) : null;
+        if (!agent || !agent.rpgEntity) {
+            return '<div style="color: #ff6666; text-align: center; padding: 40px;">Error: Agent not found or has no RPG entity</div>';
+        }
+
+        const rpg = agent.rpgEntity;
+        if (rpg.availablePerkPoints <= 0) {
+            return '<div style="color: #888; text-align: center; padding: 40px;">No perk points available. Gain perk points every 3 levels.</div>';
+        }
+
+        // Get perks from campaign config
+        const rpgConfig = window.ContentLoader?.getContent('rpgConfig');
+        const perks = rpgConfig?.perks || {};
+
+        if (Object.keys(perks).length === 0) {
+            return '<div style="color: #888; text-align: center; padding: 40px;">No perks available in this campaign</div>';
+        }
+
+        // Organize perks by category
+        const categories = {};
+        Object.entries(perks).forEach(([perkId, perk]) => {
+            const category = perk.category || 'general';
+            if (!categories[category]) {
+                categories[category] = [];
+            }
+            categories[category].push({ id: perkId, ...perk });
+        });
+
+        let html = '<div class="perk-selection-content" style="padding: 20px;">';
+
+        // Points available
+        html += `
+            <div class="points-available" style="text-align: center; padding: 15px; background: rgba(255,255,0,0.1); color: #ffff00; font-size: 20px; font-weight: bold; margin-bottom: 20px; border-radius: 5px;">
+                Perk Points Available: ${rpg.availablePerkPoints}
+            </div>
+        `;
+
+        // Show perks by category
+        const categoryNames = {
+            combat: '⚔️ Combat',
+            defense: '🛡️ Defense',
+            stealth: '👤 Stealth',
+            tech: '💻 Tech',
+            medical: '🏥 Medical',
+            leadership: '👑 Leadership',
+            survival: '❤️ Survival',
+            general: '⭐ General'
+        };
+
+        Object.entries(categories).forEach(([category, categoryPerks]) => {
+            const categoryName = categoryNames[category] || category;
+
+            html += `<div class="perk-category" style="margin: 20px 0;">`;
+            html += `<h3 style="color: #00ffff; border-bottom: 2px solid #00ffff; padding-bottom: 5px; margin-bottom: 15px;">${categoryName}</h3>`;
+            html += '<div class="perk-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">';
+
+            categoryPerks.forEach(perk => {
+                // Check if agent already has this perk
+                const hasPerk = rpg.hasPerk ? rpg.hasPerk(perk.id) : false;
+
+                // Check requirements
+                let meetsRequirements = true;
+                let requirementText = [];
+
+                if (perk.requirements) {
+                    if (perk.requirements.level && rpg.level < perk.requirements.level) {
+                        meetsRequirements = false;
+                        requirementText.push(`Level ${perk.requirements.level}`);
+                    }
+
+                    Object.entries(perk.requirements).forEach(([stat, value]) => {
+                        if (stat !== 'level' && rpg.stats[stat]) {
+                            const statValue = typeof rpg.stats[stat] === 'object' ?
+                                rpg.stats[stat].value : rpg.stats[stat];
+                            if (statValue < value) {
+                                meetsRequirements = false;
+                                requirementText.push(`${stat.charAt(0).toUpperCase() + stat.slice(1)} ${value}`);
+                            }
+                        }
+                    });
+                }
+
+                const canSelect = !hasPerk && meetsRequirements;
+                const bgColor = hasPerk ? 'rgba(0,255,0,0.1)' :
+                               !meetsRequirements ? 'rgba(100,100,100,0.1)' :
+                               'rgba(0,255,255,0.05)';
+                const borderColor = hasPerk ? '#00ff00' :
+                                   !meetsRequirements ? '#666' :
+                                   '#00ffff';
+
+                html += `
+                    <div class="perk-card" style="
+                        padding: 15px;
+                        background: ${bgColor};
+                        border: 2px solid ${borderColor};
+                        border-radius: 5px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 10px;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 30px;">${perk.icon}</span>
+                            <div style="flex: 1;">
+                                <div style="color: #00ffff; font-weight: bold; font-size: 16px;">${perk.name}</div>
+                                ${hasPerk ? '<div style="color: #00ff00; font-size: 12px;">✓ UNLOCKED</div>' : ''}
+                            </div>
+                        </div>
+                        <div style="color: #ccc; font-size: 14px; line-height: 1.4;">${perk.description}</div>
+                        ${requirementText.length > 0 ?
+                            `<div style="color: ${meetsRequirements ? '#888' : '#ff6666'}; font-size: 12px;">
+                                Requires: ${requirementText.join(', ')}
+                            </div>` : ''}
+                        ${canSelect ?
+                            `<button class="dialog-button primary" style="margin-top: auto;"
+                                     onclick="game.selectPerkDeclarative('${agentId}', '${perk.id}')">
+                                SELECT PERK
+                            </button>` :
+                            hasPerk ?
+                                `<button class="dialog-button" disabled style="margin-top: auto;">ALREADY UNLOCKED</button>` :
+                                `<button class="dialog-button" disabled style="margin-top: auto;">REQUIREMENTS NOT MET</button>`
+                        }
+                    </div>
+                `;
+            });
+
+            html += '</div>'; // perk-list
+            html += '</div>'; // perk-category
+        });
+
+        html += '</div>'; // perk-selection-content
+
+        return html;
+    });
+
     // Arsenal/Equipment Management
     engine.registerGenerator('generateEquipmentManagement', function() {
         // Initialize equipment system if needed
@@ -2250,6 +2394,128 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return content;
     });
 
+    // RPG Shop generator
+    engine.registerGenerator('generateRPGShop', function() {
+        const shopId = this.dialogEngine?.stateData?.shopId || 'black_market';
+        const shop = this.shopManager?.shops.get(shopId);
+
+        if (!shop) {
+            return '<div style="color: #ff6666; text-align: center; padding: 40px;">Shop not available</div>';
+        }
+
+        // Get current tab (default to 'buy')
+        const currentTab = this.dialogEngine?.stateData?.shopTab || 'buy';
+
+        // Get selected agent's credits
+        const agentCredits = this._selectedAgent?.rpgEntity?.credits || this._selectedAgent?.credits || 0;
+
+        let html = '<div class="rpg-shop-content">';
+
+        // Shop description
+        html += `<div style="color: #00ffff; margin-bottom: 15px; text-align: center;">${shop.name}</div>`;
+        if (shop.description) {
+            html += `<div style="color: #ccc; margin-bottom: 20px; text-align: center; font-size: 0.9em;">${shop.description}</div>`;
+        }
+
+        // Agent credits display
+        html += `<div style="color: #ffff00; margin-bottom: 20px; text-align: center; font-size: 1.1em;">Your Credits: ${agentCredits.toLocaleString()} ©</div>`;
+
+        // Tab buttons
+        html += `
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #00ffff;">
+                <button class="dialog-button ${currentTab === 'buy' ? 'primary' : ''}"
+                        onclick="game.switchRPGShopTab('${shopId}', 'buy')"
+                        style="flex: 1; ${currentTab === 'buy' ? 'background: #00ffff; color: #000;' : ''}">
+                    BUY
+                </button>
+                <button class="dialog-button ${currentTab === 'sell' ? 'primary' : ''}"
+                        onclick="game.switchRPGShopTab('${shopId}', 'sell')"
+                        style="flex: 1; ${currentTab === 'sell' ? 'background: #00ffff; color: #000;' : ''}">
+                    SELL
+                </button>
+            </div>
+        `;
+
+        // Content based on tab
+        html += '<div style="max-height: 400px; overflow-y: auto;">';
+
+        if (currentTab === 'buy') {
+            // Buy tab - show shop inventory
+            if (!shop.inventory || shop.inventory.length === 0) {
+                html += '<div style="color: #999; text-align: center; padding: 40px;">Shop is out of stock!</div>';
+            } else {
+                shop.inventory.forEach(item => {
+                    const canAfford = agentCredits >= item.price;
+                    const inStock = item.stock === -1 || item.stock > 0;
+
+                    html += `
+                        <div style="background: ${canAfford && inStock ? 'rgba(0,255,255,0.1)' : 'rgba(128,128,128,0.1)'};
+                                   padding: 15px; margin-bottom: 10px; border-radius: 5px;
+                                   border: 1px solid ${canAfford && inStock ? '#00ffff' : '#666'};">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: bold; color: ${canAfford && inStock ? '#fff' : '#999'};">
+                                        ${item.icon || '📦'} ${item.name}
+                                    </div>
+                                    ${item.description ? `<div style="color: #ccc; font-size: 0.9em; margin: 5px 0;">${item.description}</div>` : ''}
+                                    <div style="color: #aaa; font-size: 0.85em;">
+                                        ${item.damage ? `DMG: ${item.damage} ` : ''}
+                                        ${item.defense ? `DEF: ${item.defense} ` : ''}
+                                        ${item.weight ? `Weight: ${item.weight}kg` : ''}
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="color: #ffff00; font-weight: bold; margin-bottom: 5px;">${item.price} ©</div>
+                                    ${item.stock !== -1 ? `<div style="color: #aaa; font-size: 0.85em;">Stock: ${item.stock}</div>` : ''}
+                                    ${canAfford && inStock ?
+                                        `<button class="dialog-button" onclick="game.buyRPGItem('${shopId}', '${item.id}')" style="margin-top: 5px;">BUY</button>` :
+                                        `<button class="dialog-button" disabled style="margin-top: 5px; opacity: 0.5;">UNAVAILABLE</button>`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        } else {
+            // Sell tab - show agent's sellable items
+            const inventory = this.inventoryManager?.getInventory(this._selectedAgent?.id || this._selectedAgent?.name) || [];
+            const sellableItems = inventory.filter(item => item.value && item.value > 0);
+
+            if (sellableItems.length === 0) {
+                html += '<div style="color: #999; text-align: center; padding: 40px;">No items to sell</div>';
+            } else {
+                html += '<div style="color: #ccc; margin-bottom: 15px; text-align: center; font-size: 0.9em;">Select items from your inventory to sell</div>';
+
+                sellableItems.forEach(item => {
+                    const sellPrice = Math.floor((item.value || 0) * 0.5); // 50% of value
+
+                    html += `
+                        <div style="background: rgba(255,255,0,0.1); padding: 15px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ffff00;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: bold; color: #fff;">
+                                        ${item.icon || '📦'} ${item.name}
+                                    </div>
+                                    ${item.description ? `<div style="color: #ccc; font-size: 0.9em; margin: 5px 0;">${item.description}</div>` : ''}
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="color: #00ff00; font-weight: bold; margin-bottom: 5px;">${sellPrice} ©</div>
+                                    <button class="dialog-button" onclick="game.sellRPGItem('${shopId}', '${item.id}')" style="margin-top: 5px;">SELL</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        html += '</div>'; // Close scrollable content
+        html += '</div>'; // Close rpg-shop-content
+
+        return html;
+    });
+
     // Save/Load UI generator
     engine.registerGenerator('generateSaveLoadUI', function() {
         let html = '<div class="save-load-ui">';
@@ -2343,30 +2609,6 @@ CyberOpsGame.prototype.registerDialogValidators = function(engine) {
 // Register action handlers
 CyberOpsGame.prototype.registerDialogActions = function(engine) {
     const game = this;
-
-    // Hire agent (legacy - kept for compatibility)
-    engine.registerAction('hireAgent', function(agentId, context) {
-        if (!agentId) {
-            agentId = this.stateData.selectedAgent?.id;
-        }
-
-        const agent = game.availableAgents.find(a => a.id === parseInt(agentId));
-        if (agent && !agent.hired && game.credits >= agent.cost) {
-            game.credits -= agent.cost;
-            agent.hired = true;
-            game.activeAgents.push(agent);
-            game.updateHubStats();
-
-            // Show success notification
-            this.navigateTo('hire-success', { agent });
-
-            // Return to hire list after delay
-            setTimeout(() => {
-                this.back();
-                this.actionRegistry.get('refresh')();
-            }, 2000);
-        }
-    });
 
     // Confirm hire - uses selectedAgent from state
     engine.registerAction('confirmHire', function(context) {

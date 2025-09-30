@@ -230,6 +230,11 @@
                 id: 'maintenance_worker',
                 spawn: { x: 25, y: 20 },
                 quests: ['secret_passage']
+            },
+            {
+                id: 'black_market_merchant',
+                spawn: { x: 5, y: 75 },
+                quests: []  // Merchant has no quests, just shop access
             }
         ]
     };

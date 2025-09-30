@@ -97,6 +97,43 @@
                     rewards: { credits: 800, experience: 250 }
                 }
             ]
+        },
+        'black_market_merchant': {
+            name: 'Viktor "The Fence" Kozlov',
+            sprite: '🛒',
+            avatar: '💼',
+            color: '#ffcc00',
+            movementType: 'stationary',
+            dialog: [
+                {
+                    greeting: 'Looking to buy or sell? I have the best gear in the city... for the right price.',
+                    options: [
+                        {
+                            text: '🛒 Open Shop',
+                            action: function() {
+                                // Close NPC dialog first
+                                if (game.closeNPCDialog) {
+                                    game.closeNPCDialog();
+                                }
+                                // Open the RPG shop
+                                if (game.showShop) {
+                                    game.showShop('black_market');
+                                }
+                            }
+                        },
+                        {
+                            text: '💬 Tell me about your goods',
+                            action: 'info'
+                        },
+                        {
+                            text: '👋 Leave',
+                            action: 'close'
+                        }
+                    ],
+                    info: 'I deal in weapons, armor, and special equipment. Everything you need to survive the corporate wars. My prices are fair... mostly. I buy items too, but at half price - that\'s business.'
+                }
+            ],
+            quests: []
         }
     };
 

@@ -512,80 +512,19 @@ CyberOpsGame.prototype.unequipFromRPG = function(itemId, slotType) {
 
 // Shop UI
 CyberOpsGame.prototype.showShop = function(shopId) {
-    const shop = this.shopManager?.shops.get(shopId);
-    if (!shop) return;
+    if (this.logger) this.logger.debug(`🛒 showShop - routing to declarative rpg-shop state (shopId: ${shopId})`);
 
-    const dialog = document.createElement('div');
-    dialog.className = 'hud-dialog shop-dialog';
-    dialog.innerHTML = `
-        <div class="dialog-header">
-            <h2>${shop.name}</h2>
-            <button class="close-button" onclick="this.parentElement.parentElement.remove()">×</button>
-        </div>
+    // Use the declarative dialog system
+    if (this.dialogEngine && this.dialogEngine.navigateTo) {
+        // Store shop ID in state data
+        this.dialogEngine.stateData = this.dialogEngine.stateData || {};
+        this.dialogEngine.stateData.shopId = shopId || 'black_market';
+        this.dialogEngine.stateData.shopTab = 'buy'; // Default to buy tab
 
-        <div class="dialog-content">
-            <div class="shop-description">${shop.description || ''}</div>
-
-            <div class="shop-tabs">
-                <button class="tab-button active" onclick="game.switchShopTab(this, 'buy')">Buy</button>
-                <button class="tab-button" onclick="game.switchShopTab(this, 'sell')">Sell</button>
-            </div>
-
-            <div class="shop-content">
-                <div id="shop-buy" class="shop-panel">
-                    <div class="shop-inventory">
-                        ${this.renderShopInventory(shop.inventory)}
-                    </div>
-                </div>
-
-                <div id="shop-sell" class="shop-panel" style="display: none;">
-                    <div class="sell-instructions">Select items from your inventory to sell</div>
-                    <div class="agent-inventory">
-                        ${this.renderSellableItems()}
-                    </div>
-                </div>
-            </div>
-
-            <div class="shop-footer">
-                <span>Your Credits: ${this._selectedAgent?.credits || 0}</span>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(dialog);
-};
-
-// Render shop inventory
-CyberOpsGame.prototype.renderShopInventory = function(inventory) {
-    if (!inventory || inventory.length === 0) {
-        return '<div>Shop is out of stock!</div>';
+        this.dialogEngine.navigateTo('rpg-shop');
+    } else {
+        if (this.logger) this.logger.error('Dialog engine not available for RPG shop');
     }
-
-    return `
-        <div class="shop-items">
-            ${inventory.map(item => `
-                <div class="shop-item">
-                    <div class="item-info">
-                        <span class="item-icon">${item.icon || '📦'}</span>
-                        <div class="item-details">
-                            <div class="item-name">${item.name}</div>
-                            <div class="item-description">${item.description || ''}</div>
-                            <div class="item-stats">
-                                ${item.damage ? `DMG: ${item.damage} ` : ''}
-                                ${item.defense ? `DEF: ${item.defense} ` : ''}
-                                ${item.weight ? `${item.weight}kg` : ''}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="item-purchase">
-                        <span class="item-price">${item.price} ©</span>
-                        ${item.stock !== -1 ? `<span class="item-stock">Stock: ${item.stock}</span>` : ''}
-                        <button onclick="game.buyItem('${item.id}', 1)">Buy</button>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    `;
 };
 
 // Level up notification
@@ -633,95 +572,16 @@ CyberOpsGame.prototype.findAgentForRPG = function(agentId) {
 
 // Stat allocation dialog
 CyberOpsGame.prototype.showStatAllocation = function(agentId) {
-    const logger = window.Logger ? new window.Logger('RPG-UI') : null;
-    if (logger) logger.debug('showStatAllocation called with agentId:', agentId);
+    if (this.logger) this.logger.debug('📈 showStatAllocation - routing to declarative stat-allocation state');
 
-    const agent = this.findAgentForRPG(agentId);
-    if (logger) logger.debug('Found agent:', agent ? agent.name : 'null');
-
-    // Debug: Log the full agent object structure
-    if (logger && agent) {
-        logger.debug('Agent details:', {
-            id: agent.id,
-            name: agent.name,
-            hasRpgEntity: !!agent.rpgEntity,
-            rpgEntity: agent.rpgEntity
-        });
-    }
-
-    if (!agent || !agent.rpgEntity) {
-        if (logger) logger.error('Cannot find agent or RPG entity for stat allocation:', agentId);
-        return;
-    }
-
-    const rpg = agent.rpgEntity;
-    if (logger) logger.debug('RPG Entity details:', {
-        level: rpg.level,
-        unspentStatPoints: rpg.unspentStatPoints,
-        stats: rpg.stats
-    });
-
-    if (logger) logger.debug('Unspent stat points:', rpg.unspentStatPoints);
-
-    if (rpg.unspentStatPoints <= 0) {
-        if (logger) logger.warn('No unspent stat points available');
-        return;
-    }
-
-    if (logger) logger.info('✅ Creating stat allocation dialog with', rpg.unspentStatPoints, 'points');
-
-    // Remove any existing stat allocation dialog
-    const existingDialog = document.querySelector('.stat-allocation');
-    if (existingDialog) {
-        existingDialog.remove();
-    }
-
-    const dialog = document.createElement('div');
-    // Don't use hud-dialog class as it has display:none by default
-    dialog.className = 'stat-allocation';
-    // Ensure high z-index to appear above other dialogs
-    dialog.style.zIndex = '30000';
-    dialog.innerHTML = `
-        <div class="dialog-header">
-            <h2>Allocate Stat Points</h2>
-            <button class="close-button" onclick="this.parentElement.parentElement.remove()">×</button>
-        </div>
-
-        <div class="dialog-content">
-            <div class="points-remaining">Points Remaining: <span id="points-left">${rpg.unspentStatPoints}</span></div>
-
-            <div class="stat-allocation-list">
-                ${Object.keys(rpg.stats).map(stat => `
-                    <div class="stat-allocation-row">
-                        <span class="stat-name">${stat.charAt(0).toUpperCase() + stat.slice(1)}</span>
-                        <span class="stat-current">${rpg.stats[stat]}</span>
-                        <button onclick="game.allocateStat('${agentId}', '${stat}', -1)">-</button>
-                        <span class="stat-change" id="change-${stat}">+0</span>
-                        <button onclick="game.allocateStat('${agentId}', '${stat}', 1)">+</button>
-                    </div>
-                `).join('')}
-            </div>
-
-            <div class="dialog-buttons">
-                <button onclick="game.confirmStatAllocation('${agentId}')">Confirm</button>
-                <button onclick="this.parentElement.parentElement.remove()">Cancel</button>
-            </div>
-        </div>
-    `;
-
-    dialog.dataset.pendingChanges = '{}';
-
-    if (logger) logger.info('📊 Adding stat allocation dialog to DOM');
-    document.body.appendChild(dialog);
-
-    // Check if dialog was actually added
-    const addedDialog = document.querySelector('.stat-allocation');
-    if (logger) {
-        if (addedDialog) {
-            logger.info('✅ Stat allocation dialog successfully added to DOM');
-        } else {
-            logger.error('❌ Failed to add stat allocation dialog to DOM');
-        }
+    // Store agentId in state data for the declarative generator
+    if (this.dialogEngine) {
+        this.dialogEngine.stateData = this.dialogEngine.stateData || {};
+        this.dialogEngine.stateData.agentId = agentId;
+        this.dialogEngine.stateData.pendingChanges = {}; // Reset pending changes
+        this.dialogEngine.navigateTo('stat-allocation');
+    } else {
+        if (this.logger) this.logger.error('Dialog engine not available for stat allocation');
     }
 };
 
@@ -750,33 +610,6 @@ CyberOpsGame.prototype.allocateStatDeclarative = function(agentId, stat, change)
 
     // Refresh the dialog to update UI
     this.dialogEngine.navigateTo('stat-allocation', null, true);
-};
-
-// Handle stat allocation (old standalone version - kept for compatibility)
-CyberOpsGame.prototype.allocateStat = function(agentId, stat, change) {
-    const dialog = document.querySelector('.stat-allocation');
-    if (!dialog) return;
-
-    const pending = JSON.parse(dialog.dataset.pendingChanges || '{}');
-    const current = pending[stat] || 0;
-    const newValue = current + change;
-
-    // Check bounds
-    const pointsLeft = parseInt(document.getElementById('points-left').textContent);
-    if (change > 0 && pointsLeft <= 0) return;
-    if (change < 0 && current <= 0) return;
-
-    pending[stat] = Math.max(0, newValue);
-    dialog.dataset.pendingChanges = JSON.stringify(pending);
-
-    // Update UI
-    document.getElementById(`change-${stat}`).textContent = `+${pending[stat]}`;
-
-    const totalUsed = Object.values(pending).reduce((sum, val) => sum + val, 0);
-    const agent = this.findAgentForRPG(agentId);
-    if (agent && agent.rpgEntity) {
-        document.getElementById('points-left').textContent = agent.rpgEntity.unspentStatPoints - totalUsed;
-    }
 };
 
 // Confirm stat allocation (declarative version)
@@ -853,7 +686,61 @@ CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
     }
 };
 
-// confirmStatAllocationOld removed - now using confirmStatAllocation which handles declarative system
+// Select perk (declarative version)
+CyberOpsGame.prototype.selectPerkDeclarative = function(agentId, perkId) {
+    const logger = window.Logger ? new window.Logger('RPG-UI') : null;
+    if (logger) logger.debug(`selectPerkDeclarative called: agent=${agentId}, perk=${perkId}`);
+
+    const agent = this.findAgentForRPG(agentId);
+    if (!agent || !agent.rpgEntity) {
+        if (logger) logger.error('Cannot find agent for perk selection:', agentId);
+        return;
+    }
+
+    const rpg = agent.rpgEntity;
+
+    // Check if agent has perk points
+    if (rpg.availablePerkPoints <= 0) {
+        if (this.logEvent) {
+            this.logEvent('No perk points available!', 'warning');
+        }
+        return;
+    }
+
+    // Try to unlock the perk
+    const success = rpg.unlockPerk(perkId);
+
+    if (success) {
+        if (logger) logger.info(`✅ ${agent.name} unlocked perk: ${perkId}`);
+        if (this.logEvent) {
+            const rpgConfig = window.ContentLoader?.getContent('rpgConfig');
+            const perkName = rpgConfig?.perks?.[perkId]?.name || perkId;
+            this.logEvent(`${agent.name} unlocked ${perkName}!`, 'progression');
+        }
+
+        // Refresh the dialog to show updated perk points and unlocked perks
+        if (this.dialogEngine) {
+            // If no more perk points, go back to character sheet
+            if (rpg.availablePerkPoints <= 0) {
+                this.dialogEngine.back();
+                // Refresh character sheet to show new perk
+                setTimeout(() => {
+                    if (this.dialogEngine.currentState === 'character') {
+                        this.dialogEngine.navigateTo('character', null, true);
+                    }
+                }, 100);
+            } else {
+                // Still have perk points, refresh perk selection
+                this.dialogEngine.navigateTo('perk-selection', null, true);
+            }
+        }
+    } else {
+        if (logger) logger.warn(`❌ Failed to unlock perk: ${perkId}`);
+        if (this.logEvent) {
+            this.logEvent('Cannot unlock perk! Check requirements.', 'warning');
+        }
+    }
+};
 
 // Switch shop tabs
 CyberOpsGame.prototype.switchShopTab = function(button, tab) {
@@ -885,6 +772,97 @@ CyberOpsGame.prototype.buyItem = function(itemId, quantity) {
         if (this.logEvent) {
             this.logEvent('Not enough credits or inventory full!', 'warning');
         }
+    }
+};
+
+// DECLARATIVE SHOP FUNCTIONS
+// Switch RPG shop tabs (declarative version)
+CyberOpsGame.prototype.switchRPGShopTab = function(shopId, tab) {
+    if (this.logger) this.logger.debug(`🛒 Switching RPG shop tab to: ${tab}`);
+
+    // Update state data
+    if (this.dialogEngine) {
+        this.dialogEngine.stateData = this.dialogEngine.stateData || {};
+        this.dialogEngine.stateData.shopId = shopId;
+        this.dialogEngine.stateData.shopTab = tab;
+
+        // Refresh the dialog to show new tab
+        this.dialogEngine.navigateTo('rpg-shop', null, true);
+    }
+};
+
+// Buy item from RPG shop (declarative version)
+CyberOpsGame.prototype.buyRPGItem = function(shopId, itemId) {
+    if (!this._selectedAgent) {
+        if (this.logger) this.logger.warn('No agent selected for purchase');
+        return;
+    }
+
+    const agentId = this._selectedAgent.id || this._selectedAgent.name;
+    const success = this.shopManager?.buyItem(shopId, itemId, 1, agentId);
+
+    if (success) {
+        if (this.logEvent) {
+            this.logEvent('Purchase successful!', 'shop');
+        }
+        if (this.logger) this.logger.info(`✅ ${this._selectedAgent.name} purchased item: ${itemId}`);
+
+        // Refresh the dialog
+        if (this.dialogEngine) {
+            this.dialogEngine.navigateTo('rpg-shop', null, true);
+        }
+    } else {
+        if (this.logEvent) {
+            this.logEvent('Not enough credits or inventory full!', 'warning');
+        }
+        if (this.logger) this.logger.warn(`❌ Failed to purchase item: ${itemId}`);
+    }
+};
+
+// Sell item from RPG shop (declarative version)
+CyberOpsGame.prototype.sellRPGItem = function(shopId, itemId) {
+    if (!this._selectedAgent) {
+        if (this.logger) this.logger.warn('No agent selected for selling');
+        return;
+    }
+
+    const agentId = this._selectedAgent.id || this._selectedAgent.name;
+
+    // Get item from inventory
+    const inventory = this.inventoryManager?.getInventory(agentId) || [];
+    const item = inventory.find(i => i.id === itemId);
+
+    if (!item) {
+        if (this.logger) this.logger.warn(`Item not found in inventory: ${itemId}`);
+        return;
+    }
+
+    // Calculate sell price (50% of value)
+    const sellPrice = Math.floor((item.value || 0) * 0.5);
+
+    // Remove from inventory
+    const removed = this.inventoryManager?.removeItem(agentId, itemId);
+
+    if (removed) {
+        // Add credits to agent
+        if (this._selectedAgent.rpgEntity) {
+            this._selectedAgent.rpgEntity.credits = (this._selectedAgent.rpgEntity.credits || 0) + sellPrice;
+        } else {
+            this._selectedAgent.credits = (this._selectedAgent.credits || 0) + sellPrice;
+        }
+
+        if (this.logEvent) {
+            this.logEvent(`Sold ${item.name} for ${sellPrice} credits`, 'shop');
+        }
+        if (this.logger) this.logger.info(`✅ ${this._selectedAgent.name} sold ${item.name} for ${sellPrice} credits`);
+
+        // Refresh the dialog
+        if (this.dialogEngine) {
+            this.dialogEngine.stateData.shopTab = 'sell'; // Stay on sell tab
+            this.dialogEngine.navigateTo('rpg-shop', null, true);
+        }
+    } else {
+        if (this.logger) this.logger.warn(`❌ Failed to remove item from inventory: ${itemId}`);
     }
 };
 
@@ -1022,16 +1000,16 @@ CyberOpsGame.prototype.applySkillEffects = function(agent, skillId, skillConfig)
 
 // Show perk selection dialog
 CyberOpsGame.prototype.showPerkSelection = function(agentId) {
-    const agent = this.findAgentForRPG(agentId);
-    if (!agent) return;
+    if (this.logger) this.logger.debug('⭐ showPerkSelection - routing to declarative perk-selection state');
 
-    // For now, show a placeholder dialog
-    if (this.showHudDialog) {
-        this.showHudDialog(
-            'Perk Selection',
-            `Perk selection for ${agent.name} - Coming soon!`,
-            [{ text: 'OK', action: 'close' }]
-        );
+    // Use the declarative dialog system
+    if (this.dialogEngine && this.dialogEngine.navigateTo) {
+        // Store agentId in state data for the declarative generator
+        this.dialogEngine.stateData = this.dialogEngine.stateData || {};
+        this.dialogEngine.stateData.agentId = agentId;
+        this.dialogEngine.navigateTo('perk-selection');
+    } else {
+        if (this.logger) this.logger.error('Dialog engine not available for perk selection');
     }
 };
 

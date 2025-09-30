@@ -349,12 +349,6 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
     }
 };
 
-// Legacy function - kept for compatibility
-// Event listeners are now set up inline in initKeyboardHandler
-CyberOpsGame.prototype.setupKeyboardListeners = function() {
-    // No-op - listeners already setup in initKeyboardHandler
-};
-
 // Individual action handlers
 CyberOpsGame.prototype.selectAgentByNumber = function(index) {
     // In turn-based mode, don't allow switching

@@ -247,6 +247,36 @@ const DIALOG_CONFIG = {
             }
         },
 
+        // ========== PERK SELECTION (Level 2 - Child of Character) ==========
+        'perk-selection': {
+            type: 'dialog',
+            level: 2,
+            parent: 'character',
+            title: '⭐ SELECT PERK',
+            layout: 'large-layout',
+            content: {
+                type: 'dynamic',
+                generator: 'generatePerkSelection'
+            },
+            buttons: [
+                { text: '← BACK', action: 'back', primary: false },
+                { text: 'CLOSE', action: 'close' }
+            ],
+            keyboard: {
+                'Escape': 'back'
+            },
+            transitions: {
+                enter: { animation: 'fade-in', sound: 'dialog-open' },
+                exit: { animation: 'fade-out', sound: 'dialog-close' }
+            },
+            styles: {
+                width: '700px',
+                maxWidth: '90vw',
+                height: '80vh',
+                maxHeight: '80vh'
+            }
+        },
+
         // ========== SKILL TREE (Level 2 - Child of Character) ==========
         'skill-tree': {
             type: 'dialog',
@@ -423,6 +453,28 @@ const DIALOG_CONFIG = {
                 'Escape': 'close',
                 'J': 'close',
                 'j': 'close'
+            }
+        },
+
+        'rpg-shop': {
+            type: 'dialog',
+            level: 1,
+            parent: 'game',
+            title: '🛒 SHOP',
+            layout: 'dialog-layout',
+            content: {
+                type: 'dynamic',
+                generator: 'generateRPGShop'
+            },
+            buttons: [
+                { text: '← CLOSE', action: 'close', primary: true }
+            ],
+            keyboard: {
+                'Escape': 'close'
+            },
+            styles: {
+                maxWidth: '800px',
+                maxHeight: '80vh'
             }
         },
 

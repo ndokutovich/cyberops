@@ -406,80 +406,16 @@ CyberOpsGame.prototype.getNextIntelThreshold = function() {
     
     // Agent Hiring System
 CyberOpsGame.prototype.showHiringDialog = function() {
-        const availableAgents = this.availableAgents.filter(agent => !agent.hired);
-        
-        if (availableAgents.length === 0) {
-            this.showHudDialog(
-                '👥 NO AGENTS AVAILABLE',
-                'All available agents have already been hired!<br><br>Check back later for new recruits.',
-                [{ text: 'OK', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }]
-            );
-            return;
-        }
-        
-        let content = '<div style="max-height: 400px; overflow-y: auto;">';
-        content += `<div style="color: #00ffff; margin-bottom: 20px; text-align: center;">Available Credits: ${this.credits.toLocaleString()}</div>`;
-        
-        availableAgents.forEach(agent => {
-            const canAfford = this.credits >= agent.cost;
-            content += `
-                <div style="background: ${canAfford ? 'rgba(0,255,255,0.1)' : 'rgba(128,128,128,0.1)'}; 
-                           padding: 15px; margin: 10px 0; border-radius: 8px; 
-                           border: 1px solid ${canAfford ? '#00ffff' : '#666'};">
-                    <div style="font-weight: bold; color: ${canAfford ? '#fff' : '#999'};">${agent.name}</div>
-                    <div style="color: #ccc; font-size: 0.9em; margin: 5px 0;">
-                        Specialization: ${agent.specialization}<br>
-                        Skills: ${agent.skills.join(', ')}<br>
-                        Health: ${agent.health} | Damage: ${agent.damage} | Speed: ${agent.speed}
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                        <span style="color: #00ffff; font-weight: bold;">Cost: ${agent.cost.toLocaleString()} credits</span>
-                        <button data-agent-id="${agent.id}"
-                                class="hire-agent-btn"
-                                style="background: ${canAfford ? '#1e3c72' : '#666'};
-                                       color: ${canAfford ? '#fff' : '#999'};
-                                       border: 1px solid ${canAfford ? '#00ffff' : '#888'};
-                                       padding: 8px 15px; border-radius: 4px; cursor: ${canAfford ? 'pointer' : 'not-allowed'};"
-                                ${!canAfford ? 'disabled' : ''}>
-                            ${canAfford ? 'HIRE' : 'INSUFFICIENT FUNDS'}
-                        </button>
-                    </div>
-                </div>`;
-        });
-        
-        content += '</div>';
-        
-        this.showHudDialog(
-            '👥 HIRE AGENTS',
-            content,
-            [
-                { text: 'BACK TO AGENTS', action: () => { this.transitionDialog(() => { if (this.dialogEngine) { this.dialogEngine.navigateTo('agent-management'); } }); } },
-                { text: 'CLOSE', action: () => { this.closeDialog(); } }
-            ]
-        );
+    if (this.logger) this.logger.debug('📋 showHiringDialog - routing to declarative hire-agents state');
 
-        // Add event delegation for hire buttons after a short delay to ensure DOM is ready
-        setTimeout(() => {
-            // Try to find buttons in modal engine
-            const modalContainer = document.getElementById('modalEngineContainer');
+    // Use the declarative dialog system
+    if (this.dialogEngine && this.dialogEngine.navigateTo) {
+        this.dialogEngine.navigateTo('hire-agents');
+    } else {
+        if (this.logger) this.logger.error('Dialog engine not available for hiring dialog');
+    }
+};
 
-            const containers = [modalContainer].filter(c => c);
-
-            containers.forEach(container => {
-                const hireButtons = container.querySelectorAll('.hire-agent-btn:not([disabled])');
-                hireButtons.forEach(btn => {
-                    btn.onclick = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const agentId = parseInt(btn.dataset.agentId);
-                        if (this.logger) this.logger.debug('Hiring agent:', agentId);
-                        this.hireAgent(agentId);
-                    };
-                });
-            });
-        }, 100);
-}
-    
 CyberOpsGame.prototype.hireAgent = function(agentId) {
         const agent = this.availableAgents.find(a => a.id === agentId);
         const currentCredits = this.gameServices?.resourceService?.get('credits') || this.credits;
