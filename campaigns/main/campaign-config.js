@@ -674,28 +674,46 @@
     };
 
     // Merge with existing campaign content if available
+    console.log('🔍 [campaign-config] Starting merge process...');
+    console.log('🔍 [campaign-config] window.MAIN_CAMPAIGN_CONTENT exists:', !!window.MAIN_CAMPAIGN_CONTENT);
+
     if (window.MAIN_CAMPAIGN_CONTENT) {
+        console.log('🔍 [campaign-config] MAIN_CAMPAIGN_CONTENT has enemyTypes:', !!window.MAIN_CAMPAIGN_CONTENT.enemyTypes);
+
         // Use agents from campaign-content.js
         if (window.MAIN_CAMPAIGN_CONTENT.agents) {
             mainCampaign.agents = window.MAIN_CAMPAIGN_CONTENT.agents;
+            console.log('✅ [campaign-config] Merged agents:', mainCampaign.agents.length);
         }
         // Use weapons from campaign-content.js
         if (window.MAIN_CAMPAIGN_CONTENT.weapons) {
             mainCampaign.weapons = window.MAIN_CAMPAIGN_CONTENT.weapons;
+            console.log('✅ [campaign-config] Merged weapons:', mainCampaign.weapons.length);
         }
         // Use equipment from campaign-content.js
         if (window.MAIN_CAMPAIGN_CONTENT.equipment) {
             mainCampaign.equipment = window.MAIN_CAMPAIGN_CONTENT.equipment;
+            console.log('✅ [campaign-config] Merged equipment:', mainCampaign.equipment.length);
         }
-        // Use enemies from campaign-content.js
-        if (window.MAIN_CAMPAIGN_CONTENT.enemies) {
-            mainCampaign.enemies = window.MAIN_CAMPAIGN_CONTENT.enemies;
+        // Use enemy types from campaign-content.js (stored as "enemies" for validation)
+        if (window.MAIN_CAMPAIGN_CONTENT.enemyTypes) {
+            mainCampaign.enemies = window.MAIN_CAMPAIGN_CONTENT.enemyTypes;
+            console.log('✅ [campaign-config] Merged enemies:', mainCampaign.enemies.length);
         }
-        // Use missions from campaign-content.js
-        if (window.MAIN_CAMPAIGN_CONTENT.missions) {
-            mainCampaign.missions = window.MAIN_CAMPAIGN_CONTENT.missions;
+
+        // Missions are loaded separately from campaign files, add placeholder for validation
+        if (!mainCampaign.missions) {
+            mainCampaign.missions = [];
+            console.log('✅ [campaign-config] Added placeholder missions array (loaded separately)');
         }
+    } else {
+        console.warn('⚠️ [campaign-config] MAIN_CAMPAIGN_CONTENT not available - merge skipped');
     }
+
+    console.log('🔍 [campaign-config] After merge - mainCampaign has enemies:', !!mainCampaign.enemies);
+    console.log('🔍 [campaign-config] After merge - mainCampaign has missions:', !!mainCampaign.missions);
+    console.log('🔍 [campaign-config] After merge - mainCampaign has rpgConfig:', !!mainCampaign.rpgConfig);
+    console.log('🔍 [campaign-config] After merge - mainCampaign keys:', Object.keys(mainCampaign));
 
     // Register the campaign
     if (window.CampaignSystem) {
@@ -704,6 +722,11 @@
         window.CampaignSystem.campaignConfigs['main'] = mainCampaign;
 
         console.log('📦 Main campaign configuration registered');
+        console.log('📦 Registered campaign has enemies:', !!window.CampaignSystem.campaignConfigs['main'].enemies);
+        console.log('📦 Registered campaign has missions:', !!window.CampaignSystem.campaignConfigs['main'].missions);
+        console.log('📦 Registered campaign has rpgConfig:', !!window.CampaignSystem.campaignConfigs['main'].rpgConfig);
+    } else {
+        console.error('❌ [campaign-config] window.CampaignSystem not available - registration failed');
     }
 
     // Export for direct access if needed

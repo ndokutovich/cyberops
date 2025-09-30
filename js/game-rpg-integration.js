@@ -126,7 +126,11 @@ class RPGManager {
             xp: baseAgent.experience || baseAgent.xp || 0, // RPGAgent uses 'xp', not 'experience'
             stats: this.generateInitialStats(classType),
             skills: this.getClassSkills(classType),
-            perks: []
+            perks: [],
+            // Give starting points for customization
+            statPoints: 1,
+            skillPoints: 1,
+            perkPoints: 1
         });
 
         // Add experience property for compatibility

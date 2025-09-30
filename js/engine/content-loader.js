@@ -77,13 +77,19 @@ class ContentLoader {
      * Load RPG configuration from campaign
      */
     loadRPGConfig(game) {
-        if (!this.currentCampaign.rpgConfig) return;
+        if (!this.currentCampaign.rpgConfig) {
+            console.error('❌ [ContentLoader] Campaign has NO rpgConfig!');
+            return;
+        }
 
-        if (logger) logger.debug('🎮 Loading RPG configuration...');
+        console.log('🎮 [ContentLoader] Loading RPG configuration...');
+        console.log('🎮 [ContentLoader] rpgConfig has perks:', !!this.currentCampaign.rpgConfig.perks);
+        console.log('🎮 [ContentLoader] Number of perks:', Object.keys(this.currentCampaign.rpgConfig.perks || {}).length);
 
         // Set RPG_CONFIG globally for backward compatibility with game-rpg-system.js
         window.RPG_CONFIG = this.currentCampaign.rpgConfig;
-        if (logger) logger.info('✅ RPG_CONFIG set globally');
+        console.log('✅ [ContentLoader] window.RPG_CONFIG set globally');
+        console.log('✅ [ContentLoader] window.RPG_CONFIG.perks has keys:', Object.keys(window.RPG_CONFIG.perks || {}).length);
 
         // Also inject into services for proper architecture
         if (window.GameServices?.rpgService) {
@@ -97,6 +103,11 @@ class ContentLoader {
 
         // Store for reference
         this.contentCache.set('rpgConfig', this.currentCampaign.rpgConfig);
+        console.log('✅ [ContentLoader] rpgConfig stored in contentCache');
+
+        // TEST: Verify we can read it back
+        const testRead = this.contentCache.get('rpgConfig');
+        console.log('✅ [ContentLoader] Test read from cache - perks count:', Object.keys(testRead?.perks || {}).length);
     }
 
     /**
@@ -304,11 +315,10 @@ class ContentLoader {
         // Store combat configuration
         this.contentCache.set('combat', combat);
 
-        // Update formula service if exists
-        if (window.GameServices?.formulaService) {
-            window.GameServices.formulaService.setFormulas(this.formulas);
-            window.GameServices.formulaService.setCombatConfig(combat);
-        }
+        // Note: FormulaService has its own formula implementations
+        // These methods don't exist and aren't needed:
+        // - window.GameServices.formulaService.setFormulas(this.formulas);
+        // - window.GameServices.formulaService.setCombatConfig(combat);
     }
 
     /**
@@ -445,7 +455,9 @@ class ContentLoader {
 
         // Load research tree
         if (progression.researchTree && window.GameServices?.researchService) {
-            window.GameServices.researchService.loadTree(progression.researchTree);
+            // Note: ResearchService doesn't have loadTree method
+            // Research tree loaded via legacy path instead
+            // window.GameServices.researchService.loadTree(progression.researchTree);
         }
 
         // Load unlock schedule

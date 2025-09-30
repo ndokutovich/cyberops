@@ -112,8 +112,26 @@ class RPGPawn {
         const rpgConfig3 = this.getRPGConfig();
         for (let statName in rpgConfig3?.stats?.derived || {}) {
             const derivedConfig = rpgConfig3.stats.derived[statName];
+
+            // Convert declarative format to formula function if needed
+            let formula;
+            if (typeof derivedConfig.formula === 'function') {
+                // Already a function
+                formula = derivedConfig.formula;
+            } else if (derivedConfig.base !== undefined && derivedConfig.stat && derivedConfig.multiplier !== undefined) {
+                // Declarative format: { base, stat, multiplier }
+                // Convert to: base + (statValue * multiplier)
+                formula = (stats) => {
+                    const statValue = stats[derivedConfig.stat]?.value || 0;
+                    return derivedConfig.base + (statValue * derivedConfig.multiplier);
+                };
+            } else {
+                // Fallback: return base or 0
+                formula = () => derivedConfig.base || 0;
+            }
+
             Object.defineProperty(this.derivedStats, statName, {
-                get: () => derivedConfig.formula(this.stats)
+                get: () => formula(this.stats)
             });
         }
     }
@@ -328,11 +346,24 @@ class RPGPawn {
 
     // Perk management
     unlockPerk(perkName) {
-        if (this.hasPerk(perkName)) return false;
+        const logger = window.Logger ? new window.Logger('RPGPawn') : null;
+
+        if (this.hasPerk(perkName)) {
+            if (logger) logger.warn(`Already has perk: ${perkName}`);
+            return false;
+        }
 
         const rpgConfig = this.getRPGConfig();
+        if (logger) logger.debug(`getRPGConfig returned:`, rpgConfig ? 'CONFIG FOUND' : 'NULL');
+
         const perkConfig = rpgConfig?.perks?.[perkName];
-        if (!perkConfig) return false;
+        if (!perkConfig) {
+            if (logger) logger.error(`❌ Perk config not found for: ${perkName}`);
+            if (logger) logger.debug('Available perks:', rpgConfig?.perks ? Object.keys(rpgConfig.perks) : 'NO PERKS');
+            return false;
+        }
+
+        if (logger) logger.debug(`✅ Found perk config for: ${perkName}`);
 
         // Check requirements
         if (perkConfig.requirements) {
@@ -364,6 +395,9 @@ class RPGPawn {
         if (!perkConfig.free) {
             this.availablePerkPoints--;
         }
+
+        if (logger) logger.info(`🎉 Successfully unlocked perk: ${perkName}`);
+        if (logger) logger.debug(`Total perks now: ${this.perks.length}, Available perk points: ${this.availablePerkPoints}`);
 
         this.recalculateStats();
         this.triggerEffect('perk_unlock');

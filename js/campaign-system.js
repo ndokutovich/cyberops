@@ -411,6 +411,9 @@ const CampaignSystem = {
     }
 };
 
+// Export to window for global access
+window.CampaignSystem = CampaignSystem;
+
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => CampaignSystem.init());

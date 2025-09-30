@@ -925,8 +925,7 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
     }
 
     // Force complete UI refresh
-    this.updateAgentList();
-    this.updateCreditsDisplay();
+    this.refreshEquipmentUI();
 
     // Update current inventory display
     const inventoryEl = document.getElementById('inventoryList');

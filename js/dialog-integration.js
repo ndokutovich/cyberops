@@ -508,14 +508,14 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             });
         }
 
-        if (rpg.unspentStatPoints > 0) {
+        if (rpg.availableStatPoints > 0) {
             const agentIdForAllocation = agent.id || agent.name;
             const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
             if (logger) logger.debug('Creating Allocate Points button for agent:', agentIdForAllocation);
 
             html += `
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);">
-                    <div style="color: #00ff00; margin-bottom: 10px;">${rpg.unspentStatPoints} stat points available</div>
+                    <div style="color: #00ff00; margin-bottom: 10px;">${rpg.availableStatPoints} stat points available</div>
                     <button class="dialog-button" onclick="(function() {
                         const logger = window.Logger ? new window.Logger('AllocateButton') : null;
                         if (logger) logger.debug('Allocate button clicked for:', '${agentIdForAllocation}');
@@ -617,10 +617,10 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             html += '<div style="color: #888;">No skills learned</div>';
         }
 
-        if (rpg.unspentSkillPoints > 0) {
+        if (rpg.availableSkillPoints > 0) {
             html += `
                 <div style="margin-top: 15px;">
-                    <div style="color: #00ff00; margin-bottom: 10px;">${rpg.unspentSkillPoints} skill points available</div>
+                    <div style="color: #00ff00; margin-bottom: 10px;">${rpg.availableSkillPoints} skill points available</div>
                     <button class="dialog-button" onclick="game.showSkillTree('${agent.id || agent.name}')">
                         Learn Skills
                     </button>
@@ -655,10 +655,10 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             html += '<div style="color: #888;">No perks acquired</div>';
         }
 
-        if (rpg.unspentPerkPoints > 0) {
+        if (rpg.availablePerkPoints > 0) {
             html += `
                 <div style="margin-top: 15px;">
-                    <div style="color: #00ff00; margin-bottom: 10px;">${rpg.unspentPerkPoints} perk points available</div>
+                    <div style="color: #00ff00; margin-bottom: 10px;">${rpg.availablePerkPoints} perk points available</div>
                     <button class="dialog-button" onclick="game.showPerkSelection('${agent.id || agent.name}')">
                         Choose Perks
                     </button>
@@ -689,8 +689,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         }
 
         const rpg = agent.rpgEntity;
-        if (rpg.unspentStatPoints <= 0) {
-            return '<div style="color: #888; text-align: center; padding: 40px;">No unspent stat points available</div>';
+        if (rpg.availableStatPoints <= 0) {
+            return '<div style="color: #888; text-align: center; padding: 40px;">No stat points available</div>';
         }
 
         // Initialize pending changes if not set
@@ -703,7 +703,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         // Points remaining
         const totalUsed = Object.values(pending).reduce((sum, val) => sum + val, 0);
-        const pointsLeft = rpg.unspentStatPoints - totalUsed;
+        const pointsLeft = rpg.availableStatPoints - totalUsed;
 
         html += `
             <div class="points-remaining" style="text-align: center; padding: 15px; background: rgba(255,255,0,0.1); color: #ffff00; font-size: 20px; font-weight: bold; margin-bottom: 20px; border-radius: 5px;">
@@ -819,6 +819,12 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             categoryPerks.forEach(perk => {
                 // Check if agent already has this perk
                 const hasPerk = rpg.hasPerk ? rpg.hasPerk(perk.id) : false;
+
+                // Debug logging
+                if (logger && perk.id === 'rapidFire') {
+                    logger.debug(`Checking perk rapidFire: hasPerk=${hasPerk}`);
+                    logger.debug(`Agent perks:`, rpg.perks);
+                }
 
                 // Check requirements
                 let meetsRequirements = true;
@@ -2987,7 +2993,7 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
             <div class="skill-tree-container" style="max-height: 500px; overflow-y: auto;">
                 <div style="margin-bottom: 20px; padding: 10px; background: rgba(0,255,0,0.1); border-radius: 5px;">
                     <h3 style="color: #00ff00; margin: 0;">Agent: ${agent.name}</h3>
-                    <p style="color: #00ff00; margin: 5px 0;">Available Skill Points: ${rpg.unspentSkillPoints || 0}</p>
+                    <p style="color: #00ff00; margin: 5px 0;">Available Skill Points: ${rpg.availableSkillPoints || 0}</p>
                 </div>
         `;
 
@@ -3027,7 +3033,7 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
             skills.forEach(skill => {
                 const currentLevel = rpg.skills?.[skill.id] || 0;
                 const maxLevel = skill.maxLevel || 5;
-                const canLearn = rpg.unspentSkillPoints > 0 && currentLevel < maxLevel;
+                const canLearn = rpg.availableSkillPoints > 0 && currentLevel < maxLevel;
 
                 html += `
                     <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px;
