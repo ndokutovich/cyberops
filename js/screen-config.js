@@ -253,7 +253,8 @@ const SCREEN_CONFIG = {
         type: 'generated',
         background: 'linear-gradient(135deg, #0a1628, #1a0a2e)',
         content: (params) => {
-            const mission = params?.mission || window.game?.currentMission;
+            const game = window.game;
+            const mission = params?.mission || game?.currentMission;
             if (!mission) return '<p>No mission selected</p>';
 
             const objectives = mission.objectives?.map(obj =>
@@ -262,22 +263,66 @@ const SCREEN_CONFIG = {
                 </li>`
             ).join('') || '';
 
+            // Get active agents for squad selection
+            const activeAgents = game?.activeAgents || [];
+            const selectedAgents = game?.selectedAgents || [];
+
+            const squadInfo = activeAgents.length > 0 ?
+                `<div class="squad-section">
+                    <h4 style="margin-top: 20px; color: #00ffff;">SELECT SQUAD (${selectedAgents.length}/4):</h4>
+                    <div class="selection-info" style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 5px; text-align: center;">
+                        ${selectedAgents.length === 0 ?
+                            '<span style="color: #ff6666;">⚠️ Select at least one agent to start the mission</span>' :
+                            `<span style="color: #00ff00;">✓ ${selectedAgents.length} agent(s) selected - Ready to deploy!</span>`
+                        }
+                    </div>
+                    <div class="agents-grid" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 10px 0;">
+                        ${activeAgents.map(agent => {
+                            const selected = selectedAgents.some(id => String(id) === String(agent.id));
+                            const loadout = game.agentLoadouts?.[agent.id];
+                            return `
+                                <div class="agent-card ${selected ? 'selected' : ''}" data-agent-id="${agent.id}"
+                                     style="cursor: pointer; padding: 12px; background: ${selected ? 'rgba(0,255,0,0.15)' : 'rgba(0,255,255,0.1)'};
+                                            border: 2px solid ${selected ? '#00ff00' : '#00ffff'}; border-radius: 8px; min-width: 150px;
+                                            transition: all 0.2s;">
+                                    <div style="font-weight: bold; color: ${selected ? '#00ff00' : '#00ffff'}; font-size: 1.1em;">
+                                        ${selected ? '✓ ' : ''}${agent.name}
+                                    </div>
+                                    <div style="color: #888; font-size: 0.9em; margin: 4px 0;">${agent.class || 'Soldier'}</div>
+                                    <div style="font-size: 0.85em; margin-top: 6px; color: #aaa;">
+                                        ❤️ ${agent.health}/${agent.maxHealth || agent.health} | ⚔️ ${agent.damage} | 👟 ${agent.speed}
+                                    </div>
+                                    ${loadout?.weapon ? `<div style="font-size: 0.8em; color: #0ff; margin-top: 4px;">🔫 ${loadout.weapon.name}</div>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>` :
+                `<div class="squad-section">
+                    <h4 style="margin-top: 20px; color: #ff6666;">⚠️ NO AGENTS AVAILABLE</h4>
+                    <div style="margin: 10px 0; padding: 10px; background: rgba(255,0,0,0.1); border: 1px solid #ff6666; border-radius: 5px;">
+                        You need to hire agents from the Hub before starting missions!
+                    </div>
+                </div>`;
+
             return `
                 <div class="briefing-container">
                     <h2 class="briefing-title">MISSION BRIEFING</h2>
-                    <h3 class="mission-name">${mission.title}</h3>
+                    <h3 class="mission-name">${mission.title || mission.name || 'Operation Unknown'}</h3>
 
                     <div class="briefing-content">
-                        <div class="mission-location">📍 ${mission.location || 'Classified'}</div>
-                        <div class="mission-description">${mission.description || mission.briefing}</div>
+                        <div class="mission-location">📍 ${mission.location || 'Classified Location'}</div>
+                        <div class="mission-description">${mission.description || mission.briefing || 'Details classified.'}</div>
 
                         <div class="objectives-section">
-                            <h4>OBJECTIVES:</h4>
-                            <ul class="objectives-list">${objectives}</ul>
+                            <h4 style="margin-top: 20px; color: #00ffff;">OBJECTIVES:</h4>
+                            <ul class="objectives-list">${objectives || '<li>Survive and extract</li>'}</ul>
                         </div>
 
+                        ${squadInfo}
+
                         <div class="rewards-section">
-                            <h4>REWARDS:</h4>
+                            <h4 style="margin-top: 20px; color: #00ffff;">REWARDS:</h4>
                             <div class="rewards">
                                 💰 ${mission.rewards?.credits || 1000} Credits |
                                 🔬 ${mission.rewards?.researchPoints || 50} RP |
@@ -288,10 +333,109 @@ const SCREEN_CONFIG = {
                 </div>
             `;
         },
-        actions: [
-            { text: 'SELECT LOADOUT', action: 'navigate:loadout', primary: true },
-            { text: 'BACK TO HUB', action: 'navigate:hub' }
-        ]
+        actions: function() {
+            const game = window.game;
+            const hasAgents = game?.activeAgents?.length > 0;
+            const hasSelection = game?.selectedAgents?.length > 0;
+
+            if (!hasAgents) {
+                return [
+                    { text: 'HIRE AGENTS FIRST', action: 'navigate:hub', primary: true }
+                ];
+            } else if (hasSelection) {
+                return [
+                    { text: 'START MISSION', action: 'execute:startMission', primary: true },
+                    { text: 'BACK TO HUB', action: 'navigate:hub' }
+                ];
+            } else {
+                return [
+                    { text: 'SELECT AGENTS TO START', action: '', primary: false, disabled: true },
+                    { text: 'BACK TO HUB', action: 'navigate:hub' }
+                ];
+            }
+        },
+        onEnter: function() {
+            // Initialize selectedAgents array if not exists
+            const game = window.game;
+            if (game && !game.selectedAgents) {
+                game.selectedAgents = [];
+            }
+
+            // Add click handlers for agent selection
+            setTimeout(() => {
+                document.querySelectorAll('.agent-card').forEach(card => {
+                    card.addEventListener('click', function() {
+                        const agentId = this.dataset.agentId;
+                        const game = window.game;
+                        if (!game) return;
+
+                        if (!game.selectedAgents) game.selectedAgents = [];
+
+                        // Find if this agent is already selected
+                        const index = game.selectedAgents.findIndex(id => String(id) === String(agentId));
+                        if (index > -1) {
+                            // Deselect
+                            game.selectedAgents.splice(index, 1);
+                            this.classList.remove('selected');
+                            this.style.background = 'rgba(0,255,255,0.1)';
+                            this.style.borderColor = '#00ffff';
+                            // Update name color and remove checkmark
+                            const nameEl = this.querySelector('div:first-child');
+                            if (nameEl) {
+                                nameEl.style.color = '#00ffff';
+                                nameEl.textContent = nameEl.textContent.replace('✓ ', '');
+                            }
+                        } else if (game.selectedAgents.length < 4) {
+                            // Select
+                            game.selectedAgents.push(agentId);
+                            this.classList.add('selected');
+                            this.style.background = 'rgba(0,255,0,0.15)';
+                            this.style.borderColor = '#00ff00';
+                            // Update name color and add checkmark
+                            const nameEl = this.querySelector('div:first-child');
+                            if (nameEl) {
+                                nameEl.style.color = '#00ff00';
+                                if (!nameEl.textContent.startsWith('✓')) {
+                                    nameEl.textContent = '✓ ' + nameEl.textContent;
+                                }
+                            }
+                        }
+
+                        // Update selection info
+                        const infoEl = document.querySelector('.selection-info');
+                        if (infoEl) {
+                            const count = game.selectedAgents.length;
+                            infoEl.innerHTML = count === 0 ?
+                                '<span style="color: #ff6666;">⚠️ Select at least one agent to start the mission</span>' :
+                                `<span style="color: #00ff00;">✓ ${count} agent(s) selected - Ready to deploy!</span>`;
+                        }
+
+                        // Update squad count in header
+                        const squadHeader = document.querySelector('.squad-section h4');
+                        if (squadHeader) {
+                            squadHeader.textContent = `SELECT SQUAD (${game.selectedAgents.length}/4):`;
+                        }
+
+                        // Update buttons
+                        const hasSelection = game.selectedAgents.length > 0;
+                        const actionButtons = document.querySelectorAll('.screen-action');
+                        actionButtons.forEach(btn => {
+                            if (btn.textContent.includes('SELECT AGENTS') || btn.textContent === 'START MISSION') {
+                                btn.textContent = hasSelection ? 'START MISSION' : 'SELECT AGENTS TO START';
+                                btn.disabled = !hasSelection;
+                                if (hasSelection) {
+                                    btn.classList.add('primary');
+                                    btn.dataset.action = 'execute:startMission';
+                                } else {
+                                    btn.classList.remove('primary');
+                                    btn.dataset.action = '';
+                                }
+                            }
+                        });
+                    });
+                });
+            }, 100);
+        }
     },
 
     // Loadout Selection
@@ -300,20 +444,40 @@ const SCREEN_CONFIG = {
         background: 'linear-gradient(135deg, #0a1628, #2a1a3e)',
         content: () => {
             const game = window.game;
-            if (!game || !game.activeAgents) {
-                return '<p>No agents available</p>';
+            if (!game || !game.activeAgents || game.activeAgents.length === 0) {
+                return `
+                    <div class="loadout-container">
+                        <h2 class="loadout-title">NO AGENTS AVAILABLE</h2>
+                        <div style="text-align: center; padding: 40px;">
+                            <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                            <div style="color: #ff6666; font-size: 1.2em; margin-bottom: 20px;">
+                                You haven't hired any agents yet!
+                            </div>
+                            <div style="color: #aaa;">
+                                Return to the Hub and hire agents from the Agent Management office.
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
 
             const selectedAgents = game.selectedAgents || [];
             const agentCards = game.activeAgents.map(agent => {
-                const selected = selectedAgents.includes(agent.id);
+                // Check selection with type conversion for safety
+                const selected = selectedAgents.some(id => String(id) === String(agent.id));
+                const loadout = game.agentLoadouts?.[agent.id];
+
                 return `
-                    <div class="agent-card ${selected ? 'selected' : ''}" data-agent-id="${agent.id}">
-                        <div class="agent-name">${agent.name}</div>
-                        <div class="agent-class">${agent.class || 'Soldier'}</div>
-                        <div class="agent-stats">
-                            ❤️ ${agent.health} | ⚔️ ${agent.damage} | 👟 ${agent.speed}
+                    <div class="agent-card ${selected ? 'selected' : ''}" data-agent-id="${agent.id}"
+                         style="cursor: pointer; padding: 15px; margin: 10px; background: ${selected ? 'rgba(0,255,255,0.2)' : 'rgba(0,255,255,0.1)'};
+                                border: 2px solid ${selected ? '#00ff00' : '#00ffff'}; border-radius: 8px;">
+                        <div class="agent-name" style="font-weight: bold; color: ${selected ? '#00ff00' : '#00ffff'};">${agent.name}</div>
+                        <div class="agent-class" style="color: #888; font-size: 0.9em;">${agent.class || 'Soldier'}</div>
+                        <div class="agent-stats" style="margin-top: 8px; font-size: 0.9em;">
+                            ❤️ ${agent.health}/${agent.maxHealth || agent.health} | ⚔️ ${agent.damage} | 👟 ${agent.speed}
                         </div>
+                        ${loadout?.weapon ? `<div style="font-size: 0.8em; color: #aaa; margin-top: 4px;">🔫 ${loadout.weapon.name}</div>` : ''}
+                        ${selected ? '<div style="color: #00ff00; margin-top: 8px;">✓ SELECTED</div>' : ''}
                     </div>
                 `;
             }).join('');
@@ -323,30 +487,68 @@ const SCREEN_CONFIG = {
                     <h2 class="loadout-title">SELECT YOUR TEAM</h2>
                     <div class="loadout-subtitle">Choose up to 4 agents for this mission</div>
 
-                    <div class="agents-grid">${agentCards}</div>
+                    <div class="agents-grid" style="display: flex; flex-wrap: wrap; justify-content: center; margin: 20px 0;">
+                        ${agentCards}
+                    </div>
 
-                    <div class="selection-info">
-                        Selected: ${selectedAgents.length}/4 agents
+                    <div class="selection-info" style="text-align: center; padding: 15px; background: rgba(0,0,0,0.5); border-radius: 8px;">
+                        Selected: <span style="color: ${selectedAgents.length > 0 ? '#00ff00' : '#ff6666'};">${selectedAgents.length}/4</span> agents
+                        ${selectedAgents.length === 0 ? '<div style="color: #ff6666; margin-top: 8px;">⚠️ Select at least one agent to continue!</div>' : ''}
                     </div>
                 </div>
             `;
         },
-        actions: [
-            { text: 'START MISSION', action: 'execute:startMission', primary: true },
-            { text: 'BACK', action: 'navigate:mission-briefing' }
-        ],
+        actions: function() {
+            const game = window.game;
+            const hasAgents = game?.activeAgents?.length > 0;
+            const hasSelection = game?.selectedAgents?.length > 0;
+
+            if (!hasAgents) {
+                return [
+                    { text: 'HIRE AGENTS FIRST', action: 'navigate:hub', primary: true },
+                    { text: 'BACK', action: 'navigate:mission-briefing' }
+                ];
+            } else if (hasSelection) {
+                return [
+                    { text: 'START MISSION', action: 'execute:startMission', primary: true },
+                    { text: 'BACK', action: 'navigate:mission-briefing' }
+                ];
+            } else {
+                return [
+                    { text: 'SELECT AGENTS TO CONTINUE', action: '', primary: false, disabled: true },
+                    { text: 'BACK', action: 'navigate:mission-briefing' }
+                ];
+            }
+        },
         onEnter: function() {
+            // Initialize selectedAgents array if not exists
+            const game = window.game;
+            if (game && !game.selectedAgents) {
+                game.selectedAgents = [];
+                if (window.Logger) {
+                    const logger = new window.Logger('LoadoutScreen');
+                    logger.info('Initialized selectedAgents array');
+                }
+            }
+
             // Add click handlers for agent selection
             setTimeout(() => {
                 document.querySelectorAll('.agent-card').forEach(card => {
                     card.addEventListener('click', function() {
-                        const agentId = parseInt(this.dataset.agentId);
+                        const agentId = this.dataset.agentId; // Keep as string, don't parse
                         const game = window.game;
                         if (!game) return;
 
                         if (!game.selectedAgents) game.selectedAgents = [];
 
-                        const index = game.selectedAgents.indexOf(agentId);
+                        // Log for debugging
+                        if (window.Logger) {
+                            const logger = new window.Logger('LoadoutScreen');
+                            logger.info(`Agent clicked: ${agentId}, current selection: [${game.selectedAgents.join(', ')}]`);
+                        }
+
+                        // Find if this agent is already selected (using string comparison)
+                        const index = game.selectedAgents.findIndex(id => String(id) === String(agentId));
                         if (index > -1) {
                             game.selectedAgents.splice(index, 1);
                             this.classList.remove('selected');
@@ -358,8 +560,26 @@ const SCREEN_CONFIG = {
                         // Update count
                         const info = document.querySelector('.selection-info');
                         if (info) {
-                            info.textContent = `Selected: ${game.selectedAgents.length}/4 agents`;
+                            info.innerHTML = `Selected: <span style="color: ${game.selectedAgents.length > 0 ? '#00ff00' : '#ff6666'};">${game.selectedAgents.length}/4</span> agents
+                                ${game.selectedAgents.length === 0 ? '<div style="color: #ff6666; margin-top: 8px;">⚠️ Select at least one agent to continue!</div>' : ''}`;
                         }
+
+                        // Update buttons based on selection
+                        const hasSelection = game.selectedAgents.length > 0;
+                        const actionButtons = document.querySelectorAll('.screen-action');
+                        actionButtons.forEach(btn => {
+                            if (btn.textContent === 'SELECT AGENTS TO CONTINUE' || btn.textContent === 'START MISSION') {
+                                btn.textContent = hasSelection ? 'START MISSION' : 'SELECT AGENTS TO CONTINUE';
+                                btn.disabled = !hasSelection;
+                                if (hasSelection) {
+                                    btn.classList.add('primary');
+                                    btn.dataset.action = 'execute:startMission';
+                                } else {
+                                    btn.classList.remove('primary');
+                                    btn.dataset.action = '';
+                                }
+                            }
+                        });
                     });
                 });
             }, 100);

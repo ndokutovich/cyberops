@@ -129,6 +129,5 @@ CyberOpsGame.prototype.closeDialog = function() {
             }
             this.resumeLevelMusic();
         }
-    }
 }
 

@@ -296,6 +296,11 @@ class ScreenManager {
      * Generate action buttons for a screen
      */
     generateScreenActions(actions, screenId) {
+        // If actions is a function, call it to get the array
+        if (typeof actions === 'function') {
+            actions = actions.call(this);
+        }
+
         if (!actions || actions.length === 0) return '';
 
         const buttons = actions.map((action, index) => {
@@ -320,12 +325,36 @@ class ScreenManager {
     bindScreenActions(screenEl, actions) {
         if (!actions) return;
 
+        // If actions is a function, call it to get the array
+        if (typeof actions === 'function') {
+            actions = actions.call(this);
+        }
+
         screenEl.querySelectorAll('.screen-action').forEach(button => {
             button.addEventListener('click', (e) => {
+                // Check if button is disabled
+                if (e.target.disabled) return;
+
+                // First check if action was dynamically updated in dataset
+                const currentAction = e.target.dataset.action;
+
+                // If we have a current action in dataset, use it
+                if (currentAction) {
+                    if (currentAction.startsWith('navigate:')) {
+                        const targetScreen = currentAction.replace('navigate:', '');
+                        this.navigateTo(targetScreen);
+                    } else if (currentAction.startsWith('execute:')) {
+                        const actionName = currentAction.replace('execute:', '');
+                        this.executeAction(actionName);
+                    }
+                    return;
+                }
+
+                // Otherwise fall back to original action from array
                 const actionIndex = parseInt(e.target.dataset.index);
                 const action = actions[actionIndex];
 
-                if (action.action) {
+                if (action && action.action) {
                     if (action.action.startsWith('navigate:')) {
                         const targetScreen = action.action.replace('navigate:', '');
                         this.navigateTo(targetScreen);
@@ -368,9 +397,31 @@ class ScreenManager {
                 }
             },
             'startMission': () => {
-                if (this.game?.startMission) {
-                    this.game.startMission();
-                    this.navigateTo('game');
+                if (logger) logger.info(`🚀 startMission action triggered`);
+                if (logger) logger.info(`Selected agents: ${this.game?.selectedAgents}`);
+
+                if (this.game?.selectedAgents?.length > 0) {
+                    // Prepare agents for mission - handle both string and number IDs
+                    this.game.agents = this.game.activeAgents.filter(agent => {
+                        // Convert both to strings for comparison
+                        const agentIdStr = String(agent.id);
+                        return this.game.selectedAgents.some(selectedId =>
+                            String(selectedId) === agentIdStr
+                        );
+                    });
+
+                    if (logger) logger.info(`✅ Starting mission with ${this.game.agents.length} agents`);
+
+                    if (this.game?.startMission) {
+                        if (logger) logger.info(`📍 Calling game.startMission()`);
+                        this.game.startMission();
+                        if (logger) logger.info(`📍 Navigating to game screen`);
+                        this.navigateTo('game');
+                    } else {
+                        if (logger) logger.error('❌ game.startMission function not found!');
+                    }
+                } else {
+                    if (logger) logger.warn('⚠️ No agents selected for mission');
                 }
             },
             'returnToHub': () => this.navigateTo('hub'),

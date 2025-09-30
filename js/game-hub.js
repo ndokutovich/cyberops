@@ -84,6 +84,12 @@ CyberOpsGame.prototype.updateHubStats = function() {
         const agentStatus = document.getElementById('agentStatus');
         if (agentStatus) agentStatus.textContent = `${this.activeAgents.length} Active`;
 
+        // Also update agent count in the generated hub screen if visible
+        const agentCountDisplay = document.querySelector('.hub-panel .hub-card .card-value');
+        if (agentCountDisplay && agentCountDisplay.parentElement?.querySelector('.card-title')?.textContent === 'Active Agents') {
+            agentCountDisplay.textContent = this.activeAgents.length;
+        }
+
         const arsenalStatus = document.getElementById('arsenalStatus');
         if (arsenalStatus) arsenalStatus.textContent = `${this.weapons.length + this.equipment.length} Items`;
 

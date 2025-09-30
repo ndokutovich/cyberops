@@ -2255,24 +2255,60 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         });
 
         if (agent && !agent.hired && game.credits >= agent.cost) {
-            game.credits -= agent.cost;
-            agent.hired = true;
-            game.activeAgents.push(agent);
+            // Use AgentService to properly hire the agent
+            if (game.gameServices && game.gameServices.agentService) {
+                const success = game.gameServices.agentService.hireAgent(agent.id);
+                if (success) {
+                    if (this.logger) this.logger.info(`✅ Successfully hired ${agent.name} through AgentService`);
 
-            // Initialize equipment loadout for new agent
-            if (game.agentLoadouts && !game.agentLoadouts[agent.id]) {
-                game.agentLoadouts[agent.id] = {
-                    weapon: null,
-                    armor: null,
-                    utility: null,
-                    special: null
-                };
-                if (this.logger) this.logger.info(`Initialized loadout for ${agent.name}`);
+                    // Initialize equipment loadout for new agent
+                    if (game.agentLoadouts && !game.agentLoadouts[agent.id]) {
+                        game.agentLoadouts[agent.id] = {
+                            weapon: null,
+                            armor: null,
+                            utility: null,
+                            special: null
+                        };
+                        if (this.logger) this.logger.info(`Initialized loadout for ${agent.name}`);
+                    }
+                }
+            } else {
+                // Fallback if AgentService not available
+                if (this.logger) this.logger.warn('AgentService not available, using legacy hiring');
+                game.credits -= agent.cost;
+                agent.hired = true;
+                game.activeAgents.push(agent);
+
+                // Initialize equipment loadout for new agent
+                if (game.agentLoadouts && !game.agentLoadouts[agent.id]) {
+                    game.agentLoadouts[agent.id] = {
+                        weapon: null,
+                        armor: null,
+                        utility: null,
+                        special: null
+                    };
+                    if (this.logger) this.logger.info(`Initialized loadout for ${agent.name}`);
+                }
             }
 
             game.updateHubStats();
 
             if (this.logger) this.logger.info(`✅ Hired ${agent.name} for ${agent.cost} credits`);
+
+            // Update the hub screen content if it's visible (without navigation)
+            if (window.screenManager && window.screenManager.currentScreen === 'hub') {
+                // Just update the agent count in the hub without re-navigating
+                const agentCards = document.querySelectorAll('.hub-card');
+                agentCards.forEach(card => {
+                    const titleEl = card.querySelector('.card-title');
+                    if (titleEl && titleEl.textContent === 'Active Agents') {
+                        const valueEl = card.querySelector('.card-value');
+                        if (valueEl) {
+                            valueEl.textContent = game.activeAgents.length;
+                        }
+                    }
+                });
+            }
 
             // Navigate directly back to hire-agents (this will close the confirmation)
             this.navigateTo('hire-agents', null, true); // Force refresh to show updated list
