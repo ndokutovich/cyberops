@@ -8,23 +8,8 @@ CyberOpsGame.prototype.showSaveList = function(mode = 'save') {
         return;
     }
 
-    // Fallback to old system (with safety checks for test mode)
-    this.saveListMode = mode; // 'save' or 'load'
-    const dialog = document.getElementById('saveListDialog');
-
-    // Safety check for test mode
-    if (!dialog) {
-        if (this.logger) this.logger.warn('saveListDialog not found - likely in test mode');
-        return;
-    }
-
-    const title = dialog.querySelector('.dialog-title');
-    if (title) {
-        title.textContent = mode === 'save' ? '💾 SAVE GAME' : '📁 LOAD GAME';
-    }
-
-    this.refreshSaveList();
-    dialog.classList.add('show');
+    // Legacy dialog removed - modal engine handles saves
+    this.saveListMode = mode;
 }
 
 // New modal engine version
@@ -126,11 +111,7 @@ CyberOpsGame.prototype.closeSaveList = function() {
         return;
     }
 
-    // Fallback to old system
-    const dialog = document.getElementById('saveListDialog');
-    if (dialog) {
-        dialog.classList.remove('show');
-    }
+    // Legacy dialog removed
 }
 
 CyberOpsGame.prototype.refreshSaveList = function() {

@@ -322,12 +322,7 @@
                 if (el) el.style.display = 'none';
             });
 
-            // Remove show class from dialogs
-            const intermissionDialog = document.getElementById('intermissionDialog');
-            if (intermissionDialog) intermissionDialog.classList.remove('show');
-
-            const hudDialog = document.getElementById('hudDialog');
-            if (hudDialog) hudDialog.classList.remove('show');
+            // Legacy dialogs removed - using declarative system
 
             // Capture previous screen before updating
             const previousScreen = game ? game.currentScreen : null;

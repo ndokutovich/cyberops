@@ -85,7 +85,7 @@ CyberOpsGame.prototype.showHudDialog = function(title, message, buttons) {
         actionsDiv.appendChild(button);
     });
 
-    document.getElementById('hudDialog').classList.add('show');
+    // Legacy dialog removed - modal engine handles everything
 }
 
 // Helper function for safe dialog transitions
@@ -119,14 +119,8 @@ CyberOpsGame.prototype.closeDialog = function() {
         return;
     }
 
-    // Fallback to old system
-    const hudDialog = document.getElementById('hudDialog');
-    if (hudDialog) {
-        hudDialog.classList.remove('show');
-
-        // If we're closing the pause menu, also resume the game
-        const dialogTitle = document.getElementById('dialogTitle');
-        if (dialogTitle && dialogTitle.textContent === '⏸ GAME PAUSED' && this.isPaused) {
+    // Legacy dialog removed - handle pause menu through modal
+    if (this.isPaused) {
             // Directly resume the game without calling resumeFromPause (avoid recursion)
             this.isPaused = false;
             const pauseButton = document.querySelector('.pause-button');

@@ -655,11 +655,10 @@ CyberOpsGame.prototype.showHiringDialog = function() {
 
         // Add event delegation for hire buttons after a short delay to ensure DOM is ready
         setTimeout(() => {
-            // Try to find buttons in both modal engine and legacy dialog
+            // Try to find buttons in modal engine
             const modalContainer = document.getElementById('modalEngineContainer');
-            const legacyDialog = document.getElementById('hudDialog');
 
-            const containers = [modalContainer, legacyDialog].filter(c => c);
+            const containers = [modalContainer].filter(c => c);
 
             containers.forEach(container => {
                 const hireButtons = container.querySelectorAll('.hire-agent-btn:not([disabled])');
