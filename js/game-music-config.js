@@ -203,8 +203,8 @@ const GAME_MUSIC_CONFIG = {
         demoscene: {
             // No tracks - continues menu music
             transitions: {
-                'toMain-menu': {
-                    type: 'restart'  // Restart music when returning to menu
+                toMenu: {  // Use 'toMenu' not 'toMain-menu' because of screen name mapping
+                    type: 'continue'  // Continue music when returning to menu
                 }
             }
         }

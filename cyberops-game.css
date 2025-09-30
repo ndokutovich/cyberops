@@ -2412,7 +2412,7 @@ body {
 /* Running Text System */
 .menu-running-text {
     position: absolute;
-    bottom: 30px;
+    bottom: 140px;  /* Moved up to sit above action buttons */
     left: 0;
     right: 0;
     height: 25px;
@@ -3248,11 +3248,16 @@ body {
 }
 
 .screen-actions {
+    position: absolute;
+    bottom: 30px;
+    left: 0;
+    right: 0;
     display: flex;
     justify-content: center;
     gap: 20px;
     padding: 30px;
     width: 100%;
+    box-sizing: border-box;
 }
 
 /* Screen action buttons */

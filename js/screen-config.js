@@ -155,12 +155,22 @@ const SCREEN_CONFIG = {
                 }
             };
 
+            // Throttle mousemove events to prevent spam
+            let lastMouseMove = 0;
+            const throttledMouseMove = () => {
+                const now = Date.now();
+                if (now - lastMouseMove > 1000) {  // Only reset once per second max
+                    lastMouseMove = now;
+                    resetTimer();
+                }
+            };
+
             // Add activity listeners
             setTimeout(() => {
                 const menuContainer = document.getElementById('screen-main-menu');
                 if (menuContainer) {
                     menuContainer.addEventListener('click', resetTimer);
-                    menuContainer.addEventListener('mousemove', resetTimer);
+                    menuContainer.addEventListener('mousemove', throttledMouseMove);  // Use throttled version
                     menuContainer.addEventListener('keydown', resetTimer);
                 }
             }, 100);
@@ -236,33 +246,6 @@ const SCREEN_CONFIG = {
             { text: 'CREDITS', action: 'navigate:credits' },
             { text: 'EXIT', action: 'execute:exitGame' }
         ]
-    },
-
-    // Syndicate Hub
-    'hub': {
-        type: 'dom',
-        elementId: 'syndicateHub',
-        // music: true,  // Music continues from menu, don't restart
-        onEnter: function() {
-            const game = window.game;
-            if (game) {
-                // Disable 3D mode if active
-                if (game.is3DMode && game.cleanup3D) {
-                    game.cleanup3D();
-                }
-
-                // Update hub statistics
-                if (game.updateHubStats) {
-                    game.updateHubStats();
-                }
-
-                // Set game state
-                game.currentScreen = 'hub';
-            }
-        },
-        onExit: function() {
-            // Cleanup if needed
-        }
     },
 
     // Mission Briefing
@@ -489,6 +472,158 @@ const SCREEN_CONFIG = {
                     game.removeDemosceneInterruptHandlers();
                 }
             }
+        }
+    },
+
+    // Syndicate Hub
+    hub: {
+        type: 'generated',
+        background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)',
+        onEnter: function() {
+            // Initialize hub data
+            if (window.game && window.game.updateHubStats) {
+                setTimeout(() => window.game.updateHubStats(), 100);
+            }
+        },
+        content: function() {
+            return `
+                <div class="hub-screen" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+                    <div class="hub-header">
+                        <div class="hub-title">🏢 SYNDICATE HUB</div>
+                        <div class="hub-subtitle">Central Command & Operations</div>
+
+                        <div class="world-control-indicator">
+                            <span>World Control: </span>
+                            <span id="worldControlPercent">15%</span>
+                            <div class="control-bar">
+                                <div class="control-progress" id="controlProgress" style="width: 15%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hub-content">
+                        <!-- Left Panel: Operations -->
+                        <div class="hub-panel operations-panel">
+                            <div class="panel-header">🎯 OPERATIONS</div>
+                            <div class="panel-content">
+                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('mission-select-hub'); } else if(game.showMissionsFromHub) { game.showMissionsFromHub(); } else { console.error('No mission selection available'); }">
+                                    <div class="card-icon">🎭</div>
+                                    <div class="card-title">MISSIONS</div>
+                                    <div class="card-desc">Launch new operations</div>
+                                    <div class="card-status" id="missionStatus">2 Available</div>
+                                </div>
+
+                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('agent-management'); } else { alert('Agent management not available'); }">
+                                    <div class="card-icon">👥</div>
+                                    <div class="card-title">AGENTS</div>
+                                    <div class="card-desc">Hire & manage operatives</div>
+                                    <div class="card-status" id="agentStatus">4 Active</div>
+                                </div>
+
+                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('research-lab'); } else { alert('Research lab not available'); }">
+                                    <div class="card-icon">🔬</div>
+                                    <div class="card-title">RESEARCH</div>
+                                    <div class="card-desc">Upgrade capabilities</div>
+                                    <div class="card-status" id="researchStatus">2 Active</div>
+                                </div>
+
+                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('hall-of-glory'); } else if(game.showHallOfGlory) { game.showHallOfGlory(); } else { alert('Hall of Glory not available'); }">
+                                    <div class="card-icon">⚰️</div>
+                                    <div class="card-title">HALL OF GLORY</div>
+                                    <div class="card-desc">Remember the fallen</div>
+                                    <div class="card-status" id="fallenStatus">0 Heroes</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Center Panel: Dashboard -->
+                        <div class="hub-panel dashboard-panel">
+                            <div class="panel-header">📊 COMMAND CENTER</div>
+                            <div class="panel-content">
+                                <div class="dashboard-stats">
+                                    <div class="stat-group">
+                                        <div class="stat-item">
+                                            <div class="stat-label">Missions Complete</div>
+                                            <div class="stat-value" id="hubMissionsComplete">0/5</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-label">Active Agents</div>
+                                            <div class="stat-value" id="hubActiveAgents">4</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-label">Research Points</div>
+                                            <div class="stat-value" id="hubResearchPoints">150</div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-label">Credits</div>
+                                            <div class="stat-value" id="hubCredits">5000</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="world-map">
+                                    <div class="map-title">🌍 GLOBAL INFLUENCE</div>
+                                    <div class="influence-regions">
+                                        <div class="region" data-region="north-america">
+                                            <span class="region-name">North America</span>
+                                            <span class="region-control">25%</span>
+                                        </div>
+                                        <div class="region" data-region="europe">
+                                            <span class="region-name">Europe</span>
+                                            <span class="region-control">10%</span>
+                                        </div>
+                                        <div class="region" data-region="asia">
+                                            <span class="region-name">Asia</span>
+                                            <span class="region-control">5%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Resources -->
+                        <div class="hub-panel resources-panel">
+                            <div class="panel-header">🛡️ RESOURCES</div>
+                            <div class="panel-content">
+                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('arsenal'); } else if(game.showEquipmentManagement) { game.showEquipmentManagement(); } else { alert('Arsenal not available'); }">
+                                    <div class="card-icon">🔫</div>
+                                    <div class="card-title">ARSENAL</div>
+                                    <div class="card-desc">Manage equipment</div>
+                                    <div class="card-status" id="arsenalStatus">8 Items</div>
+                                </div>
+
+                                <div class="hub-card" onclick="if(game.dialogEngine) { game.dialogEngine.navigateTo('intel-missions'); } else { alert('Intel missions not available'); }">
+                                    <div class="card-icon">📡</div>
+                                    <div class="card-title">INTEL</div>
+                                    <div class="card-desc">Surveillance & data</div>
+                                    <div class="card-status" id="intelStatus">3 Reports</div>
+                                </div>
+
+                                <div class="hub-card" onclick="if(game.dialogEngine && game.dialogEngine.navigateTo) { game.dialogEngine.navigateTo('character'); } else if(game.showCharacterSheet) { game.showCharacterSheet(); } else { alert('Character sheet not available'); }">
+                                    <div class="card-icon">📊</div>
+                                    <div class="card-title">CHARACTER</div>
+                                    <div class="card-desc">View RPG stats</div>
+                                    <div class="card-status" id="characterStatus">Level 1</div>
+                                </div>
+
+                                <div class="hub-card" onclick="if(game.showWorldMap) { game.showWorldMap(); } else { alert('World map coming soon!'); }">
+                                    <div class="card-icon">🗺️</div>
+                                    <div class="card-title">WORLD MAP</div>
+                                    <div class="card-desc">Global operations</div>
+                                    <div class="card-status" id="worldMapStatus">L1 Access</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hub-footer">
+                        <button class="menu-button hub-button" onclick="game.startNextMission()" style="background: #2e7d32; font-size: 1.1em;">🎯 NEXT MISSION</button>
+                        <button class="menu-button hub-button" onclick="game.backToMainMenu()">MAIN MENU</button>
+                        <button class="menu-button hub-button" onclick="game.quickSave()">QUICK SAVE</button>
+                        <button class="menu-button hub-button" onclick="game.saveGame()">SAVE MANAGER</button>
+                    </div>
+                </div>
+            `;
         }
     },
 

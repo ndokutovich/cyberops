@@ -5,54 +5,26 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
     if (!this.logger && window.Logger) {
         this.logger = new window.Logger('GameHub');
     }
-        // CRITICAL: Disable 3D mode if active
-        if (this.is3DMode) {
-            if (this.logger) this.logger.debug('🔄 Disabling 3D mode when entering Hub');
-            this.cleanup3D();
-        }
 
-        // Hide all other screens (with safety checks for test mode)
-        const elementsToHide = ['mainMenu', 'gameCompleteScreen', 'creditsScreen', 'endScreen', 'gameHUD', 'hallOfGlory'];
-        elementsToHide.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
+    // CRITICAL: Disable 3D mode if active
+    if (this.is3DMode) {
+        if (this.logger) this.logger.debug('🔄 Disabling 3D mode when entering Hub');
+        this.cleanup3D();
+    }
 
-        // Remove show class from dialogs (with safety checks)
-        const intermissionDialog = document.getElementById('intermissionDialog');
-        if (intermissionDialog) intermissionDialog.classList.remove('show');
+    // Stop mission music and cleanup music system
+    if (this.musicSystem && this.cleanupMusicSystem) {
+        if (this.logger) this.logger.debug('🛑 Stopping mission music when returning to hub');
+        this.cleanupMusicSystem();
+    }
 
-        const hudDialog = document.getElementById('hudDialog');
-        if (hudDialog) hudDialog.classList.remove('show');
+    // Use screen manager to navigate to hub (fully declarative - no fallback)
+    window.screenManager.navigateTo('hub');
 
-        // Capture previous screen before updating
-        const previousScreen = this.currentScreen;
-
-        // Show hub (with safety check)
-        const syndicateHub = document.getElementById('syndicateHub');
-        if (syndicateHub) syndicateHub.style.display = 'flex';
-        this.currentScreen = 'hub';
-
-        // Stop mission music and cleanup music system
-        if (this.musicSystem && this.cleanupMusicSystem) {
-            if (this.logger) this.logger.debug('🛑 Stopping mission music when returning to hub');
-            this.cleanupMusicSystem();
-        }
-
-        // Mission music is stopped by music system cleanup
-
-        // Handle music transition based on where we're coming from
-        if (this.transitionScreenMusic && previousScreen && previousScreen !== 'game') {
-            // Use transition system if coming from another screen (not from mission)
-            if (this.logger) this.logger.debug(`🎵 Transitioning music from ${previousScreen} to hub`);
-            this.transitionScreenMusic(previousScreen, 'hub');
-        } else if (this.loadScreenMusic) {
-            // Direct load if no previous screen or coming from mission
-            if (this.logger) this.logger.debug('🎵 Loading hub music');
-            this.loadScreenMusic('hub');
-        }
-
+    // Update hub stats after navigation completes
+    setTimeout(() => {
         this.updateHubStats();
+    }, 100);
 }
     
 CyberOpsGame.prototype.updateHubStats = function() {
@@ -179,8 +151,8 @@ CyberOpsGame.prototype.startNextMission = function() {
     }
 
     if (nextMission) {
-        // Hide hub
-        document.getElementById('syndicateHub').style.display = 'none';
+        // Hide hub using screen manager
+        // Hub hiding is handled by screen navigation
 
         // Set current mission index and start briefing
         this.currentMissionIndex = nextMissionIndex;
@@ -209,9 +181,8 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
             this.dialogEngine.closeAll();
         }
 
-        // Hide both hub and menu (in case we came from either)
-        document.getElementById('syndicateHub').style.display = 'none';
-        document.getElementById('mainMenu').style.display = 'none';
+        // Navigation handled by screen manager
+        // No need to manually hide screens
 
         const mission = this.missions[missionIndex];
         this.currentMissionIndex = missionIndex;
@@ -220,8 +191,7 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
 }
     
 CyberOpsGame.prototype.showHallOfGlory = function() {
-    // Hide the hub first
-    document.getElementById('syndicateHub').style.display = 'none';
+    // Navigation handled by screen manager - no need to hide hub
 
     // Use the declarative dialog system
     if (this.dialogEngine && this.dialogEngine.navigateTo) {
@@ -248,13 +218,10 @@ CyberOpsGame.prototype.returnToHub = function() {
 
     if (returnTo === 'menu') {
         // We're already showing main menu, just ensure hub is hidden
-        document.getElementById('mainMenu').style.display = 'flex';
-        document.getElementById('syndicateHub').style.display = 'none';
-        this.currentScreen = 'menu';
+        // Navigation handled by screen manager
+        window.screenManager.navigateTo('main-menu');
     } else {
-        // Make sure hub is visible and menu is hidden
-        document.getElementById('syndicateHub').style.display = 'flex';
-        document.getElementById('mainMenu').style.display = 'none';
+        // Already in hub, just update
         this.currentScreen = 'hub';
         this.updateHubStats();
     }
