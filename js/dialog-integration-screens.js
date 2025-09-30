@@ -204,22 +204,80 @@
 
         // Defeat actions
         engine.registerAction('retryMission', function() {
+            if (logger) logger.info('🔄 retryMission handler running');
+            const game = window.game; // Get current game reference
             this.closeAll();
             // Reload from pre-mission save
             if (game) {
                 if (game.loadPreMissionSave) {
+                    if (logger) logger.info('🔄 Loading pre-mission save');
                     game.loadPreMissionSave();
                 } else if (game.startMission) {
+                    if (logger) logger.info('🔄 Restarting mission from index:', game.currentMissionIndex);
                     // Restart current mission
                     game.startMission(game.currentMissionIndex);
+                } else {
+                    if (logger) logger.error('❌ No retry method available');
                 }
+            } else {
+                if (logger) logger.error('❌ game not available');
             }
         });
 
         engine.registerAction('returnToHubFromDefeat', function() {
+            if (logger) logger.info('🏠 returnToHubFromDefeat handler running');
+            const game = window.game; // Get current game reference
             this.closeAll();
+
+            // CRITICAL: Sync dead agents from mission to AgentService
+            if (game && game.agents && game.gameServices && game.gameServices.agentService) {
+                if (logger) logger.info(`🔍 Checking ${game.agents.length} agents for deaths`);
+                if (logger) logger.info(`📊 AgentService state: active=${game.gameServices.agentService.activeAgents.length}, fallen=${game.gameServices.agentService.fallenAgents.length}`);
+
+                game.agents.forEach(missionAgent => {
+                    if (logger) logger.info(`Agent: ${missionAgent.name}, alive: ${missionAgent.alive}, health: ${missionAgent.health}`);
+                    if (!missionAgent.alive) {
+                        // Find the corresponding active agent
+                        const agentId = missionAgent.originalId || missionAgent.id || missionAgent.name;
+                        if (logger) logger.info(`Looking for agent with ID: ${agentId}`);
+                        const activeAgent = game.gameServices.agentService.getAgent(agentId);
+
+                        if (activeAgent) {
+                            if (logger) logger.info(`Found agent in service: alive=${activeAgent.alive}, hired=${activeAgent.hired}`);
+                            if (activeAgent.alive) {
+                                // Agent died in mission - kill them in AgentService
+                                if (game.logger) game.logger.info(`☠️ Syncing death of ${missionAgent.name} to AgentService`);
+                                game.gameServices.agentService.killAgent(agentId);
+                            } else {
+                                // Agent is already marked dead but might not be in fallenAgents
+                                // Force move to fallenAgents if still in activeAgents
+                                if (logger) logger.info(`Agent ${missionAgent.name} already dead - checking if in fallenAgents`);
+                                const inActive = game.gameServices.agentService.activeAgents.includes(activeAgent);
+                                const inFallen = game.gameServices.agentService.fallenAgents.includes(activeAgent);
+
+                                if (inActive && !inFallen && activeAgent.hired) {
+                                    if (logger) logger.info(`🔧 Agent is dead but still in activeAgents - moving to fallenAgents`);
+                                    const index = game.gameServices.agentService.activeAgents.indexOf(activeAgent);
+                                    if (index > -1) {
+                                        game.gameServices.agentService.activeAgents.splice(index, 1);
+                                        game.gameServices.agentService.fallenAgents.push(activeAgent);
+                                    }
+                                }
+                            }
+                        } else {
+                            if (logger) logger.error(`❌ Agent ${missionAgent.name} not found in AgentService!`);
+                        }
+                    }
+                });
+
+                if (logger) logger.info(`📊 After sync: active=${game.gameServices.agentService.activeAgents.length}, fallen=${game.gameServices.agentService.fallenAgents.length}`);
+            }
+
             if (game && game.showSyndicateHub) {
+                if (logger) logger.info('🏠 Calling game.showSyndicateHub()');
                 game.showSyndicateHub();
+            } else {
+                if (logger) logger.error('❌ game.showSyndicateHub not available');
             }
         });
 

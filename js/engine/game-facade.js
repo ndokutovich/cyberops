@@ -914,14 +914,11 @@ class GameFacade {
             // Create visual projectile
             this.createProjectile(attacker, target);
 
-            // UNIDIRECTIONAL: Get updated health from CombatService
-            const updatedTarget = this.services.combatService.getCombatant(target.id);
-            if (updatedTarget && updatedTarget.entity) {
-                target.health = updatedTarget.entity.health;
-                target.alive = updatedTarget.entity.health > 0;
-            }
+            // UNIDIRECTIONAL: CombatService already handled damage/death
+            // For agents: AgentService is single source of truth
+            // For enemies: CombatService updated entity directly
+            // State is already correct - no sync needed
             if (result.killed) {
-                target.alive = false;
                 this.onEntityDeath(target);
             }
         }
@@ -1687,18 +1684,23 @@ class GameFacade {
                                 actualDamage = Math.max(1, actualDamage - agent.protection);
                             }
 
-                            // Use FormulaService to apply damage properly
-                            const damageResult = window.GameServices.formulaService.applyDamage(agent, actualDamage);
-                            if (damageResult.isDead) {
-                                // Log agent death
-                                if (game.logDeath) game.logDeath(agent);
-                            } else {
-                                // Log hit - use projectile owner or generic enemy
-                                if (game.logCombatHit) {
-                                    const attacker = proj.owner ?
-                                        this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
-                                        { name: 'Enemy' };
-                                    game.logCombatHit(attacker, agent, actualDamage);
+                            // CRITICAL: Use AgentService for agent damage (single source of truth)
+                            const agentId = agent.originalId || agent.id || agent.name;
+                            if (window.GameServices.agentService) {
+                                window.GameServices.agentService.damageAgent(agentId, actualDamage, 'enemy projectile');
+
+                                // Check if agent died
+                                const agentData = window.GameServices.agentService.getAgent(agentId);
+                                if (agentData && !agentData.alive) {
+                                    if (game.logDeath) game.logDeath(agent);
+                                } else {
+                                    // Log hit
+                                    if (game.logCombatHit) {
+                                        const attacker = proj.owner ?
+                                            this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy' } :
+                                            { name: 'Enemy' };
+                                        game.logCombatHit(attacker, agent, actualDamage);
+                                    }
                                 }
                             }
                             // Play hit sound
@@ -1729,20 +1731,27 @@ class GameFacade {
                             if (closestAgent.shield > 0) {
                                 closestAgent.shield -= actualDamage;
                             } else {
-                                // Use FormulaService to apply damage
-                                const damageResult = window.GameServices.formulaService.applyDamage(closestAgent, actualDamage);
+                                // CRITICAL: Use AgentService for agent damage (single source of truth)
+                                const agentId = closestAgent.originalId || closestAgent.id || closestAgent.name;
+                                if (window.GameServices.agentService) {
+                                    window.GameServices.agentService.damageAgent(agentId, actualDamage, 'enemy projectile');
 
-                                // Log hit with kill information
-                                if (game.logCombatHit) {
-                                    const attacker = proj.owner ?
-                                        this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy', type: 'enemy' } :
-                                        { name: 'Enemy', type: 'enemy' };
-                                    game.logCombatHit(attacker, closestAgent, actualDamage, damageResult.isDead);
-                                }
+                                    // Check if agent died
+                                    const agentData = window.GameServices.agentService.getAgent(agentId);
+                                    const isDead = agentData && !agentData.alive;
 
-                                if (damageResult.isDead) {
-                                    // Additional death logging if needed
-                                    // if (game.logDeath) game.logDeath(closestAgent);
+                                    // Log hit with kill information
+                                    if (game.logCombatHit) {
+                                        const attacker = proj.owner ?
+                                            this.enemies.find(e => e.id === proj.owner) || { name: 'Enemy', type: 'enemy' } :
+                                            { name: 'Enemy', type: 'enemy' };
+                                        game.logCombatHit(attacker, closestAgent, actualDamage, isDead);
+                                    }
+
+                                    if (isDead) {
+                                        // Additional death logging if needed
+                                        // if (game.logDeath) game.logDeath(closestAgent);
+                                    }
                                 }
                             }
                             // Play hit sound

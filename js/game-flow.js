@@ -1313,16 +1313,10 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
                 // UNIDIRECTIONAL: CombatService already updated health internally
                 // Just sync the visual state from the service
                 if (result.hit && result.damage) {
-                    // Get updated state from CombatService
-                    const updatedEnemy = window.GameServices.combatService.getCombatant(targetId);
-                    if (updatedEnemy && updatedEnemy.entity) {
-                        nearest.health = updatedEnemy.entity.health;
-                        nearest.alive = updatedEnemy.entity.health > 0;
-                    } else if (result.killed) {
-                        // Fallback if entity not found
-                        nearest.alive = false;
-                        nearest.health = 0;
-                    }
+                    // UNIDIRECTIONAL: CombatService already updated entity state
+                    // For agents: AgentService is single source of truth
+                    // For enemies: CombatService updated entity directly
+                    // No need to sync back - state is already correct
                 }
 
                 if (this.logger) {

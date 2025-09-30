@@ -282,9 +282,19 @@ class CombatService {
         const combatant = this.getCombatant(entityId);
         if (!combatant) return;
 
-        combatant.entity.health = Math.max(0, combatant.entity.health - damage);
+        // CRITICAL: Use AgentService for agents to maintain single source of truth
+        const agentId = combatant.entity.originalId || combatant.entity.id;
+        const isAgent = this.agentService && this.agentService.getAgent(agentId);
 
-        if (this.logger) this.logger.debug(`${entityId} took ${damage} damage, health: ${combatant.entity.health}`);
+        if (isAgent) {
+            // Agent damage - delegate to AgentService (single source of truth)
+            this.agentService.damageAgent(agentId, damage, 'combat');
+            if (this.logger) this.logger.debug(`${entityId} took ${damage} damage via AgentService`);
+        } else {
+            // Enemy/NPC damage - handle directly
+            combatant.entity.health = Math.max(0, combatant.entity.health - damage);
+            if (this.logger) this.logger.debug(`${entityId} took ${damage} damage, health: ${combatant.entity.health}`);
+        }
     }
 
     /**
@@ -500,8 +510,20 @@ class CombatService {
         const combatant = this.getCombatant(entityId);
         if (!combatant) return;
 
-        combatant.entity.alive = false;
-        combatant.entity.health = 0;
+        // CRITICAL: Use AgentService for agents to maintain single source of truth
+        // Check if this is an agent (has originalId or is in agentService)
+        const agentId = combatant.entity.originalId || combatant.entity.id;
+        const isAgent = this.agentService && this.agentService.getAgent(agentId);
+
+        if (isAgent) {
+            // Agent death - delegate to AgentService (single source of truth)
+            if (this.logger) this.logger.info(`💀 Agent death detected - delegating to AgentService: ${combatant.entity.name}`);
+            this.agentService.killAgent(agentId, killerId);
+        } else {
+            // Enemy/NPC death - handle directly
+            combatant.entity.alive = false;
+            combatant.entity.health = 0;
+        }
 
         // Remove from turn order if turn-based
         if (this.turnBasedMode) {

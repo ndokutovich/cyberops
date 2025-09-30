@@ -528,7 +528,7 @@ const SCREEN_CONFIG = {
         },
         actions: [
             { text: 'RETRY MISSION', action: 'execute:retryMission', primary: true },
-            { text: 'RETURN TO HUB', action: 'navigate:hub' },
+            { text: 'RETURN TO HUB', action: 'execute:returnToHubFromDefeat' },
             { text: 'LOAD CHECKPOINT', action: 'execute:showLoadGame' }
         ]
     },

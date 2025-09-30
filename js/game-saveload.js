@@ -292,20 +292,26 @@ CyberOpsGame.prototype.loadSaveSlot = function(slotId) {
     const saveTime = new Date(saveData.timestamp).toLocaleString();
     this.showHudDialog(
         '📁 LOAD GAME',
-        `Load "${saveData.name}"?<br><br>Saved: ${saveTime}<br>Mission: ${saveData.gameState.currentMissionIndex + 1}/${this.missions.length}`,
+        `Load "${saveData.name || 'Unnamed Save'}"?<br><br>Saved: ${saveTime}<br>Missions Completed: ${saveData.missionCount || 0}`,
         [
             { text: 'LOAD', action: () => {
                 // Load through GameStateService only
                 const success = this.gameServices.gameStateService.loadGame(this, slotId);
                 if (success) {
                     this.closeSaveList();
-                    // Navigate to hub
-                    this.changeScreen('hub');
-                    this.showHudDialog(
-                        '✅ GAME LOADED',
-                        `Game loaded successfully!<br><br>Mission: ${this.currentMissionIndex + 1}/${this.missions.length}<br>Credits: ${this.credits.toLocaleString()}`,
-                        [{ text: 'CONTINUE', action: 'close' }]
-                    );
+
+                    // Close any open dialogs first
+                    if (this.dialogEngine && this.dialogEngine.closeAll) {
+                        this.dialogEngine.closeAll();
+                    }
+
+                    // Navigate to the screen that was saved (usually hub)
+                    const savedScreen = this.currentScreen || 'hub';
+                    if (window.screenManager) {
+                        window.screenManager.navigateTo(savedScreen);
+                    }
+
+                    if (this.logger) this.logger.info(`✅ Game loaded from ${slotId}, navigated to ${savedScreen}`);
                 } else {
                     this.showHudDialog(
                         '❌ LOAD ERROR',

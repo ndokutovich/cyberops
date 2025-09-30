@@ -228,6 +228,9 @@ class ScreenManager {
      * Show a generated HTML screen
      */
     showGeneratedScreen(screenId, config, params) {
+        // Hide game canvas and HUD when showing generated screen
+        this.hideCanvasScreen();
+
         // Clear container
         this.screenContainer.innerHTML = '';
         this.screenContainer.style.pointerEvents = 'auto';
@@ -379,10 +382,11 @@ class ScreenManager {
             'continueGame': () => this.game?.continueCampaign(),
             'showSettings': () => this.game?.dialogEngine?.navigateTo('settings'),
             'showLoadGame': () => {
-                if (this.game?.loadGame) {
-                    this.game.loadGame();
-                } else if (this.game?.dialogEngine) {
+                // Always open save-load dialog to let user choose which save to load
+                if (this.game?.dialogEngine) {
                     this.game.dialogEngine.navigateTo('save-load');
+                } else if (this.game?.showSaveLoadDialog) {
+                    this.game.showSaveLoadDialog();
                 }
             },
             'showCredits': () => this.navigateTo('credits'),
@@ -425,6 +429,34 @@ class ScreenManager {
                 }
             },
             'returnToHub': () => this.navigateTo('hub'),
+            'returnToHubFromDefeat': () => {
+                if (logger) logger.info('🏠 returnToHubFromDefeat action called');
+                if (this.game?.dialogEngine) {
+                    const action = this.game.dialogEngine.actionRegistry?.get('returnToHubFromDefeat');
+                    if (action) {
+                        if (logger) logger.info('✅ Calling DialogEngine returnToHubFromDefeat handler');
+                        action.call(this.game.dialogEngine);
+                    } else {
+                        if (logger) logger.error('❌ returnToHubFromDefeat not found in DialogEngine actionRegistry');
+                    }
+                } else {
+                    if (logger) logger.error('❌ DialogEngine not available');
+                }
+            },
+            'retryMission': () => {
+                if (logger) logger.info('🔄 retryMission action called');
+                if (this.game?.dialogEngine) {
+                    const action = this.game.dialogEngine.actionRegistry?.get('retryMission');
+                    if (action) {
+                        if (logger) logger.info('✅ Calling DialogEngine retryMission handler');
+                        action.call(this.game.dialogEngine);
+                    } else {
+                        if (logger) logger.error('❌ retryMission not found in DialogEngine actionRegistry');
+                    }
+                } else {
+                    if (logger) logger.error('❌ DialogEngine not available');
+                }
+            },
             'returnToMenu': () => this.navigateTo('main-menu')
         };
 

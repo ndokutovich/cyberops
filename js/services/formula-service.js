@@ -669,9 +669,9 @@ class FormulaService {
         // Check if entity died
         const isDead = target.health <= 0;
         if (isDead) {
-            target.alive = false;
             target.health = 0;
         }
+        // NOTE: Do NOT set alive=false here - caller must use proper service (AgentService for agents)
 
         if (this.logger) {
             this.logger.debug(`Applied ${damage} damage to ${target.name || 'entity'}: shield -${shieldDamage}, health -${healthDamage}, isDead=${isDead}`);
