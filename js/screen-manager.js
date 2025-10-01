@@ -405,14 +405,8 @@ class ScreenManager {
                 if (logger) logger.info(`Selected agents: ${this.game?.selectedAgents}`);
 
                 if (this.game?.selectedAgents?.length > 0) {
-                    // Prepare agents for mission - handle both string and number IDs
-                    this.game.agents = this.game.activeAgents.filter(agent => {
-                        // Convert both to strings for comparison
-                        const agentIdStr = String(agent.id);
-                        return this.game.selectedAgents.some(selectedId =>
-                            String(selectedId) === agentIdStr
-                        );
-                    });
+                    // NOTE: game.agents is now a computed property
+                    // It automatically filters activeAgents by selectedAgents
 
                     if (logger) logger.info(`✅ Starting mission with ${this.game.agents.length} agents`);
 

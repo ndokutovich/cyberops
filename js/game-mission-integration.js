@@ -216,9 +216,16 @@ if (!CyberOpsGame.prototype.initMissionOriginal) {
 // Update the game loop to check objectives
 CyberOpsGame.prototype.updateMissionObjectives = function() {
     // CRITICAL: Check for mission failure - all agents dead
-    if (this.agents && this.agents.length > 0) {
-        const aliveAgents = this.agents.filter(a => a.alive).length;
-        if (aliveAgents === 0) {
+    // NOTE: this.agents is a computed property that filters out dead agents
+    // So we need to check if selectedAgents exist but no agents are alive
+
+    // GUARD: Skip failure check during first 60 frames (1 second) of mission
+    // This prevents false positive during mission initialization
+    if (this.missionTimer > 60 && this.selectedAgents && this.selectedAgents.length > 0) {
+        // Check how many selected agents are still alive
+        const aliveCount = this.agents.filter(a => a.alive).length;
+
+        if (aliveCount === 0) {
             // All agents are dead - mission failed!
             if (!this.missionFailed) {
                 this.missionFailed = true;

@@ -54,7 +54,7 @@ class CyberOpsGame {
 
         this.currentMissionIndex = 0; // TODO: Move to MissionService
         this.missionTimer = 0; // TODO: Move to MissionService
-        this.selectedAgents = [];
+        // NOTE: this.selectedAgents is now a computed property (see line 650)
         this.totalCampaignTime = 0;
         this.totalEnemiesDefeated = 0;
 
@@ -108,7 +108,7 @@ class CyberOpsGame {
         this.mouseDown = false;
 
         // Game Objects
-        this.agents = [];
+        // NOTE: this.agents is now a computed property (see line 650)
         this.enemies = [];
         this.projectiles = [];
         this.effects = [];
@@ -257,7 +257,7 @@ class CyberOpsGame {
         this.mouseDown = false;
 
         // Game Objects
-        this.agents = [];
+        // NOTE: this.agents is now a computed property (see line 650)
         this.enemies = [];
         this.projectiles = [];
         this.effects = [];
@@ -638,6 +638,64 @@ Object.defineProperty(CyberOpsGame.prototype, 'fallenAgents', {
             const currentState = this.gameServices.agentService.exportState();
             currentState.fallenAgents = value;
             this.gameServices.agentService.importState(currentState);
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+// Computed property for selected agents (agents chosen for current mission)
+// CRITICAL: This is a computed property following unidirectional data flow
+// NOTE: For backward compatibility, getter returns IDs not objects
+Object.defineProperty(CyberOpsGame.prototype, 'selectedAgents', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.agentService) return [];
+        // Return agent IDs for backward compatibility (old code expects IDs)
+        const selectedAgentObjects = this.gameServices.agentService.getSelectedAgents();
+        return selectedAgentObjects.map(agent => agent.id || agent.originalId);
+    },
+    set: function(value) {
+        if (!this.gameServices || !this.gameServices.agentService) return;
+
+        // Forward to AgentService - maintain unidirectional flow
+        // Value should be array of IDs
+        if (Array.isArray(value)) {
+            this.gameServices.agentService.selectAgentsForMission(value);
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
+// Computed property for mission agents (agents deployed on current mission)
+// CRITICAL: This is a computed property following unidirectional data flow
+// It filters activeAgents by selectedAgents - NO separate array storage
+Object.defineProperty(CyberOpsGame.prototype, 'agents', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.agentService) return [];
+
+        // CRITICAL: Use this.selectedAgents which returns IDs (not objects)
+        // Don't call getSelectedAgents() directly as it returns objects
+        const selectedIds = this.selectedAgents;
+
+        // If we have selected agents for a mission, filter by those IDs
+        if (selectedIds && selectedIds.length > 0) {
+            const selectedIdsStr = selectedIds.map(id => String(id));
+            return this.gameServices.agentService.activeAgents.filter(agent => {
+                const agentIdStr = String(agent.id);
+                return selectedIdsStr.includes(agentIdStr);
+            });
+        }
+
+        // Otherwise return all active agents (hub view)
+        return this.gameServices.agentService.activeAgents;
+    },
+    set: function(value) {
+        // Setting game.agents is now a NO-OP since it's computed
+        // All agent management goes through AgentService
+        // This setter exists only for backward compatibility
+        if (this.logger) {
+            this.logger.warn('⚠️ game.agents is now a computed property - use AgentService for agent management');
         }
     },
     enumerable: true,

@@ -294,6 +294,11 @@ class AgentService {
             this.fallenAgents.push(agent);
         }
 
+        // Track agent death in MissionStateService if mission is active
+        if (window.GameServices?.missionStateService?.isMissionActive()) {
+            window.GameServices.missionStateService.trackAgentDeath(agentId);
+        }
+
         // Notify listeners
         this.notifyListeners('death', { agent, killer });
 
@@ -535,10 +540,23 @@ class AgentService {
      * Export state for saving
      */
     exportState() {
+        if (this.logger) {
+            this.logger.debug(`📤 Exporting AgentService state:`);
+            this.logger.debug(`   Active: ${this.activeAgents.length}, Available: ${this.availableAgents.length}, Fallen: ${this.fallenAgents.length}`);
+            if (this.activeAgents.length > 0) {
+                this.logger.debug(`   Active agents: ${this.activeAgents.map(a => a.name).join(', ')}`);
+            }
+            if (this.fallenAgents.length > 0) {
+                this.logger.warn(`   ⚠️ EXPORTING ${this.fallenAgents.length} FALLEN AGENTS: ${this.fallenAgents.map(a => a.name).join(', ')}`);
+            }
+        }
+
+        // CRITICAL: Create DEEP COPIES of agent arrays to prevent snapshot corruption
+        // If we return references, when agents die during the mission, the snapshot will be modified!
         return {
-            availableAgents: this.availableAgents,
-            activeAgents: this.activeAgents,
-            fallenAgents: this.fallenAgents,
+            availableAgents: this.availableAgents.map(a => ({...a})),  // Deep copy
+            activeAgents: this.activeAgents.map(a => ({...a})),        // Deep copy
+            fallenAgents: this.fallenAgents.map(a => ({...a})),        // Deep copy
             selectedAgents: this.selectedAgents.map(a => a.id),
             nextAgentId: this.nextAgentId
         };
@@ -548,6 +566,19 @@ class AgentService {
      * Import state from save
      */
     importState(state) {
+        // CRITICAL: Log state BEFORE import to detect issues
+        if (this.logger) {
+            this.logger.debug(`📥 BEFORE importState:`);
+            this.logger.debug(`   Current active: ${this.activeAgents.length}, available: ${this.availableAgents.length}, fallen: ${this.fallenAgents.length}`);
+            if (this.fallenAgents.length > 0) {
+                this.logger.debug(`   Current fallen agents: ${this.fallenAgents.map(a => a.name).join(', ')}`);
+            }
+            this.logger.debug(`   Snapshot active: ${state.activeAgents?.length || 0}, available: ${state.availableAgents?.length || 0}, fallen: ${state.fallenAgents?.length || 0}`);
+            if (state.fallenAgents && state.fallenAgents.length > 0) {
+                this.logger.debug(`   Snapshot fallen agents: ${state.fallenAgents.map(a => a.name).join(', ')}`);
+            }
+        }
+
         if (state.availableAgents) this.availableAgents = state.availableAgents.map(a => this.createAgent(a));
         if (state.activeAgents) this.activeAgents = state.activeAgents.map(a => this.createAgent(a));
         if (state.fallenAgents) this.fallenAgents = state.fallenAgents.map(a => this.createAgent(a));
@@ -563,7 +594,14 @@ class AgentService {
             this.selectedAgents = state.selectedAgents.map(id => this.getAgent(id)).filter(a => a);
         }
 
-        if (this.logger) this.logger.info('👥 AgentService state imported');
+        if (this.logger) {
+            this.logger.info('👥 AgentService state imported');
+            this.logger.debug(`📥 AFTER importState:`);
+            this.logger.debug(`   Active: ${this.activeAgents.length}, available: ${this.availableAgents.length}, fallen: ${this.fallenAgents.length}`);
+            if (this.fallenAgents.length > 0) {
+                this.logger.debug(`   Fallen agents: ${this.fallenAgents.map(a => a.name).join(', ')}`);
+            }
+        }
     }
 
     /**

@@ -188,12 +188,18 @@ CyberOpsGame.prototype.showMissionBriefing = function(mission) {
                 </div>
             `;
             card.onclick = () => {
-                const existing = this.selectedAgents.findIndex(a => a.template === idx);
+                // NOTE: selectedAgents is now a computed property - need to get, modify, then set
+                const currentSelection = [...this.selectedAgents]; // Get current selection
+                const existing = currentSelection.findIndex(a => a.template === idx);
                 if (existing !== -1) {
-                    this.selectedAgents.splice(existing, 1);
+                    // Deselect - remove from array
+                    currentSelection.splice(existing, 1);
+                    this.selectedAgents = currentSelection; // Set modified array back
                     card.classList.remove('selected');
-                } else if (this.selectedAgents.length < maxAgentsForMission) {
-                    this.selectedAgents.push({ template: idx, ...agent });
+                } else if (currentSelection.length < maxAgentsForMission) {
+                    // Select - add to array
+                    currentSelection.push({ template: idx, ...agent });
+                    this.selectedAgents = currentSelection; // Set modified array back
                     card.classList.add('selected');
                 }
             };
@@ -275,6 +281,26 @@ CyberOpsGame.prototype.startMission = function() {
             squadHealth.style.zIndex = '20';
         }
 
+        // CRITICAL: Create mission snapshot BEFORE initMission
+        // Must snapshot agents from hub BEFORE they're transformed for mission
+        if (this.gameServices?.missionStateService) {
+            if (this._retryInProgress) {
+                // This is a retry - snapshot was already restored, keep it
+                if (this.logger) this.logger.info('♻️ Retry in progress - using restored snapshot');
+                this._retryInProgress = false; // Clear flag
+            } else {
+                // New mission attempt - clear any old snapshot and create fresh one
+                if (this.gameServices.missionStateService.snapshot) {
+                    if (this.logger) this.logger.warn('⚠️ Old snapshot exists - clearing before new mission');
+                    this.gameServices.missionStateService.clearSnapshot();
+                }
+
+                // Create fresh snapshot for this mission attempt
+                if (this.logger) this.logger.info('📸 Creating pre-mission snapshot');
+                this.gameServices.missionStateService.createSnapshot(this);
+            }
+        }
+
         this.currentScreen = 'game';
         this.initMission();
 
@@ -348,7 +374,7 @@ CyberOpsGame.prototype.initMission = function() {
         }
 
         // Reset state
-        this.agents = [];
+        // NOTE: this.agents is now a computed property - don't reset it
         this.enemies = [];
         this.projectiles = [];
         this.effects = [];
@@ -503,7 +529,15 @@ CyberOpsGame.prototype.initMission = function() {
         if (this.selectedAgents) {
             if (this.logger) this.logger.debug('📝 Selected agents structure:', this.selectedAgents);
             if (this.logger) this.logger.debug('  First selected agent:', this.selectedAgents[0]);
-            if (this.logger) this.logger.debug('  Available agents for matching:', this.activeAgents?.map(a => ({id: a.id, name: a.name})));
+
+            // CRITICAL: Check if selectedAgents contains objects with positions
+            if (this.selectedAgents.length > 0 && typeof this.selectedAgents[0] === 'object' && this.selectedAgents[0].x !== undefined) {
+                if (this.logger) this.logger.warn(`⚠️ selectedAgents contains OBJECTS with positions! This is wrong for mission restart!`);
+                if (this.logger) this.logger.warn(`   Agent 0 position: (${this.selectedAgents[0].x}, ${this.selectedAgents[0].y})`);
+                if (this.logger) this.logger.warn(`   Agent 0 targetPos: (${this.selectedAgents[0].targetX}, ${this.selectedAgents[0].targetY})`);
+            }
+
+            if (this.logger) this.logger.debug('  Available agents for matching:', this.activeAgents?.map(a => ({id: a.id, name: a.name, x: a.x, y: a.y})));
 
             // Add selected agents first
             baseAgents = this.selectedAgents.map(selectedAgent => {
@@ -581,9 +615,11 @@ CyberOpsGame.prototype.initMission = function() {
         let modifiedAgents;
         if (window.GameServices && window.GameServices.researchService) {
             // Apply research bonuses (weapons already handled by loadouts)
+            // CRITICAL: Pass agent reference directly, NOT a copy
+            // If we copy the agent, changes (like death) won't sync with AgentService
             modifiedAgents = agentsWithLoadouts.map(agent => {
                 return window.GameServices.researchService.applyResearchToAgent(
-                    { ...agent },
+                    agent,  // Pass reference, not copy
                     this.completedResearch || []
                 );
             });
@@ -631,7 +667,7 @@ CyberOpsGame.prototype.initMission = function() {
             agent.targetX = spawn.x + idx % 2;
             agent.targetY = spawn.y + Math.floor(idx / 2);
             if (this.logger) {
-                this.logger.debug(`🎯 Agent ${idx+1} (${agent.name}) placed at (${agent.x}, ${agent.y})`);
+                this.logger.info(`🎯 Agent ${idx+1} (${agent.name}) positioned at spawn: pos=(${agent.x}, ${agent.y}), target=(${agent.targetX}, ${agent.targetY})`);
                 this.logger.debug(`   Agent ID: ${agent.id}`);
             }
             agent.selected = idx === 0;
@@ -695,22 +731,70 @@ CyberOpsGame.prototype.initMission = function() {
             if (!agent.hackBonus) agent.hackBonus = 0;
             if (!agent.stealthBonus) agent.stealthBonus = 0;
 
-            this.agents.push(agent);
+            // NOTE: Don't push to this.agents - it's a computed property!
+            // Agents are already in activeAgents and will be returned by computed property
         });
 
+        // CRITICAL: After re-indexing, verify selected agents have correct positions
+        if (window.GameServices && window.GameServices.agentService && modifiedAgents.length > 0) {
+            // Log current selectedAgents positions
+            const currentSelected = window.GameServices.agentService.getSelectedAgents();
+            if (this.logger) {
+                this.logger.debug(`📍 Before update - selectedAgents positions:`);
+                currentSelected.forEach((a, i) => {
+                    this.logger.debug(`   Agent ${i}: ${a.name} at (${a.x}, ${a.y}) -> (${a.targetX}, ${a.targetY})`);
+                });
+            }
+
+            // Update selection to get newly indexed agents
+            const agentIds = modifiedAgents.map(a => a.id);
+            window.GameServices.agentService.selectAgentsForMission(agentIds);
+
+            // Log after update
+            const updatedSelected = window.GameServices.agentService.getSelectedAgents();
+            if (this.logger) {
+                this.logger.debug(`📍 After update - selectedAgents positions:`);
+                updatedSelected.forEach((a, i) => {
+                    this.logger.debug(`   Agent ${i}: ${a.name} at (${a.x}, ${a.y}) -> (${a.targetX}, ${a.targetY})`);
+                });
+            }
+
+            if (this.logger) this.logger.info(`✅ Updated AgentService with ${agentIds.length} mission agents`);
+        }
+
+        // CRITICAL: Re-initialize hold positions AFTER agents are positioned at spawn
+        // initTeamCommands was called earlier when agents had wrong positions
+        if (this.logger) this.logger.info(`🎯 Team mode: ${this.teamMode}, Modified agents: ${modifiedAgents.length}`);
+
+        if (this.teamMode === 'hold' && modifiedAgents.length > 0) {
+            if (this.logger) this.logger.info('🔄 Re-initializing hold positions with correct spawn positions');
+            modifiedAgents.forEach(agent => {
+                if (agent.alive) {
+                    this.holdPositions[agent.id] = {
+                        x: agent.x,
+                        y: agent.y
+                    };
+                    if (this.logger) this.logger.info(`   ✓ Hold position for ${agent.name}: (${agent.x}, ${agent.y})`);
+                }
+            });
+        } else {
+            if (this.logger) this.logger.warn(`⚠️ Hold positions NOT re-initialized (teamMode: ${this.teamMode}, agents: ${modifiedAgents.length})`);
+        }
+
             // Auto-select first agent for better UX
-            if (this.agents.length > 0) {
-                this.agents.forEach(a => a.selected = false);
+            // NOTE: Use modifiedAgents instead of this.agents (computed property)
+            if (modifiedAgents.length > 0) {
+                modifiedAgents.forEach(a => a.selected = false);
 
                 // Select first agent by default
-                const firstAgent = this.agents[0];
+                const firstAgent = modifiedAgents[0];
                 firstAgent.selected = true;
                 this._selectedAgent = firstAgent;
                 // Also set selectedAgent (without underscore) for compatibility
                 this.selectedAgent = firstAgent;
 
                 if (this.logger) this.logger.debug('🎯 Auto-selected first agent for better UX:', firstAgent.name || firstAgent.id);
-                if (this.logger) this.logger.debug('👥 Available agents:', this.agents.map(a => a.name || a.id));
+                if (this.logger) this.logger.debug('👥 Available agents:', modifiedAgents.map(a => a.name || a.id));
                 if (this.logger) this.logger.info('✅ Selected agent stored as:', this._selectedAgent?.name || this._selectedAgent?.id);
                 if (this.logger) this.logger.info('✅ Press E to switch camera modes, Tab to change agents');
 
@@ -718,21 +802,22 @@ CyberOpsGame.prototype.initMission = function() {
             if (this.logger) this.logger.debug('🎥 Before camera centering - cameraX:', this.cameraX, 'cameraY:', this.cameraY);
 
             // Calculate center point of all agents
-            if (this.agents && this.agents.length > 0) {
+            // NOTE: Use modifiedAgents instead of this.agents (computed property)
+            if (modifiedAgents && modifiedAgents.length > 0) {
                 let totalX = 0;
                 let totalY = 0;
-                this.agents.forEach(agent => {
+                modifiedAgents.forEach(agent => {
                     totalX += agent.x;
                     totalY += agent.y;
                 });
 
                 // Center camera on average agent position
-                this.cameraX = Math.floor(totalX / this.agents.length - this.canvas.width / (2 * this.tileWidth));
-                this.cameraY = Math.floor(totalY / this.agents.length - this.canvas.height / (2 * this.tileHeight));
+                this.cameraX = Math.floor(totalX / modifiedAgents.length - this.canvas.width / (2 * this.tileWidth));
+                this.cameraY = Math.floor(totalY / modifiedAgents.length - this.canvas.height / (2 * this.tileHeight));
 
                 if (this.logger) this.logger.info('🎥 Manual camera centering completed - agents average pos:', {
-                    avgX: totalX / this.agents.length,
-                    avgY: totalY / this.agents.length,
+                    avgX: totalX / modifiedAgents.length,
+                    avgY: totalY / modifiedAgents.length,
                     cameraX: this.cameraX,
                     cameraY: this.cameraY
                 });
@@ -1310,14 +1395,9 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
                     visualOnly: true  // CRITICAL: Don't apply damage on hit - CombatService already did!
                 });
 
-                // UNIDIRECTIONAL: CombatService already updated health internally
-                // Just sync the visual state from the service
-                if (result.hit && result.damage) {
-                    // UNIDIRECTIONAL: CombatService already updated entity state
-                    // For agents: AgentService is single source of truth
-                    // For enemies: CombatService updated entity directly
-                    // No need to sync back - state is already correct
-                }
+                // UNIDIRECTIONAL: CombatService already updated entity state
+                // For agents: AgentService is single source of truth
+                // For enemies: CombatService updated entity directly
 
                 if (this.logger) {
                     if (result.hit) {

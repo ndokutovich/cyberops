@@ -12,8 +12,9 @@ class GameServices {
         this.resourceService = new ResourceService();
         this.agentService = new AgentService(this.resourceService);
 
-        // Mission service
+        // Mission services
         this.missionService = new MissionService(this.resourceService, this.agentService);
+        this.missionStateService = new MissionStateService(); // Mission state isolation
 
         // Initialize dependent services
         this.researchService = new ResearchService(this.formulaService);

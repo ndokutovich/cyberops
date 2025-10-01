@@ -1041,8 +1041,18 @@ CyberOpsGame.prototype.useSkill = function(agent, skillId, target) {
 CyberOpsGame.prototype.applySkillEffects = function(agent, skill, target) {
     if (skill.damage && target) {
         const damage = this.calculateSkillDamage(agent, skill);
-        // Use FormulaService to apply damage
-        window.GameServices.formulaService.applyDamage(target, damage);
+
+        // CRITICAL: Check if target is an agent, use AgentService if so
+        const targetId = target.originalId || target.id || target.name;
+        const isAgent = window.GameServices?.agentService?.getAgent(targetId);
+
+        if (isAgent) {
+            // Agent damage - delegate to AgentService (single source of truth)
+            window.GameServices.agentService.damageAgent(targetId, damage, `skill:${skill.name}`);
+        } else {
+            // Enemy damage - use FormulaService
+            window.GameServices.formulaService.applyDamage(target, damage);
+        }
 
         if (this.logEvent) {
             this.logEvent(`${skill.name} dealt ${damage} damage!`, 'combat');

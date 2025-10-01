@@ -149,33 +149,33 @@ class ResearchService {
     applyResearchToAgent(agent, completedResearch = []) {
         const bonuses = this.calculateResearchBonuses(completedResearch);
 
-        // Create a copy to avoid mutation
-        const modifiedAgent = { ...agent };
+        // CRITICAL: Modify agent IN-PLACE, don't create a copy
+        // If we copy the agent, changes (like death) won't sync with AgentService
 
         // Apply permanent stat bonuses
         if (bonuses.damageBonus > 0) {
-            modifiedAgent.damage = (modifiedAgent.damage || 0) + bonuses.damageBonus;
+            agent.damage = (agent.damage || 0) + bonuses.damageBonus;
         }
 
         if (bonuses.healthBonus > 0) {
-            modifiedAgent.health = (modifiedAgent.health || 0) + bonuses.healthBonus;
-            modifiedAgent.maxHealth = (modifiedAgent.maxHealth || modifiedAgent.health) + bonuses.healthBonus;
+            agent.health = (agent.health || 0) + bonuses.healthBonus;
+            agent.maxHealth = (agent.maxHealth || agent.health) + bonuses.healthBonus;
         }
 
         if (bonuses.speedBonus > 0) {
-            modifiedAgent.speed = (modifiedAgent.speed || 0) + bonuses.speedBonus;
+            agent.speed = (agent.speed || 0) + bonuses.speedBonus;
         }
 
         // Apply percentage bonuses (these are applied during gameplay)
         if (bonuses.stealthBonus > 0) {
-            modifiedAgent.stealthBonus = (modifiedAgent.stealthBonus || 0) + bonuses.stealthBonus;
+            agent.stealthBonus = (agent.stealthBonus || 0) + bonuses.stealthBonus;
         }
 
         if (bonuses.hackingBonus > 0) {
-            modifiedAgent.hackBonus = (modifiedAgent.hackBonus || 0) + bonuses.hackingBonus;
+            agent.hackBonus = (agent.hackBonus || 0) + bonuses.hackingBonus;
         }
 
-        return modifiedAgent;
+        return agent;  // Return same reference
     }
 
     /**

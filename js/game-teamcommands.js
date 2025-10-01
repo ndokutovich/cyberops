@@ -95,6 +95,10 @@ CyberOpsGame.prototype.updateTeamAI = function() {
                 this.autoFireAtEnemy(agent, nearbyEnemy);
             }
 
+            // Track position before team behavior
+            const beforeX = agent.targetX;
+            const beforeY = agent.targetY;
+
             // Execute team mode behavior
             switch(this.teamMode) {
                 case 'hold':
@@ -109,6 +113,14 @@ CyberOpsGame.prototype.updateTeamAI = function() {
                     this.executeFollowBehavior(agent);
                     break;
             }
+
+            // Log if target changed
+            if (agent.targetX !== beforeX || agent.targetY !== beforeY) {
+                // Only log if positions are defined
+                if (this.logger && beforeX !== undefined && beforeY !== undefined && agent.targetX !== undefined && agent.targetY !== undefined) {
+                    this.logger.info(`🎯 TeamAI [${this.teamMode}] changed ${agent.name} target: (${beforeX.toFixed(1)}, ${beforeY.toFixed(1)}) → (${agent.targetX.toFixed(1)}, ${agent.targetY.toFixed(1)})`);
+                }
+            }
         }
     });
 };
@@ -116,7 +128,10 @@ CyberOpsGame.prototype.updateTeamAI = function() {
 // Hold position behavior
 CyberOpsGame.prototype.executeHoldBehavior = function(agent) {
     const holdPos = this.holdPositions[agent.id];
-    if (!holdPos) return;
+    if (!holdPos) {
+        if (this.logger) this.logger.warn(`⚠️ No hold position for agent ${agent.name} (ID: ${agent.id})`);
+        return;
+    }
 
     // Stay at hold position
     agent.targetX = holdPos.x;

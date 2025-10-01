@@ -207,20 +207,44 @@
             if (logger) logger.info('🔄 retryMission handler running');
             const game = window.game; // Get current game reference
             this.closeAll();
-            // Reload from pre-mission save
-            if (game) {
-                if (game.loadPreMissionSave) {
-                    if (logger) logger.info('🔄 Loading pre-mission save');
-                    game.loadPreMissionSave();
-                } else if (game.startMission) {
-                    if (logger) logger.info('🔄 Restarting mission from index:', game.currentMissionIndex);
-                    // Restart current mission
-                    game.startMission(game.currentMissionIndex);
-                } else {
-                    if (logger) logger.error('❌ No retry method available');
+
+            // CRITICAL: Use MissionStateService to restore snapshot
+            // This properly restores agents, resources, inventory, RPG state
+            if (game && game.gameServices?.missionStateService) {
+                if (logger) logger.info('⏮️ Restoring pre-mission snapshot for retry');
+                const restored = game.gameServices.missionStateService.restoreSnapshot(game);
+
+                if (!restored) {
+                    if (logger) logger.error('❌ Failed to restore snapshot');
+                    return;
+                }
+
+                // Set flag so startMission knows this is a retry (don't create new snapshot)
+                game._retryInProgress = true;
+            } else {
+                if (logger) logger.error('❌ MissionStateService not available');
+                return;
+            }
+
+            // Reset MissionService status
+            if (game.gameServices?.missionService) {
+                if (logger) logger.info('🔄 Resetting MissionService for retry');
+                game.gameServices.missionService.missionStatus = 'none';
+                game.missionFailed = false;
+            }
+
+            // Restart mission
+            if (game.startMission) {
+                if (logger) logger.info('🔄 Restarting mission from index:', game.currentMissionIndex);
+                game.startMission(game.currentMissionIndex);
+
+                // Navigate to game screen
+                if (window.screenManager) {
+                    if (logger) logger.info('🔄 Navigating to game screen');
+                    window.screenManager.navigateTo('game');
                 }
             } else {
-                if (logger) logger.error('❌ game not available');
+                if (logger) logger.error('❌ startMission not available');
             }
         });
 
@@ -229,7 +253,7 @@
             const game = window.game; // Get current game reference
             this.closeAll();
 
-            // CRITICAL: Sync dead agents from mission to AgentService
+            // CRITICAL: Sync dead agents from mission to AgentService (PERMANENT deaths)
             if (game && game.agents && game.gameServices && game.gameServices.agentService) {
                 if (logger) logger.info(`🔍 Checking ${game.agents.length} agents for deaths`);
                 if (logger) logger.info(`📊 AgentService state: active=${game.gameServices.agentService.activeAgents.length}, fallen=${game.gameServices.agentService.fallenAgents.length}`);
@@ -273,6 +297,12 @@
                 if (logger) logger.info(`📊 After sync: active=${game.gameServices.agentService.activeAgents.length}, fallen=${game.gameServices.agentService.fallenAgents.length}`);
             }
 
+            // CRITICAL: Clear snapshot - we're accepting defeat and permanent deaths
+            if (game.gameServices?.missionStateService) {
+                if (logger) logger.info('🧹 Clearing mission snapshot (accepting defeat)');
+                game.gameServices.missionStateService.clearSnapshot();
+            }
+
             if (game && game.showSyndicateHub) {
                 if (logger) logger.info('🏠 Calling game.showSyndicateHub()');
                 game.showSyndicateHub();
@@ -298,12 +328,9 @@
         engine.registerAction('startMissionFromBriefing', function() {
             this.closeAll();
 
-            // Apply selected agents
-            if (game.activeAgents && game.selectedAgents && game.selectedAgents.length > 0) {
-                game.agents = game.activeAgents.filter(agent =>
-                    game.selectedAgents.includes(agent.id)
-                );
-
+            // NOTE: game.agents is now a computed property
+            // It automatically filters activeAgents by selectedAgents
+            if (game.selectedAgents && game.selectedAgents.length > 0) {
                 // Start the mission
                 if (game.startMission) {
                     game.startMission(game.currentMissionIndex);

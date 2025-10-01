@@ -997,7 +997,12 @@ class GameFacade {
         const game = this.legacyGame;
 
         // CRITICAL: Check for mission failure - all agents dead
-        if (this.agents && this.agents.length > 0) {
+        // NOTE: this.agents is a computed property that filters out dead agents
+        // So we need to check if selectedAgents exist but no agents are alive
+
+        // GUARD: Skip failure check during first 60 frames (1 second) of mission
+        // This prevents false positive during mission initialization
+        if (game && game.missionTimer > 60 && game.selectedAgents && game.selectedAgents.length > 0) {
             const aliveAgents = this.agents.filter(a => a.alive).length;
             if (aliveAgents === 0) {
                 // All agents are dead - mission failed!
@@ -1367,10 +1372,16 @@ class GameFacade {
                     const offsetAngle = formationAngle + (Math.PI / 4) * ((index / squadSize) - 0.5);
 
                     // Calculate formation position
-                    agent.targetX = this.selectedAgent.x + Math.cos(offsetAngle) * followDist;
-                    agent.targetY = this.selectedAgent.y + Math.sin(offsetAngle) * followDist;
+                    const newTargetX = this.selectedAgent.x + Math.cos(offsetAngle) * followDist;
+                    const newTargetY = this.selectedAgent.y + Math.sin(offsetAngle) * followDist;
+
+                    if (this.logger) this.logger.info(`🎯 3D Follow: ${agent.name} moving to formation (${newTargetX.toFixed(1)}, ${newTargetY.toFixed(1)})`);
+
+                    agent.targetX = newTargetX;
+                    agent.targetY = newTargetY;
                 } else if (leaderDist < 2) {
                     // Too close, stop moving
+                    if (this.logger) this.logger.debug(`🛑 3D Follow: ${agent.name} too close, stopping`);
                     agent.targetX = agent.x;
                     agent.targetY = agent.y;
                 }
@@ -2025,7 +2036,7 @@ class GameFacade {
      */
     dispose() {
         // Clean up any resources
-        this.agents = [];
+        // NOTE: agents is now a computed property - don't reset it
         this.enemies = [];
         this.npcs = [];
         this.projectiles = [];

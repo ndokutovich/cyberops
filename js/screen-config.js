@@ -381,10 +381,14 @@ const SCREEN_CONFIG = {
                         if (!game.selectedAgents) game.selectedAgents = [];
 
                         // Find if this agent is already selected
-                        const index = game.selectedAgents.findIndex(id => String(id) === String(agentId));
+                        // NOTE: selectedAgents is now a computed property - need to get, modify, then set
+                        const currentSelection = [...game.selectedAgents]; // Get current selection
+                        const index = currentSelection.findIndex(id => String(id) === String(agentId));
+
                         if (index > -1) {
-                            // Deselect
-                            game.selectedAgents.splice(index, 1);
+                            // Deselect - remove from array
+                            currentSelection.splice(index, 1);
+                            game.selectedAgents = currentSelection; // Set modified array back
                             this.classList.remove('selected');
                             this.style.background = 'rgba(0,255,255,0.1)';
                             this.style.borderColor = '#00ffff';
@@ -394,9 +398,10 @@ const SCREEN_CONFIG = {
                                 nameEl.style.color = '#00ffff';
                                 nameEl.textContent = nameEl.textContent.replace('✓ ', '');
                             }
-                        } else if (game.selectedAgents.length < maxAgents) {
+                        } else if (currentSelection.length < maxAgents) {
                             // Select (check against mission's max agents)
-                            game.selectedAgents.push(agentId);
+                            currentSelection.push(agentId);
+                            game.selectedAgents = currentSelection; // Set modified array back
                             this.classList.add('selected');
                             this.style.background = 'rgba(0,255,0,0.15)';
                             this.style.borderColor = '#00ff00';

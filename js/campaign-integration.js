@@ -30,7 +30,7 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
                 // Apply starting resources if new game
                 if (!this.campaignStarted) {
                     const economy = window.ContentLoader.getContent('economy');
-                    if (economy) {
+                    if (economy && this.gameServices?.resourceService) {
                         // Use ResourceService ONLY
                         this.gameServices.resourceService.set('credits', economy.startingCredits || 5000, 'campaign start');
                         this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints || 100, 'campaign start');

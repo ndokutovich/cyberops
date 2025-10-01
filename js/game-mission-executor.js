@@ -744,8 +744,16 @@ CyberOpsGame.prototype.completeMission = function(victory) {
             if (this.logger && result) {
                 this.logger.info('🎆 Mission stats:', result.stats);
             }
+
+            // CRITICAL: Merge mission results on victory
+            // This applies XP gains, items found, and accepts permanent agent deaths
+            if (this.gameServices.missionStateService) {
+                if (this.logger) this.logger.info('✅ Merging mission results to game state');
+                this.gameServices.missionStateService.mergeResults(this);
+            }
         } else {
             this.gameServices.missionService.failMission('Mission failed');
+            // Don't merge results on defeat - either retry (restore) or return to hub (manual sync)
         }
     } else {
         // Fallback if MissionService not available
