@@ -360,6 +360,11 @@ CyberOpsGame.prototype.init = function() {
             screen.style.display = 'none';
         });
 
+        // Initialize HUD service (must be before screen manager)
+        if (this.gameServices) {
+            this.gameServices.initializeHUD(this);
+        }
+
         // Initialize screen manager
         if (window.screenManager) {
             window.screenManager.init(this);

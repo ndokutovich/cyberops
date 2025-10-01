@@ -1055,93 +1055,17 @@ CyberOpsGame.prototype.centerCameraOnAgent = function(agent) {
 }
 
 CyberOpsGame.prototype.updateSquadHealth = function() {
-        const container = document.getElementById('squadHealth');
-        if (!container) return; // Skip if element doesn't exist (e.g., in tests)
-
-        container.innerHTML = '';
-
-        this.agents.forEach((agent, index) => {
-            const bar = document.createElement('div');
-
-            // Add dead class if agent is not alive
-            let className = 'agent-health-bar';
-            if (!agent.alive) {
-                className += ' dead';
-            }
-            // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
-            if (this.isAgentSelected(agent)) {
-                className += ' selected';
-            }
-            bar.className = className;
-
-            bar.style.pointerEvents = 'auto'; // Explicitly enable pointer events
-            bar.style.cursor = agent.alive ? 'pointer' : 'not-allowed'; // Change cursor for dead agents
-
-            // Calculate health percentage, ensuring it's 0 for dead agents
-            const healthPercent = agent.alive ? Math.max(0, (agent.health / agent.maxHealth) * 100) : 0;
-
-            // Get TB info if in turn-based mode
-            let tbInfo = '';
-            let apBar = '';
-            let turnIndicator = '';
-
-            if (this.turnBasedMode && agent.alive) {
-                // Find this unit in turn queue
-                const turnUnit = this.turnQueue?.find(tu => tu.unit === agent);
-                if (turnUnit) {
-                    const apPercent = (turnUnit.ap / turnUnit.maxAp) * 100;
-                    apBar = `<div class="ap-bar">
-                        <div class="ap-fill" style="width: ${apPercent}%"></div>
-                        <div class="ap-text">${turnUnit.ap}/${turnUnit.maxAp} AP</div>
-                    </div>`;
-
-                    // Check if this is current turn
-                    if (this.currentTurnUnit?.unit === agent) {
-                        turnIndicator = ' 🌟'; // Star for current turn
-                        bar.className += ' current-turn';
-                    }
-
-                    // Show initiative order
-                    const turnIndex = this.turnQueue.indexOf(turnUnit);
-                    if (turnIndex >= 0) {
-                        tbInfo = ` [T${turnIndex + 1}]`;
-                    }
-                }
-            }
-
-            bar.innerHTML = `
-                <div class="health-fill" style="width: ${healthPercent}%"></div>
-                <div class="agent-name">${agent.name} [${index + 1}]${!agent.alive ? ' ☠️' : ''}${tbInfo}${turnIndicator}</div>
-                ${apBar}
-            `;
-
-            // Add click handler to select this agent
-            bar.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent event bubbling
-                e.preventDefault(); // Prevent default behavior
-                if (this.logger) this.logger.debug(`🖱️ Health bar CLICK event for ${agent.name}, alive: ${agent.alive}`);
-
-                if (agent.alive) {
-                    // Directly call selectAgent
-                    this.selectAgent(agent);
-                    if (this.logger) this.logger.debug(`🎯 Selected ${agent.name} via health bar click`);
-                }
+        // Update squad health via HUDService
+        const hudService = this.gameServices?.hudService;
+        if (hudService) {
+            hudService.update('squadHealth', {
+                agents: this.agents,
+                turnBasedMode: this.turnBasedMode,
+                turnQueue: this.turnQueue,
+                currentTurnUnit: this.currentTurnUnit,
+                game: this  // Pass game reference for isAgentSelected and selectAgent
             });
-
-            // Also handle mousedown as backup
-            bar.addEventListener('mousedown', (e) => {
-                e.stopPropagation();
-                if (this.logger) this.logger.debug(`🖱️ Health bar MOUSEDOWN for ${agent.name}, alive: ${agent.alive}`);
-
-                // Try selecting on mousedown as well
-                if (agent.alive) {
-                    this.selectAgent(agent);
-                    if (this.logger) this.logger.debug(`🎯 Selected ${agent.name} via health bar mousedown`);
-                }
-            });
-
-            container.appendChild(bar);
-        });
+        }
 }
 
 CyberOpsGame.prototype.useAbility = function(abilityIndex) {
@@ -2162,13 +2086,10 @@ CyberOpsGame.prototype.updateCooldownDisplay = function() {
         const agent = this.agents.find(a => this.isAgentSelected(a));
         if (!agent) return;
 
-        for (let i = 0; i < 5; i++) {
-            const overlay = document.getElementById('cooldown' + i);
-            if (overlay) {
-                const maxCooldown = [0, 60, 180, 120, 300][i];
-                const progress = agent.cooldowns[i] / maxCooldown;
-                overlay.style.background = `conic-gradient(from 0deg, transparent ${(1 - progress) * 360}deg, rgba(0,0,0,0.7) ${(1 - progress) * 360}deg)`;
-            }
+        // Update cooldowns via HUDService
+        const hudService = this.gameServices?.hudService;
+        if (hudService && hudService.updateAllCooldowns) {
+            hudService.updateAllCooldowns(agent);
         }
 }
 

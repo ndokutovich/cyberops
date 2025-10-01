@@ -36,6 +36,9 @@ class GameServices {
             this.missionService
         );
 
+        // HUD service (initialized later when game is ready)
+        this.hudService = null;
+
         // NEW SERVICES: Combat, Quest, and SaveGame
         // Combat service for centralized combat state management
         if (window.CombatService) {
@@ -61,6 +64,21 @@ class GameServices {
         this.calculateAttackDamage = this.calculateAttackDamage.bind(this);
 
         if (this.logger) this.logger.debug('GameServices initialized with all services');
+    }
+
+    /**
+     * Initialize HUD service - requires game reference
+     * Called from game initialization
+     */
+    initializeHUD(game) {
+        if (!game) {
+            throw new Error('GameServices.initializeHUD requires game instance');
+        }
+
+        this.hudService = new HUDService(game);
+        this.hudService.registerAllElements();
+
+        if (this.logger) this.logger.info('✅ HUDService initialized and registered');
     }
 
     /**

@@ -111,6 +111,20 @@ class ScreenManager {
                 break;
         }
 
+        // Set HUD mode based on screen configuration
+        if (config.hud !== undefined) {
+            const hudService = this.game?.gameServices?.hudService;
+            if (hudService) {
+                const mode = config.hud;
+                const elements = config.hudElements || [];
+                if (logger) logger.debug(`🎨 Setting HUD mode: ${mode}, elements: ${elements.length}`);
+                hudService.setMode(mode, elements);
+            } else if (config.hud !== 'none') {
+                // Fail-fast: HUD configured but service not available
+                throw new Error(`HUD configured for screen '${screenId}' but HUDService not initialized`);
+            }
+        }
+
         // Execute enter actions
         if (config.onEnter) {
             if (typeof config.onEnter === 'string') {
@@ -193,15 +207,11 @@ class ScreenManager {
      * Show the game canvas
      */
     showCanvasScreen() {
-        // Show game canvas and HUD
+        // Show game canvas (HUD visibility now managed by HUDService)
         const gameCanvas = document.getElementById('gameCanvas');
-        const gameHUD = document.getElementById('gameHUD');
 
         if (gameCanvas) {
             gameCanvas.style.display = 'block';
-        }
-        if (gameHUD) {
-            gameHUD.style.display = 'block';
         }
 
         // Hide screen container to allow canvas interaction
@@ -214,14 +224,11 @@ class ScreenManager {
      */
     hideCanvasScreen() {
         const gameCanvas = document.getElementById('gameCanvas');
-        const gameHUD = document.getElementById('gameHUD');
 
         if (gameCanvas) {
             gameCanvas.style.display = 'none';
         }
-        if (gameHUD) {
-            gameHUD.style.display = 'none';
-        }
+        // HUD visibility now managed by HUDService via screen config
     }
 
     /**

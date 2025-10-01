@@ -629,10 +629,15 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
             // Sync extraction state from MissionService
             this.extractionEnabled = this.gameServices.missionService.extractionEnabled;
 
-            // Update objective display to show extraction
-            const tracker = document.getElementById('objectiveTracker');
-            if (tracker) {
-                tracker.textContent = 'All objectives complete! Reach extraction point!';
+            // Update objective display via HUDService
+            const hudService = this.gameServices?.hudService;
+            if (hudService) {
+                hudService.update('objectiveTracker', {
+                    objectives: [{
+                        description: 'All objectives complete! Reach extraction point!',
+                        completed: false
+                    }]
+                });
             }
         }
     }
@@ -640,37 +645,18 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
 
 // Update objective display
 CyberOpsGame.prototype.updateObjectiveDisplay = function() {
-    const tracker = document.getElementById('objectiveTracker');
-    if (!tracker || !this.currentMissionDef) {
-        if (this.logger) this.logger.warn('📋 updateObjectiveDisplay: No tracker element or missionDef');
+    if (!this.currentMissionDef) {
+        if (this.logger) this.logger.warn('📋 updateObjectiveDisplay: No missionDef');
         return;
-    }
-
-    let displayText = '';
-
-    // Add turn-based mode info if active
-    if (this.turnBasedMode) {
-        let tbInfo = `[TB Mode] `;
-        if (this.currentTurnUnit) {
-            const unitName = this.currentTurnUnit.unit.name || `Agent ${this.currentTurnUnit.unit.id}`;
-            const ap = this.currentTurnUnit.ap;
-            const maxAp = this.currentTurnUnit.maxAp;
-            tbInfo += `${unitName}'s Turn (${ap}/${maxAp} AP) | Round ${this.turnRound || 1} | `;
-        } else {
-            tbInfo += `Round ${this.turnRound || 1} | `;
-        }
-        displayText = tbInfo;
     }
 
     // SINGLE SOURCE: Always use MissionService objectives
     if (!this.gameServices || !this.gameServices.missionService) {
-        tracker.textContent = displayText + 'Mission service loading...';
         return;
     }
 
     const objectives = this.gameServices.missionService.objectives;
     if (!objectives || objectives.length === 0) {
-        tracker.textContent = displayText + 'Mission objectives loading...';
         return;
     }
 
@@ -685,15 +671,26 @@ CyberOpsGame.prototype.updateObjectiveDisplay = function() {
             this.logger.trace(`  - Progress: ${primaryObj.progress}/${primaryObj.maxProgress}`);
         }
     }
-    if (primaryObj) {
-        displayText += OBJECTIVE_HANDLERS.getDisplayText(primaryObj, this);
-    } else if (this.gameServices?.missionService?.extractionEnabled) {
-        displayText += 'All objectives complete! Reach extraction point!';
-    } else {
-        displayText += 'All objectives complete!';
-    }
 
-    tracker.textContent = displayText;
+    // Build objective list for HUDService
+    const objectiveList = [];
+    objectives.forEach(obj => {
+        objectiveList.push({
+            description: OBJECTIVE_HANDLERS.getDisplayText(obj, this),
+            completed: obj.status === 'completed'
+        });
+    });
+
+    // Update via HUDService
+    const hudService = this.gameServices?.hudService;
+    if (hudService) {
+        hudService.update('objectiveTracker', {
+            turnBasedMode: this.turnBasedMode,
+            currentTurnUnit: this.currentTurnUnit,
+            turnRound: this.turnRound,
+            objectives: objectiveList
+        });
+    }
 
     // Also update the mission list dialog if it's open
     const missionDialog = document.querySelector('.mission-list-dialog');

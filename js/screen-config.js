@@ -36,6 +36,7 @@ const SCREEN_CONFIG = {
         type: 'generated',
         background: '#000',
         music: true,  // Start music here at the beginning
+        hud: 'none',  // No HUD on splash screens
         content: () => `
             <div class="logo-container">
                 <div class="company-name">${SPLASH_CONFIG.vendor.mainText}</div>
@@ -78,6 +79,7 @@ const SCREEN_CONFIG = {
     'studio-splash': {
         type: 'generated',
         background: '#000',
+        hud: 'none',  // No HUD on splash screens
         content: () => `
             <div class="logo-container">
                 <div class="studio-name">${SPLASH_CONFIG.studio.mainText}</div>
@@ -107,6 +109,7 @@ const SCREEN_CONFIG = {
     'splash': {
         type: 'generated',
         background: '#0a0e1a',
+        hud: 'none',  // No HUD on splash screens
         // music: true,  // Music continues from vendor-splash, don't restart
         content: () => `
             <div class="loading-screen" style="display: flex;">
@@ -141,6 +144,7 @@ const SCREEN_CONFIG = {
     'main-menu': {
         type: 'generated',
         background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)',
+        hud: 'none',  // No HUD on menu
         // music: true,  // Music continues from vendor-splash, don't restart
         onEnter: function() {
             // Start demoscene idle timer
@@ -252,6 +256,7 @@ const SCREEN_CONFIG = {
     'mission-briefing': {
         type: 'generated',
         background: 'linear-gradient(135deg, #0a1628, #1a0a2e)',
+        hud: 'none',  // No HUD during briefing
         content: (params) => {
             const game = window.game;
             const mission = params?.mission || game?.currentMission;
@@ -455,6 +460,17 @@ const SCREEN_CONFIG = {
     // Game Screen (Canvas)
     'game': {
         type: 'canvas',
+        hud: 'game-2d',  // Enable in-game HUD
+        hudElements: [
+            'missionTimer',
+            'objectiveTracker',
+            'squadHealth',
+            'cooldown0',
+            'cooldown1',
+            'cooldown2',
+            'cooldown3',
+            'cooldown4'
+        ],
         onEnter: function() {
             const game = window.game;
             if (game) {
@@ -478,6 +494,7 @@ const SCREEN_CONFIG = {
     'victory': {
         type: 'generated',
         background: 'radial-gradient(circle at center, #0a4a0a, #000000)',
+        hud: 'none',  // No HUD on victory screen
         content: () => {
             const game = window.game;
             const summary = game?.gatherMissionSummary?.(true) || {};
@@ -512,6 +529,7 @@ const SCREEN_CONFIG = {
     'defeat': {
         type: 'generated',
         background: 'radial-gradient(circle at center, #4a0a0a, #000000)',
+        hud: 'none',  // No HUD on defeat screen
         content: () => {
             const game = window.game;
             const summary = game?.gatherMissionSummary?.(false) || {};
@@ -542,6 +560,7 @@ const SCREEN_CONFIG = {
     'demoscene': {
         type: 'generated',
         background: 'linear-gradient(135deg, #000000, #1a0a2e)',
+        hud: 'none',  // No HUD during demoscene
         onEnter: function() {
             const game = window.game;
             if (game) {
@@ -675,6 +694,7 @@ const SCREEN_CONFIG = {
     hub: {
         type: 'generated',
         background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)',
+        hud: 'none',  // No HUD in hub (has its own UI)
         onEnter: function() {
             // Initialize hub data
             if (window.game && window.game.updateHubStats) {
@@ -827,6 +847,7 @@ const SCREEN_CONFIG = {
     'credits': {
         type: 'generated',
         background: 'linear-gradient(to bottom, #000000, #1a1a2e)',
+        hud: 'none',  // No HUD during credits
         music: true,
         content: () => `
             <div class="credits-container">
