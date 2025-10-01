@@ -19,7 +19,8 @@ CyberOpsGame.prototype.handleInteractionKey = function() {
     }
 
     // Get the selected agent (or first agent)
-    const agent = this.agents.find(a => a.selected && a.alive) || this.agents[0];
+    // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+    const agent = this.agents.find(a => this.isAgentSelected(a) && a.alive) || this.agents[0];
     if (!agent) {
         if (this.logger) this.logger.debug('  ❌ No agent available');
         return; // No agent available
@@ -407,8 +408,8 @@ CyberOpsGame.prototype.toggle3DMode = function() {
     if (!this._selectedAgent && this.agents && this.agents.length > 0) {
         const firstAlive = this.agents.find(a => a.alive);
         if (firstAlive) {
-            this._selectedAgent = firstAlive;
-            firstAlive.selected = true;
+            // Use setter to properly sync .selected flags
+            this.selectedAgent = firstAlive;
             if (this.logger) this.logger.debug('🎯 Auto-selected first alive agent for E key:', firstAlive.name);
         }
     }

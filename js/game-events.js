@@ -11,15 +11,13 @@ CyberOpsGame.prototype.selectAllSquad = function() {
         let selectedCount = 0;
         this.agents.forEach(agent => {
             if (agent.alive) {
-                agent.selected = true;
                 selectedCount++;
-            } else {
-                agent.selected = false;
             }
         });
 
         // Update selected agent reference to first alive agent
-        this._selectedAgent = this.agents.find(a => a.alive);
+        // Use setter to properly sync .selected flags
+        this.selectedAgent = this.agents.find(a => a.alive);
 
         if (this.logger) this.logger.debug(`👥 SQUAD SELECT: Selected all ${selectedCount} alive agents`);
         this.updateSquadHealth();
@@ -133,7 +131,8 @@ CyberOpsGame.prototype.setupEventListeners = function() {
             // Action Hotkeys for both 2D and 3D modes
             if (this.currentScreen === 'game') {
                 // Get ALL selected agents for team actions
-                const selectedAgents = this.agents.filter(a => a.selected && a.alive);
+                // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+                const selectedAgents = this.agents.filter(a => this.isAgentSelected(a) && a.alive);
 
                 if (selectedAgents.length > 0) {
                     let actionTriggered = false;
@@ -517,12 +516,9 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
                 }
             }
 
-            // Clear all selections first
-            this.agents.forEach(a => a.selected = false);
-
             // Select the precisely clicked agent
-            selectedAgent.selected = true;
-            this._selectedAgent = selectedAgent;
+            // Use setter to properly sync .selected flags
+            this.selectedAgent = selectedAgent;
 
             if (this.logger) this.logger.info(`✅ TAP SELECTED: ${selectedAgent.name} (precise sprite hit)`);
             return; // Don't move if we selected an agent
@@ -557,7 +553,8 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
         }
 
         // Get all selected agents
-        const selectedAgents = this.agents.filter(a => a.selected && a.alive);
+        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+        const selectedAgents = this.agents.filter(a => this.isAgentSelected(a) && a.alive);
 
         if (selectedAgents.length > 0) {
             // Handle turn-based movement differently
@@ -693,17 +690,15 @@ CyberOpsGame.prototype.selectAgent = function(agent) {
                     this.logEvent(`It's ${this.currentTurnUnit.unit.name}'s turn!`, 'warning');
                 }
                 // Re-select the current turn unit
-                this.agents.forEach(a => a.selected = false);
-                this.currentTurnUnit.unit.selected = true;
-                this._selectedAgent = this.currentTurnUnit.unit;
+                // Use setter to properly sync .selected flags
+                this.selectedAgent = this.currentTurnUnit.unit;
                 this.updateSquadHealth();
                 return;
             }
         }
 
-        this.agents.forEach(a => a.selected = false);
-        agent.selected = true;
-        this._selectedAgent = agent;
+        // Use setter to properly sync .selected flags
+        this.selectedAgent = agent;
         this.updateSquadHealth();
         this.updateCooldownDisplay();
         this.centerCameraOnAgent(agent);

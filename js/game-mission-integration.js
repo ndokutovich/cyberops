@@ -54,7 +54,8 @@ CyberOpsGame.prototype.breachNearestGate = function(agent) {
 CyberOpsGame.prototype.useAbilityForAllSelectedUpdated = function(abilityIndex) {
     if (this.isPaused) return;
 
-    const selectedAgents = this.agents.filter(a => a.selected && a.alive);
+    // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+    const selectedAgents = this.agents.filter(a => this.isAgentSelected(a) && a.alive);
     if (selectedAgents.length === 0) return;
 
     let anyUsed = false;

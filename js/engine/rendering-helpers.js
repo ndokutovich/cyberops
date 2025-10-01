@@ -156,7 +156,9 @@ class RenderingHelpers {
         ctx.translate(isoPos.x, isoPos.y);
 
         // Draw body and selection WITHOUT rotation
-        if (agent.selected) {
+        // UNIDIRECTIONAL: Check selection from single source of truth (_selectedAgent)
+        const isSelected = game && game.isAgentSelected ? game.isAgentSelected(agent) : agent.selected;
+        if (isSelected) {
             // Pulsing selection ring for selected agents
             const pulse = Math.sin(Date.now() * 0.005) * 0.2 + 0.8;
             ctx.strokeStyle = '#00ffff';

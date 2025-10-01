@@ -48,8 +48,28 @@ Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
                 return;
             }
         }
+
+        // CRITICAL: Sync the .selected flag on agent objects
+        // Movement code checks agent.selected, not just _selectedAgent
+        if (this.agents && Array.isArray(this.agents)) {
+            this.agents.forEach(agent => {
+                // Use ID comparison instead of reference equality
+                // because this.agents is a computed property that returns new array each time
+                if (value) {
+                    agent.selected = (agent.id === value.id || agent.name === value.name);
+                } else {
+                    agent.selected = false;
+                }
+            });
+        }
     }
 });
+
+// Check if an agent is selected (unidirectional - reads from _selectedAgent only)
+CyberOpsGame.prototype.isAgentSelected = function(agent) {
+    if (!this._selectedAgent) return false;
+    return agent.id === this._selectedAgent.id || agent.name === this._selectedAgent.name;
+};
 
 CyberOpsGame.prototype.resizeCanvas = function() {
     if (this.canvas) {

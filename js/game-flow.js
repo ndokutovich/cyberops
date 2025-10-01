@@ -385,9 +385,8 @@ CyberOpsGame.prototype.initMission = function() {
         };
         this.objectiveStatus = {};
 
-        // Initialize event log and team commands
+        // Initialize event log (but NOT team commands yet - agents need positions first)
         this.initEventLog();
-        this.initTeamCommands();
         this.clearEventLog();
         this.logMissionEvent('start');
 
@@ -651,7 +650,7 @@ CyberOpsGame.prototype.initMission = function() {
                 this.logger.info(`🎯 Agent ${idx+1} (${agent.name}) positioned at spawn: pos=(${agent.x}, ${agent.y}), target=(${agent.targetX}, ${agent.targetY})`);
                 this.logger.debug(`   Agent ID: ${agent.id}`);
             }
-            agent.selected = idx === 0;
+            // Selection will be set via setter below
             agent.alive = true;
             agent.cooldowns = [0, 0, 0, 0, 0];
             agent.facingAngle = Math.PI / 2; // Default facing down/south
@@ -751,35 +750,16 @@ CyberOpsGame.prototype.initMission = function() {
             if (this.logger) this.logger.info(`✅ Updated AgentService with ${agentIds.length} mission agents`);
         }
 
-        // CRITICAL: Re-initialize hold positions AFTER agents are positioned at spawn
-        // initTeamCommands was called earlier when agents had wrong positions
-        if (this.logger) this.logger.info(`🎯 Team mode: ${this.teamMode}, Modified agents: ${modifiedAgents.length}`);
-
-        if (this.teamMode === 'hold' && modifiedAgents.length > 0) {
-            if (this.logger) this.logger.info('🔄 Re-initializing hold positions with correct spawn positions');
-            modifiedAgents.forEach(agent => {
-                if (agent.alive) {
-                    this.holdPositions[agent.id] = {
-                        x: agent.x,
-                        y: agent.y
-                    };
-                    if (this.logger) this.logger.info(`   ✓ Hold position for ${agent.name}: (${agent.x}, ${agent.y})`);
-                }
-            });
-        } else {
-            if (this.logger) this.logger.warn(`⚠️ Hold positions NOT re-initialized (teamMode: ${this.teamMode}, agents: ${modifiedAgents.length})`);
-        }
+        // Initialize team commands AFTER agents have been positioned
+        // This ensures hold positions are set to actual spawn positions, not (0,0)
+        this.initTeamCommands();
+        if (this.logger) this.logger.info(`🎯 Team commands initialized. Team mode: ${this.teamMode}, Modified agents: ${modifiedAgents.length}`);
 
             // Auto-select first agent for better UX
             // NOTE: Use modifiedAgents instead of this.agents (computed property)
             if (modifiedAgents.length > 0) {
-                modifiedAgents.forEach(a => a.selected = false);
-
-                // Select first agent by default
+                // Select first agent by default using setter (syncs flags automatically)
                 const firstAgent = modifiedAgents[0];
-                firstAgent.selected = true;
-                this._selectedAgent = firstAgent;
-                // Also set selectedAgent (without underscore) for compatibility
                 this.selectedAgent = firstAgent;
 
                 if (this.logger) this.logger.debug('🎯 Auto-selected first agent for better UX:', firstAgent.name || firstAgent.id);
@@ -1289,7 +1269,8 @@ CyberOpsGame.prototype.useAbilityForAllSelected = function(abilityIndex) {
             return;
         }
 
-        const selectedAgents = this.agents.filter(a => a.selected && a.alive);
+        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+        const selectedAgents = this.agents.filter(a => this.isAgentSelected(a) && a.alive);
         if (selectedAgents.length === 0) return;
 
         let anyUsed = false;

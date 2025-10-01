@@ -28,9 +28,14 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
 
             if (campaignConfig && campaignContent) {
                 // Merge config and content
+                // campaignContent has the proper structure (metadata, agents, weapons, etc.)
+                // campaignConfig has the old structure (id, name, folder, acts)
+                // Merge campaignContent first so it takes precedence
                 const campaign = {
-                    ...campaignConfig,
-                    ...campaignContent
+                    ...campaignContent,
+                    // Keep acts and folder from campaignConfig if not in content
+                    acts: campaignContent.acts || campaignConfig.acts,
+                    folder: campaignContent.folder || campaignConfig.folder
                 };
 
                 const success = await window.ContentLoader.loadCampaign(campaign, this);

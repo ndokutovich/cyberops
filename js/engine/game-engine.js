@@ -870,7 +870,9 @@ class GameEngine {
         this.facade.agents.forEach(agent => {
             if (agent.alive) {
                 // Render path if exists (for debugging)
-                if (agent.selected && this.facade.showPaths) {
+                // UNIDIRECTIONAL: Check selection from single source of truth
+                const isSelected = game && game.isAgentSelected ? game.isAgentSelected(agent) : agent.selected;
+                if (isSelected && this.facade.showPaths) {
                     // Render A* pathfinding path
                     if (agent.path) {
                         this.renderingHelpers.renderPath(agent.path, agent.currentPathIndex, agent.color, this.ctx, (x, y) => this.worldToIsometric(x, y));

@@ -19,10 +19,23 @@ CyberOpsGame.prototype.initTeamCommands = function() {
     if (this.agents) {
         this.agents.forEach(agent => {
             if (agent.alive) {
+                // CRITICAL: Validate agent position before storing as hold position
+                const agentX = agent.x !== undefined ? agent.x : 0;
+                const agentY = agent.y !== undefined ? agent.y : 0;
+
                 this.holdPositions[agent.id] = {
-                    x: agent.x,
-                    y: agent.y
+                    x: agentX,
+                    y: agentY
                 };
+
+                if (this.logger) {
+                    this.logger.debug(`🎯 Initial hold position for ${agent.name || agent.id}: (${agentX}, ${agentY})`);
+                }
+
+                // WARN if position is (0,0) - likely a bug
+                if (agentX === 0 && agentY === 0) {
+                    if (this.logger) this.logger.warn(`⚠️ Agent ${agent.name || agent.id} has position (0,0) at initTeamCommands!`);
+                }
             }
         });
     }
@@ -42,7 +55,8 @@ CyberOpsGame.prototype.setTeamMode = function(mode) {
 
     // Set positions based on mode
     this.agents.forEach(agent => {
-        if (!agent.selected && agent.alive) {
+        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+        if (!this.isAgentSelected(agent) && agent.alive) {
             switch(mode) {
                 case 'hold':
                     // Store current position as hold position (not spawn - use where agent currently is)
@@ -89,7 +103,8 @@ CyberOpsGame.prototype.updateTeamAI = function() {
     if (!this.agents) return;
 
     this.agents.forEach(agent => {
-        if (!agent.selected && agent.alive) {
+        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+        if (!this.isAgentSelected(agent) && agent.alive) {
             // Check for nearby enemies and auto-fire
             const nearbyEnemy = this.findNearestEnemy(agent);
             if (nearbyEnemy && this.getDistance(agent, nearbyEnemy) <= this.autoFireRange) {
@@ -134,6 +149,13 @@ CyberOpsGame.prototype.executeHoldBehavior = function(agent) {
         return;
     }
 
+    // WARN if hold position is (0,0) - likely a bug
+    if (holdPos.x === 0 && holdPos.y === 0) {
+        if (this.logger) {
+            this.logger.error(`🚨 HOLD POSITION IS (0,0) for ${agent.name}! Agent at (${agent.x}, ${agent.y})`);
+        }
+    }
+
     // Stay at hold position
     agent.targetX = holdPos.x;
     agent.targetY = holdPos.y;
@@ -170,7 +192,8 @@ CyberOpsGame.prototype.executePatrolBehavior = function(agent) {
 // Follow behavior (existing squad following logic)
 CyberOpsGame.prototype.executeFollowBehavior = function(agent) {
     // Find selected leader
-    const leader = this.agents.find(a => a.selected && a.alive);
+    // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+    const leader = this.agents.find(a => this.isAgentSelected(a) && a.alive);
     if (!leader) return;
 
     // Follow at a distance
@@ -277,7 +300,8 @@ CyberOpsGame.prototype.drawTeamModeIndicators = function(ctx) {
     ctx.save();
 
     this.agents.forEach(agent => {
-        if (!agent.selected && agent.alive) {
+        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+        if (!this.isAgentSelected(agent) && agent.alive) {
             const screenPos = this.worldToIsometric(agent.x, agent.y);
 
             // Draw mode indicator
