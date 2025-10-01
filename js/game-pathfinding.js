@@ -288,7 +288,8 @@ CyberOpsGame.prototype.moveAgentWithPathfinding = function(agent) {
                 agent.lastTargetKey = targetKey;
                 agent.currentPathIndex = 0;
 
-                if (agent.selected) {
+                // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+                if (this.isAgentSelected(agent)) {
                     const agentIdentifier = agent.name || agent.id || 'unknown';
                     if (this.logger) this.logger.debug(`📍 Path calculated for ${agentIdentifier}: ${agent.path.length} waypoints`);
                 }

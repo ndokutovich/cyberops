@@ -1408,7 +1408,8 @@ class GameFacade {
                     // Update the main waypoints array reference
                     game.agentWaypoints[agent.id] = waypoints;
 
-                    if (agent.selected) {
+                    // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+                    if (game.isAgentSelected && game.isAgentSelected(agent)) {
                         if (this.logger) this.logger.info(`✅ ${agent.name} reached waypoint, ${waypoints.length} remaining`);
                     }
 
@@ -1918,7 +1919,8 @@ class GameFacade {
         });
 
         game.updateSquadHealth();
-        if (this.agents.some(a => a.selected)) {
+        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+        if (this.agents.some(a => game.isAgentSelected && game.isAgentSelected(a))) {
             game.updateCooldownDisplay();
         }
 

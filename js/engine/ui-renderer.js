@@ -175,7 +175,9 @@ class UIRenderer {
                 ctx.rotate(angle);
 
                 // Vision cone
-                ctx.fillStyle = agent.selected ? 'rgba(0, 255, 255, 0.15)' : 'rgba(0, 255, 0, 0.1)';
+                // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+                const isSelected = game && game.isAgentSelected ? game.isAgentSelected(agent) : agent.selected;
+                ctx.fillStyle = isSelected ? 'rgba(0, 255, 255, 0.15)' : 'rgba(0, 255, 0, 0.1)';
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
                 ctx.arc(0, 0, 30 * scale, -Math.PI / 4, Math.PI / 4);
@@ -185,7 +187,7 @@ class UIRenderer {
                 ctx.restore();
 
                 // Draw agent dot
-                ctx.fillStyle = agent.selected ? '#00ffff' : '#00ff00';
+                ctx.fillStyle = isSelected ? '#00ffff' : '#00ff00';
                 ctx.fillRect(
                     agent.x * scale - 2,
                     agent.y * scale - 2,
@@ -193,7 +195,7 @@ class UIRenderer {
                 );
 
                 // Selected agent gets a circle
-                if (agent.selected) {
+                if (isSelected) {
                     ctx.strokeStyle = '#00ffff';
                     ctx.lineWidth = 1;
                     ctx.strokeRect(

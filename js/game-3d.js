@@ -161,10 +161,8 @@ CyberOpsGame.prototype.switchCameraMode = function() {
             // Auto-select the first available alive agent
             const aliveAgent = this.agents.find(agent => agent.alive);
             if (aliveAgent) {
-                // Clear previous selections
-                this.agents.forEach(a => a.selected = false);
-                this._selectedAgent = aliveAgent;
-                aliveAgent.selected = true;
+                // Use setter to properly sync .selected flags
+                this.selectedAgent = aliveAgent;
                 if (this.logger) this.logger.debug('🎯 Auto-selected agent for 3D mode:', aliveAgent.name);
             }
         }
@@ -1266,10 +1264,8 @@ CyberOpsGame.prototype.update3D = function() {
             // Find another alive agent
             const aliveAgent = this.agents.find(agent => agent.alive);
             if (aliveAgent) {
-                // Clear previous selections
-                this.agents.forEach(a => a.selected = false);
-                this._selectedAgent = aliveAgent;
-                aliveAgent.selected = true;
+                // Use setter to properly sync .selected flags
+                this.selectedAgent = aliveAgent;
                 if (this.logger) this.logger.debug('🎯 Auto-selected new agent:', aliveAgent.name);
                 this.update3DHUD();
             } else {
@@ -2121,7 +2117,9 @@ CyberOpsGame.prototype.renderMinimap3D = function() {
         // Draw agents
         this.agents.forEach(agent => {
             if (agent.alive) {
-                mctx.fillStyle = agent.selected ? '#00ffff' : '#00ff00';
+                // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+                const isSelected = this.isAgentSelected ? this.isAgentSelected(agent) : agent.selected;
+                mctx.fillStyle = isSelected ? '#00ffff' : '#00ff00';
                 mctx.fillRect(
                     agent.x * scale - 2,
                     agent.y * scale - 2,

@@ -378,7 +378,8 @@ CyberOpsGame.prototype.cycleAgents = function() {
 
     const aliveAgents = this.agents.filter(a => a.alive);
     if (aliveAgents.length > 0) {
-        const current = aliveAgents.findIndex(a => a.selected);
+        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+        const current = aliveAgents.findIndex(a => this.isAgentSelected(a));
         const next = (current + 1) % aliveAgents.length;
         this.selectAgent(aliveAgents[next]);
     }

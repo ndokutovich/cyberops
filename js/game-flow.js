@@ -1068,7 +1068,8 @@ CyberOpsGame.prototype.updateSquadHealth = function() {
             if (!agent.alive) {
                 className += ' dead';
             }
-            if (agent.selected) {
+            // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+            if (this.isAgentSelected(agent)) {
                 className += ' selected';
             }
             bar.className = className;
@@ -1145,7 +1146,8 @@ CyberOpsGame.prototype.updateSquadHealth = function() {
 
 CyberOpsGame.prototype.useAbility = function(abilityIndex) {
         if (this.isPaused) return;
-        const agent = this.agents.find(a => a.selected);
+        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+        const agent = this.agents.find(a => this.isAgentSelected(a));
         if (!agent || !agent.alive || agent.cooldowns[abilityIndex] > 0) return;
 
         // In turn-based mode, check AP and handle differently
@@ -2156,7 +2158,8 @@ CyberOpsGame.prototype.alertEnemies = function(x, y, radius) {
 }
 
 CyberOpsGame.prototype.updateCooldownDisplay = function() {
-        const agent = this.agents.find(a => a.selected);
+        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+        const agent = this.agents.find(a => this.isAgentSelected(a));
         if (!agent) return;
 
         for (let i = 0; i < 5; i++) {

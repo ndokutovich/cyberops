@@ -203,8 +203,9 @@ class RenderingHelpers {
         ctx.rotate(isoAngle);
 
         // Draw vision cone
-        ctx.fillStyle = agent.selected ? 'rgba(0, 255, 255, 0.15)' : 'rgba(0, 255, 255, 0.1)';
-        ctx.strokeStyle = agent.selected ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 255, 255, 0.2)';
+        // UNIDIRECTIONAL: Reuse isSelected from line 160 (already calculated)
+        ctx.fillStyle = isSelected ? 'rgba(0, 255, 255, 0.15)' : 'rgba(0, 255, 255, 0.1)';
+        ctx.strokeStyle = isSelected ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 255, 255, 0.2)';
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, 60, -Math.PI/4, Math.PI/4);

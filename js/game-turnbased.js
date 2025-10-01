@@ -277,11 +277,8 @@ CyberOpsGame.prototype.startTurn = function(index) {
     if (turnData.team === 'enemy') {
         setTimeout(() => this.executeAITurn(turnData), 500);
     } else if (turnData.team === 'player') {
-        // Deselect all agents
-        this.agents.forEach(a => a.selected = false);
-        // Select the current unit
-        turnData.unit.selected = true;
-        this._selectedAgent = turnData.unit;
+        // Select the current unit (use setter to sync .selected flags)
+        this.selectedAgent = turnData.unit;
         if (this.logger) this.logger.debug(`🎯 Auto-selected: ${turnData.unit.name}`);
 
         // Add visual notification and log

@@ -848,7 +848,8 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
                                                     text: 'Back',
                                                     action: () => {
                                                         // Re-show NPC dialog
-                                                        this.interactWithNPC(this.agents.find(a => a.selected), dialogData.npc);
+                                                        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
+                                                        this.interactWithNPC(this.agents.find(a => this.isAgentSelected(a)), dialogData.npc);
                                                     }
                                                 }
                                             ]
