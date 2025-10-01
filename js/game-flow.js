@@ -24,28 +24,9 @@ CyberOpsGame.prototype.startCampaign = function() {
         this.gameServices.resourceService.set('researchPoints', this.startingResearchPoints || 100, 'new campaign');
         this.gameServices.resourceService.set('worldControl', 0, 'new campaign');
 
-        // Assign 4 random agents from available pool if not already assigned
-        // (This just makes them active, doesn't actually hire through service)
-        if (!this.activeAgents || this.activeAgents.length === 0) {
-            const availableAgents = [...this.availableAgents];
-            this.activeAgents = [];
-            for (let i = 0; i < 4 && availableAgents.length > 0; i++) {
-                const randomIndex = Math.floor(Math.random() * availableAgents.length);
-                const agent = availableAgents.splice(randomIndex, 1)[0];
-
-                // Properly hire through service to maintain consistency
-                if (agent && this.gameServices?.agentService) {
-                    // Mark as free starter agent
-                    const originalCost = agent.cost;
-                    agent.cost = 0;
-                    const success = this.gameServices.agentService.hireAgent(agent.id);
-                    if (success) {
-                        if (this.logger) this.logger.debug(`Auto-hired starter agent: ${agent.name}`);
-                    }
-                    agent.cost = originalCost; // Restore cost
-                }
-            }
-        }
+        // Agents are already properly initialized by AgentService from campaign content
+        // Agents with hired: true in campaign-content.js are already in activeAgents
+        // No need to hire them again!
 
         // EMERGENCY CHECK: Make sure missions are initialized before showing hub
         if (!this.missions || this.missions.length === 0) {
