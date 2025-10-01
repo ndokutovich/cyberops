@@ -3,8 +3,9 @@
  * Provides centralized access to RPG calculations and state
  */
 class RPGService {
-    constructor(formulaService) {
+    constructor(formulaService, resourceService) {
         this.formulaService = formulaService;
+        this.resourceService = resourceService;
         this.rpgManager = null;
         this.inventoryManager = null;
         this.shopManager = null;
@@ -18,8 +19,8 @@ class RPGService {
         this.rpgManager = new RPGManager();
         this.inventoryManager = new InventoryManager();
 
-        // Pass dependencies to ShopManager
-        this.shopManager = new ShopManager(this.rpgManager, this.inventoryManager);
+        // Pass dependencies to ShopManager (including resourceService for credits)
+        this.shopManager = new ShopManager(this.rpgManager, this.inventoryManager, this.resourceService);
 
         // Get RPG config from campaign
         this.loadRPGConfig();

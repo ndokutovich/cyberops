@@ -19,28 +19,42 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
 
     try {
         // First try to use the new flexible content loader
-        if (window.ContentLoader && window.CampaignSystem?.campaignConfigs?.[campaignId]) {
+        if (window.ContentLoader && window.CampaignSystem) {
             if (this.logger) this.logger.debug('🚀 Using flexible content loader system');
-            const campaign = window.CampaignSystem.campaignConfigs[campaignId];
-            const success = await window.ContentLoader.loadCampaign(campaign, this);
 
-            if (success) {
-                if (this.logger) this.logger.info('✅ Campaign loaded via flexible system');
+            // Merge campaign config (structure) with content (agents, weapons, etc.)
+            const campaignConfig = window.CampaignSystem.getCampaign(campaignId);
+            const campaignContent = window.CampaignSystem.getCampaignContent(campaignId);
 
-                // Apply starting resources if new game
-                if (!this.campaignStarted) {
-                    const economy = window.ContentLoader.getContent('economy');
-                    if (economy && this.gameServices?.resourceService) {
-                        // Use ResourceService ONLY
-                        this.gameServices.resourceService.set('credits', economy.startingCredits || 5000, 'campaign start');
-                        this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints || 100, 'campaign start');
-                        this.gameServices.resourceService.set('worldControl', economy.startingWorldControl || 0, 'campaign start');
+            if (campaignConfig && campaignContent) {
+                // Merge config and content
+                const campaign = {
+                    ...campaignConfig,
+                    ...campaignContent
+                };
+
+                const success = await window.ContentLoader.loadCampaign(campaign, this);
+
+                if (success) {
+                    if (this.logger) this.logger.info('✅ Campaign loaded via flexible system');
+
+                    // Apply starting resources if new game
+                    if (!this.campaignStarted) {
+                        const economy = window.ContentLoader.getContent('economy');
+                        if (economy && this.gameServices?.resourceService) {
+                            // Use ResourceService ONLY
+                            this.gameServices.resourceService.set('credits', economy.startingCredits || 5000, 'campaign start');
+                            this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints || 100, 'campaign start');
+                            this.gameServices.resourceService.set('worldControl', economy.startingWorldControl || 0, 'campaign start');
+                        }
+                        this.campaignStarted = true;
                     }
-                    this.campaignStarted = true;
-                }
 
-                // The flexible loader already set up agents, weapons, etc.
-                return;
+                    // The flexible loader already set up agents, weapons, etc.
+                    return;
+                }
+            } else {
+                if (this.logger) this.logger.warn('Campaign config or content not found, falling back to legacy loading');
             }
         }
 

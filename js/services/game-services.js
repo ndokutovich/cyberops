@@ -19,7 +19,7 @@ class GameServices {
         // Initialize dependent services
         this.researchService = new ResearchService(this.formulaService);
         this.equipmentService = new EquipmentService(this.formulaService);
-        this.rpgService = new RPGService(this.formulaService);
+        this.rpgService = new RPGService(this.formulaService, this.resourceService);
         this.inventoryService = new InventoryService(this.formulaService, this.equipmentService);
 
         // Item service for collectable handling

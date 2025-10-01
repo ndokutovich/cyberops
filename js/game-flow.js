@@ -678,6 +678,14 @@ CyberOpsGame.prototype.initMission = function() {
                 // Preserve existing RPG entity with all XP and stats
                 agent.rpgEntity = persistentAgent.rpgEntity;
                 if (this.logger) this.logger.debug(`📊 Preserved RPG entity for agent: ${agent.name} (Level ${agent.rpgEntity.level}, XP: ${agent.rpgEntity.experience})`);
+
+                // Re-register the entity in RPGManager so skills can be learned
+                const rpgManager = this.rpgManager || window.GameServices?.rpgService?.rpgManager;
+                if (rpgManager) {
+                    const entityId = agent.originalId || agent.id || agent.name;
+                    rpgManager.entities.set(entityId, agent.rpgEntity);
+                    if (this.logger) this.logger.debug(`📇 Re-registered RPG entity in RPGManager with ID: ${entityId}`);
+                }
             } else if (!agent.rpgEntity) {
                 const rpgManager = this.rpgManager || window.GameServices?.rpgService?.rpgManager;
                 if (rpgManager) {

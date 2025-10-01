@@ -45,13 +45,14 @@ CyberOpsGame.prototype.setTeamMode = function(mode) {
         if (!agent.selected && agent.alive) {
             switch(mode) {
                 case 'hold':
-                    // Store current position as hold position
+                    // Store current position as hold position (not spawn - use where agent currently is)
                     this.holdPositions[agent.id] = {
                         x: agent.x,
                         y: agent.y
                     };
                     agent.targetX = agent.x;
                     agent.targetY = agent.y;
+                    if (this.logger) this.logger.debug(`🎯 Hold position set for ${agent.name || agent.id}: (${agent.x}, ${agent.y})`);
                     break;
 
                 case 'patrol':

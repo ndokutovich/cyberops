@@ -110,7 +110,8 @@
                     options: [
                         {
                             text: '🛒 Open Shop',
-                            action: function() {
+                            action: function(game) {
+                                // game parameter is passed by the action handler
                                 // Close NPC dialog first
                                 if (game.closeNPCDialog) {
                                     game.closeNPCDialog();

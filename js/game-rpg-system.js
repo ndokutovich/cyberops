@@ -51,8 +51,17 @@ class RPGPawn {
     }
 
     getRPGConfig() {
-        // Try multiple sources for RPG config
-        return window.RPG_CONFIG || window.ContentLoader?.getContent?.('rpgConfig') || null;
+        // Try multiple sources for RPG config (same as game.getRPGConfig())
+        if (window.ContentLoader) {
+            const config = window.ContentLoader.getContent('rpgConfig');
+            if (config) return config;
+        }
+        // Fallback to campaign config
+        if (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig) {
+            return window.MAIN_CAMPAIGN_CONFIG.rpgConfig;
+        }
+        // Legacy fallback
+        return window.RPG_CONFIG || null;
     }
 
     initializeStats(customStats = {}) {

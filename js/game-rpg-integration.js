@@ -28,26 +28,19 @@ CyberOpsGame.prototype.initRPGSystem = function() {
     this._originalCreateEnemy = this.createEnemy;
     this._originalCreateNPC = this.createNPC;
 
-    // Initialize RPG through GameServices if available
-    if (window.GameServices && window.GameServices.rpgService) {
-        // Use centralized RPG service
-        window.GameServices.rpgService.initialize(this);
-
-        // Store references locally for convenience
-        this.rpgManager = window.GameServices.rpgService.rpgManager;
-        this.inventoryManager = window.GameServices.rpgService.inventoryManager;
-        this.shopManager = window.GameServices.rpgService.shopManager;
-    } else {
-        // Fallback to direct initialization
-        this.rpgManager = new RPGManager();
-        this.rpgManager.game = this;
-        this.inventoryManager = new InventoryManager();
-        this.inventoryManager.game = this;
-        this.shopManager = new ShopManager();
-        this.shopManager.game = this;
-        // Load shops after game reference is set
-        this.shopManager.loadShops();
+    // Initialize RPG through GameServices (required)
+    if (!window.GameServices || !window.GameServices.rpgService) {
+        console.error('❌ GameServices.rpgService not available - RPG system cannot initialize');
+        return;
     }
+
+    // Use centralized RPG service
+    window.GameServices.rpgService.initialize(this);
+
+    // Store references locally for convenience
+    this.rpgManager = window.GameServices.rpgService.rpgManager;
+    this.inventoryManager = window.GameServices.rpgService.inventoryManager;
+    this.shopManager = window.GameServices.rpgService.shopManager;
 
     // Load RPG config from campaign
     let rpgConfig = null;
@@ -182,15 +175,43 @@ class RPGManager {
 
     // Learn a skill for an entity (unidirectional flow)
     learnSkill(entityId, skillId) {
-        const entity = this.entities.get(entityId);
+        // Try both numeric and string versions of the ID
+        let entity = this.entities.get(entityId);
+
+        if (!entity && typeof entityId === 'string') {
+            // Try parsing as number
+            const numericId = parseInt(entityId, 10);
+            if (!isNaN(numericId)) {
+                entity = this.entities.get(numericId);
+                if (this.logger && entity) {
+                    this.logger.debug(`🎓 Found entity using numeric ID: ${numericId}`);
+                }
+            }
+        } else if (!entity && typeof entityId === 'number') {
+            // Try as string
+            entity = this.entities.get(String(entityId));
+            if (this.logger && entity) {
+                this.logger.debug(`🎓 Found entity using string ID: "${entityId}"`);
+            }
+        }
+
         if (!entity) {
-            if (this.logger) this.logger.error(`Entity not found: ${entityId}`);
+            if (this.logger) {
+                this.logger.error(`❌ Entity not found: ${entityId} (type: ${typeof entityId})`);
+                this.logger.debug(`🎓 Available entity IDs: ${Array.from(this.entities.keys()).join(', ')}`);
+            }
             return false;
+        }
+
+        if (this.logger) {
+            this.logger.debug(`🎓 Learning skill: entityId=${entityId}, skillId=${skillId}`);
+            this.logger.debug(`🎓 Entity availableSkillPoints: ${entity.availableSkillPoints}`);
+            this.logger.debug(`🎓 Entity skills: ${JSON.stringify(entity.skills || {})}`);
         }
 
         // Check if entity has available skill points
         if (!entity.availableSkillPoints || entity.availableSkillPoints <= 0) {
-            if (this.logger) this.logger.warn(`No skill points available for ${entityId}`);
+            if (this.logger) this.logger.warn(`⚠️ No skill points available for ${entityId} (has ${entity.availableSkillPoints})`);
             return false;
         }
 
@@ -480,10 +501,11 @@ class InventoryManager {
 
 // Shop Manager
 class ShopManager {
-    constructor(rpgManager = null, inventoryManager = null) {
+    constructor(rpgManager = null, inventoryManager = null, resourceService = null) {
         this.shops = new Map();
         this.rpgManager = rpgManager;
         this.inventoryManager = inventoryManager;
+        this.resourceService = resourceService;
         this.rpgConfig = null;
     }
 
@@ -494,24 +516,36 @@ class ShopManager {
     loadShops() {
         // Load shops from config
         const rpgConfig = this.rpgConfig || window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {};
+
+        console.log('🛒 loadShops called - rpgConfig has shops?', !!rpgConfig?.shops);
         if (rpgConfig?.shops) {
+            console.log('🛒 Shop IDs in config:', Object.keys(rpgConfig.shops));
             Object.entries(rpgConfig.shops).forEach(([id, shop]) => {
+                const inventory = this.generateShopInventory(shop);
                 this.shops.set(id, {
                     ...shop,
-                    inventory: this.generateShopInventory(shop)
+                    inventory: inventory
                 });
+                console.log(`🛒 Loaded shop: ${id} (${shop.name}) with ${inventory.length} items`);
             });
+        } else {
+            console.warn('⚠️ No shops found in rpgConfig');
         }
+        console.log('🛒 Total shops loaded:', this.shops.size);
     }
 
     generateShopInventory(shop) {
         const inventory = [];
+        const rpgConfig = this.rpgConfig || window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {};
+
+        console.log('🛒 generateShopInventory - shop has categories?', !!shop.itemCategories);
+        console.log('🛒 rpgConfig has items?', !!rpgConfig?.items);
 
         if (shop.itemCategories) {
             shop.itemCategories.forEach(category => {
-                // Get items from config matching category
-                const rpgConfig = this.rpgConfig || window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {};
+                console.log(`🛒 Looking for items in category: ${category}`);
                 if (rpgConfig?.items?.[category]) {
+                    console.log(`  ✓ Found ${Object.keys(rpgConfig.items[category]).length} items in ${category}`);
                     Object.entries(rpgConfig.items[category]).forEach(([id, item]) => {
                         inventory.push({
                             id,
@@ -520,11 +554,52 @@ class ShopManager {
                             price: Math.floor(item.value * (shop.priceMultiplier || 1))
                         });
                     });
+                } else {
+                    console.warn(`  ✗ No items found in category: ${category}`);
+                }
+            });
+        }
+
+        // Add exclusive items for this shop
+        if (shop.exclusiveItems && Array.isArray(shop.exclusiveItems)) {
+            console.log(`🛒 Adding ${shop.exclusiveItems.length} exclusive items`);
+            shop.exclusiveItems.forEach(itemId => {
+                // Search for the exclusive item in all categories
+                let foundItem = null;
+                let foundId = itemId;
+
+                if (rpgConfig?.items) {
+                    for (const [category, items] of Object.entries(rpgConfig.items)) {
+                        for (const [id, item] of Object.entries(items)) {
+                            if (id === itemId || item.id === itemId) {
+                                foundItem = item;
+                                foundId = id;
+                                console.log(`  ✓ Found exclusive item "${item.name}" in ${category}`);
+                                break;
+                            }
+                        }
+                        if (foundItem) break;
+                    }
+                }
+
+                if (foundItem) {
+                    inventory.push({
+                        id: foundId,
+                        ...foundItem,
+                        stock: shop.infiniteStock ? -1 : 1,  // Unique items usually have limited stock
+                        price: Math.floor(foundItem.value * (shop.priceMultiplier || 1))
+                    });
+                } else {
+                    console.warn(`  ✗ Exclusive item not found: ${itemId}`);
                 }
             });
         }
 
         return inventory;
+    }
+
+    getShop(shopId) {
+        return this.shops.get(shopId);
     }
 
     buyItem(shopId, itemId, quantity = 1, buyerId) {
@@ -536,15 +611,18 @@ class ShopManager {
 
         const totalCost = item.price * quantity;
 
-        // Check buyer has enough credits
-        const buyer = this.rpgManager?.entities.get(buyerId);
-        if (!buyer || (buyer.credits || 0) < totalCost) return false;
+        // Check team has enough credits (use ResourceService)
+        const teamCredits = this.resourceService?.get('credits') || 0;
+        if (teamCredits < totalCost) return false;
 
         // Check stock
         if (item.stock !== -1 && item.stock < quantity) return false;
 
-        // Process transaction
-        buyer.credits -= totalCost;
+        // Process transaction - deduct from team credits
+        if (this.resourceService) {
+            this.resourceService.spend('credits', totalCost, `Bought ${item.name}`);
+        }
+
         if (item.stock !== -1) item.stock -= quantity;
 
         // Add to buyer inventory
@@ -570,22 +648,20 @@ class ShopManager {
         const sellPrice = Math.floor(item.value * 0.5 * (shop.priceMultiplier || 1));
         const totalValue = sellPrice * quantity;
 
-        // Process transaction
-        const seller = this.rpgManager?.entities.get(sellerId);
-        if (seller) {
-            seller.credits = (seller.credits || 0) + totalValue;
-            inventory.removeItem(itemId, quantity);
-
-            // Add back to shop inventory if not infinite stock
-            const shopItem = shop.inventory.find(i => i.id === itemId);
-            if (shopItem && shopItem.stock !== -1) {
-                shopItem.stock += quantity;
-            }
-
-            return true;
+        // Process transaction - add to team credits
+        if (this.resourceService) {
+            this.resourceService.add('credits', totalValue, `Sold ${item.name}`);
         }
 
-        return false;
+        inventory.removeItem(itemId, quantity);
+
+        // Add back to shop inventory if not infinite stock
+        const shopItem = shop.inventory.find(i => i.id === itemId);
+        if (shopItem && shopItem.stock !== -1) {
+            shopItem.stock += quantity;
+        }
+
+        return true;
     }
 }
 
@@ -677,6 +753,10 @@ CyberOpsGame.prototype.upgradeExistingEntities = function() {
                     const derived = this.rpgManager.calculateDerivedStats(rpgAgent);
                     this.inventoryManager.createInventory(agent.id || agent.name, derived.carryWeight);
                 }
+            } else if (agent.rpgEntity && this.rpgManager) {
+                // Re-register existing entity in Map (for hub context)
+                const entityId = agent.originalId || agent.id || agent.name;
+                this.rpgManager.entities.set(entityId, agent.rpgEntity);
             }
         });
     }

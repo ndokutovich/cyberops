@@ -64,6 +64,9 @@ class ContentLoader {
             // 9. Load progression system
             this.loadProgression(game);
 
+            // 10. Load agent generation config
+            this.loadAgentGeneration(game);
+
             if (logger) logger.info('✅ Campaign loaded successfully');
             return true;
 
@@ -85,6 +88,8 @@ class ContentLoader {
         console.log('🎮 [ContentLoader] Loading RPG configuration...');
         console.log('🎮 [ContentLoader] rpgConfig has perks:', !!this.currentCampaign.rpgConfig.perks);
         console.log('🎮 [ContentLoader] Number of perks:', Object.keys(this.currentCampaign.rpgConfig.perks || {}).length);
+        console.log('🔍 [ContentLoader] rpgConfig has shops:', !!this.currentCampaign.rpgConfig.shops);
+        console.log('🔍 [ContentLoader] rpgConfig keys:', Object.keys(this.currentCampaign.rpgConfig));
 
         // Set RPG_CONFIG globally for backward compatibility with game-rpg-system.js
         window.RPG_CONFIG = this.currentCampaign.rpgConfig;
@@ -121,17 +126,19 @@ class ContentLoader {
         // Load agents into service
         const agentService = window.GameServices?.agentService;
         if (agentService) {
-            // Clear existing agents
-            agentService.clearAllAgents();
+            // Process campaign agents to proper format
+            const agents = this.currentCampaign.agents.map(agentData =>
+                this.createAgentFromData(agentData)
+            );
 
-            // Load campaign agents
-            this.currentCampaign.agents.forEach(agentData => {
-                const agent = this.createAgentFromData(agentData);
-                agentService.addAvailableAgent(agent);
-            });
+            // Use AgentService.initialize which properly handles hired flag
+            agentService.initialize(agents);
 
-            // Store for reference
-            this.contentCache.set('agents', agentService.getAvailableAgents());
+            // Store for reference (both active and available)
+            this.contentCache.set('agents', [
+                ...agentService.getActiveAgents(),
+                ...agentService.getAvailableAgents()
+            ]);
         }
     }
 
@@ -143,14 +150,18 @@ class ContentLoader {
             id: data.id,
             name: data.name,
             portrait: data.portrait || 'default',
+            specialization: data.specialization || data.class || 'soldier',  // Support both fields
             health: data.health || 100,
             maxHealth: data.maxHealth || data.health || 100,
             damage: data.damage || 10,
-            class: data.class || 'soldier',
-            hiringCost: data.hiringCost || 1000,
-            hired: false,
-            alive: true,
-            backstory: data.backstory || '',
+            speed: data.speed || 5,
+            protection: data.protection || 0,
+            class: data.class || data.specialization || 'soldier',
+            cost: data.cost || data.hiringCost || 1000,  // Support both 'cost' and 'hiringCost'
+            hired: data.hired || false,  // Respect campaign's hired flag
+            alive: data.alive !== undefined ? data.alive : true,
+            backstory: data.backstory || data.bio || '',  // Support both 'backstory' and 'bio'
+            bio: data.bio || data.backstory || '',  // Also support bio field
 
             // RPG stats if defined
             stats: data.stats || {},
@@ -475,6 +486,22 @@ class ContentLoader {
         }
 
         this.contentCache.set('progression', progression);
+    }
+
+    /**
+     * Load agent generation configuration
+     */
+    loadAgentGeneration(game) {
+        const agentGen = this.currentCampaign.agentGeneration;
+        if (!agentGen) return;
+
+        if (logger) logger.debug('👥 Loading agent generation configuration...');
+
+        // Set on game object for mission completion
+        game.agentGeneration = agentGen;
+
+        // Store for reference
+        this.contentCache.set('agentGeneration', agentGen);
     }
 
     /**

@@ -408,6 +408,26 @@
             items: {
                 weapons: {
                     // This will be populated from existing weapons
+
+                    // UNIQUE WEAPON - Only available from Viktor's shop
+                    ghostPrototype: {
+                        id: "weapon_ghost_prototype",
+                        name: "Ghost Prototype",
+                        description: "An experimental plasma rifle stolen from a military research facility. Deals massive damage but has a chance to malfunction.",
+                        icon: "⚡",
+                        type: "weapon",
+                        slot: "primary",
+                        weight: 8,
+                        value: 8000,
+                        stats: {
+                            damage: 45,  // Very high damage
+                            accuracy: 85,
+                            critChance: 15,
+                            malfunctionChance: 10  // 10% chance to misfire
+                        },
+                        rarity: "unique",
+                        shopExclusive: "black_market"  // Only Viktor sells this
+                    }
                 },
                 armor: {
                     // This will be populated from existing equipment
@@ -427,6 +447,19 @@
                         weight: 1,
                         effect: { type: "buff", duration: 5, stats: { agility: 2, strength: 2 } }
                     }
+                }
+            },
+
+            // Shop configurations
+            shops: {
+                black_market: {
+                    name: "Viktor's Black Market",
+                    description: "The best gear in the city - for the right price",
+                    priceMultiplier: 1.2,  // 20% markup
+                    sellPriceMultiplier: 0.5,  // Buy back at 50% value
+                    infiniteStock: true,
+                    itemCategories: ["weapons", "armor", "utility"],
+                    exclusiveItems: ["weapon_ghost_prototype"]  // Viktor's exclusive inventory
                 }
             }
         },
@@ -672,6 +705,14 @@
             }
         }
     };
+
+    // DIAGNOSTIC: Check rpgConfig structure immediately after definition
+    console.log('🔍 [campaign-config] DIAGNOSTIC - rpgConfig defined');
+    console.log('🔍 [campaign-config] DIAGNOSTIC - rpgConfig keys:', Object.keys(mainCampaign.rpgConfig));
+    console.log('🔍 [campaign-config] DIAGNOSTIC - rpgConfig.shops exists:', !!mainCampaign.rpgConfig.shops);
+    if (mainCampaign.rpgConfig.shops) {
+        console.log('🔍 [campaign-config] DIAGNOSTIC - shop IDs:', Object.keys(mainCampaign.rpgConfig.shops));
+    }
 
     // Merge with existing campaign content if available
     console.log('🔍 [campaign-config] Starting merge process...');

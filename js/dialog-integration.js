@@ -435,7 +435,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         // Left Panel - Agent Roster
         const rosterClickAction = `(function() {
-            game._selectedAgent = game.activeAgents[{{index}}];
+            game.selectedAgent = game.activeAgents[{{index}}];  // Use setter, not direct assignment
             const dialogEngine = game.dialogEngine || window.dialogEngine || window.declarativeDialogEngine;
             if (dialogEngine && dialogEngine.navigateTo) {
                 dialogEngine.navigateTo('character', null, true);
@@ -600,10 +600,16 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         // Skills is an object: { skillId: level }
         const learnedSkills = rpg.skills && typeof rpg.skills === 'object' ? Object.keys(rpg.skills) : [];
         if (learnedSkills.length > 0) {
+            // Get RPG config to look up skill details
+            const rpgConfig = this.getRPGConfig ? this.getRPGConfig() :
+                             (window.ContentLoader?.getContent('rpgConfig') ||
+                              window.MAIN_CAMPAIGN_CONFIG?.rpgConfig ||
+                              window.RPG_CONFIG);
+
             html += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
             learnedSkills.forEach(skillId => {
                 const skillLevel = rpg.skills[skillId];
-                const skillConfig = window.RPG_CONFIG?.skills?.[skillId];
+                const skillConfig = rpgConfig?.skills?.[skillId];
                 if (skillConfig) {
                     html += `
                         <div style="background: rgba(0,255,255,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(0,255,255,0.3);"
@@ -642,10 +648,16 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         // Perks is an array of objects: [{ id, name, effects, cooldown }]
         const acquiredPerks = Array.isArray(rpg.perks) ? rpg.perks : [];
         if (acquiredPerks.length > 0) {
+            // Get RPG config to look up perk details
+            const rpgConfig = this.getRPGConfig ? this.getRPGConfig() :
+                             (window.ContentLoader?.getContent('rpgConfig') ||
+                              window.MAIN_CAMPAIGN_CONFIG?.rpgConfig ||
+                              window.RPG_CONFIG);
+
             html += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
             acquiredPerks.forEach(perk => {
                 // Get full config for description and icon
-                const perkConfig = window.RPG_CONFIG?.perks?.[perk.id];
+                const perkConfig = rpgConfig?.perks?.[perk.id];
                 if (perkConfig) {
                     // Show perk effects if available
                     let effectsText = '';
@@ -789,10 +801,28 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         }
 
         // Get perks from campaign config
-        const rpgConfig = window.ContentLoader?.getContent('rpgConfig');
+        const rpgConfig = this.getRPGConfig ? this.getRPGConfig() :
+                         (window.ContentLoader?.getContent('rpgConfig') ||
+                          window.MAIN_CAMPAIGN_CONFIG?.rpgConfig);
         const perks = rpgConfig?.perks || {};
 
+        // Debug logging
+        if (logger) {
+            logger.debug(`🎯 Perk selection generator called for agent: ${agentId}`);
+            logger.debug(`📦 RPG Config loaded:`, rpgConfig ? 'YES' : 'NO');
+            logger.debug(`🎁 Perks available:`, Object.keys(perks).length);
+            logger.debug(`🎯 Agent RPG entity:`, rpg);
+            logger.debug(`💎 Available perk points:`, rpg.availablePerkPoints);
+            if (!rpgConfig && logger) {
+                logger.error(`❌ Could not load RPG config from any source!`);
+                logger.debug(`- this.getRPGConfig exists: ${!!this.getRPGConfig}`);
+                logger.debug(`- ContentLoader exists: ${!!window.ContentLoader}`);
+                logger.debug(`- MAIN_CAMPAIGN_CONFIG exists: ${!!window.MAIN_CAMPAIGN_CONFIG}`);
+            }
+        }
+
         if (Object.keys(perks).length === 0) {
+            if (logger) logger.error('❌ No perks found in rpgConfig!');
             return '<div style="color: #888; text-align: center; padding: 40px;">No perks available in this campaign</div>';
         }
 
@@ -1251,7 +1281,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                                             `<button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
                                                      onclick="(function() {
                                                          if (game.equipItem) {
-                                                             game.equipItem('${game.selectedEquipmentAgent}', 'weapon', ${weapon.id});
+                                                             game.equipItem('${game.selectedEquipmentAgent}', 'weapon', '${weapon.id}');
                                                              game.dialogEngine.navigateTo('arsenal');
                                                          }
                                                      })()">
@@ -1378,7 +1408,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                                             `<button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
                                                      onclick="(function() {
                                                          if (game.equipItem) {
-                                                             game.equipItem('${game.selectedEquipmentAgent}', '${slot}', ${item.id});
+                                                             game.equipItem('${game.selectedEquipmentAgent}', '${slot}', '${item.id}');
                                                              game.dialogEngine.navigateTo('arsenal');
                                                          }
                                                      })()">
@@ -2421,17 +2451,50 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
     // RPG Shop generator
     engine.registerGenerator('generateRPGShop', function() {
         const shopId = this.dialogEngine?.stateData?.shopId || 'black_market';
-        const shop = this.shopManager?.shops.get(shopId);
 
+        // Access shopManager through gameServices
+        const shopManager = this.gameServices?.rpgService?.shopManager;
+        if (!shopManager) {
+            if (this.logger) this.logger.error('ShopManager not available');
+            return '<div style="color: #ff6666; text-align: center; padding: 40px;">Shop system not initialized</div>';
+        }
+
+        // If no shops loaded, try to reload them
+        if (shopManager.shops.size === 0) {
+            if (this.logger) this.logger.warn('⚠️ No shops loaded, attempting to reload...');
+
+            // Debug: Check what's available
+            console.log('🔍 Debug - window.MAIN_CAMPAIGN_CONFIG exists?', !!window.MAIN_CAMPAIGN_CONFIG);
+            console.log('🔍 Debug - window.MAIN_CAMPAIGN_CONFIG.rpgConfig exists?', !!window.MAIN_CAMPAIGN_CONFIG?.rpgConfig);
+            console.log('🔍 Debug - rpgConfig.shops exists?', !!window.MAIN_CAMPAIGN_CONFIG?.rpgConfig?.shops);
+            if (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig?.shops) {
+                console.log('🔍 Debug - Shop keys:', Object.keys(window.MAIN_CAMPAIGN_CONFIG.rpgConfig.shops));
+            }
+
+            // Set config first
+            const rpgConfig = window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || this.getRPGConfig?.() || {};
+            if (rpgConfig && rpgConfig.shops) {
+                shopManager.setConfig(rpgConfig);
+                shopManager.loadShops();
+                if (this.logger) this.logger.info(`✅ Reloaded ${shopManager.shops.size} shops`);
+            } else {
+                if (this.logger) this.logger.error('❌ Cannot reload shops - no rpgConfig.shops found');
+                console.log('🔍 Debug - rpgConfig object:', rpgConfig);
+                console.log('🔍 Debug - rpgConfig keys:', rpgConfig ? Object.keys(rpgConfig) : 'null/undefined');
+            }
+        }
+
+        const shop = shopManager.shops.get(shopId);
         if (!shop) {
+            if (this.logger) this.logger.error(`Shop not found: ${shopId} (Total shops: ${shopManager.shops.size})`);
             return '<div style="color: #ff6666; text-align: center; padding: 40px;">Shop not available</div>';
         }
 
         // Get current tab (default to 'buy')
         const currentTab = this.dialogEngine?.stateData?.shopTab || 'buy';
 
-        // Get selected agent's credits
-        const agentCredits = this._selectedAgent?.rpgEntity?.credits || this._selectedAgent?.credits || 0;
+        // Get credits from ResourceService (team credits, not individual agent)
+        const agentCredits = this.gameServices?.resourceService?.get('credits') || this.credits || 0;
 
         let html = '<div class="rpg-shop-content">';
 
@@ -2472,6 +2535,12 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                     const canAfford = agentCredits >= item.price;
                     const inStock = item.stock === -1 || item.stock > 0;
 
+                    // Check how many of this item the player already owns
+                    const inventoryObj = this.inventoryManager?.getInventory(this._selectedAgent?.id || this._selectedAgent?.name) || { items: [] };
+                    const inventoryItems = inventoryObj.items || [];
+                    const ownedItem = inventoryItems.find(invItem => invItem.id === item.id);
+                    const ownedQuantity = ownedItem ? ownedItem.quantity : 0;
+
                     html += `
                         <div style="background: ${canAfford && inStock ? 'rgba(0,255,255,0.1)' : 'rgba(128,128,128,0.1)'};
                                    padding: 15px; margin-bottom: 10px; border-radius: 5px;
@@ -2480,6 +2549,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                                 <div style="flex: 1;">
                                     <div style="font-weight: bold; color: ${canAfford && inStock ? '#fff' : '#999'};">
                                         ${item.icon || '📦'} ${item.name}
+                                        ${ownedQuantity > 0 ? `<span style="color: #00ff00; font-size: 0.85em; margin-left: 8px;">(Owned: ${ownedQuantity})</span>` : ''}
                                     </div>
                                     ${item.description ? `<div style="color: #ccc; font-size: 0.9em; margin: 5px 0;">${item.description}</div>` : ''}
                                     <div style="color: #aaa; font-size: 0.85em;">
@@ -2503,8 +2573,9 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             }
         } else {
             // Sell tab - show agent's sellable items
-            const inventory = this.inventoryManager?.getInventory(this._selectedAgent?.id || this._selectedAgent?.name) || [];
-            const sellableItems = inventory.filter(item => item.value && item.value > 0);
+            const inventoryObj = this.inventoryManager?.getInventory(this._selectedAgent?.id || this._selectedAgent?.name) || { items: [] };
+            const inventoryItems = inventoryObj.items || [];
+            const sellableItems = inventoryItems.filter(item => item.value && item.value > 0);
 
             if (sellableItems.length === 0) {
                 html += '<div style="color: #999; text-align: center; padding: 40px;">No items to sell</div>';
@@ -3099,6 +3170,10 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         const agentId = parts[0];
         const skillId = parts[1];
 
+        if (game.logger) {
+            game.logger.debug(`🎓 learnSkill action: params="${params}", agentId="${agentId}", skillId="${skillId}"`);
+        }
+
         if (game.learnSkill) {
             const success = game.learnSkill(agentId, skillId);
             if (success) {
@@ -3106,23 +3181,9 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
                 this.stateData = this.stateData || {};
                 this.stateData.agentId = agentId;
 
-                // Check if agent still has skill points
-                const agent = game.findAgentForRPG ? game.findAgentForRPG(agentId) : null;
-                const hasMorePoints = agent?.rpgEntity?.availableSkillPoints > 0;
-
-                if (hasMorePoints) {
-                    // Still have skill points, refresh skill tree
-                    this.navigateTo('skill-tree', null, true);
-                } else {
-                    // No more skill points, go back to character sheet
-                    this.back();
-                    // Refresh character sheet to show new skills
-                    setTimeout(() => {
-                        if (this.currentState === 'character') {
-                            this.navigateTo('character', null, true);
-                        }
-                    }, 100);
-                }
+                // Always refresh the skill tree to show the updated skills
+                // User can manually navigate back when done
+                this.navigateTo('skill-tree', null, true);
             }
         }
     });

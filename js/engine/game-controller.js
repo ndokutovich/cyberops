@@ -489,6 +489,13 @@ class RenderBridge {
         });
 
         // Render NPCs
+        if (this.logger && gameState.npcs.length > 0 && !this._npcRenderLogged) {
+            this.logger.info(`🎨 Rendering ${gameState.npcs.length} NPCs`);
+            gameState.npcs.forEach((npc, i) => {
+                this.logger.debug(`   NPC ${i}: ${npc.name} at (${npc.x}, ${npc.y})`);
+            });
+            this._npcRenderLogged = true; // Only log once
+        }
         gameState.npcs.forEach(npc => {
             this.renderEntity(ctx, npc, '#ffff44');
         });

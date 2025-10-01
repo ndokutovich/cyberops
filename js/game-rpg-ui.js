@@ -542,7 +542,7 @@ CyberOpsGame.prototype.showLevelUpNotification = function(agent) {
                 <div>+${agent.rpgEntity.availableSkillPoints || 0} Skill Points</div>
                 ${agent.rpgEntity.availablePerkPoints > 0 ? `<div>+1 Perk Point</div>` : ''}
             </div>
-            <button onclick="game._selectedAgent = game.agents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}') || game.activeAgents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}'); game.dialogEngine?.navigateTo('character'); this.parentElement.parentElement.remove()">
+            <button onclick="game.selectedAgent = game.agents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}') || game.activeAgents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}'); game.dialogEngine?.navigateTo('character'); this.parentElement.parentElement.remove()">
                 Open Character Sheet
             </button>
         </div>
@@ -674,7 +674,7 @@ CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
         if (dialog) dialog.remove();
 
         // Set selected agent and open character sheet
-        this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
+        this.selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
                              (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
         if (this.dialogEngine && this.dialogEngine.navigateTo) {
             this.dialogEngine.navigateTo('character');
@@ -728,19 +728,9 @@ CyberOpsGame.prototype.selectPerkDeclarative = function(agentId, perkId) {
 
         // Refresh the dialog to show updated perk points and unlocked perks
         if (this.dialogEngine) {
-            // If no more perk points, go back to character sheet
-            if (rpg.availablePerkPoints <= 0) {
-                this.dialogEngine.back();
-                // Refresh character sheet to show new perk
-                setTimeout(() => {
-                    if (this.dialogEngine.currentState === 'character') {
-                        this.dialogEngine.navigateTo('character', null, true);
-                    }
-                }, 100);
-            } else {
-                // Still have perk points, refresh perk selection
-                this.dialogEngine.navigateTo('perk-selection', null, true);
-            }
+            // Always refresh the perk selection to show the updated perks
+            // User can manually navigate back when done
+            this.dialogEngine.navigateTo('perk-selection', null, true);
         }
     } else {
         if (logger) logger.warn(`❌ Failed to unlock perk: ${perkId}`);
@@ -814,6 +804,54 @@ CyberOpsGame.prototype.buyRPGItem = function(shopId, itemId) {
             this.logEvent('Purchase successful!', 'shop');
         }
         if (this.logger) this.logger.info(`✅ ${this._selectedAgent.name} purchased item: ${itemId}`);
+
+        // Also add to hub inventory so it shows in Arsenal
+        const shop = this.shopManager?.getShop(shopId);
+        const item = shop?.inventory.find(i => i.id === itemId);
+        if (item && this.gameServices?.inventoryService) {
+            const inventoryService = this.gameServices.inventoryService;
+
+            // Convert RPG item format to hub inventory format
+            const hubItem = {
+                id: item.id.replace('weapon_', '').replace('armor_', ''),  // Remove prefix
+                name: item.name,
+                damage: item.stats?.damage || item.damage || 0,
+                protection: item.stats?.defense || item.defense || 0,
+                weight: item.weight || 1,
+                cost: item.value || item.price || 0,
+                owned: 1,
+                equipped: 0
+            };
+
+            // Add to appropriate hub inventory category
+            if (item.type === 'weapon' || item.slot === 'primary') {
+                // Check if weapon already exists
+                const existingWeapon = inventoryService.inventory.weapons.find(w => w.id === hubItem.id);
+                if (existingWeapon) {
+                    existingWeapon.owned += 1;
+                } else {
+                    inventoryService.inventory.weapons.push(hubItem);
+                }
+            } else if (item.type === 'armor' || item.slot === 'armor') {
+                // Check if armor already exists
+                const existingArmor = inventoryService.inventory.armor.find(a => a.id === hubItem.id);
+                if (existingArmor) {
+                    existingArmor.owned += 1;
+                } else {
+                    inventoryService.inventory.armor.push(hubItem);
+                }
+            } else {
+                // Check if utility already exists
+                const existingUtility = inventoryService.inventory.utility.find(u => u.id === hubItem.id);
+                if (existingUtility) {
+                    existingUtility.owned += 1;
+                } else {
+                    inventoryService.inventory.utility.push(hubItem);
+                }
+            }
+
+            if (this.logger) this.logger.info(`📦 Added ${item.name} to hub inventory`);
+        }
 
         // Refresh the dialog
         if (this.dialogEngine) {
@@ -929,16 +967,29 @@ CyberOpsGame.prototype.showSkillTree = function(agentId) {
 
 // Learn a skill for an agent (uses unidirectional flow through RPGManager)
 CyberOpsGame.prototype.learnSkill = function(agentId, skillId) {
+    if (this.logger) {
+        this.logger.debug(`🎓 learnSkill called: agentId=${agentId}, skillId=${skillId}`);
+    }
+
     const agent = this.findAgentForRPG(agentId);
     if (!agent || !agent.rpgEntity) {
-        if (this.logger) this.logger.error(`Cannot learn skill - agent not found: ${agentId}`);
+        if (this.logger) this.logger.error(`❌ Cannot learn skill - agent not found: ${agentId}`);
         return false;
+    }
+
+    if (this.logger) {
+        this.logger.debug(`🎓 Found agent: ${agent.name}, originalId=${agent.originalId}, id=${agent.id}`);
+        this.logger.debug(`🎓 Agent rpgEntity: ${JSON.stringify({
+            availableSkillPoints: agent.rpgEntity?.availableSkillPoints,
+            skills: agent.rpgEntity?.skills
+        })}`);
     }
 
     // UNIDIRECTIONAL FLOW: Game → RPGManager → Entity
     // Use RPGManager to learn skill (service manages the data)
     if (this.rpgManager && this.rpgManager.learnSkill) {
         const entityId = agent.originalId || agent.id || agent.name;
+        if (this.logger) this.logger.debug(`🎓 Using entityId: ${entityId}`);
         const success = this.rpgManager.learnSkill(entityId, skillId);
 
         if (success) {
@@ -1053,7 +1104,7 @@ CyberOpsGame.prototype.useHealthPack = function(agentId) {
     const dialog = document.querySelector('.rpg-character-sheet');
     if (dialog) {
         // Set selected agent and open character sheet
-        this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
+        this.selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
                              (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
         if (this.dialogEngine && this.dialogEngine.navigateTo) {
             this.dialogEngine.navigateTo('character');
@@ -1115,7 +1166,7 @@ CyberOpsGame.prototype.useItem = function(agentId, itemId) {
     const dialog = document.querySelector('.rpg-character-sheet');
     if (dialog) {
         // Set selected agent and open character sheet
-        this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
+        this.selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
                              (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
         if (this.dialogEngine && this.dialogEngine.navigateTo) {
             this.dialogEngine.navigateTo('character');

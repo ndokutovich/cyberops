@@ -644,15 +644,20 @@ CyberOpsGame.prototype.interactWithNPC = function(agent, npc) {
 
     // Debug: Check what dialog was returned
     if (this.logger) this.logger.debug('Dialog returned from getNextDialog:', dialog);
-    if (!dialog.text) {
-        if (this.logger) this.logger.warn('⚠️ Dialog has no text! Dialog object:', dialog);
+
+    // Support both old format (text/choices) and new format (greeting/options/info)
+    const dialogText = dialog.text || dialog.greeting || "...";
+    const dialogChoices = dialog.choices || dialog.options || [];
+
+    if (!dialogText || dialogText === "...") {
+        if (this.logger) this.logger.warn('⚠️ Dialog has no text or greeting! Dialog object:', dialog);
     }
 
     // Add context-sensitive options based on nearby objects
     const contextChoices = this.getContextualChoices(agent, npc);
 
     // Combine NPC dialog choices with context choices
-    const allChoices = [...(dialog.choices || [])];
+    const allChoices = [...dialogChoices];
 
     // Add context choices at the end
     if (contextChoices.length > 0) {
@@ -683,7 +688,7 @@ CyberOpsGame.prototype.interactWithNPC = function(agent, npc) {
     // Show dialog UI
     this.showDialog({
         npc: npc,
-        text: dialog.text,
+        text: dialogText,
         choices: allChoices
     });
 
@@ -823,8 +828,41 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
                 text: choice.text,
                 action: () => {
                     if (choice.action) {
-                        // Call action with NPC as context and game as parameter (matching original system)
-                        choice.action.call(dialogData.npc, this);
+                        // Handle different action types
+                        if (typeof choice.action === 'function') {
+                            // Function action - call with NPC as context and game as parameter
+                            choice.action.call(dialogData.npc, this);
+                        } else if (typeof choice.action === 'string') {
+                            // String action - handle special cases
+                            switch (choice.action) {
+                                case 'info':
+                                    // Show info dialog if available
+                                    if (dialogData.npc.dialog && dialogData.npc.dialog[0] && dialogData.npc.dialog[0].info) {
+                                        this.closeNPCDialog();
+                                        window.modalEngine.show({
+                                            type: 'info',
+                                            title: dialogData.npc.name,
+                                            text: dialogData.npc.dialog[0].info,
+                                            choices: [
+                                                {
+                                                    text: 'Back',
+                                                    action: () => {
+                                                        // Re-show NPC dialog
+                                                        this.interactWithNPC(this.agents.find(a => a.selected), dialogData.npc);
+                                                    }
+                                                }
+                                            ]
+                                        });
+                                    }
+                                    break;
+                                case 'close':
+                                    this.closeNPCDialog();
+                                    break;
+                                default:
+                                    if (this.logger) this.logger.warn(`Unknown string action: ${choice.action}`);
+                                    break;
+                            }
+                        }
                     }
                 },
                 closeAfter: false  // We handle closing manually

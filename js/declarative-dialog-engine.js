@@ -643,11 +643,13 @@ class DeclarativeDialogEngine {
             const current = this.stateStack.pop();
             this.closeStateDialog(current.id);
 
-            // Navigate to parent
+            // Navigate to parent and refresh it
             if (this.stateStack.length > 0) {
                 const parent = this.stateStack[this.stateStack.length - 1];
                 this.currentState = parent.id;
-                this.updateBreadcrumb();
+
+                // Refresh the parent dialog to show updated data
+                this.navigateTo(parent.id, null, true);
             } else {
                 this.currentState = null;
                 this.returnToBase();
