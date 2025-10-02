@@ -60,7 +60,8 @@
       "Bash(for action in \"continueFromVictory\" \"returnToHub\" \"startMissionWithLoadout\" \"skipSplash\" \"startNewCampaign\" \"loadLastSave\" \"performHack\" \"onHackComplete\" \"performReturnToHub\" \"confirmSave\" \"confirmLoad\" \"confirmDelete\" \"confirmSurrender\" \"proceedToNextMission\" \"completeCampaign\" \"returnToHubFromVictory\" \"retryMission\" \"returnToHubFromDefeat\")",
       "Bash(do echo -n \"$action: \")",
       "Read(//w//**)",
-      "Bash(start w:/_proj/_own/_ideator/cyberops-game/test-runner.html)"
+      "Bash(start w:/_proj/_own/_ideator/cyberops-game/test-runner.html)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

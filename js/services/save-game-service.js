@@ -661,3 +661,8 @@ class SaveGameService {
 if (typeof window !== 'undefined') {
     window.SaveGameService = SaveGameService;
 }
+
+// Export for Node.js
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SaveGameService;
+}

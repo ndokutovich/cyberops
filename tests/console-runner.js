@@ -35,7 +35,17 @@ global.assertNotIncludes = TestFramework.assert.notIncludes;
 
 // Mock browser globals for tests that check for them
 global.window = {
-    Logger: null,
+    Logger: class MockLogger {
+        constructor(name) {
+            this.name = name;
+        }
+        trace() {}
+        debug() {}
+        info() {}
+        warn() {}
+        error() {}
+        fatal() {}
+    },
     GameServices: null,
     CombatService: null,
     FormulaService: null,
