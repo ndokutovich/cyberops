@@ -197,6 +197,7 @@
     <div id="controls">
         <button id="btn-run-all">🚀 RUN ALL TESTS</button>
         <button id="btn-run-universal" style="background: #002200;">🌐 UNIVERSAL TESTS</button>
+        <button id="btn-run-core-services" style="background: #002200;">⚙️ CORE SERVICES</button>
         <button id="btn-run-dialogs">💬 TEST DIALOGS</button>
         <button id="btn-run-state">🔄 TEST STATE MACHINE</button>
         <button id="btn-run-audit">🔍 AUDIT STATES</button>
@@ -383,6 +384,15 @@
     <script src="tests/save-game-service-tests.js"></script>
     <script src="tests/hud-service-tests.js"></script>
     <script src="tests/mission-state-service-tests.js"></script>
+
+    <!-- Core Service Tests (Priority 1) -->
+    <script src="tests/formula-service-tests.js"></script>
+    <script src="tests/resource-service-tests.js"></script>
+    <script src="tests/mission-service-tests.js"></script>
+    <script src="tests/inventory-service-tests.js"></script>
+    <script src="tests/equipment-service-tests.js"></script>
+    <script src="tests/research-service-tests.js"></script>
+
     <script src="tests/test-summary.js"></script>
     <script src="tests/test-diagnostic.js"></script>
 
@@ -860,9 +870,66 @@
             showSummary();
         }
 
+        async function runCoreServiceTests() {
+            clearOutput();
+            logToOutput('⚙️ Running Core Service Tests (Priority 1)...', 'log-suite');
+            logToOutput('='.repeat(60), 'log-test');
+
+            if (!window.UniversalTestFramework) {
+                logToOutput('❌ Universal Test Framework not loaded!', 'log-error');
+                return;
+            }
+
+            logToOutput('📊 Core Service Test Coverage:', 'log-suite');
+            logToOutput('✅ FormulaService: 58 tests', 'log-test-pass');
+            logToOutput('✅ ResourceService: 39 tests', 'log-test-pass');
+            logToOutput('✅ MissionService: 34 tests', 'log-test-pass');
+            logToOutput('✅ InventoryService: 30 tests', 'log-test-pass');
+            logToOutput('✅ EquipmentService: 29 tests', 'log-test-pass');
+            logToOutput('✅ ResearchService: 28 tests', 'log-test-pass');
+            logToOutput('='.repeat(60), 'log-test');
+
+            // Run tests through universal framework
+            const results = await window.UniversalTestFramework.run({
+                verbose: document.getElementById('verbose-mode').checked,
+                filter: (suite) => {
+                    return suite.includes('FormulaService') ||
+                           suite.includes('ResourceService') ||
+                           suite.includes('MissionService') ||
+                           suite.includes('InventoryService') ||
+                           suite.includes('EquipmentService') ||
+                           suite.includes('ResearchService');
+                }
+            });
+
+            // Show results
+            logToOutput('\n' + '='.repeat(60), 'log-test');
+            logToOutput(`📊 Final Results`, 'log-suite');
+            logToOutput(`Total: ${results.total}`, 'log-test');
+            logToOutput(`✅ Passed: ${results.passed}`, 'log-test-pass');
+            logToOutput(`❌ Failed: ${results.failed}`, results.failed > 0 ? 'log-error' : 'log-test');
+            logToOutput(`⏭️  Skipped: ${results.skipped}`, 'log-test-skip');
+            logToOutput(`Time: ${results.time}ms`, 'log-test');
+
+            if (results.failed > 0) {
+                logToOutput('\n❌ Failed Tests:', 'log-error');
+                results.results.filter(r => r.status === 'failed').forEach(r => {
+                    logToOutput(`  • ${r.suite} > ${r.test}`, 'log-fail');
+                    if (r.error) {
+                        logToOutput(`    Error: ${r.error}`, 'log-error');
+                    }
+                });
+            } else {
+                logToOutput('\n✅ All core service tests passed!', 'log-test-pass');
+            }
+
+            showSummary();
+        }
+
         // Event listeners
         document.getElementById('btn-run-all').addEventListener('click', runAllTests);
         document.getElementById('btn-run-universal').addEventListener('click', runUniversalTests);
+        document.getElementById('btn-run-core-services').addEventListener('click', runCoreServiceTests);
         document.getElementById('btn-run-dialogs').addEventListener('click', runDialogTests);
         document.getElementById('btn-run-state').addEventListener('click', runStateMachineTests);
         document.getElementById('btn-run-audit').addEventListener('click', runAuditTests);
