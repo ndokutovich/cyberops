@@ -393,6 +393,9 @@
     <script src="tests/equipment-service-tests.js"></script>
     <script src="tests/research-service-tests.js"></script>
 
+    <!-- RPG Integration Tests -->
+    <script src="tests/rpg-max-level-integration-test.js"></script>
+
     <script src="tests/test-summary.js"></script>
     <script src="tests/test-diagnostic.js"></script>
 
@@ -887,6 +890,7 @@
             logToOutput('✅ InventoryService: 30 tests', 'log-test-pass');
             logToOutput('✅ EquipmentService: 29 tests', 'log-test-pass');
             logToOutput('✅ ResearchService: 28 tests', 'log-test-pass');
+            logToOutput('✅ RPG Max Level Integration: 15 tests', 'log-test-pass');
             logToOutput('='.repeat(60), 'log-test');
 
             // Run tests through universal framework
@@ -898,7 +902,8 @@
                            suite.includes('MissionService') ||
                            suite.includes('InventoryService') ||
                            suite.includes('EquipmentService') ||
-                           suite.includes('ResearchService');
+                           suite.includes('ResearchService') ||
+                           suite.includes('RPG Max Level Integration');
                 }
             });
 
