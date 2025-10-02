@@ -4,19 +4,19 @@
  * Provides backwards-compatible wrappers and adapters
  */
 
-// Helper to get RPG config
+// Helper to get RPG config - FAIL FAST if not found
 CyberOpsGame.prototype.getRPGConfig = function() {
     // Try content loader first
     if (window.ContentLoader) {
         const config = window.ContentLoader.getContent('rpgConfig');
         if (config) return config;
     }
-    // Fallback to campaign config
+    // Try campaign config
     if (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig) {
         return window.MAIN_CAMPAIGN_CONFIG.rpgConfig;
     }
-    // Return empty config if none found
-    return {};
+    // FAIL FAST - RPG config is required for RPG features
+    throw new Error('RPG config not found in ContentLoader or MAIN_CAMPAIGN_CONFIG - campaign must provide RPG configuration');
 };
 
 // Integration layer for existing agent/enemy/NPC systems
@@ -784,176 +784,17 @@ CyberOpsGame.prototype.upgradeExistingEntities = function() {
 
 // Sync existing hub equipment with RPG inventory system
 CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
-    if (this.logger) this.logger.debug('🔄 Syncing hub equipment with RPG inventory...');
-    if (this.logger) this.logger.debug('   Weapons in game:', this.weapons?.length || 0, 'items');
-    if (this.logger) this.logger.debug('   Equipment in game:', this.equipment?.length || 0, 'items');
-    if (this.weapons && this.weapons.length > 0) {
-        if (this.logger) this.logger.debug('   First weapon:', this.weapons[0].name, 'owned:', this.weapons[0].owned);
-    }
+    if (this.logger) this.logger.debug('🔄 Syncing agent loadouts with RPG inventory...');
 
-    // Use GameServices if available
+    // Use GameServices if available (recommended path)
     if (window.GameServices && window.GameServices.rpgService) {
-        window.GameServices.rpgService.syncEquipment(this);
+        window.GameServices.rpgService.syncEquipment();
         if (this.logger) this.logger.info('✅ Equipment sync complete via GameServices');
         return;
     }
 
-    // Fallback to local sync
-    // Ensure systems are initialized
-    if (!this.inventoryManager || !this.rpgManager) {
-        if (this.logger) this.logger.warn('⚠️ RPG systems not initialized, skipping sync');
-        return;
-    }
-
-    // Sync weapons from hub to RPG inventory
-    if (this.weapons) {
-        this.weapons.forEach(weapon => {
-            if (weapon.owned > 0) {
-                // Convert hub weapon to RPG item format
-                const rpgWeapon = {
-                    id: `weapon_${weapon.id}`,
-                    name: weapon.name,
-                    type: 'weapon',
-                    slot: 'primary',
-                    weight: weapon.weight || 5,
-                    value: weapon.cost || 1000,
-                    stats: {
-                        damage: weapon.damage || 10,
-                        accuracy: weapon.accuracy || 80,
-                        range: weapon.range || 10
-                    },
-                    quantity: weapon.owned
-                };
-
-                // Add to RPG config if not exists
-                const rpgConfig = this.getRPGConfig();
-                if (rpgConfig.items && !rpgConfig.items.weapons[rpgWeapon.id]) {
-                    rpgConfig.items.weapons[rpgWeapon.id] = rpgWeapon;
-                }
-
-                if (this.logger) this.logger.info(`   ✅ Synced weapon: ${weapon.name} (x${weapon.owned})`);
-            }
-        });
-    }
-
-    // Sync equipment/armor from hub to RPG inventory
-    if (this.equipment) {
-        this.equipment.forEach(item => {
-            if (item.owned > 0) {
-                const itemType = item.protection ? 'armor' : 'consumables';
-                const slot = item.protection ? 'armor' : null;
-
-                // Convert hub equipment to RPG item format
-                const rpgItem = {
-                    id: `${itemType}_${item.id}`,
-                    name: item.name,
-                    type: itemType,
-                    slot: slot,
-                    weight: item.weight || 3,
-                    value: item.cost || 500,
-                    stats: {},
-                    quantity: item.owned
-                };
-
-                // Add relevant stats
-                if (item.protection) rpgItem.stats.defense = item.protection;
-                if (item.hackBonus) rpgItem.stats.hackBonus = item.hackBonus;
-                if (item.stealthBonus) rpgItem.stats.stealthBonus = item.stealthBonus;
-                if (item.explosiveDamage) rpgItem.stats.explosiveDamage = item.explosiveDamage;
-
-                // Add to RPG config if not exists
-                const rpgConfig = this.getRPGConfig();
-                if (rpgConfig.items && !rpgConfig.items[itemType][rpgItem.id]) {
-                    rpgConfig.items[itemType][rpgItem.id] = rpgItem;
-                }
-
-                if (this.logger) this.logger.info(`   ✅ Synced ${itemType}: ${item.name} (x${item.owned})`);
-            }
-        });
-    }
-
-    // Sync agent loadouts to RPG inventories
-    if (this.agentLoadouts) {
-        // Get all agents (active agents in hub, or agents array in mission)
-        const agentsToSync = this.activeAgents || this.agents || [];
-
-        agentsToSync.forEach(agent => {
-            const agentId = agent.id || agent.name;
-            const loadout = this.agentLoadouts[agentId];
-
-            // Create or get inventory
-            let inventory = this.inventoryManager.getInventory(agentId);
-            if (!inventory && this.inventoryManager) {
-                const carryWeight = agent.rpgEntity?.derivedStats?.carryWeight || 100;
-                inventory = this.inventoryManager.createInventory(agentId, carryWeight);
-            }
-
-            if (loadout && inventory) {
-                // Clear current inventory equipment
-                inventory.clearEquipment();
-
-                // Equip weapon from loadout
-                if (loadout.weapon) {
-                    const weapon = this.getItemById('weapon', loadout.weapon);
-                    if (weapon) {
-                        const rpgWeaponId = `weapon_${loadout.weapon}`;
-                        // Add weapon to inventory items if not there
-                        if (!inventory.items.find(i => i.id === rpgWeaponId)) {
-                            const rpgConfig = this.getRPGConfig();
-                            const rpgWeapon = rpgConfig?.items?.weapons?.[rpgWeaponId];
-                            if (rpgWeapon) {
-                                inventory.items.push({
-                                    ...rpgWeapon,
-                                    quantity: 1,
-                                    instanceId: `${rpgWeaponId}_${Date.now()}`
-                                });
-                            }
-                        }
-                        inventory.equipItem(rpgWeaponId, 'primary');
-                        if (this.logger) this.logger.info(`   ✅ Equipped ${weapon.name} on ${agent.name}`);
-                    }
-                }
-
-                // Equip armor from loadout
-                if (loadout.armor) {
-                    const armor = this.getItemById('armor', loadout.armor);
-                    if (armor) {
-                        const rpgArmorId = `armor_${loadout.armor}`;
-                        // Add armor to inventory items if not there
-                        if (!inventory.items.find(i => i.id === rpgArmorId)) {
-                            const rpgConfig = this.getRPGConfig();
-                            const rpgArmor = rpgConfig?.items?.armor?.[rpgArmorId];
-                            if (rpgArmor) {
-                                inventory.items.push({
-                                    ...rpgArmor,
-                                    quantity: 1,
-                                    instanceId: `${rpgArmorId}_${Date.now()}`
-                                });
-                            }
-                        }
-                        inventory.equipItem(rpgArmorId, 'armor');
-                        if (this.logger) this.logger.info(`   ✅ Equipped ${armor.name} on ${agent.name}`);
-                    }
-                }
-
-                // Add utility items to inventory
-                if (loadout.utility) {
-                    const utility = this.getItemById('equipment', loadout.utility);
-                    if (utility) {
-                        const rpgUtilityId = `consumables_${loadout.utility}`;
-                        const rpgConfig = this.getRPGConfig();
-                        const rpgUtility = rpgConfig?.items?.consumables?.[rpgUtilityId];
-                        if (rpgUtility && !inventory.items.find(i => i.id === rpgUtilityId)) {
-                            inventory.addItem(rpgUtility, 1);
-                            if (this.logger) this.logger.info(`   ✅ Added ${utility.name} to ${agent.name}'s inventory`);
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    if (this.logger) this.logger.info('✅ Equipment sync complete');
+    // DEPRECATED fallback path - should not be used
+    if (this.logger) this.logger.warn('⚠️ GameServices not available, equipment sync skipped');
 };
 
 // Enhanced combat calculation using RPG stats

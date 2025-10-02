@@ -18,6 +18,21 @@ CyberOpsGame.prototype.selectRPGAgent = function(agentId) {
     }
 };
 
+// Computed property for campaignEnemyTypes - flows from ContentLoader
+Object.defineProperty(CyberOpsGame.prototype, 'campaignEnemyTypes', {
+    get: function() {
+        if (window.ContentLoader && window.ContentLoader.currentCampaign) {
+            // Handle both 'enemies' (from config) and 'enemyTypes' (from content)
+            return window.ContentLoader.currentCampaign.enemies ||
+                   window.ContentLoader.currentCampaign.enemyTypes ||
+                   [];
+        }
+        return [];
+    },
+    enumerable: true,
+    configurable: true
+});
+
 // Getter and setter for selectedAgent with logging
 Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
     get: function() {

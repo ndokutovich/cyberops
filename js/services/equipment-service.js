@@ -4,7 +4,10 @@
  */
 class EquipmentService {
     constructor(formulaService) {
-        this.formulaService = formulaService || new FormulaService();
+        if (!formulaService) {
+            throw new Error('EquipmentService requires FormulaService - dependency injection required');
+        }
+        this.formulaService = formulaService;
 
         // Weapon definitions
         this.weapons = {

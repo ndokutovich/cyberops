@@ -4,7 +4,10 @@
  */
 class ResearchService {
     constructor(formulaService) {
-        this.formulaService = formulaService || new FormulaService();
+        if (!formulaService) {
+            throw new Error('ResearchService requires FormulaService - dependency injection required');
+        }
+        this.formulaService = formulaService;
 
         // Research project definitions
         this.projects = {

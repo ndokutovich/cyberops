@@ -118,67 +118,54 @@ class RPGService {
     }
 
     /**
+     * Convert weapon from InventoryService format to RPG item format
+     * NO STORAGE - pure conversion function following unidirectional flow
+     */
+    convertWeaponToRPGItem(weapon) {
+        return {
+            id: `weapon_${weapon.id}`,
+            name: weapon.name,
+            type: 'weapon',
+            slot: 'primary',
+            weight: weapon.weight ?? 5,
+            value: weapon.cost ?? 1000,
+            stats: {
+                damage: weapon.damage ?? 10
+            },
+            quantity: 1
+        };
+    }
+
+    /**
+     * Convert equipment from InventoryService format to RPG item format
+     * NO STORAGE - pure conversion function following unidirectional flow
+     */
+    convertEquipmentToRPGItem(equipment) {
+        const itemType = equipment.protection ? 'armor' : 'consumables';
+        const rpgItem = {
+            id: `${itemType}_${equipment.id}`,
+            name: equipment.name,
+            type: itemType,
+            slot: equipment.protection ? 'armor' : null,
+            weight: equipment.weight ?? 3,
+            value: equipment.cost ?? 500,
+            stats: {},
+            quantity: 1
+        };
+
+        if (equipment.protection) rpgItem.stats.defense = equipment.protection;
+        if (equipment.hackBonus) rpgItem.stats.hackBonus = equipment.hackBonus;
+        if (equipment.stealthBonus) rpgItem.stats.stealthBonus = equipment.stealthBonus;
+
+        return rpgItem;
+    }
+
+    /**
      * Sync equipment between hub and RPG systems
+     * RENAMED to syncLoadouts - only syncs agent loadouts, no config mutation
      */
     syncEquipment() {
-        if (!this.inventoryManager) return;
-
-        // Get data from services
-        const inventoryService = window.GameServices?.inventoryService;
-        if (!inventoryService) return;
-
-        // Sync weapons from inventory service
-        const weapons = inventoryService.getWeapons();
-        weapons.forEach(weapon => {
-            if (weapon.owned > 0) {
-                const rpgWeapon = {
-                    id: `weapon_${weapon.id}`,
-                    name: weapon.name,
-                    type: 'weapon',
-                    slot: 'primary',
-                    weight: weapon.weight || 5,
-                    value: weapon.cost || 1000,
-                    stats: {
-                        damage: weapon.damage || 10
-                    },
-                    quantity: weapon.owned
-                };
-
-                const rpgConfig = this.getRPGConfig();
-                if (rpgConfig.items && !rpgConfig.items.weapons[rpgWeapon.id]) {
-                    rpgConfig.items.weapons[rpgWeapon.id] = rpgWeapon;
-                }
-            }
-        });
-
-        // Sync equipment from inventory service
-        const equipment = inventoryService.getEquipment();
-        equipment.forEach(item => {
-            if (item.owned > 0) {
-                const itemType = item.protection ? 'armor' : 'consumables';
-                const rpgItem = {
-                    id: `${itemType}_${item.id}`,
-                    name: item.name,
-                    type: itemType,
-                    slot: item.protection ? 'armor' : null,
-                    weight: item.weight || 3,
-                    value: item.cost || 500,
-                    stats: {},
-                    quantity: item.owned
-                };
-
-                if (item.protection) rpgItem.stats.defense = item.protection;
-                if (item.hackBonus) rpgItem.stats.hackBonus = item.hackBonus;
-                if (item.stealthBonus) rpgItem.stats.stealthBonus = item.stealthBonus;
-
-                const rpgConfig = this.getRPGConfig();
-                if (rpgConfig.items && !rpgConfig.items[itemType][rpgItem.id]) {
-                    rpgConfig.items[itemType][rpgItem.id] = rpgItem;
-                }
-            }
-        });
-
-        // Sync loadouts to inventories
+        // Just sync loadouts - no config mutation needed
         this.syncLoadouts();
     }
 
@@ -215,20 +202,11 @@ class RPGService {
                 if (loadout.weapon) {
                     const weapon = inventoryService.getItemById('weapon', loadout.weapon);
                     if (weapon) {
-                        const rpgWeaponId = `weapon_${loadout.weapon}`;
-                        const rpgConfig = this.getRPGConfig();
-                        const rpgWeapon = rpgConfig?.items?.weapons?.[rpgWeaponId];
-                        if (rpgWeapon) {
-                            // Add to inventory first, then equip
-                            const itemToAdd = {
-                                ...rpgWeapon,
-                                id: rpgWeaponId,
-                                quantity: 1
-                            };
-                            inventory.items.push(itemToAdd);
-                            inventory.equipped.primary = itemToAdd;
-                            if (logger) logger.info(`   ✅ Equipped ${weapon.name} on ${agent.name}`);
-                        }
+                        // Convert weapon to RPG format on-the-fly (no storage needed)
+                        const rpgWeapon = this.convertWeaponToRPGItem(weapon);
+                        inventory.items.push(rpgWeapon);
+                        inventory.equipped.primary = rpgWeapon;
+                        if (logger) logger.info(`   ✅ Equipped ${weapon.name} on ${agent.name}`);
                     }
                 }
 
@@ -236,20 +214,11 @@ class RPGService {
                 if (loadout.armor) {
                     const armor = inventoryService.getItemById('armor', loadout.armor);
                     if (armor) {
-                        const rpgArmorId = `armor_${loadout.armor}`;
-                        const rpgConfig = this.getRPGConfig();
-                        const rpgArmor = rpgConfig?.items?.armor?.[rpgArmorId];
-                        if (rpgArmor) {
-                            // Add to inventory first, then equip
-                            const itemToAdd = {
-                                ...rpgArmor,
-                                id: rpgArmorId,
-                                quantity: 1
-                            };
-                            inventory.items.push(itemToAdd);
-                            inventory.equipped.armor = itemToAdd;
-                            if (logger) logger.info(`   ✅ Equipped ${armor.name} on ${agent.name}`);
-                        }
+                        // Convert armor to RPG format on-the-fly (no storage needed)
+                        const rpgArmor = this.convertEquipmentToRPGItem(armor);
+                        inventory.items.push(rpgArmor);
+                        inventory.equipped.armor = rpgArmor;
+                        if (logger) logger.info(`   ✅ Equipped ${armor.name} on ${agent.name}`);
                     }
                 }
 
@@ -257,19 +226,10 @@ class RPGService {
                 if (loadout.utility) {
                     const utility = inventoryService.getItemById('equipment', loadout.utility);
                     if (utility) {
-                        const rpgUtilityId = `consumables_${loadout.utility}`;
-                        const rpgConfig = this.getRPGConfig();
-                        const rpgUtility = rpgConfig?.items?.consumables?.[rpgUtilityId];
-                        if (rpgUtility) {
-                            // Add to inventory
-                            const itemToAdd = {
-                                ...rpgUtility,
-                                id: rpgUtilityId,
-                                quantity: 1
-                            };
-                            inventory.items.push(itemToAdd);
-                            if (logger) logger.info(`   ✅ Added ${utility.name} to ${agent.name}'s inventory`);
-                        }
+                        // Convert utility to RPG format on-the-fly (no storage needed)
+                        const rpgUtility = this.convertEquipmentToRPGItem(utility);
+                        inventory.items.push(rpgUtility);
+                        if (logger) logger.info(`   ✅ Added ${utility.name} to ${agent.name}'s inventory`);
                     }
                 }
 

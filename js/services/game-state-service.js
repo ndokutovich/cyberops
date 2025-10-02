@@ -52,19 +52,25 @@ class GameStateService {
 
     /**
      * Collect complete game state from all services and game
+     * Uses ?? instead of || for proper null/undefined handling
      */
     collectGameState(game) {
+        // Validate required game object exists
+        if (!game) {
+            throw new Error('GameStateService.collectGameState: game object is required');
+        }
+
         const state = {
             // Metadata
             version: this.saveVersion,
             timestamp: Date.now(),
-            playTime: game.playTime || 0,
+            playTime: game.playTime ?? 0,  // Use ?? for optional numeric values
 
             // Core game state
-            currentScreen: game.currentScreen || 'hub',
-            currentMission: game.currentMission || null,
-            completedMissions: game.completedMissions || [],
-            missionCount: game.missionCount || 0,
+            currentScreen: game.currentScreen ?? 'hub',  // Default to hub if not set
+            currentMission: game.currentMission ?? null,
+            completedMissions: game.completedMissions ?? [],
+            missionCount: game.missionCount ?? 0,
 
             // Resources (from ResourceService)
             resources: this.resourceService
@@ -82,43 +88,43 @@ class GameStateService {
                 : { weapons: [], equipment: [], agentLoadouts: {} },
 
             // Research and unlocks
-            researchTree: game.researchTree || {},
-            completedResearch: game.completedResearch || [],
-            unlockedAbilities: game.unlockedAbilities || [],
+            researchTree: game.researchTree ?? {},
+            completedResearch: game.completedResearch ?? [],
+            unlockedAbilities: game.unlockedAbilities ?? [],
 
             // Campaign progress
             campaignData: {
-                currentAct: game.currentAct || 1,
-                currentCampaign: game.currentCampaign || 'main',
-                campaignProgress: game.campaignProgress || {}
+                currentAct: game.currentAct ?? 1,
+                currentCampaign: game.currentCampaign ?? 'main',
+                campaignProgress: game.campaignProgress ?? {}
             },
 
             // Settings
             settings: {
                 soundEnabled: game.soundEnabled !== false,
-                musicVolume: game.musicVolume || 0.5,
-                sfxVolume: game.sfxVolume || 0.5,
-                difficulty: game.difficulty || 'normal'
+                musicVolume: game.musicVolume ?? 0.5,
+                sfxVolume: game.sfxVolume ?? 0.5,
+                difficulty: game.difficulty ?? 'normal'
             },
 
             // Statistics
             statistics: {
-                totalKills: game.totalKills || 0,
-                totalDeaths: game.totalDeaths || 0,
-                missionsCompleted: game.completedMissions?.length || 0,
-                creditsEarned: game.totalCreditsEarned || 0,
+                totalKills: game.totalKills ?? 0,
+                totalDeaths: game.totalDeaths ?? 0,
+                missionsCompleted: game.completedMissions?.length ?? 0,
+                creditsEarned: game.totalCreditsEarned ?? 0,
                 timeP
 
-: game.totalPlayTime || 0
+: game.totalPlayTime ?? 0
             },
 
             // Intel and collectibles
-            collectedIntel: game.collectedIntel || [],
-            unlockedLore: game.unlockedLore || [],
+            collectedIntel: game.collectedIntel ?? [],
+            unlockedLore: game.unlockedLore ?? [],
 
             // Milestones
-            milestones: game.milestones || [],
-            achievements: game.achievements || [],
+            milestones: game.milestones ?? [],
+            achievements: game.achievements ?? [],
 
             // Mission state (from MissionService)
             missionState: this.missionService
@@ -140,13 +146,13 @@ class GameStateService {
 
         try {
             // Apply metadata
-            game.playTime = state.playTime || 0;
+            game.playTime = state.playTime ?? 0;
 
             // Apply core game state
-            game.currentScreen = state.currentScreen || 'hub';
-            game.currentMission = state.currentMission || null;
-            game.completedMissions = state.completedMissions || [];
-            game.missionCount = state.missionCount || 0;
+            game.currentScreen = state.currentScreen ?? 'hub';
+            game.currentMission = state.currentMission ?? null;
+            game.completedMissions = state.completedMissions ?? [];
+            game.missionCount = state.missionCount ?? 0;
 
             // Apply resources
             if (this.resourceService && state.resources) {
@@ -164,15 +170,15 @@ class GameStateService {
             }
 
             // Apply research and unlocks
-            game.researchTree = state.researchTree || {};
-            game.completedResearch = state.completedResearch || [];
-            game.unlockedAbilities = state.unlockedAbilities || [];
+            game.researchTree = state.researchTree ?? {};
+            game.completedResearch = state.completedResearch ?? [];
+            game.unlockedAbilities = state.unlockedAbilities ?? [];
 
             // Apply campaign progress
             if (state.campaignData) {
-                game.currentAct = state.campaignData.currentAct || 1;
-                game.currentCampaign = state.campaignData.currentCampaign || 'main';
-                game.campaignProgress = state.campaignData.campaignProgress || {};
+                game.currentAct = state.campaignData.currentAct ?? 1;
+                game.currentCampaign = state.campaignData.currentCampaign ?? 'main';
+                game.campaignProgress = state.campaignData.campaignProgress ?? {};
             }
 
             // Apply settings
@@ -184,28 +190,26 @@ class GameStateService {
             // Apply settings
             if (state.settings) {
                 game.soundEnabled = state.settings.soundEnabled !== false;
-                game.musicVolume = state.settings.musicVolume || 0.5;
-                game.sfxVolume = state.settings.sfxVolume || 0.5;
-                game.difficulty = state.settings.difficulty || 'normal';
+                game.musicVolume = state.settings.musicVolume ?? 0.5;
+                game.sfxVolume = state.settings.sfxVolume ?? 0.5;
+                game.difficulty = state.settings.difficulty ?? 'normal';
             }
 
             // Apply statistics
             if (state.statistics) {
-                game.totalKills = state.statistics.totalKills || 0;
-                game.totalDeaths = state.statistics.totalDeaths || 0;
-                game.totalCreditsEarned = state.statistics.creditsEarned || 0;
-                game.totalPlayTime = state.statistics.timeP
-
- || 0;
+                game.totalKills = state.statistics.totalKills ?? 0;
+                game.totalDeaths = state.statistics.totalDeaths ?? 0;
+                game.totalCreditsEarned = state.statistics.creditsEarned ?? 0;
+                game.totalPlayTime = state.statistics.timePlayed ?? 0;
             }
 
             // Apply collectibles
-            game.collectedIntel = state.collectedIntel || [];
-            game.unlockedLore = state.unlockedLore || [];
+            game.collectedIntel = state.collectedIntel ?? [];
+            game.unlockedLore = state.unlockedLore ?? [];
 
             // Apply milestones
-            game.milestones = state.milestones || [];
-            game.achievements = state.achievements || [];
+            game.milestones = state.milestones ?? [];
+            game.achievements = state.achievements ?? [];
 
             if (this.logger) this.logger.info('✅ Game state applied successfully');
             return true;

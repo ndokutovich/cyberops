@@ -89,17 +89,35 @@ class RPGPawn {
 
         // Add any missing stats from config with default values
         const rpgConfig = this.getRPGConfig();
-        for (let statName in rpgConfig?.stats?.primary || {}) {
-            if (!this.stats[statName]) {
-                const statConfig = rpgConfig.stats.primary[statName];
-                this.stats[statName] = {
-                    base: statConfig?.baseValue || 10,
-                    bonus: 0,
-                    multiplier: 1,
-                    get value() {
-                        return Math.floor((this.base + this.bonus) * this.multiplier);
-                    }
-                };
+        const primaryStats = rpgConfig?.stats?.primary;
+        if (primaryStats && Array.isArray(primaryStats)) {
+            // Primary stats is an array of stat definitions
+            primaryStats.forEach(statDef => {
+                if (!this.stats[statDef.id]) {
+                    this.stats[statDef.id] = {
+                        base: statDef.baseValue || 10,
+                        bonus: 0,
+                        multiplier: 1,
+                        get value() {
+                            return Math.floor((this.base + this.bonus) * this.multiplier);
+                        }
+                    };
+                }
+            });
+        } else if (primaryStats && typeof primaryStats === 'object') {
+            // Fallback: primary stats is an object
+            for (let statName in primaryStats) {
+                if (!this.stats[statName]) {
+                    const statConfig = primaryStats[statName];
+                    this.stats[statName] = {
+                        base: statConfig?.baseValue || 10,
+                        bonus: 0,
+                        multiplier: 1,
+                        get value() {
+                            return Math.floor((this.base + this.bonus) * this.multiplier);
+                        }
+                    };
+                }
             }
         }
 

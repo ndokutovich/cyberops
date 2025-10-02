@@ -250,9 +250,9 @@ class ContentLoader {
             };
         });
 
-        // Also set campaignEnemyTypes for backward compatibility with spawnMissionEnemies
-        game.campaignEnemyTypes = this.currentCampaign.enemies;
-        if (logger) logger.info(`✅ Set campaignEnemyTypes: ${game.campaignEnemyTypes.length} enemy types`);
+        // campaignEnemyTypes now available via computed property in game-utils.js
+        // No need to set directly - property getter will retrieve from ContentLoader
+        if (logger) logger.info(`✅ Campaign enemies loaded: ${this.currentCampaign.enemies.length} enemy types`);
 
         this.contentCache.set('enemyTypes', game.enemyTypes);
     }
