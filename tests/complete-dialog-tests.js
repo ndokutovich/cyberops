@@ -28,8 +28,9 @@ describe('Complete Dialog Coverage Tests', () => {
             'confirm-surrender',
 
             // Game screens (from dialog-config-screens.js)
+            // Note: loadout-select was removed and merged into mission-briefing
             'victory-screen', 'defeat-screen', 'mission-briefing',
-            'loadout-select', 'syndicate-hub',
+            'syndicate-hub',
 
             // Menu & Navigation screens (from dialog-config-screens.js)
             'splash-screen', 'menu-screen', 'credits-screen',

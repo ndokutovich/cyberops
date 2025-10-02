@@ -182,13 +182,13 @@ describe('Screen Dialog Tests', () => {
         // Verify buttons
         const stateConfig = game.dialogEngine.config.states['mission-briefing'];
         assertEqual(stateConfig.buttons.length, 2, 'Should have 2 buttons');
-        assertEqual(stateConfig.buttons[0].text, 'PROCEED TO LOADOUT', 'First button should be proceed');
+        assertEqual(stateConfig.buttons[0].text, 'START MISSION', 'First button should be start mission');
         assertEqual(stateConfig.buttons[1].text, 'BACK TO HUB', 'Second button should be back');
 
         game.dialogEngine.closeAll();
     });
 
-    // Test loadout selection
+    // Test loadout selection (merged into mission-briefing)
     it('should show loadout selection with agent roster', async () => {
         game.dialogEngine.closeAll();
         await sleep(50);
@@ -202,19 +202,18 @@ describe('Screen Dialog Tests', () => {
 
         game.selectedAgents = [1]; // Pre-select first agent
 
-        // Navigate to briefing first (parent)
+        // Navigate to briefing (loadout functionality is now in briefing screen)
         game.dialogEngine.navigateTo('mission-briefing');
         await sleep(50);
 
-        // Then to loadout
-        game.dialogEngine.navigateTo('loadout-select');
-        await sleep(50);
-        assertEqual(game.dialogEngine.currentState, 'loadout-select', 'Should show loadout selection');
-        assertEqual(game.dialogEngine.stateStack.length, 2, 'Should have 2 levels (briefing -> loadout)');
+        // Loadout-select was merged into mission-briefing per dialog-config-screens.js line 89-90
+        assertEqual(game.dialogEngine.currentState, 'mission-briefing', 'Should show mission briefing with loadout');
+        assertEqual(game.dialogEngine.stateStack.length, 1, 'Should have 1 level (briefing includes loadout)');
 
-        // Check validation
-        const stateConfig = game.dialogEngine.config.states['loadout-select'];
-        assertTruthy(stateConfig.validation, 'Should have validation');
+        // Check that briefing state exists and has content
+        const stateConfig = game.dialogEngine.config.states['mission-briefing'];
+        assertTruthy(stateConfig, 'Mission briefing state should exist');
+        assertTruthy(stateConfig.content, 'Should have content generator');
 
         game.dialogEngine.closeAll();
     });
@@ -253,6 +252,7 @@ describe('Screen Dialog Tests', () => {
 
     // Test action handlers
     it('should register screen action handlers', async () => {
+        // Actions that are actually registered in dialog-integration-screens.js
         const actions = [
             'continueFromVictory',
             'proceedToNextMission',
@@ -260,8 +260,10 @@ describe('Screen Dialog Tests', () => {
             'returnToHubFromVictory',
             'retryMission',
             'returnToHubFromDefeat',
-            'toggleAgent',
-            'startMissionWithLoadout'
+            'returnToHub',
+            'startMissionFromBriefing',
+            'initializeHubScreen',
+            'cleanupHubScreen'
         ];
 
         for (const action of actions) {
@@ -352,11 +354,11 @@ describe('Screen Dialog Tests', () => {
 
     // Test screen coverage
     it('should generate screen coverage report', () => {
+        // loadout-select was removed and merged into mission-briefing
         const expectedScreens = [
             'victory-screen',
             'defeat-screen',
             'mission-briefing',
-            'loadout-select',
             'syndicate-hub'
         ];
 
