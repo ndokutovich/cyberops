@@ -97,6 +97,9 @@ class TestFramework {
             return this.results;
         }
 
+        // Note: onProgress callback should be set by test runner BEFORE calling run()
+        // Don't clear it here!
+
         // Prevent infinite loops
         this.executionCount++;
         if (this.executionCount > this.maxExecutions) {
@@ -196,6 +199,27 @@ class TestFramework {
             }
 
             this.stats.total++;
+
+            // Notify progress callback (for real-time UI updates)
+            if (this.onProgress) {
+                console.log(`🔥 TEST FRAMEWORK: Calling onProgress for test #${this.stats.total}`);
+                this.onProgress({
+                    passed: this.stats.passed,
+                    total: this.stats.total,
+                    failed: this.stats.failed,
+                    skipped: this.stats.skipped,
+                    currentTest: test.name,
+                    currentSuite: suite.name
+                });
+
+                // CRITICAL: Force browser to repaint by waiting for animation frame
+                await new Promise(resolve => requestAnimationFrame(() => {
+                    // Then wait a bit more to ensure repaint completes
+                    setTimeout(resolve, 10);
+                }));
+            } else {
+                console.log(`❌ TEST FRAMEWORK: onProgress callback is NOT SET!`);
+            }
         }
 
         // Run afterAll
@@ -215,7 +239,7 @@ class TestFramework {
             name: test.name,
             status: 'pending',
             error: null,
-            errorDetails: null,  // NEW: Store full error details
+            errorDetails: null,  // Store full error details
             duration: 0
         };
 
@@ -226,10 +250,22 @@ class TestFramework {
         } catch (error) {
             result.status = 'failed';
             result.error = error.message || error;
-            // NEW: Capture full error details including stack trace
+
+            // Extract only the relevant stack trace (first test file line, not framework internals)
+            let relevantStack = 'No stack trace available';
+            if (error.stack) {
+                const stackLines = error.stack.split('\n');
+                // Find first line that's from tests/ directory (not test-framework.js)
+                const testFileLine = stackLines.find(line =>
+                    line.includes('/tests/') && !line.includes('test-framework.js')
+                );
+                relevantStack = testFileLine ? testFileLine.trim() : stackLines[1] || stackLines[0];
+            }
+
+            // Store structured error details
             result.errorDetails = {
                 message: error.message || String(error),
-                stack: error.stack || 'No stack trace available',
+                stack: relevantStack,  // Only relevant line, not full stack
                 expected: error.expected,  // From assertion errors
                 actual: error.actual,      // From assertion errors
                 fullError: error

@@ -90,6 +90,10 @@ CyberOpsGame.prototype.playScreenTrack = function(trackConfig, trackId) {
     audio.loop = trackConfig.loop !== false;
     audio.volume = 0; // Start at 0 for fade in
 
+    // Store config volume for later multiplication with user settings
+    const configVolume = trackConfig.volume !== undefined ? trackConfig.volume : 1.0;
+    audio.setAttribute('data-config-volume', configVolume);
+
     // Handle start time with conditional logic
     if (trackConfig.startTime !== undefined) {
         if (this.logger) this.logger.debug(`🎵 Start time config: ${trackConfig.startTime}, condition: ${trackConfig.startTimeCondition}, splashSkipped: ${this.splashSkipped}`);
@@ -121,7 +125,10 @@ CyberOpsGame.prototype.playScreenTrack = function(trackConfig, trackId) {
     // Play new track
     audio.play().then(() => {
         if (this.logger) this.logger.info(`✅ Started playing: ${trackId}`);
-        const targetVolume = (trackConfig.volume || 0.7) * (this.musicConfig.global?.musicVolume || 1);
+        // MULTIPLY: config volume × user volume (master × music)
+        const configVolume = trackConfig.volume || 0.7;
+        const userVolume = (this.masterVolume || 0.5) * (this.musicVolume || 0.3);
+        const targetVolume = configVolume * userVolume;
         this.fadeInScreenTrack(audio, targetVolume, trackConfig.fadeIn || this.musicConfig.global?.fadeInTime || 2000);
         this.screenMusic.currentTrack = audio;
 

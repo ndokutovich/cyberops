@@ -486,12 +486,37 @@ const DIALOG_CONFIG = {
             title: '⚙️ SETTINGS',
             layout: 'settings-layout',
             content: {
-                type: 'dynamic',
-                generator: 'generateSettingsForm'
+                type: 'tabbed',
+                tabs: [
+                    {
+                        id: 'keyboard',
+                        label: 'KEYBOARD',
+                        icon: '⌨️',
+                        generator: 'generateKeyboardSettings'
+                    },
+                    {
+                        id: 'audio',
+                        label: 'AUDIO',
+                        icon: '🔊',
+                        generator: 'generateAudioSettings'
+                    },
+                    {
+                        id: 'graphics',
+                        label: 'GRAPHICS',
+                        icon: '🖥️',
+                        generator: 'generateGraphicsSettings'
+                    },
+                    {
+                        id: 'game',
+                        label: 'GAME',
+                        icon: '🎮',
+                        generator: 'generateGameSettings'
+                    }
+                ]
             },
             buttons: [
+                { text: 'RESET TO DEFAULTS', action: 'execute:resetSettings', style: 'danger' },
                 { text: 'APPLY', action: 'execute:applySettings', primary: true },
-                { text: 'DEFAULTS', action: 'execute:resetSettings' },
                 { text: 'BACK', action: 'back' }
             ]
         },
@@ -522,16 +547,41 @@ const DIALOG_CONFIG = {
             type: 'dialog',
             level: 1,
             parent: 'hub',
-            title: '⚙️ SETTINGS & CONTROLS',
+            title: 'SYSTEM SETTINGS',
             layout: 'settings-layout',
             content: {
-                type: 'dynamic',
-                generator: 'generateSettingsForm'
+                type: 'tabbed',
+                tabs: [
+                    {
+                        id: 'keyboard',
+                        label: 'KEYBOARD',
+                        icon: '⌨️',
+                        generator: 'generateKeyboardSettings'
+                    },
+                    {
+                        id: 'audio',
+                        label: 'AUDIO',
+                        icon: '🔊',
+                        generator: 'generateAudioSettings'
+                    },
+                    {
+                        id: 'graphics',
+                        label: 'GRAPHICS',
+                        icon: '🖥️',
+                        generator: 'generateGraphicsSettings'
+                    },
+                    {
+                        id: 'game',
+                        label: 'GAME',
+                        icon: '🎮',
+                        generator: 'generateGameSettings'
+                    }
+                ]
             },
             buttons: [
+                { text: 'RESET TO DEFAULTS', action: 'execute:resetSettings', style: 'danger' },
                 { text: 'APPLY', action: 'execute:applySettings', primary: true },
-                { text: 'DEFAULTS', action: 'execute:resetSettings' },
-                { text: 'BACK TO HUB', action: 'back' }
+                { text: 'CANCEL', action: 'back' }
             ]
         },
 

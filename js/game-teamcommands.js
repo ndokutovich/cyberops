@@ -10,7 +10,11 @@ CyberOpsGame.prototype.initTeamCommands = function() {
     if (!this.logger) {
         this.logger = window.Logger ? new window.Logger('GameTeamcommands') : null;
     }
-    this.teamMode = 'hold'; // Default mode: hold (changed from follow)
+
+    // Use defaultTeamMode from settings, fallback to 'hold'
+    this.teamMode = this.defaultTeamMode || 'hold';
+    if (this.logger) this.logger.debug(`🎯 Team mode initialized: ${this.teamMode} (from ${this.defaultTeamMode ? 'settings' : 'default'})`);
+
     this.patrolPoints = {}; // Store patrol points for each agent
     this.holdPositions = {}; // Store hold positions for each agent
     this.autoFireRange = 5; // Range for automatic firing
@@ -45,16 +49,31 @@ CyberOpsGame.prototype.initTeamCommands = function() {
 CyberOpsGame.prototype.setTeamMode = function(mode) {
     this.teamMode = mode;
 
-    // Update button states
-    document.getElementById('holdBtn').style.background = mode === 'hold' ?
-        'rgba(0, 150, 255, 0.9)' : 'rgba(0, 100, 200, 0.8)';
-    document.getElementById('patrolBtn').style.background = mode === 'patrol' ?
-        'rgba(0, 200, 150, 0.9)' : 'rgba(0, 150, 100, 0.8)';
-    document.getElementById('followBtn').style.background = mode === 'follow' ?
-        'rgba(200, 150, 0, 0.9)' : 'rgba(150, 100, 0, 0.8)';
+    // Initialize arrays if not already initialized (defensive for test environment)
+    if (!this.holdPositions) this.holdPositions = {};
+    if (!this.patrolPoints) this.patrolPoints = {};
 
-    // Set positions based on mode
-    this.agents.forEach(agent => {
+    // Update button states (only if elements exist - may not exist in test environment)
+    const holdBtn = document.getElementById('holdBtn');
+    const patrolBtn = document.getElementById('patrolBtn');
+    const followBtn = document.getElementById('followBtn');
+
+    if (holdBtn) {
+        holdBtn.style.background = mode === 'hold' ?
+            'rgba(0, 150, 255, 0.9)' : 'rgba(0, 100, 200, 0.8)';
+    }
+    if (patrolBtn) {
+        patrolBtn.style.background = mode === 'patrol' ?
+            'rgba(0, 200, 150, 0.9)' : 'rgba(0, 150, 100, 0.8)';
+    }
+    if (followBtn) {
+        followBtn.style.background = mode === 'follow' ?
+            'rgba(200, 150, 0, 0.9)' : 'rgba(150, 100, 0, 0.8)';
+    }
+
+    // Set positions based on mode (only if agents exist)
+    if (this.agents && this.agents.length > 0) {
+        this.agents.forEach(agent => {
         // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
         if (!this.isAgentSelected(agent) && agent.alive) {
             switch(mode) {
@@ -87,7 +106,8 @@ CyberOpsGame.prototype.setTeamMode = function(mode) {
                     break;
             }
         }
-    });
+        });
+    }
 
     // Log the command
     if (this.logEvent) {

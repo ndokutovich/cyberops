@@ -1665,93 +1665,226 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
     });
 
     // Settings form with full keyboard layout
-    engine.registerGenerator('generateSettingsForm', function() {
-        let html = '<div class="settings-form" style="max-height: 500px; overflow-y: auto;">';
+    // === SETTINGS TABS GENERATORS ===
 
-        // Volume Controls
-        html += `
-            <h3 style="color: #00ffff; border-bottom: 1px solid #00ffff; padding-bottom: 10px; margin-bottom: 20px;">🔊 AUDIO SETTINGS</h3>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #00ffff;">Master Volume</label>
-                <input type="range" min="0" max="100" value="${(this.masterVolume || 0.7) * 100}"
-                       id="master-volume" onchange="game.setMasterVolume(this.value)" style="width: 100%;">
-            </div>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #00ffff;">Music Volume</label>
-                <input type="range" min="0" max="100" value="${(this.musicVolume || 0.5) * 100}"
-                       id="music-volume" onchange="game.setMusicVolume(this.value)" style="width: 100%;">
-            </div>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #00ffff;">SFX Volume</label>
-                <input type="range" min="0" max="100" value="${(this.sfxVolume || 0.5) * 100}"
-                       id="sfx-volume" onchange="game.setSFXVolume(this.value)" style="width: 100%;">
-            </div>
-        `;
+    // Keyboard Settings Tab - Full key rebinding system
+    engine.registerGenerator('generateKeyboardSettings', function() {
+        let html = '<div style="color: #fff; overflow-y: auto; max-height: 500px;">';
 
-        // Display Settings
-        html += `
-            <h3 style="color: #00ffff; border-bottom: 1px solid #00ffff; padding-bottom: 10px; margin: 30px 0 20px 0;">🖥️ DISPLAY SETTINGS</h3>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #00ffff;">
-                    <input type="checkbox" id="show-fps" ${this.showFPS ? 'checked' : ''} onchange="game.toggleFPS(this.checked)">
-                    Show FPS Counter
-                </label>
-            </div>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #00ffff;">
-                    <input type="checkbox" id="show-debug" ${this.debugMode ? 'checked' : ''} onchange="game.toggleDebugMode(this.checked)">
-                    Debug Mode
-                </label>
-            </div>
-        `;
+        if (window.KeybindingService) {
+            const categories = window.KeybindingService.exportForUI();
 
-        // Keyboard Controls
-        html += `
-            <h3 style="color: #00ffff; border-bottom: 1px solid #00ffff; padding-bottom: 10px; margin: 30px 0 20px 0;">⌨️ KEYBOARD CONTROLS</h3>
-            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">WASD/Arrows</span> - Move camera</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">Space</span> - Center on selected</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">Tab</span> - Cycle agents</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">1-6</span> - Select agent</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">H</span> - Hack/Interact</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">G</span> - Use grenade</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">E</span> - Toggle 3D mode</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">Z</span> - Game speed</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">J</span> - Mission list</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">P/Esc</span> - Pause menu</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">+/-</span> - Zoom in/out</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">F</span> - Follow mode</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">Shift+Click</span> - Waypoint</div>
-                    <div style="color: #fff;"><span style="color: #00ff00; font-weight: bold;">Ctrl+[1-6]</span> - Squad group</div>
-                </div>
-            </div>
-        `;
+            categories.forEach(cat => {
+                html += `
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #00ffff; margin-bottom: 15px; border-bottom: 1px solid #00ffff; padding-bottom: 5px;">
+                            ${cat.label}
+                        </h3>
+                        <div style="display: grid; gap: 10px;">
+                `;
 
-        // Game Settings
-        html += `
-            <h3 style="color: #00ffff; border-bottom: 1px solid #00ffff; padding-bottom: 10px; margin: 30px 0 20px 0;">🎮 GAMEPLAY</h3>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #00ffff;">
-                    <input type="checkbox" id="auto-save" ${this.autosaveEnabled ? 'checked' : ''} onchange="game.toggleAutosave(this.checked)">
-                    Enable Autosave
-                </label>
-            </div>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #00ffff;">
-                    <input type="checkbox" id="turn-based" ${this.turnBasedMode ? 'checked' : ''} onchange="game.toggleTurnBased(this.checked)">
-                    Turn-Based Mode (Experimental)
-                </label>
-            </div>
-            <div style="margin-bottom: 20px;">
-                <button class="dialog-button" onclick="game.resetSettings()" style="background: #ff0000; border-color: #ff0000;">
-                    RESET TO DEFAULTS
-                </button>
-            </div>
-        `;
+                cat.bindings.forEach(binding => {
+                    html += `
+                        <div style="
+                            display: grid;
+                            grid-template-columns: 1fr 150px 100px;
+                            align-items: center;
+                            padding: 8px;
+                            background: rgba(255, 255, 255, 0.05);
+                            border-radius: 5px;
+                        ">
+                            <span style="color: #ccc;">${binding.description}</span>
+                            <input type="text"
+                                id="key-${binding.action}"
+                                value="${binding.key}"
+                                readonly
+                                style="
+                                    background: rgba(0, 0, 0, 0.5);
+                                    border: 1px solid #444;
+                                    color: #00ffff;
+                                    padding: 5px 10px;
+                                    text-align: center;
+                                    cursor: pointer;
+                                    border-radius: 3px;
+                                "
+                                onclick="game.startKeyRebind('${binding.action}')"
+                            >
+                            <button
+                                onclick="game.resetKeyBinding('${binding.action}')"
+                                style="
+                                    background: rgba(255, 0, 0, 0.1);
+                                    border: 1px solid #ff4444;
+                                    color: #ff4444;
+                                    padding: 5px 10px;
+                                    cursor: pointer;
+                                    border-radius: 3px;
+                                "
+                            >Reset</button>
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+            });
+        } else {
+            html += '<p style="color: #ff4444;">Keyboard binding service not loaded</p>';
+        }
 
         html += '</div>';
         return html;
+    });
+
+    // Audio Settings Tab
+    engine.registerGenerator('generateAudioSettings', function() {
+        // Get current state from localStorage or audioEnabled flag
+        const audioEnabledSetting = localStorage.getItem('cyberops_audio_enabled');
+        const audioEnabled = audioEnabledSetting !== null ? audioEnabledSetting === 'true' : this.audioEnabled;
+
+        return `
+            <div style="color: #fff;">
+                <h3 style="color: #00ffff; margin-bottom: 20px;">AUDIO SETTINGS</h3>
+
+                <div style="margin-bottom: 20px;">
+                    <label>
+                        <input type="checkbox" ${audioEnabled ? 'checked' : ''}
+                            onchange="game.toggleAudioEnable(this.checked)"
+                            style="margin-right: 10px;">
+                        <span style="color: #00ffff; font-weight: bold;">Enable Audio</span>
+                    </label>
+                    <p style="color: #888; font-size: 0.9em; margin: 5px 0 0 24px;">
+                        Enable or disable all game audio (music and sound effects)
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px;">
+                        Master Volume <span id="master-volume-value" style="color: #888; font-size: 0.9em;">${Math.round((this.masterVolume || 0.5) * 100)}%</span>
+                    </label>
+                    <input type="range" min="0" max="100" value="${(this.masterVolume || 0.5) * 100}"
+                        oninput="document.getElementById('master-volume-value').textContent = this.value + '%'"
+                        onchange="game.setMasterVolume(this.value)"
+                        style="width: 100%;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px;">
+                        Sound Effects <span id="sfx-volume-value" style="color: #888; font-size: 0.9em;">${Math.round((this.sfxVolume || 0.5) * 100)}%</span>
+                    </label>
+                    <input type="range" min="0" max="100" value="${(this.sfxVolume || 0.5) * 100}"
+                        oninput="document.getElementById('sfx-volume-value').textContent = this.value + '%'"
+                        onchange="game.setSFXVolume(this.value)"
+                        style="width: 100%;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px;">
+                        Music <span id="music-volume-value" style="color: #888; font-size: 0.9em;">${Math.round((this.musicVolume || 0.3) * 100)}%</span>
+                    </label>
+                    <input type="range" min="0" max="100" value="${(this.musicVolume || 0.3) * 100}"
+                        oninput="document.getElementById('music-volume-value').textContent = this.value + '%'"
+                        onchange="game.setMusicVolume(this.value)"
+                        style="width: 100%;">
+                </div>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 5px;">
+                    <p style="color: #888; margin: 0; font-size: 0.9em;">
+                        💡 Note: Volume changes take effect immediately. Music playback requires user interaction first.
+                    </p>
+                </div>
+            </div>
+        `;
+    });
+
+    // Graphics Settings Tab
+    engine.registerGenerator('generateGraphicsSettings', function() {
+        const enableScreenShake = localStorage.getItem('cyberops_screenshake') !== 'false';
+        const enable3DShadows = localStorage.getItem('cyberops_shadows') !== 'false';
+        const showFPS = this.showFPS || false;
+
+        return `
+            <div style="color: #fff;">
+                <h3 style="color: #00ffff; margin-bottom: 20px;">GRAPHICS SETTINGS</h3>
+
+                <div style="margin-bottom: 20px;">
+                    <label>
+                        <input type="checkbox" ${enableScreenShake ? 'checked' : ''}
+                            onchange="game.toggleScreenShake(this.checked)">
+                        Enable Screen Shake
+                    </label>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label>
+                        <input type="checkbox" ${enable3DShadows ? 'checked' : ''}
+                            onchange="game.toggle3DShadows(this.checked)">
+                        Enable 3D Shadows (3D mode only)
+                    </label>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label>
+                        <input type="checkbox" ${showFPS ? 'checked' : ''}
+                            onchange="game.toggleFPS(this.checked)">
+                        Show FPS Counter
+                    </label>
+                </div>
+
+                <div style="margin-top: 40px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 5px;">
+                    <p style="color: #888; margin: 0;">
+                        Note: Most graphics settings are optimized for performance.<br>
+                        Advanced graphics options may be added in future updates.
+                    </p>
+                </div>
+            </div>
+        `;
+    });
+
+    // Game Settings Tab
+    engine.registerGenerator('generateGameSettings', function() {
+        const usePathfinding = this.usePathfinding !== false;
+        const autoSave = localStorage.getItem('cyberops_autosave') !== 'false';
+
+        return `
+            <div style="color: #fff;">
+                <h3 style="color: #00ffff; margin-bottom: 20px;">GAME SETTINGS</h3>
+
+                <div style="margin-bottom: 20px;">
+                    <label>
+                        <input type="checkbox" ${usePathfinding ? 'checked' : ''}
+                            onchange="game.togglePathfindingSetting(this.checked)">
+                        Use Pathfinding (smarter agent movement)
+                    </label>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label>
+                        <input type="checkbox" ${autoSave ? 'checked' : ''}
+                            onchange="game.toggleAutoSave(this.checked)">
+                        Auto-Save Between Missions
+                    </label>
+                </div>
+
+                <div style="margin-top: 40px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 5px;">
+                    <h4 style="color: #00ffff; margin-bottom: 10px;">Default Team Mode</h4>
+                    <select id="defaultTeamMode" style="width: 200px; padding: 5px; background: #222; color: #fff; border: 1px solid #444;"
+                        onchange="game.setDefaultTeamMode(this.value)">
+                        <option value="hold" ${this.defaultTeamMode === 'hold' ? 'selected' : ''}>Hold Position</option>
+                        <option value="patrol" ${this.defaultTeamMode === 'patrol' ? 'selected' : ''}>Patrol Area</option>
+                        <option value="follow" ${this.defaultTeamMode === 'follow' ? 'selected' : ''}>Follow Leader</option>
+                    </select>
+                    <p style="color: #888; margin-top: 10px; font-size: 0.9em;">
+                        Sets the default behavior for unselected team members
+                    </p>
+                </div>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 5px;">
+                    <p style="color: #888; margin: 0;">
+                        Note: Difficulty settings are balanced for the current campaign.<br>
+                        Additional difficulty options may be added in future updates.
+                    </p>
+                </div>
+            </div>
+        `;
     });
 
     // NPC dialog

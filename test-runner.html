@@ -225,6 +225,9 @@
     <div id="progress-bar">
         <div id="progress-fill"></div>
     </div>
+    <div id="progress-text" style="text-align: center; color: #00ffff; margin: 5px 0; font-size: 14px;">
+        Ready to run tests...
+    </div>
 
     <div id="test-output"></div>
 
@@ -235,6 +238,7 @@
             <button id="btn-export-json">📄 Export JSON</button>
             <button id="btn-export-html">📋 Export HTML Report</button>
             <button id="btn-export-junit">🔧 Export JUnit XML</button>
+            <button id="btn-copy-results">📋 Copy to Clipboard</button>
         </div>
     </div>
 
@@ -368,6 +372,8 @@
     <script src="tests/screen-dialog-tests.js"></script>
     <script src="tests/complete-dialog-tests.js"></script>
     <script src="tests/hub-dialog-tests.js"></script>
+    <script src="tests/tabbed-content-tests.js"></script>
+    <script src="tests/settings-functionality-tests.js"></script>
     <script src="tests/menu-screen-tests.js"></script>
     <script src="tests/rpg-dialog-tests.js"></script>
     <script src="tests/hud-tests.js"></script>
@@ -407,6 +413,47 @@
         const summary = document.getElementById('test-summary');
         const summaryContent = document.getElementById('summary-content');
         const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+
+        // Store total test count for progress calculation
+        let totalTests = 0;
+
+        // Real-time progress update handler
+        function updateProgress(progress) {
+            // Count total tests on first call
+            if (totalTests === 0 && testFramework.suites) {
+                testFramework.suites.forEach(suite => {
+                    totalTests += suite.tests.filter(t => !t.skip).length;
+                });
+                originalLog(`📊 PROGRESS INITIALIZED: ${totalTests} tests total`);
+            }
+
+            const testsCompleted = progress.passed + progress.failed;
+            const percentage = totalTests > 0 ? (testsCompleted / totalTests) * 100 : 0;
+
+            // Debug output using originalLog to bypass filter
+            originalLog(`📊 PROGRESS UPDATE: ${testsCompleted}/${totalTests} = ${Math.round(percentage)}%`);
+
+            // Update UI immediately and force repaint
+            progressFill.style.width = `${Math.round(percentage)}%`;
+
+            // Truncate long test names for better display
+            const testName = progress.currentTest.length > 50
+                ? progress.currentTest.substring(0, 47) + '...'
+                : progress.currentTest;
+
+            progressText.textContent = `Running: ${testName} | Passed: ${progress.passed}/${totalTests} | Failed: ${progress.failed}`;
+
+            // Change color based on status
+            if (progress.failed > 0) {
+                progressFill.style.background = 'linear-gradient(90deg, #ff4444, #ff8844)';
+            } else {
+                progressFill.style.background = 'linear-gradient(90deg, #00ff00, #00ffff)';
+            }
+
+            // Force a layout recalculation to ensure repaint
+            progressFill.offsetHeight;
+        }
 
         // Custom console logger for test output
         const originalLog = console.log;
@@ -429,6 +476,13 @@
                 typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
             ).join(' ');
 
+            // Filter out specific noisy messages (but NOT progress bar updates)
+            if (message.includes('🖼️ Rendering: Frame')) return;  // GameEngine frame spam
+            if (message.includes('🔄 New architecture: Frame')) return;  // GameController frame spam
+            if (message.includes('📊 XP Progress:')) return;  // XP progress spam
+            if (message.includes('⚠️ No currentMissionDef')) return;  // Mission def warning spam
+            // Allow "📊 Progress" messages (test progress, not XP)
+
             // Detect test result patterns
             if (message.includes('✅')) {
                 logToOutput(message, 'log-test-pass');
@@ -446,6 +500,13 @@
         console.error = function(...args) {
             originalError.apply(console, args);
             const message = args.join(' ');
+
+            // Better error formatting - show errors with proper indentation and context
+            if (message.includes('Stack Trace:')) {
+                // Skip the generic "Stack Trace:" header - individual errors now have specific stacks
+                return;
+            }
+
             logToOutput(message, 'log-error');
         };
 
@@ -461,6 +522,8 @@
         // Initialize game
         async function initializeGame() {
             logToOutput('🎮 Initializing game for testing...', 'log-suite');
+
+            // Note: Log filtering handled in console.log override below
 
             try {
                 // Create game instance
@@ -585,13 +648,29 @@
             // Reset execution counter for new test run
             testFramework.executionCount = 0;
             testFramework.isRunning = false;
+            totalTests = 0;  // Reset for accurate progress calculation
+
+            // Reset progress UI
+            progressFill.style.width = '0%';
+            progressFill.style.background = 'linear-gradient(90deg, #00ff00, #00ffff)';
+            progressText.textContent = 'Starting tests...';
 
             // Configure test framework
             testFramework.config.verbose = document.getElementById('verbose-mode').checked;
             testFramework.config.stopOnFailure = document.getElementById('stop-on-failure').checked;
 
+            // Attach progress callback for real-time updates
+            testFramework.onProgress = updateProgress;
+            console.log('✅ Progress callback attached to testFramework');
+
             // Run tests
             const results = await testFramework.run();
+
+            // Update progress text to show completion
+            const finalTotal = testFramework.stats.total;
+            const finalPassed = testFramework.stats.passed;
+            const finalFailed = testFramework.stats.failed;
+            progressText.textContent = `✅ Complete! Passed: ${finalPassed}/${finalTotal} | Failed: ${finalFailed}`;
 
             // Show summary
             showSummary();
@@ -608,10 +687,20 @@
             // Reset execution counter
             testFramework.executionCount = 0;
             testFramework.isRunning = false;
+            totalTests = 0;
+
+            // Reset progress UI
+            progressFill.style.width = '0%';
+            progressFill.style.background = 'linear-gradient(90deg, #00ff00, #00ffff)';
+            progressText.textContent = 'Starting tests...';
 
             // Configure test framework
             testFramework.config.verbose = document.getElementById('verbose-mode').checked;
             testFramework.config.stopOnFailure = document.getElementById('stop-on-failure').checked;
+
+            // Attach progress callback for real-time updates
+            testFramework.onProgress = updateProgress;
+            console.log('✅ Progress callback attached to testFramework');
 
             // Run only dialog tests
             const results = await testFramework.run('Dialog Conversion Tests');
@@ -630,10 +719,20 @@
             // Reset execution counter
             testFramework.executionCount = 0;
             testFramework.isRunning = false;
+            totalTests = 0;
+
+            // Reset progress UI
+            progressFill.style.width = '0%';
+            progressFill.style.background = 'linear-gradient(90deg, #00ff00, #00ffff)';
+            progressText.textContent = 'Starting tests...';
 
             // Configure test framework
             testFramework.config.verbose = document.getElementById('verbose-mode').checked;
             testFramework.config.stopOnFailure = document.getElementById('stop-on-failure').checked;
+
+            // Attach progress callback for real-time updates
+            testFramework.onProgress = updateProgress;
+            console.log('✅ Progress callback attached to testFramework');
 
             // Run only state machine tests
             const results = await testFramework.run('State Machine Transition Tests');
@@ -652,10 +751,20 @@
             // Reset execution counter
             testFramework.executionCount = 0;
             testFramework.isRunning = false;
+            totalTests = 0;
+
+            // Reset progress UI
+            progressFill.style.width = '0%';
+            progressFill.style.background = 'linear-gradient(90deg, #00ff00, #00ffff)';
+            progressText.textContent = 'Starting tests...';
 
             // Configure test framework
             testFramework.config.verbose = document.getElementById('verbose-mode').checked;
             testFramework.config.stopOnFailure = document.getElementById('stop-on-failure').checked;
+
+            // Attach progress callback for real-time updates
+            testFramework.onProgress = updateProgress;
+            console.log('✅ Progress callback attached to testFramework');
 
             // Run only audit tests
             const results = await testFramework.run('Complete Dialog State Audit');
@@ -807,8 +916,8 @@
                                 }
                                 if (f.errorDetails.stack) {
                                     const stackPreview = f.errorDetails.stack.split('\n').slice(0, 5).join('\n');
-                                    detailsHtml += `<details style="margin-left: 20px; color: #888;">
-                                        <summary style="cursor: pointer; color: #aaa;">Stack Trace (click to expand)</summary>
+                                    detailsHtml += `<details open style="margin-left: 20px; color: #888;">
+                                        <summary style="cursor: pointer; color: #aaa;">Stack Trace</summary>
                                         <pre style="font-size: 0.75em; overflow-x: auto; color: #999;">${f.errorDetails.stack}</pre>
                                     </details>`;
                                 }
@@ -951,6 +1060,28 @@
         document.getElementById('btn-export-json').addEventListener('click', () => exportResults('json'));
         document.getElementById('btn-export-html').addEventListener('click', () => exportResults('html'));
         document.getElementById('btn-export-junit').addEventListener('click', () => exportResults('junit'));
+
+        // Copy to clipboard handler
+        document.getElementById('btn-copy-results').addEventListener('click', async () => {
+            const testOutput = document.getElementById('test-output').textContent;
+            const summaryContent = document.getElementById('summary-content').textContent;
+            const fullResults = `=== TEST RESULTS ===\n\n${summaryContent}\n\n=== DETAILED OUTPUT ===\n\n${testOutput}`;
+
+            try {
+                await navigator.clipboard.writeText(fullResults);
+                const btn = document.getElementById('btn-copy-results');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#004400';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard. Please copy manually.');
+            }
+        });
 
         // Auto-run tests if specified in URL
         const urlParams = new URLSearchParams(window.location.search);

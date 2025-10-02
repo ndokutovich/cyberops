@@ -214,6 +214,13 @@ class CyberOpsGame {
             if (this.logger) this.logger.info('✅ Equipment system initialized');
         }
 
+        // Load saved settings from localStorage
+        if (this.logger) this.logger.debug('⚙️ Loading saved settings...');
+        if (this.loadSavedSettings) {
+            this.loadSavedSettings();
+            if (this.logger) this.logger.info('✅ Settings loaded from localStorage');
+        }
+
         // Initialize 3D system - check if Three.js is loaded
         if (this.logger) this.logger.debug('🔍 Checking Three.js availability...');
         if (this.logger) this.logger.debug('- window.THREE exists:', !!window.THREE);

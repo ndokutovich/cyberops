@@ -321,6 +321,9 @@ class DeclarativeDialogEngine {
             case 'conditional':
                 return this.generateConditional(contentConfig, params);
 
+            case 'tabbed':
+                return this.generateTabbed(contentConfig, params);
+
             default:
                 return `<p>Unknown content type: ${contentConfig.type}</p>`;
         }
@@ -411,6 +414,117 @@ class DeclarativeDialogEngine {
         }
 
         return '';
+    }
+
+    /**
+     * Generate tabbed content
+     */
+    generateTabbed(config, params) {
+        if (!config.tabs || !Array.isArray(config.tabs) || config.tabs.length === 0) {
+            return '<p>No tabs configured</p>';
+        }
+
+        const game = window.game;
+        // Determine active tab and store it
+        const activeTab = this.activeTab || config.tabs[0].id;
+        this.activeTab = activeTab;  // Store for test verification
+
+        // Generate tab navigation
+        let html = '<div class="tabbed-content-wrapper">';
+        html += '<div class="tab-navigation" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #444; padding-bottom: 10px;">';
+
+        config.tabs.forEach(tab => {
+            const isActive = tab.id === activeTab;
+            html += `
+                <button
+                    class="tab-button ${isActive ? 'active' : ''}"
+                    onclick="(window.declarativeDialogEngine || window.game?.dialogEngine)?.switchTab('${tab.id}')"
+                    style="
+                        background: ${isActive ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)'};
+                        border: 1px solid ${isActive ? '#00ffff' : '#444'};
+                        color: ${isActive ? '#00ffff' : '#ccc'};
+                        padding: 10px 20px;
+                        cursor: pointer;
+                        border-radius: 5px 5px 0 0;
+                        font-size: 14px;
+                        transition: all 0.2s;
+                    "
+                    onmouseover="if (!this.classList.contains('active')) { this.style.background = 'rgba(255, 255, 255, 0.1)'; this.style.borderColor = '#666'; }"
+                    onmouseout="if (!this.classList.contains('active')) { this.style.background = 'rgba(255, 255, 255, 0.05)'; this.style.borderColor = '#444'; }"
+                >
+                    ${tab.icon || ''} ${tab.label}
+                </button>
+            `;
+        });
+
+        html += '</div>';
+
+        // Generate tab content areas
+        config.tabs.forEach(tab => {
+            const isActive = tab.id === activeTab;
+            html += `
+                <div class="tab-content" id="tab-content-${tab.id}" style="display: ${isActive ? 'block' : 'none'};">
+            `;
+
+            // Generate content for this tab using its generator
+            if (tab.generator) {
+                const generator = this.generatorRegistry.get(tab.generator);
+                if (generator) {
+                    game._dialogEngineContext = this;
+                    html += generator.call(game, params);
+                    delete game._dialogEngineContext;
+                } else {
+                    html += `<p style="color: #ff4444;">Generator not found: ${tab.generator}</p>`;
+                }
+            } else if (tab.content) {
+                // Direct content
+                html += tab.content;
+            } else {
+                html += '<p>No content configured for this tab</p>';
+            }
+
+            html += '</div>';
+        });
+
+        html += '</div>';
+        return html;
+    }
+
+    /**
+     * Switch active tab in tabbed content
+     */
+    switchTab(tabId) {
+        this.activeTab = tabId;
+
+        // Hide all tab contents and deactivate all buttons
+        const tabContents = document.querySelectorAll('.tab-content');
+        const tabButtons = document.querySelectorAll('.tab-button');
+
+        tabContents.forEach(content => {
+            content.style.display = 'none';
+        });
+
+        tabButtons.forEach(button => {
+            button.classList.remove('active');
+            button.style.background = 'rgba(255, 255, 255, 0.05)';
+            button.style.borderColor = '#444';
+            button.style.color = '#ccc';
+        });
+
+        // Show active tab content
+        const activeContent = document.getElementById(`tab-content-${tabId}`);
+        if (activeContent) {
+            activeContent.style.display = 'block';
+        }
+
+        // Activate button
+        const activeButton = Array.from(tabButtons).find(btn => btn.textContent.includes(tabId) || btn.onclick?.toString().includes(`'${tabId}'`));
+        if (activeButton) {
+            activeButton.classList.add('active');
+            activeButton.style.background = 'rgba(0, 255, 255, 0.2)';
+            activeButton.style.borderColor = '#00ffff';
+            activeButton.style.color = '#00ffff';
+        }
     }
 
     /**

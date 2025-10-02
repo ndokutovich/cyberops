@@ -237,7 +237,7 @@ describe('Hub Dialog Tests', () => {
         const stateConfig = game.dialogEngine.config.states['hub-settings'];
         assertEqual(stateConfig.parent, 'hub', 'Should be child of hub');
         assertEqual(stateConfig.level, 1, 'Should be level 1');
-        assertEqual(stateConfig.title, '⚙️ SETTINGS & CONTROLS', 'Should have correct title');
+        assertEqual(stateConfig.title, 'SYSTEM SETTINGS', 'Should have correct title');
 
         game.dialogEngine.closeAll();
     });
@@ -246,9 +246,55 @@ describe('Hub Dialog Tests', () => {
         const stateConfig = game.dialogEngine.config.states['hub-settings'];
         assertTruthy(stateConfig.buttons, 'Should have buttons');
         assertEqual(stateConfig.buttons.length, 3, 'Should have 3 buttons');
-        assertEqual(stateConfig.buttons[0].text, 'APPLY', 'Should have apply button');
-        assertEqual(stateConfig.buttons[1].text, 'DEFAULTS', 'Should have defaults button');
-        assertEqual(stateConfig.buttons[2].text, 'BACK TO HUB', 'Should have back to hub button');
+        assertEqual(stateConfig.buttons[0].text, 'RESET TO DEFAULTS', 'Should have reset to defaults button');
+        assertEqual(stateConfig.buttons[1].text, 'APPLY', 'Should have apply button');
+        assertEqual(stateConfig.buttons[2].text, 'CANCEL', 'Should have cancel button');
+    });
+
+    it('should have tabbed content in hub settings', async () => {
+        const stateConfig = game.dialogEngine.config.states['hub-settings'];
+        assertEqual(stateConfig.content.type, 'tabbed', 'Should use tabbed content');
+        assertTruthy(stateConfig.content.tabs, 'Should have tabs array');
+        assertEqual(stateConfig.content.tabs.length, 4, 'Should have 4 tabs');
+        assertEqual(stateConfig.content.tabs[0].label, 'KEYBOARD', 'Should have keyboard tab');
+        assertEqual(stateConfig.content.tabs[1].label, 'AUDIO', 'Should have audio tab');
+        assertEqual(stateConfig.content.tabs[2].label, 'GRAPHICS', 'Should have graphics tab');
+        assertEqual(stateConfig.content.tabs[3].label, 'GAME', 'Should have game tab');
+    });
+
+    it('should have correct generators for each settings tab', async () => {
+        const stateConfig = game.dialogEngine.config.states['hub-settings'];
+        assertEqual(stateConfig.content.tabs[0].generator, 'generateKeyboardSettings', 'Keyboard tab should have correct generator');
+        assertEqual(stateConfig.content.tabs[1].generator, 'generateAudioSettings', 'Audio tab should have correct generator');
+        assertEqual(stateConfig.content.tabs[2].generator, 'generateGraphicsSettings', 'Graphics tab should have correct generator');
+        assertEqual(stateConfig.content.tabs[3].generator, 'generateGameSettings', 'Game tab should have correct generator');
+    });
+
+    it('should render settings with tabs in DOM', async () => {
+        game.dialogEngine.closeAll();
+        await sleep(50);
+
+        game.dialogEngine.navigateTo('hub-settings');
+        await sleep(100);
+
+        const dialogEl = document.getElementById('dialog-hub-settings');
+        assertTruthy(dialogEl, 'Settings dialog should be in DOM');
+
+        const tabNav = dialogEl.querySelector('.tab-navigation');
+        assertTruthy(tabNav, 'Should have tab navigation');
+
+        const tabButtons = dialogEl.querySelectorAll('.tab-button');
+        assertEqual(tabButtons.length, 4, 'Should have 4 tab buttons');
+
+        game.dialogEngine.closeAll();
+    });
+
+    it('should have all generator functions registered', async () => {
+        const generators = ['generateKeyboardSettings', 'generateAudioSettings', 'generateGraphicsSettings', 'generateGameSettings'];
+        generators.forEach(gen => {
+            const hasGenerator = game.dialogEngine.generatorRegistry.has(gen);
+            assertTruthy(hasGenerator, `Should have ${gen} registered`);
+        });
     });
 
     // ========== HALL OF GLORY ==========

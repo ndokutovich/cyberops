@@ -120,6 +120,10 @@ CyberOpsGame.prototype.playMissionTrack = function(trackType, eventId = null) {
     audioElement.loop = trackConfig.loop !== false;
     audioElement.volume = 0; // Start at 0 for fade in
 
+    // Store config volume for later multiplication with user settings
+    const configVolume = trackConfig.volume !== undefined ? trackConfig.volume : 0.7;
+    audioElement.setAttribute('data-config-volume', configVolume);
+
     // Mark slot as in use
     audioSlot.inUse = true;
     audioSlot.type = trackType;
@@ -132,7 +136,10 @@ CyberOpsGame.prototype.playMissionTrack = function(trackType, eventId = null) {
     // Start new track
     audioElement.play().then(() => {
         if (this.logger) this.logger.info('✅ Started playing:', trackType);
-        this.fadeInTrack(audioElement, trackConfig.volume || 0.7, trackConfig.fadeIn || 1000);
+        // MULTIPLY: config volume × user volume (master × music)
+        const userVolume = (this.masterVolume || 0.5) * (this.musicVolume || 0.3);
+        const targetVolume = configVolume * userVolume;
+        this.fadeInTrack(audioElement, targetVolume, trackConfig.fadeIn || 1000);
 
         // Update current track info
         this.musicSystem.currentTrack = audioElement;
