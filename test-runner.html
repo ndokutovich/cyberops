@@ -1063,12 +1063,48 @@
 
         // Copy to clipboard handler
         document.getElementById('btn-copy-results').addEventListener('click', async () => {
-            const testOutput = document.getElementById('test-output').textContent;
-            const summaryContent = document.getElementById('summary-content').textContent;
-            const fullResults = `=== TEST RESULTS ===\n\n${summaryContent}\n\n=== DETAILED OUTPUT ===\n\n${testOutput}`;
+            // Build failed tests report text
+            const failedTests = [];
+            testFramework.results.forEach(suiteResult => {
+                suiteResult.tests.forEach(test => {
+                    if (test.status === 'failed') {
+                        failedTests.push({
+                            suite: suiteResult.name,
+                            test: test.name,
+                            error: test.error,
+                            errorDetails: test.errorDetails
+                        });
+                    }
+                });
+            });
+
+            if (failedTests.length === 0) {
+                alert('No failed tests to copy!');
+                return;
+            }
+
+            let reportText = `Failed Tests (${failedTests.length}) - DETAILED REPORT:\n\n`;
+
+            failedTests.forEach((f, i) => {
+                reportText += `${i + 1}. [${f.suite}] ${f.test}\n`;
+                reportText += `❌ ${f.error}\n`;
+
+                if (f.errorDetails) {
+                    if (f.errorDetails.expected !== undefined) {
+                        reportText += `Expected: ${JSON.stringify(f.errorDetails.expected)}\n`;
+                    }
+                    if (f.errorDetails.actual !== undefined) {
+                        reportText += `Actual: ${JSON.stringify(f.errorDetails.actual)}\n`;
+                    }
+                    if (f.errorDetails.stack) {
+                        reportText += `Stack Trace\n${f.errorDetails.stack}\n`;
+                    }
+                }
+                reportText += '\n';
+            });
 
             try {
-                await navigator.clipboard.writeText(fullResults);
+                await navigator.clipboard.writeText(reportText);
                 const btn = document.getElementById('btn-copy-results');
                 const originalText = btn.textContent;
                 btn.textContent = '✅ Copied!';

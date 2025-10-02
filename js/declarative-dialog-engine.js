@@ -804,6 +804,7 @@ class DeclarativeDialogEngine {
         }
 
         this.currentState = null;
+        this.activeTab = null;  // Reset active tab for next dialog
         this.updateBreadcrumb();
         this.returnToBase();
     }

@@ -106,21 +106,23 @@ describe('Tabbed Content Functionality', () => {
 
         const dialogEl = document.getElementById('dialog-hub-settings');
 
-        // Check keyboard content was generated
+        // Check keyboard content was generated (has bindings or service message)
         const keyboardContent = dialogEl.querySelector('#tab-content-keyboard');
-        assertTruthy(keyboardContent.innerHTML.includes('KEYBOARD'), 'Keyboard content should be generated');
+        const hasKeyboardContent = keyboardContent.innerHTML.length > 50 &&
+            (keyboardContent.innerHTML.includes('Agents') || keyboardContent.innerHTML.includes('binding'));
+        assertTruthy(hasKeyboardContent, 'Keyboard content should be generated');
 
-        // Check audio content was generated
+        // Check audio content was generated (has AUDIO heading)
         const audioContent = dialogEl.querySelector('#tab-content-audio');
-        assertTruthy(audioContent.innerHTML.includes('AUDIO'), 'Audio content should be generated');
+        assertTruthy(audioContent.innerHTML.includes('AUDIO SETTINGS'), 'Audio content should be generated');
 
-        // Check graphics content was generated
+        // Check graphics content was generated (has GRAPHICS heading)
         const graphicsContent = dialogEl.querySelector('#tab-content-graphics');
-        assertTruthy(graphicsContent.innerHTML.includes('GRAPHICS'), 'Graphics content should be generated');
+        assertTruthy(graphicsContent.innerHTML.includes('GRAPHICS SETTINGS'), 'Graphics content should be generated');
 
-        // Check game content was generated
+        // Check game content was generated (has GAME heading)
         const gameContent = dialogEl.querySelector('#tab-content-game');
-        assertTruthy(gameContent.innerHTML.includes('GAME'), 'Game content should be generated');
+        assertTruthy(gameContent.innerHTML.includes('GAME SETTINGS'), 'Game content should be generated');
 
         game.dialogEngine.closeAll();
     });

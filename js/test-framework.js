@@ -202,7 +202,6 @@ class TestFramework {
 
             // Notify progress callback (for real-time UI updates)
             if (this.onProgress) {
-                console.log(`🔥 TEST FRAMEWORK: Calling onProgress for test #${this.stats.total}`);
                 this.onProgress({
                     passed: this.stats.passed,
                     total: this.stats.total,
@@ -211,14 +210,6 @@ class TestFramework {
                     currentTest: test.name,
                     currentSuite: suite.name
                 });
-
-                // CRITICAL: Force browser to repaint by waiting for animation frame
-                await new Promise(resolve => requestAnimationFrame(() => {
-                    // Then wait a bit more to ensure repaint completes
-                    setTimeout(resolve, 10);
-                }));
-            } else {
-                console.log(`❌ TEST FRAMEWORK: onProgress callback is NOT SET!`);
             }
         }
 
