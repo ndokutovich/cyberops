@@ -270,7 +270,10 @@
     <script src="js/services/resource-service.js"></script>
     <script src="js/services/agent-service.js"></script>
     <script src="js/services/mission-service.js"></script>
+    <script src="js/services/mission-state-service.js"></script>
     <script src="js/services/game-state-service.js"></script>
+    <script src="js/services/hud-service.js"></script>
+    <script src="js/services/item-service.js"></script>
     <script src="js/services/research-service.js"></script>
     <script src="js/services/equipment-service.js"></script>
     <script src="js/services/inventory-service.js"></script>
@@ -751,7 +754,7 @@
             if (stats.failed > 0) {
                 testFramework.printFailedTestsSummary();
 
-                // Also add failed tests to the HTML summary
+                // Also add failed tests to the HTML summary with FULL DETAILS
                 const failedTests = [];
                 testFramework.results.forEach(suite => {
                     suite.tests.forEach(test => {
@@ -759,7 +762,8 @@
                             failedTests.push({
                                 suite: suite.name,
                                 test: test.name,
-                                error: test.error || 'Unknown error'
+                                error: test.error || 'Unknown error',
+                                errorDetails: test.errorDetails
                             });
                         }
                     });
@@ -769,16 +773,36 @@
                     summaryContent.innerHTML += `
                         <hr style="margin: 20px 0; border-color: #ff0000;">
                         <div style="color: #ff0000; font-weight: bold; margin-bottom: 10px;">
-                            ❌ Failed Tests (${failedTests.length}):
+                            ❌ Failed Tests (${failedTests.length}) - DETAILED REPORT:
                         </div>
-                        ${failedTests.map((f, i) => `
-                            <div style="margin: 5px 0; color: #ff6666;">
-                                ${i + 1}. [${f.suite}] ${f.test}
-                                <div style="margin-left: 20px; font-size: 0.9em; color: #ff9999;">
-                                    ${f.error}
+                        ${failedTests.map((f, i) => {
+                            let detailsHtml = '';
+                            if (f.errorDetails) {
+                                if (f.errorDetails.expected !== undefined) {
+                                    detailsHtml += `<div style="margin-left: 20px; font-size: 0.85em; color: #ffaa00;">Expected: ${JSON.stringify(f.errorDetails.expected)}</div>`;
+                                }
+                                if (f.errorDetails.actual !== undefined) {
+                                    detailsHtml += `<div style="margin-left: 20px; font-size: 0.85em; color: #ffaa00;">Actual: ${JSON.stringify(f.errorDetails.actual)}</div>`;
+                                }
+                                if (f.errorDetails.stack) {
+                                    const stackPreview = f.errorDetails.stack.split('\n').slice(0, 5).join('\n');
+                                    detailsHtml += `<details style="margin-left: 20px; color: #888;">
+                                        <summary style="cursor: pointer; color: #aaa;">Stack Trace (click to expand)</summary>
+                                        <pre style="font-size: 0.75em; overflow-x: auto; color: #999;">${f.errorDetails.stack}</pre>
+                                    </details>`;
+                                }
+                            }
+                            return `
+                            <div style="margin: 10px 0; padding: 10px; border-left: 3px solid #ff0000; background: rgba(255,0,0,0.05);">
+                                <div style="color: #ff6666; font-weight: bold;">
+                                    ${i + 1}. [${f.suite}] ${f.test}
                                 </div>
-                            </div>
-                        `).join('')}
+                                <div style="margin-left: 20px; margin-top: 5px; font-size: 0.9em; color: #ff9999;">
+                                    ❌ ${f.error}
+                                </div>
+                                ${detailsHtml}
+                            </div>`;
+                        }).join('')}
                     `;
                 }
             }

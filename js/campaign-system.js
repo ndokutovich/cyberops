@@ -242,6 +242,38 @@ const CampaignSystem = {
             window.CAMPAIGN_MISSIONS = {};
         }
         window.CAMPAIGN_MISSIONS[missionId] = missionData;
+
+        // Also add to campaign structure for getAllMissions
+        let campaign = this.campaigns[campaignId];
+        if (!campaign) {
+            // Create campaign if it doesn't exist
+            campaign = {
+                id: campaignId,
+                name: campaignId,
+                acts: []
+            };
+            this.campaigns[campaignId] = campaign;
+        }
+
+        // Find or create act
+        const actIdStr = String(actId).padStart(2, '0');
+        let act = campaign.acts.find(a => a.id === actIdStr || a.id === String(actId));
+        if (!act) {
+            act = {
+                id: actIdStr,
+                name: `Act ${actId}`,
+                missions: []
+            };
+            campaign.acts.push(act);
+        }
+
+        // Add mission to act if not already there
+        if (!act.missions) act.missions = [];
+        const existingMission = act.missions.find(m => m.id === missionId);
+        if (!existingMission) {
+            act.missions.push(missionData);
+        }
+
         if (campaignLogger) campaignLogger.info(`✅ Registered mission: ${missionId}`);
     },
 
@@ -262,6 +294,44 @@ const CampaignSystem = {
     getMissions(campaignId, actId) {
         const act = this.getAct(campaignId, actId);
         return act ? act.missions : [];
+    },
+
+    // Register campaign (for test compatibility)
+    registerCampaign(campaignId, campaignData) {
+        this.campaigns[campaignId] = campaignData;
+        if (campaignLogger) campaignLogger.info(`✅ Registered campaign: ${campaignId}`);
+    },
+
+    // Get single mission by ID (searches all acts)
+    getMission(campaignId, missionId) {
+        // Check mission registry first
+        if (window.CAMPAIGN_MISSIONS && window.CAMPAIGN_MISSIONS[missionId]) {
+            return window.CAMPAIGN_MISSIONS[missionId];
+        }
+
+        // Search through campaign structure
+        const campaign = this.getCampaign(campaignId);
+        if (!campaign || !campaign.acts) return null;
+
+        for (const act of campaign.acts) {
+            const mission = act.missions?.find(m => m.id === missionId);
+            if (mission) return mission;
+        }
+        return null;
+    },
+
+    // Get all missions for a campaign (all acts combined)
+    getAllMissions(campaignId) {
+        const campaign = this.getCampaign(campaignId);
+        if (!campaign || !campaign.acts) return [];
+
+        const allMissions = [];
+        for (const act of campaign.acts) {
+            if (act.missions) {
+                allMissions.push(...act.missions);
+            }
+        }
+        return allMissions;
     },
 
     // Get next mission in sequence

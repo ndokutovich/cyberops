@@ -67,6 +67,18 @@ class GameServices {
     }
 
     /**
+     * Proxy methods for test compatibility
+     * Tests may access these through window.GameServices instead of services
+     */
+    getAgent(identifier) {
+        return this.agentService?.getAgent(identifier);
+    }
+
+    initializeAgents(campaignAgents) {
+        return this.agentService?.initialize(campaignAgents);
+    }
+
+    /**
      * Initialize HUD service - requires game reference
      * Called from game initialization
      */

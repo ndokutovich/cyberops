@@ -15,9 +15,56 @@ describe('Skill-Combat Integration Tests', () => {
         // Use the global game instance from test runner
         game = window.game;
 
+        // CRITICAL: Ensure we're using the REAL game services, not mocks from other tests
+        // Other tests may replace window.GameServices with mocks, so restore from game instance
+        if (game && game.gameServices) {
+            window.GameServices = game.gameServices;
+        }
+
         // Get services
         rpgManager = game.rpgManager || game.gameServices?.rpgService?.rpgManager;
         formulaService = game.gameServices?.formulaService;
+
+        // CRITICAL: Mock RPG config with test skills for ContentLoader
+        if (window.ContentLoader) {
+            const testRPGConfig = {
+                skills: {
+                    marksmanship: {
+                        name: 'Marksmanship',
+                        cost: (level) => 1,  // Cost 1 skill point per level
+                        maxLevel: 5,
+                        requirements: {},
+                        effects: (level) => ({ damage: level * 5 }),
+                        effect: 'damage',
+                        perLevel: 5
+                    },
+                    heavy_weapons: {
+                        name: 'Heavy Weapons',
+                        cost: (level) => 1,
+                        maxLevel: 5,
+                        requirements: {},
+                        effects: (level) => ({ damage: level * 10 }),
+                        effect: 'damage',
+                        perLevel: 10
+                    },
+                    stealth: {
+                        name: 'Stealth',
+                        cost: (level) => 1,
+                        maxLevel: 5,
+                        requirements: {},
+                        effects: (level) => ({ stealth: level * 3 }),
+                        effect: 'stealth',
+                        perLevel: 3
+                    }
+                }
+            };
+            window.ContentLoader.contentCache.set('rpgConfig', testRPGConfig);
+
+            // CRITICAL: Also load config into RPGManager so learnSkill() can find skills
+            if (rpgManager && rpgManager.loadConfig) {
+                rpgManager.loadConfig(testRPGConfig);
+            }
+        }
 
         // Create test agent with RPG entity
         agent = {
@@ -34,7 +81,7 @@ describe('Skill-Combat Integration Tests', () => {
         // Create RPG entity for agent if RPGManager available
         if (rpgManager && rpgManager.createRPGAgent) {
             agent.rpgEntity = rpgManager.createRPGAgent(agent, 'soldier');
-            agent.rpgEntity.unspentSkillPoints = 5;
+            agent.rpgEntity.availableSkillPoints = 5;  // FIXED: was unspentSkillPoints
             // Store in manager's entities map
             const entityId = agent.originalId || agent.id || agent.name;
             rpgManager.entities.set(entityId, agent.rpgEntity);
@@ -43,7 +90,7 @@ describe('Skill-Combat Integration Tests', () => {
             agent.rpgEntity = {
                 id: agent.id,
                 skills: {},
-                unspentSkillPoints: 5
+                availableSkillPoints: 5  // FIXED: was unspentSkillPoints
             };
         }
 
@@ -57,6 +104,17 @@ describe('Skill-Combat Integration Tests', () => {
         // Add agent to game's agents list
         if (!game.agents) game.agents = [];
         game.agents.push(agent);
+
+        // CRITICAL: Register agent with AgentService so findAgentForRPG can find it
+        if (window.GameServices && window.GameServices.agentService) {
+            const agentService = window.GameServices.agentService;
+
+            // Add to active agents
+            agentService.activeAgents.push(agent);
+
+            // INDEX the agent in lookup maps (this is the critical step!)
+            agentService.indexAgent(agent);
+        }
     });
 
     afterEach(() => {
@@ -70,6 +128,36 @@ describe('Skill-Combat Integration Tests', () => {
         // Clean up from RPGManager
         if (rpgManager && rpgManager.entities) {
             rpgManager.entities.delete('test_agent_combat');
+        }
+        // Clean up from AgentService
+        if (window.GameServices && window.GameServices.agentService) {
+            const agentService = window.GameServices.agentService;
+            // Remove from availableAgents
+            const availableIndex = agentService.availableAgents.indexOf(agent);
+            if (availableIndex > -1) {
+                agentService.availableAgents.splice(availableIndex, 1);
+            }
+            // Remove from activeAgents
+            const activeIndex = agentService.activeAgents.indexOf(agent);
+            if (activeIndex > -1) {
+                agentService.activeAgents.splice(activeIndex, 1);
+            }
+            // Remove from lookup maps (including string versions)
+            if (agentService.agentById) {
+                agentService.agentById.delete(agent.id);
+                agentService.agentById.delete(String(agent.id));
+                if (agent.originalId) {
+                    agentService.agentById.delete(agent.originalId);
+                    agentService.agentById.delete(String(agent.originalId));
+                }
+            }
+            if (agentService.agentByName) {
+                agentService.agentByName.delete(agent.name);
+            }
+        }
+        // Clean up mock RPG config
+        if (window.ContentLoader) {
+            window.ContentLoader.contentCache.delete('rpgConfig');
         }
     });
 
@@ -100,8 +188,28 @@ describe('Skill-Combat Integration Tests', () => {
             return;
         }
 
+        // DEBUG: Check all prerequisites
+        console.log('🔍 DEBUG: agent.id =', agent.id);
+        console.log('🔍 DEBUG: agent.originalId =', agent.originalId);
+        console.log('🔍 DEBUG: agent.rpgEntity =', agent.rpgEntity);
+        console.log('🔍 DEBUG: agent.rpgEntity.availableSkillPoints =', agent.rpgEntity?.availableSkillPoints);
+
+        const foundAgent = window.GameServices?.agentService?.getAgent(agent.id);
+        console.log('🔍 DEBUG: AgentService.getAgent() found agent?', !!foundAgent);
+        console.log('🔍 DEBUG: Found agent =', foundAgent);
+
+        const rpgConfig = window.ContentLoader?.getContent('rpgConfig');
+        console.log('🔍 DEBUG: RPG Config exists?', !!rpgConfig);
+        console.log('🔍 DEBUG: marksmanship skill exists?', !!rpgConfig?.skills?.marksmanship);
+
+        const rpgEntity = rpgManager?.entities?.get(agent.id);
+        console.log('🔍 DEBUG: RPGManager has entity?', !!rpgEntity);
+        console.log('🔍 DEBUG: RPGManager entity =', rpgEntity);
+
         // Learn marksmanship skill (should add +5 damage per level)
         const success = game.learnSkill(agent.id, 'marksmanship');
+        console.log('🔍 DEBUG: learnSkill returned:', success);
+
         assertTruthy(success, 'Should successfully learn marksmanship skill');
 
         // Verify skill was learned
@@ -190,14 +298,14 @@ describe('Skill-Combat Integration Tests', () => {
             return;
         }
 
-        const initialSkillPoints = agent.rpgEntity.unspentSkillPoints;
+        const initialSkillPoints = agent.rpgEntity.availableSkillPoints;
 
         // Learn skill through game (should call RPGManager)
         const success = game.learnSkill(agent.id, 'marksmanship');
 
         assertTruthy(success, 'Should successfully learn skill');
         assertEqual(
-            agent.rpgEntity.unspentSkillPoints,
+            agent.rpgEntity.availableSkillPoints,
             initialSkillPoints - 1,
             'RPG entity skill points should decrease'
         );
@@ -220,7 +328,7 @@ describe('Skill-Combat Integration Tests', () => {
         }
 
         // Spend all skill points
-        agent.rpgEntity.unspentSkillPoints = 0;
+        agent.rpgEntity.availableSkillPoints = 0;
 
         const success = game.learnSkill(agent.id, 'marksmanship');
 
@@ -236,7 +344,7 @@ describe('Skill-Combat Integration Tests', () => {
         }
 
         // Marksmanship has maxLevel: 5
-        agent.rpgEntity.unspentSkillPoints = 10;
+        agent.rpgEntity.availableSkillPoints = 10;
 
         // Learn 5 times (should succeed)
         for (let i = 0; i < 5; i++) {
@@ -290,7 +398,7 @@ describe('Skill-Combat Integration Tests', () => {
         assertEqual(damage, 35, 'Damage should be 35 after Heavy Weapons Lv1');
 
         console.log(`  \n  Final bonus: +${agent.damageBonus} damage`);
-        console.log(`  Skill points remaining: ${agent.rpgEntity.unspentSkillPoints}`);
+        console.log(`  Skill points remaining: ${agent.rpgEntity.availableSkillPoints}`);
 
         // Verify final state
         assertEqual(agent.damageBonus, 20, 'Total damage bonus should be +20');

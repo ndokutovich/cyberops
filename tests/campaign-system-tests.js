@@ -230,9 +230,10 @@ describe('Campaign System Tests', () => {
             window.CampaignSystem.registerCampaign('campaign1', { id: 'campaign1' });
             window.CampaignSystem.registerCampaign('campaign2', { id: 'campaign2' });
 
-            assertTruthy(window.CampaignSystem.campaigns instanceof Map,
-                'Should use Map for campaigns');
-            assertEqual(window.CampaignSystem.campaigns.size, 2,
+            // CampaignSystem uses plain object for campaigns
+            assertTruthy(typeof window.CampaignSystem.campaigns === 'object',
+                'Should track campaigns in object');
+            assertEqual(Object.keys(window.CampaignSystem.campaigns).length, 2,
                 'Should track both campaigns');
         });
 

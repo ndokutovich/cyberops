@@ -33,6 +33,20 @@ class AgentService {
         // Agent ID counter
         this.nextAgentId = 1;
 
+        // Bind methods to instance for external access (fixes "is not a function" in tests)
+        this.initialize = this.initialize.bind(this);
+        this.getAgent = this.getAgent.bind(this);
+        this.getActiveAgents = this.getActiveAgents.bind(this);
+        this.getAvailableAgents = this.getAvailableAgents.bind(this);
+        this.clearAllAgents = this.clearAllAgents.bind(this);
+        this.addAvailableAgent = this.addAvailableAgent.bind(this);
+        this.indexAgent = this.indexAgent.bind(this);
+        this.getFallenAgents = this.getFallenAgents.bind(this);
+        this.hireAgent = this.hireAgent.bind(this);
+        this.killAgent = this.killAgent.bind(this);
+        this.reviveAgent = this.reviveAgent.bind(this);
+        this.damageAgent = this.damageAgent.bind(this);
+
         if (this.logger) this.logger.debug('AgentService initialized');
     }
 

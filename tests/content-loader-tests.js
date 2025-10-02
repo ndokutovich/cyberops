@@ -104,9 +104,12 @@ describe('ContentLoader Tests', () => {
                         setCombatConfig: () => { console.log('[TEST] Mock setCombatConfig called'); }
                     },
                     agentService: {
+                        initialize: () => {},
                         clearAllAgents: () => {},
                         addAvailableAgent: () => {},
-                        getAvailableAgents: () => []
+                        getAvailableAgents: () => [],
+                        getActiveAgents: () => [],
+                        getAgent: (id) => ({ id, name: 'Test Agent', health: 100, damage: 20 })
                     },
                     inventoryService: {
                         initialize: () => {}
@@ -261,9 +264,12 @@ describe('ContentLoader Tests', () => {
             // Mock services
             window.GameServices = {
                 agentService: {
-                    clearAllAgents: () => { agentServiceCalled = true; },
+                    initialize: () => { agentServiceCalled = true; },
+                    clearAllAgents: () => {},
                     addAvailableAgent: () => {},
-                    getAvailableAgents: () => []  // Add missing method
+                    getAvailableAgents: () => [],
+                    getActiveAgents: () => [],
+                    getAgent: (id) => ({ id, name: 'Test Agent', health: 100, damage: 20 })
                 },
                 inventoryService: {
                     initialize: () => { inventoryServiceCalled = true; }

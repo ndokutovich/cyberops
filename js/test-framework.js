@@ -215,6 +215,7 @@ class TestFramework {
             name: test.name,
             status: 'pending',
             error: null,
+            errorDetails: null,  // NEW: Store full error details
             duration: 0
         };
 
@@ -225,6 +226,14 @@ class TestFramework {
         } catch (error) {
             result.status = 'failed';
             result.error = error.message || error;
+            // NEW: Capture full error details including stack trace
+            result.errorDetails = {
+                message: error.message || String(error),
+                stack: error.stack || 'No stack trace available',
+                expected: error.expected,  // From assertion errors
+                actual: error.actual,      // From assertion errors
+                fullError: error
+            };
             if (this.config.captureScreenshots && window.game) {
                 result.screenshot = this.captureGameState();
             }
@@ -252,31 +261,46 @@ class TestFramework {
 
     assertEqual(actual, expected, message) {
         if (actual !== expected) {
-            throw new Error(message || `Expected ${expected}, got ${actual}`);
+            const error = new Error(message || `Expected ${expected}, got ${actual}`);
+            error.expected = expected;
+            error.actual = actual;
+            throw error;
         }
     }
 
     assertDeepEqual(actual, expected, message) {
         if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-            throw new Error(message || `Objects not equal:\nActual: ${JSON.stringify(actual, null, 2)}\nExpected: ${JSON.stringify(expected, null, 2)}`);
+            const error = new Error(message || `Objects not equal:\nActual: ${JSON.stringify(actual, null, 2)}\nExpected: ${JSON.stringify(expected, null, 2)}`);
+            error.expected = expected;
+            error.actual = actual;
+            throw error;
         }
     }
 
     assertContains(haystack, needle, message) {
         if (!haystack.includes(needle)) {
-            throw new Error(message || `Expected "${haystack}" to contain "${needle}"`);
+            const error = new Error(message || `Expected "${haystack}" to contain "${needle}"`);
+            error.expected = `string containing "${needle}"`;
+            error.actual = haystack;
+            throw error;
         }
     }
 
     assertTruthy(value, message) {
         if (!value) {
-            throw new Error(message || `Expected truthy value, got ${value}`);
+            const error = new Error(message || `Expected truthy value, got ${value}`);
+            error.expected = 'truthy value';
+            error.actual = value;
+            throw error;
         }
     }
 
     assertFalsy(value, message) {
         if (value) {
-            throw new Error(message || `Expected falsy value, got ${value}`);
+            const error = new Error(message || `Expected falsy value, got ${value}`);
+            error.expected = 'falsy value';
+            error.actual = value;
+            throw error;
         }
     }
 
@@ -342,9 +366,9 @@ class TestFramework {
 
     // Print all failed tests grouped together for easy copy-paste
     printFailedTestsSummary() {
-        if (logger) logger.debug('\n' + '='.repeat(50));
-        if (logger) logger.error('❌ FAILED TESTS SUMMARY (for easy copy-paste)');
-        if (logger) logger.debug('='.repeat(50));
+        if (logger) logger.debug('\n' + '='.repeat(80));
+        if (logger) logger.error('❌ FAILED TESTS DETAILED REPORT (Copy-Paste Ready)');
+        if (logger) logger.debug('='.repeat(80));
 
         const failedTests = [];
         this.results.forEach(suite => {
@@ -353,7 +377,8 @@ class TestFramework {
                     failedTests.push({
                         suite: suite.name,
                         test: test.name,
-                        error: test.error
+                        error: test.error,
+                        errorDetails: test.errorDetails
                     });
                 }
             });
@@ -363,24 +388,53 @@ class TestFramework {
             return;
         }
 
-        // Print in a compact format for easy copy-paste
-        if (logger) logger.error(`\nFailed: ${failedTests.length} tests\n`);
+        if (logger) logger.error(`\n📊 Total Failed: ${failedTests.length} tests\n`);
 
+        // DETAILED format with stack traces
         failedTests.forEach((failure, index) => {
-            if (logger) logger.debug(`${index + 1}. [${failure.suite}] ${failure.test}`);
-            if (logger) logger.error(`   Error: ${failure.error}`);
+            if (logger) logger.debug(`\n${'─'.repeat(80)}`);
+            if (logger) logger.error(`${index + 1}. [${failure.suite}] ${failure.test}`);
+            if (logger) logger.debug(`${'─'.repeat(80)}`);
+
+            if (logger) logger.error(`   ❌ Error: ${failure.error}`);
+
+            // Show expected vs actual if available
+            if (failure.errorDetails) {
+                if (failure.errorDetails.expected !== undefined) {
+                    if (logger) logger.error(`   📌 Expected: ${JSON.stringify(failure.errorDetails.expected)}`);
+                }
+                if (failure.errorDetails.actual !== undefined) {
+                    if (logger) logger.error(`   📌 Actual:   ${JSON.stringify(failure.errorDetails.actual)}`);
+                }
+
+                // Show stack trace
+                if (failure.errorDetails.stack) {
+                    if (logger) logger.debug(`\n   📚 Stack Trace:`);
+                    const stackLines = failure.errorDetails.stack.split('\n');
+                    stackLines.forEach(line => {
+                        if (line.trim()) {
+                            if (logger) logger.debug(`      ${line.trim()}`);
+                        }
+                    });
+                }
+            }
         });
 
-        if (logger) logger.debug('\n' + '-'.repeat(50));
-        if (logger) logger.debug('Copy-paste friendly format:');
-        if (logger) logger.debug('-'.repeat(50));
+        if (logger) logger.debug(`\n${'═'.repeat(80)}`);
+        if (logger) logger.debug('📋 COMPACT FORMAT (for issue reports):');
+        if (logger) logger.debug('═'.repeat(80) + '\n');
 
-        // Ultra-compact format for pasting
-        failedTests.forEach(failure => {
-            if (logger) logger.error(`❌ ${failure.test}: ${failure.error}`);
+        // Compact format for pasting into issues
+        failedTests.forEach((failure, index) => {
+            if (logger) logger.error(`${index + 1}. [${failure.suite}] ${failure.test}`);
+            if (logger) logger.error(`   ${failure.error}`);
+            if (failure.errorDetails && failure.errorDetails.expected !== undefined) {
+                if (logger) logger.error(`   Expected: ${JSON.stringify(failure.errorDetails.expected)}, Got: ${JSON.stringify(failure.errorDetails.actual)}`);
+            }
+            if (logger) logger.debug('');
         });
 
-        if (logger) logger.debug('='.repeat(50));
+        if (logger) logger.debug('═'.repeat(80));
     }
 
     generateHTMLReport() {
