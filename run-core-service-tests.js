@@ -112,7 +112,8 @@ console.log('✅ MissionService: Full coverage (34 tests)');
 console.log('✅ InventoryService: Full coverage (30 tests)');
 console.log('✅ EquipmentService: Full coverage (29 tests)');
 console.log('✅ ResearchService: Full coverage (28 tests)');
-console.log('✅ RPG Max Level Integration: Full coverage (15 tests)');
+console.log('✅ RPG Max Level Integration: Full coverage (18 tests)');
+console.log('✅ RPG Comprehensive: ALL 9 skills + ALL 19 perks (184 tests)');
 console.log('==========================================\n');
 
 // Load test files
@@ -123,6 +124,7 @@ require('./tests/inventory-service-tests.js');
 require('./tests/equipment-service-tests.js');
 require('./tests/research-service-tests.js');
 require('./tests/rpg-max-level-integration-test.js');
+require('./tests/rpg-comprehensive-tests.js');
 
 // Run tests
 TestFramework.run({ verbose: false }).then(results => {

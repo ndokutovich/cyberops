@@ -395,6 +395,7 @@
 
     <!-- RPG Integration Tests -->
     <script src="tests/rpg-max-level-integration-test.js"></script>
+    <script src="tests/rpg-comprehensive-tests.js"></script>
 
     <script src="tests/test-summary.js"></script>
     <script src="tests/test-diagnostic.js"></script>
@@ -890,7 +891,8 @@
             logToOutput('✅ InventoryService: 30 tests', 'log-test-pass');
             logToOutput('✅ EquipmentService: 29 tests', 'log-test-pass');
             logToOutput('✅ ResearchService: 28 tests', 'log-test-pass');
-            logToOutput('✅ RPG Max Level Integration: 15 tests', 'log-test-pass');
+            logToOutput('✅ RPG Max Level Integration: 18 tests', 'log-test-pass');
+            logToOutput('✅ RPG Comprehensive: ALL 9 skills + ALL 19 perks (184 tests)', 'log-test-pass');
             logToOutput('='.repeat(60), 'log-test');
 
             // Run tests through universal framework
@@ -903,7 +905,8 @@
                            suite.includes('InventoryService') ||
                            suite.includes('EquipmentService') ||
                            suite.includes('ResearchService') ||
-                           suite.includes('RPG Max Level Integration');
+                           suite.includes('RPG Max Level Integration') ||
+                           suite.includes('RPG Comprehensive');
                 }
             });
 
