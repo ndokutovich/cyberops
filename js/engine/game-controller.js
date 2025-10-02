@@ -122,6 +122,11 @@ class GameController {
      * Update game logic
      */
     update(deltaTime) {
+        // Skip updates in test mode
+        if (this.legacyGame.testMode) {
+            return;
+        }
+
         // Sync current state from legacy game
         this.syncState();
 
@@ -239,6 +244,11 @@ class GameController {
      * Render game
      */
     render(ctx) {
+        // Skip rendering in test mode
+        if (this.legacyGame.testMode) {
+            return;
+        }
+
         // Use engine's render method now that it's migrated
         this.engine.render();
     }
