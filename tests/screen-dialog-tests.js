@@ -24,11 +24,11 @@ describe('Screen Dialog Tests', () => {
 
     // Test navigation to all screen states
     it('should navigate to all screen dialogs', async () => {
+        // loadout-select was removed and merged into mission-briefing
         const screenStates = [
             'victory-screen',
             'defeat-screen',
             'mission-briefing',
-            'loadout-select',
             'syndicate-hub'
         ];
 
@@ -36,13 +36,6 @@ describe('Screen Dialog Tests', () => {
             try {
                 game.dialogEngine.closeAll();
                 await sleep(50);
-
-                // Set up required data for certain screens
-                if (state === 'loadout-select') {
-                    // Loadout needs a parent (briefing)
-                    game.dialogEngine.navigateTo('mission-briefing');
-                    await sleep(50);
-                }
 
                 // Navigate to screen
                 game.dialogEngine.navigateTo(state);

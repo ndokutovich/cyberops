@@ -59,7 +59,8 @@
       "Bash(do echo \"=== $func ===\")",
       "Bash(for action in \"continueFromVictory\" \"returnToHub\" \"startMissionWithLoadout\" \"skipSplash\" \"startNewCampaign\" \"loadLastSave\" \"performHack\" \"onHackComplete\" \"performReturnToHub\" \"confirmSave\" \"confirmLoad\" \"confirmDelete\" \"confirmSurrender\" \"proceedToNextMission\" \"completeCampaign\" \"returnToHubFromVictory\" \"retryMission\" \"returnToHubFromDefeat\")",
       "Bash(do echo -n \"$action: \")",
-      "Read(//w//**)"
+      "Read(//w//**)",
+      "Bash(start w:/_proj/_own/_ideator/cyberops-game/test-runner.html)"
     ],
     "deny": [],
     "ask": []

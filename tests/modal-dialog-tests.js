@@ -152,6 +152,81 @@ describe('Modal Dialog Tests', () => {
         }
     });
 
+    // Test save confirmation specifically
+    it('should show save confirmation with correct details', async () => {
+        game.dialogEngine.closeAll();
+        await sleep(50);
+
+        game.dialogEngine.stateData = {
+            saveSlot: { slotNumber: 1, slotName: 'Auto Save' }
+        };
+
+        game.dialogEngine.navigateTo('save-load');
+        await sleep(50);
+        game.dialogEngine.navigateTo('save-confirm');
+        await sleep(50);
+
+        assertEqual(game.dialogEngine.currentState, 'save-confirm', 'Should show save confirmation');
+
+        const stateConfig = game.dialogEngine.config.states['save-confirm'];
+        assertEqual(stateConfig.parent, 'save-load', 'Should be child of save-load');
+        assertEqual(stateConfig.level, 3, 'Should be level 3');
+        assertEqual(stateConfig.buttons[0].text, 'SAVE', 'First button should be SAVE');
+        assertEqual(stateConfig.buttons[1].text, 'CANCEL', 'Second button should be CANCEL');
+
+        game.dialogEngine.closeAll();
+    });
+
+    // Test load confirmation specifically
+    it('should show load confirmation with correct details', async () => {
+        game.dialogEngine.closeAll();
+        await sleep(50);
+
+        game.dialogEngine.stateData = {
+            saveSlot: { slotNumber: 2, slotName: 'Mission 5', timestamp: '2024-01-20' }
+        };
+
+        game.dialogEngine.navigateTo('save-load');
+        await sleep(50);
+        game.dialogEngine.navigateTo('load-confirm');
+        await sleep(50);
+
+        assertEqual(game.dialogEngine.currentState, 'load-confirm', 'Should show load confirmation');
+
+        const stateConfig = game.dialogEngine.config.states['load-confirm'];
+        assertEqual(stateConfig.parent, 'save-load', 'Should be child of save-load');
+        assertEqual(stateConfig.level, 3, 'Should be level 3');
+        assertEqual(stateConfig.buttons[0].text, 'LOAD', 'First button should be LOAD');
+        assertEqual(stateConfig.buttons[1].text, 'CANCEL', 'Second button should be CANCEL');
+
+        game.dialogEngine.closeAll();
+    });
+
+    // Test delete confirmation specifically
+    it('should show delete confirmation with correct details', async () => {
+        game.dialogEngine.closeAll();
+        await sleep(50);
+
+        game.dialogEngine.stateData = {
+            saveSlot: { slotNumber: 3, slotName: 'Old Save' }
+        };
+
+        game.dialogEngine.navigateTo('save-load');
+        await sleep(50);
+        game.dialogEngine.navigateTo('delete-confirm');
+        await sleep(50);
+
+        assertEqual(game.dialogEngine.currentState, 'delete-confirm', 'Should show delete confirmation');
+
+        const stateConfig = game.dialogEngine.config.states['delete-confirm'];
+        assertEqual(stateConfig.parent, 'save-load', 'Should be child of save-load');
+        assertEqual(stateConfig.level, 3, 'Should be level 3');
+        assertEqual(stateConfig.buttons[0].text, 'DELETE', 'First button should be DELETE');
+        assertEqual(stateConfig.buttons[1].text, 'CANCEL', 'Second button should be CANCEL');
+
+        game.dialogEngine.closeAll();
+    });
+
     // Test surrender confirmation
     it('should show surrender confirmation during game', async () => {
         game.dialogEngine.closeAll();
