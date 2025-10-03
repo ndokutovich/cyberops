@@ -2,7 +2,8 @@
  * EquipmentService - Manages weapon and equipment calculations
  * Follows single responsibility and open/closed principles
  */
-class EquipmentService {
+if (typeof EquipmentService === 'undefined') {
+    var EquipmentService = class EquipmentService {
     constructor(formulaService) {
         if (!formulaService) {
             throw new Error('EquipmentService requires FormulaService - dependency injection required');
@@ -434,6 +435,10 @@ class EquipmentService {
 
         return upgrades;
     }
+    }; // End of EquipmentService class definition
+
+    // Also expose on window for compatibility
+    window.EquipmentService = EquipmentService;
 }
 
 // Export as singleton

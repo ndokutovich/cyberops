@@ -4,6 +4,9 @@
  * Only one screen can be active at a time
  */
 
+// Initialize logger BEFORE class definition so it's available in all methods
+const logger = window.Logger ? new window.Logger('ScreenManager') : null;
+
 class ScreenManager {
     constructor() {
         this.currentScreen = null;
@@ -49,25 +52,45 @@ class ScreenManager {
      * Navigate to a screen
      */
     navigateTo(screenId, params = {}) {
-        if (logger) logger.debug(`📺 Navigating to screen: ${screenId}`);
+        if (logger) logger.info(`🔍 NAVIGATE TO START: ${screenId}`);
 
         const screenConfig = this.screenRegistry.get(screenId);
+
+        if (logger) logger.info(`🔍 Screen config retrieved: ${!!screenConfig}, type: ${screenConfig?.type}`);
+
         if (!screenConfig) {
-            if (logger) logger.error(`Screen not found: ${screenId}`);
+            if (logger) logger.error(`❌ Screen not found: ${screenId}`);
+            if (logger) logger.error(`   Available screens: ${Array.from(this.screenRegistry.keys()).join(', ')}`);
             return;
         }
 
         // Store previous screen for transitions
         const previousScreen = this.currentScreen;
+        if (logger) logger.info(`🔍 Previous screen: ${previousScreen}`);
 
         // Clean up current screen
         if (this.currentScreen) {
+            if (logger) logger.info(`🔍 Exiting current screen: ${this.currentScreen}`);
             this.exitScreen(this.currentScreen);
         }
 
         // Show new screen
         this.currentScreen = screenId;
-        this.enterScreen(screenId, screenConfig, params);
+
+        // Update game state BEFORE enterScreen so onEnter functions can check current screen
+        if (this.game) {
+            this.game.currentScreen = screenId;
+        }
+
+        if (logger) logger.info(`🔍 About to call enterScreen for: ${screenId}`);
+
+        try {
+            this.enterScreen(screenId, screenConfig, params);
+            if (logger) logger.info(`🔍 enterScreen completed for: ${screenId}`);
+        } catch (error) {
+            if (logger) logger.error(`❌ Error in enterScreen: ${error.message}`, error);
+            throw error;
+        }
 
         // Handle music transitions
         if (previousScreen && previousScreen !== screenId && this.game?.transitionScreenMusic) {
@@ -82,33 +105,39 @@ class ScreenManager {
         } else {
             if (logger) logger.debug(`🎵 No music action: prev=${previousScreen}, music=${screenConfig.music}, hasTransition=${!!this.game?.transitionScreenMusic}`);
         }
-
-        // Update game state
-        if (this.game) {
-            this.game.currentScreen = screenId;
-        }
     }
 
     /**
      * Enter a screen
      */
     enterScreen(screenId, config, params) {
+        if (logger) logger.info(`🔍 ENTER SCREEN START: ${screenId}, type: ${config?.type}`);
+
+        if (!config) {
+            if (logger) logger.error(`❌ No config for screen: ${screenId}`);
+            return;
+        }
+
         // Handle different screen types
         switch (config.type) {
             case 'dom':
-                // Use existing DOM element (like hub)
+                if (logger) logger.info(`🔍 Showing DOM screen: ${config.elementId}`);
                 this.showDOMScreen(config.elementId);
                 break;
 
             case 'canvas':
-                // Game canvas screen
+                if (logger) logger.info(`🔍 Showing canvas screen`);
                 this.showCanvasScreen();
                 break;
 
             case 'generated':
-                // Generate HTML content
+                if (logger) logger.info(`🔍 Showing generated screen: ${screenId}`);
                 this.showGeneratedScreen(screenId, config, params);
                 break;
+
+            default:
+                if (logger) logger.error(`❌ Unknown screen type: ${config.type} for ${screenId}`);
+                return;
         }
 
         // Set HUD mode based on screen configuration
@@ -235,12 +264,21 @@ class ScreenManager {
      * Show a generated HTML screen
      */
     showGeneratedScreen(screenId, config, params) {
+        if (logger) logger.info(`🔍 showGeneratedScreen START: ${screenId}`);
+
         // Hide game canvas and HUD when showing generated screen
         this.hideCanvasScreen();
 
         // Clear container
+        if (!this.screenContainer) {
+            if (logger) logger.error(`❌ screenContainer is null!`);
+            return;
+        }
+
         this.screenContainer.innerHTML = '';
         this.screenContainer.style.pointerEvents = 'auto';
+
+        if (logger) logger.info(`🔍 Container cleared, creating screen element`);
 
         // Create screen element
         const screenEl = document.createElement('div');
@@ -252,19 +290,39 @@ class ScreenManager {
             screenClasses += ' screen-fade-in';
         }
 
+        // Add demoscene-specific class for proper styling
+        if (screenId === 'demoscene') {
+            screenClasses += ' demoscene-screen';
+        }
+
         screenEl.className = screenClasses;
-        screenEl.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: ${config.background || 'linear-gradient(135deg, #0a0a0a, #1a1a2e)'};
-        `;
+
+        // For demoscene, use position: fixed with z-index higher than dialog systems
+        if (screenId === 'demoscene') {
+            screenEl.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 10000;
+                display: flex !important;
+                flex-direction: column;
+            `;
+        } else {
+            screenEl.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                background: ${config.background || 'linear-gradient(135deg, #0a0a0a, #1a1a2e)'};
+            `;
+        }
 
         // Generate content
         let content = '';
@@ -272,7 +330,14 @@ class ScreenManager {
             if (typeof config.content === 'string') {
                 content = config.content;
             } else if (typeof config.content === 'function') {
-                content = config.content.call(this, params);
+                if (logger) logger.info(`🔍 Calling content function for ${screenId}`);
+                try {
+                    content = config.content.call(this, params);
+                    if (logger) logger.info(`🔍 Content generated, length: ${content.length}`);
+                } catch (error) {
+                    if (logger) logger.error(`❌ Error generating content: ${error.message}`, error);
+                    throw error;
+                }
             }
         }
 
@@ -284,8 +349,16 @@ class ScreenManager {
             ${this.generateScreenActions(config.actions, screenId)}
         `;
 
-        // Add to container
-        this.screenContainer.appendChild(screenEl);
+        if (logger) logger.info(`🔍 Screen element HTML set, children: ${screenEl.children.length}`);
+
+        // Add to container (demoscene appends to body for proper z-index)
+        if (screenId === 'demoscene') {
+            document.body.appendChild(screenEl);
+            if (logger) logger.info(`🔍 Demoscene appended directly to body`);
+        } else {
+            this.screenContainer.appendChild(screenEl);
+            if (logger) logger.info(`🔍 Screen appended to container, total children: ${this.screenContainer.children.length}`);
+        }
 
         // Bind action handlers
         this.bindScreenActions(screenEl, config.actions);
@@ -298,8 +371,12 @@ class ScreenManager {
         const screenEl = document.getElementById(`screen-${screenId}`);
         if (screenEl) {
             screenEl.remove();
+            if (logger) logger.info(`🔍 Removed generated screen: ${screenId}`);
         }
-        this.screenContainer.style.pointerEvents = 'none';
+        // Only reset screenContainer pointer events if it's not demoscene (which is on body)
+        if (screenId !== 'demoscene') {
+            this.screenContainer.style.pointerEvents = 'none';
+        }
     }
 
     /**
@@ -473,5 +550,5 @@ class ScreenManager {
 // Create global instance
 window.screenManager = new ScreenManager();
 
-const logger = window.Logger ? new window.Logger('ScreenManager') : null;
+// Logger is now defined at the top of the file
 if (logger) logger.info('📺 Screen Manager loaded');

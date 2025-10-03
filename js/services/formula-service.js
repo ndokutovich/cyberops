@@ -2,7 +2,8 @@
  * FormulaService - Centralized game mathematics and calculations
  * Follows SOLID principles with single responsibility and dependency injection
  */
-class FormulaService {
+if (typeof FormulaService === 'undefined') {
+    var FormulaService = class FormulaService {
     constructor() {
         // Initialize logger
         this.logger = window.Logger ? new window.Logger('FormulaService') : null;
@@ -739,6 +740,10 @@ class FormulaService {
             change: newValue - oldValue
         };
     }
+    }; // End of FormulaService class definition
+
+    // Also expose on window for compatibility
+    window.FormulaService = FormulaService;
 }
 
 // Export as singleton

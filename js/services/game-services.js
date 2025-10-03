@@ -2,7 +2,8 @@
  * GameServices - Service locator and manager for all game services
  * Provides centralized access to all calculation services
  */
-class GameServices {
+if (typeof GameServices === 'undefined') {
+    var GameServices = class GameServices {
     constructor() {
         // Logger instance
         this.logger = window.Logger ? new window.Logger('GameServices') : null;
@@ -403,12 +404,12 @@ class GameServices {
             formulaConstants: this.formulaService.constants
         };
     }
-}
+    }; // End of GameServices class definition
 
-// Create singleton instance
-const gameServices = new GameServices();
+    // Create singleton instance
+    const gameServicesInstance = new GameServices();
 
-// Export for use in game
-if (typeof window !== 'undefined') {
-    window.GameServices = gameServices;
+    // Export both class and singleton
+    window.GameServices = gameServicesInstance;
+    window.GameServicesClass = GameServices; // Keep class available if needed
 }

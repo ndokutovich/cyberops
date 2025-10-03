@@ -578,7 +578,6 @@ const SCREEN_CONFIG = {
             }
         },
         content: () => `
-            <div class="demoscene-screen" style="width: 100%; height: 100%; position: relative;">
                 <div class="demo-header">
                     <div class="demo-title">CyberOps: Syndicate</div>
                     <div class="demo-subtitle">--- CLASSIFIED INTEL BRIEFING ---</div>
@@ -686,7 +685,6 @@ const SCREEN_CONFIG = {
                         <div class="data-stream stream-3"></div>
                     </div>
                 </div>
-            </div>
         `
     },
 

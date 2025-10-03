@@ -2,7 +2,8 @@
  * RPGService - Manages RPG mechanics and integrations
  * Provides centralized access to RPG calculations and state
  */
-class RPGService {
+if (typeof RPGService === 'undefined') {
+    var RPGService = class RPGService {
     constructor(formulaService, resourceService) {
         this.formulaService = formulaService;
         this.resourceService = resourceService;
@@ -317,4 +318,8 @@ class RPGService {
             this.rpgManager.loadConfig(config);
         }
     }
+    }; // End of RPGService class definition
+
+    // Also expose on window for compatibility
+    window.RPGService = RPGService;
 }

@@ -834,12 +834,21 @@
     <!-- Load JSZip library for ZIP export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-    <!-- Services (needed for RPG and equipment systems) -->
+    <!-- Logger service (required first) -->
+    <script src="js/services/logger-service.js"></script>
+
+    <!-- Core services (in dependency order) -->
     <script src="js/services/formula-service.js"></script>
+    <script src="js/services/resource-service.js"></script>
+    <script src="js/services/agent-service.js"></script>
+    <script src="js/services/mission-service.js"></script>
     <script src="js/services/research-service.js"></script>
     <script src="js/services/equipment-service.js"></script>
+    <script src="js/services/inventory-service.js"></script>
     <script src="js/services/keybinding-service.js"></script>
     <script src="js/services/rpg-service.js"></script>
+
+    <!-- Game services (loads last, depends on all above) -->
     <script src="js/services/game-services.js"></script>
 
     <!-- Engine -->

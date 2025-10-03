@@ -64,11 +64,8 @@ CyberOpsGame.prototype.setupDemosceneInterrupt = function() {
     if (!this.logger) {
         this.logger = window.Logger ? new window.Logger('GameDemoscene') : null;
     }
-        // Get the demoscene element from screen container
-        const screenContainer = document.getElementById('screen-container');
-        if (!screenContainer) return;
-
-        const demosceneScreen = screenContainer.querySelector('.demoscene-screen');
+        // Demoscene is now appended directly to body with id 'screen-demoscene'
+        const demosceneScreen = document.getElementById('screen-demoscene');
         if (!demosceneScreen) return;
 
         const interruptHandler = (event) => {
@@ -109,11 +106,8 @@ CyberOpsGame.prototype.interruptDemoscene = function() {
 }
     
 CyberOpsGame.prototype.removeDemosceneInterruptHandlers = function() {
-        // Get the demoscene element from screen container
-        const screenContainer = document.getElementById('screen-container');
-        if (!screenContainer) return;
-
-        const demosceneScreen = screenContainer.querySelector('.demoscene-screen');
+        // Demoscene is now appended directly to body with id 'screen-demoscene'
+        const demosceneScreen = document.getElementById('screen-demoscene');
         if (this.demosceneInterruptHandler && demosceneScreen) {
             demosceneScreen.removeEventListener('click', this.demosceneInterruptHandler);
             demosceneScreen.removeEventListener('touchstart', this.demosceneInterruptHandler);

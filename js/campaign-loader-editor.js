@@ -1,9 +1,11 @@
 // Campaign Loader for Mission Editor
 // Loads campaign missions without requiring CyberOpsGame
 
+// Create logger at module level so it's accessible everywhere
+const editorLogger = window.Logger ? new window.Logger('CampaignLoaderEditor') : null;
+
 async function loadCampaignIndex() {
-    const logger = window.Logger ? new window.Logger('CampaignLoaderEditor') : null;
-    if (logger) logger.debug('📚 Loading campaign index for editor...');
+    if (editorLogger) editorLogger.debug('📚 Loading campaign index for editor...');
 
     try {
         // Define available campaigns
@@ -13,7 +15,7 @@ async function loadCampaignIndex() {
 
         // Load all mission files
         for (const campaign of campaigns) {
-            if (logger) logger.debug(`Loading campaign: ${campaign.name}`);
+            if (editorLogger) editorLogger.debug(`Loading campaign: ${campaign.name}`);
 
             // Load Act 1 missions
             const act1Missions = [
@@ -38,9 +40,9 @@ async function loadCampaignIndex() {
             }
         }
 
-        if (logger) logger.info('✅ All campaigns loaded:', Object.keys(window.CAMPAIGN_MISSIONS || {}));
+        if (editorLogger) editorLogger.info('✅ All campaigns loaded:', Object.keys(window.CAMPAIGN_MISSIONS || {}));
     } catch (error) {
-        if (logger) logger.error('Failed to load campaigns:', error);
+        if (editorLogger) editorLogger.error('Failed to load campaigns:', error);
     }
 }
 
@@ -49,11 +51,11 @@ async function loadMissionFile(path) {
         const script = document.createElement('script');
         script.src = path;
         script.onload = () => {
-            if (logger) logger.info('Loaded mission:', path);
+            if (editorLogger) editorLogger.info('Loaded mission:', path);
             resolve();
         };
         script.onerror = () => {
-            if (logger) logger.error('Failed to load mission:', path);
+            if (editorLogger) editorLogger.error('Failed to load mission:', path);
             reject(new Error(`Failed to load ${path}`));
         };
         document.head.appendChild(script);
