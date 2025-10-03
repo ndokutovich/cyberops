@@ -517,8 +517,14 @@ CyberOpsGame.prototype.spawnNPCs = function() {
     // Clear existing NPCs
     this.npcs = [];
 
+    if (this.logger) this.logger.debug(`👥 [LEGACY] spawnNPCs called - currentMissionIndex: ${this.currentMissionIndex}`);
+    if (this.logger) this.logger.debug(`👥 [LEGACY] currentMissionDef exists: ${!!this.currentMissionDef}`);
+    if (this.logger) this.logger.debug(`👥 [LEGACY] currentMissionDef.npcs: ${this.currentMissionDef?.npcs?.length || 0}`);
+
     // Get NPCs for current mission/map
     const npcConfigs = this.getNPCsForMission(this.currentMissionIndex);
+
+    if (this.logger) this.logger.debug(`👥 [LEGACY] getNPCsForMission returned: ${npcConfigs.length} configs`);
 
     for (let config of npcConfigs) {
         // Validate and adjust spawn position if needed
@@ -1158,19 +1164,31 @@ CyberOpsGame.prototype.renderQuestHUD = function(ctx) {
 
 // Render NPCs
 CyberOpsGame.prototype.renderNPCs = function(ctx) {
-    if (!this.npcs) return;
+    if (!this.npcs) {
+        return;
+    }
 
     // Render quest objective markers first
     this.renderQuestMarkers(ctx);
 
+    let renderedCount = 0;
+    let skippedAlive = 0;
+    let skippedFog = 0;
+    let skippedOffscreen = 0;
+
     for (let npc of this.npcs) {
-        if (!npc.alive) continue;
+        if (!npc.alive) {
+            skippedAlive++;
+            continue;
+        }
 
         // Skip rendering if in fog and location is unexplored
         if (this.fogEnabled && this.fogOfWar) {
             const tileX = Math.floor(npc.x);
             const tileY = Math.floor(npc.y);
-            if (this.fogOfWar[tileY] && this.fogOfWar[tileY][tileX] === 0) {
+            const fogValue = this.fogOfWar[tileY] ? this.fogOfWar[tileY][tileX] : undefined;
+            if (fogValue === 0) {
+                skippedFog++;
                 continue; // Don't render in unexplored areas
             }
         }
@@ -1178,10 +1196,30 @@ CyberOpsGame.prototype.renderNPCs = function(ctx) {
         // Use the same coordinate conversion as agents (worldToIsometric for 2D view)
         const screenPos = this.worldToIsometric(npc.x, npc.y);
 
-        // Check if on screen
-        if (screenPos.x < -50 || screenPos.x > this.canvas.width + 50 ||
-            screenPos.y < -50 || screenPos.y > this.canvas.height + 50) {
+        // Check if on screen (accounting for camera transform that's already applied to context)
+        // The camera offset is applied via ctx.translate() in game-engine.js before this function is called
+        const screenX = screenPos.x + this.cameraX;
+        const screenY = screenPos.y + this.cameraY;
+
+        if (screenX < -50 || screenX > this.canvas.width + 50 ||
+            screenY < -50 || screenY > this.canvas.height + 50) {
+            skippedOffscreen++;
             continue;
+        }
+
+        renderedCount++;
+
+        // Log first render to debug visibility issues
+        if (!this._npcFirstRenderLogged) {
+            this._npcFirstRenderLogged = new Set();
+        }
+        if (!this._npcFirstRenderLogged.has(npc.id)) {
+            if (this.logger) {
+                this.logger.info(`🎨 Rendering NPC: ${npc.name} (${npc.id})`);
+                this.logger.info(`   Sprite: "${npc.sprite}" Color: ${npc.color}`);
+                this.logger.info(`   Position: (${npc.x}, ${npc.y}) Screen: (${Math.floor(screenPos.x)}, ${Math.floor(screenPos.y)})`);
+            }
+            this._npcFirstRenderLogged.add(npc.id);
         }
 
         // Draw NPC
@@ -1296,6 +1334,14 @@ CyberOpsGame.prototype.renderNPCs = function(ctx) {
         }
 
         ctx.restore();
+    }
+
+    // Log rendering summary (once per second to avoid spam)
+    if (!this._lastNPCRenderLog || Date.now() - this._lastNPCRenderLog > 1000) {
+        if (this.logger) {
+            this.logger.debug(`🎨 NPC Render Summary: ${renderedCount} rendered, ${skippedFog} fog, ${skippedOffscreen} offscreen, ${skippedAlive} dead`);
+        }
+        this._lastNPCRenderLog = Date.now();
     }
 };
 

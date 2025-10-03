@@ -1207,8 +1207,12 @@ class MissionEditor {
         this.mission.npcs.forEach((npc, index) => {
             const div = document.createElement('div');
             div.className = 'npc-item';
+            // NPCs use id and spawn coordinates
+            const npcName = npc.name || npc.id || 'NPC';
+            const npcX = npc.spawn?.x || npc.x || 0;
+            const npcY = npc.spawn?.y || npc.y || 0;
             div.innerHTML = `
-                <span>${npc.name} at (${npc.x}, ${npc.y})</span>
+                <span>${npcName} at (${npcX}, ${npcY})</span>
                 <span class="delete-btn" onclick="editor.removeNPC(${index})">✖</span>
             `;
             div.addEventListener('click', () => this.editNPC(index));
@@ -2331,6 +2335,26 @@ ADVANTAGES:
             });
         }
 
+        // Add NPCs from map definition
+        if (mapDef.npcs) {
+            mapDef.npcs.forEach((npc, index) => {
+                const npcX = npc.spawn ? npc.spawn.x : (npc.position ? npc.position.x : npc.x);
+                const npcY = npc.spawn ? npc.spawn.y : (npc.position ? npc.position.y : npc.y);
+
+                if (npcX !== undefined && npcY !== undefined) {
+                    this.mission.entities.push({
+                        type: 'npc',
+                        x: npcX,
+                        y: npcY,
+                        id: npc.id || `npc_${index}`,
+                        name: npc.name || npc.id || 'NPC',
+                        dialog: npc.dialog || [],
+                        quests: npc.quests || []
+                    });
+                }
+            });
+        }
+
         // Add collectables as items
         if (mapDef.collectables) {
             mapDef.collectables.forEach((item, index) => {
@@ -2380,7 +2404,10 @@ ADVANTAGES:
             });
         }
 
-        // Add NPCs from embedded mission data
+        // Add NPCs from embedded mission data (but don't duplicate if already added above at line 2259)
+        // Clear the npcs array first to avoid duplication since it was copied at line 2259
+        this.mission.npcs = [];
+
         if (missionDef.npcs) {
             missionDef.npcs.forEach((npc, index) => {
                 // Handle multiple position formats: spawn, position, or x/y directly
@@ -2388,23 +2415,35 @@ ADVANTAGES:
                 const npcY = npc.spawn ? npc.spawn.y : (npc.position ? npc.position.y : npc.y);
 
                 if (npcX !== undefined && npcY !== undefined) {
-                    this.mission.npcs.push({
-                        name: npc.name,
+                    const npcData = {
+                        id: npc.id,
+                        name: npc.name || npc.id,
                         type: npc.type || 'civilian',
                         x: npcX,
                         y: npcY,
                         dialog: npc.dialog || [],
                         quests: npc.quests || []
-                    });
+                    };
 
-                    // Also add as entity
-                    this.mission.entities.push({
-                        type: 'npc',
-                        x: npcX,
-                        y: npcY,
-                        name: npc.name,
-                        id: Date.now() + 600 + index
-                    });
+                    this.mission.npcs.push(npcData);
+
+                    // CRITICAL: Also add to entities so NPCs render on the map
+                    // Check if not already in entities (avoid duplicates from mapDef.npcs)
+                    const alreadyExists = this.mission.entities.some(e =>
+                        e.type === 'npc' && e.x === npcX && e.y === npcY
+                    );
+
+                    if (!alreadyExists) {
+                        this.mission.entities.push({
+                            type: 'npc',
+                            x: npcX,
+                            y: npcY,
+                            id: npc.id || `npc_${index}`,
+                            name: npc.name || npc.id || 'NPC',
+                            dialog: npc.dialog || [],
+                            quests: npc.quests || []
+                        });
+                    }
                 }
             });
         }

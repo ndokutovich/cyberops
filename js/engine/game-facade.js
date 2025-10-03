@@ -725,6 +725,9 @@ class GameFacade {
      * Spawn NPCs
      */
     spawnNPCs(npcData) {
+        if (this.logger) this.logger.debug(`👥 [FACADE] spawnNPCs called with ${npcData?.length || 0} NPCs`);
+        if (this.logger) this.logger.debug(`👥 [FACADE] Current npcs before overwrite: ${this.npcs?.length || 0}`);
+
         this.npcs = npcData.map((npc, index) => {
             const npcEntity = {
                 ...npc,
@@ -744,6 +747,13 @@ class GameFacade {
 
             return npcEntity;
         });
+
+        if (this.logger) this.logger.debug(`👥 [FACADE] After spawnNPCs, npcs count: ${this.npcs?.length || 0}`);
+        if (this.npcs && this.npcs.length > 0) {
+            this.npcs.forEach((npc, idx) => {
+                if (this.logger) this.logger.debug(`  [FACADE] NPC[${idx}]: ${npc.name || npc.id} at (${npc.x}, ${npc.y})`);
+            });
+        }
     }
 
     /**
