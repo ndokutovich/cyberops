@@ -23,9 +23,18 @@ Object.defineProperty(CyberOpsGame.prototype, 'campaignEnemyTypes', {
     get: function() {
         if (window.ContentLoader && window.ContentLoader.currentCampaign) {
             // Handle both 'enemies' (from config) and 'enemyTypes' (from content)
-            return window.ContentLoader.currentCampaign.enemies ||
+            const result = window.ContentLoader.currentCampaign.enemies ||
                    window.ContentLoader.currentCampaign.enemyTypes ||
                    [];
+            if (this.logger && result.length === 0) {
+                this.logger.debug('🐛 campaignEnemyTypes getter: ContentLoader.currentCampaign exists but no enemies');
+                this.logger.debug('🐛 currentCampaign.enemies:', window.ContentLoader.currentCampaign.enemies);
+                this.logger.debug('🐛 currentCampaign.enemyTypes:', window.ContentLoader.currentCampaign.enemyTypes);
+            }
+            return result;
+        }
+        if (this.logger) {
+            this.logger.debug('🐛 campaignEnemyTypes getter: ContentLoader or currentCampaign missing');
         }
         return [];
     },

@@ -936,7 +936,7 @@ CyberOpsGame.prototype.useSkill = function(agent, skillId, target) {
     }
 
     // Apply skill effects
-    this.applySkillEffects(agent, skill, target);
+    this.applyCombatSkillEffects(agent, skill, target);
 
     // Consume AP
     if (this.turnBasedMode) {
@@ -959,7 +959,8 @@ CyberOpsGame.prototype.useSkill = function(agent, skillId, target) {
 };
 
 // Apply skill effects
-CyberOpsGame.prototype.applySkillEffects = function(agent, skill, target) {
+// Apply combat skill effects (damage, healing, buffs, debuffs) - used during battle
+CyberOpsGame.prototype.applyCombatSkillEffects = function(agent, skill, target) {
     if (skill.damage && target) {
         const damage = this.calculateSkillDamage(agent, skill);
 

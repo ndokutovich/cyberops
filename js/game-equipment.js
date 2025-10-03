@@ -530,60 +530,9 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
 };
 
 // Buy item (alias for consistency)
-CyberOpsGame.prototype.buyItem = function(type, itemId) {
-    // Find item to get details for confirmation
-    let itemData = null;
-
-    // First look in local arrays (what's displayed in the UI)
-    if (type === 'weapon') {
-        itemData = this.weapons.find(w => w.id === itemId);
-    } else {
-        itemData = this.equipment.find(e => e.id === itemId);
-    }
-
-    // If not found locally, try GameServices
-    if (!itemData && window.GameServices && window.GameServices.equipmentService) {
-        if (type === 'weapon') {
-            itemData = window.GameServices.equipmentService.getWeapon(itemId);
-        } else {
-            itemData = window.GameServices.equipmentService.getEquipment(itemId);
-        }
-    }
-
-    if (!itemData) {
-        if (this.logger) this.logger.error('Item not found for type:', type, 'id:', itemId);
-        return;
-    }
-
-    // Check affordability
-    const currentCredits = this.gameServices.resourceService.get('credits');
-    if (currentCredits < itemData.cost) {
-        this.showHudDialog(
-            '❌ INSUFFICIENT FUNDS',
-            `You need ${itemData.cost} credits to buy ${itemData.name}.<br>
-            You currently have ${currentCredits} credits.`,
-            [{ text: 'OK', action: 'close' }]
-        );
-        return;
-    }
-
-    // Show confirmation
-    this.showHudDialog(
-        '🛒 CONFIRM PURCHASE',
-        `Buy ${itemData.name} for ${itemData.cost} credits?<br>
-        <span style="color: #888;">You will have ${currentCredits - itemData.cost} credits remaining.</span>`,
-        [
-            {
-                text: 'BUY',
-                action: () => {
-                    // Perform purchase
-                    this.buyItemFromShop(type, itemId);
-                }
-            },
-            { text: 'CANCEL', action: 'close' }
-        ]
-    );
-};
+// REMOVED: buyItem (type, itemId) - Dead code, overwritten by game-rpg-ui.js buyItem(itemId, quantity)
+// This version was never called because game-rpg-ui.js loads later and replaces it
+// See DUPLICATE_ANALYSIS.md for details
 
 // Show sell dialog (for declarative dialog system)
 CyberOpsGame.prototype.showSellDialog = function() {

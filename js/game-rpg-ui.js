@@ -997,7 +997,7 @@ CyberOpsGame.prototype.learnSkill = function(agentId, skillId) {
             const rpgConfig = this.getRPGConfig ? this.getRPGConfig() : null;
             const skillConfig = rpgConfig?.skills?.[skillId];
             if (skillConfig) {
-                this.applySkillEffects(agent, skillId, skillConfig);
+                this.applyPassiveSkillEffects(agent, skillId, skillConfig);
             }
 
             // Log the event
@@ -1019,7 +1019,8 @@ CyberOpsGame.prototype.learnSkill = function(agentId, skillId) {
 };
 
 // Apply skill effects
-CyberOpsGame.prototype.applySkillEffects = function(agent, skillId, skillConfig) {
+// Apply passive skill effects (stat bonuses) - used for character sheet
+CyberOpsGame.prototype.applyPassiveSkillEffects = function(agent, skillId, skillConfig) {
     if (!agent.rpgEntity || !skillConfig) return;
 
     const skillLevel = agent.rpgEntity.skills?.[skillId] || 0;

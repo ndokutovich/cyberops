@@ -20,6 +20,9 @@ class ContentLoader {
      */
     async loadCampaign(campaign, game) {
         if (logger) logger.debug('📦 Loading campaign:', campaign.metadata?.name || 'Unknown');
+        if (logger) logger.debug('📦 Campaign has enemies?', !!campaign.enemies);
+        if (logger) logger.debug('📦 Campaign has enemyTypes?', !!campaign.enemyTypes);
+        if (logger) logger.debug('📦 Enemy count:', campaign.enemies?.length || campaign.enemyTypes?.length || 0);
 
         // Validate campaign first
         const validation = window.CampaignContentInterface.validateCampaign(campaign);
@@ -34,6 +37,8 @@ class ContentLoader {
 
         // Merge with defaults
         this.currentCampaign = window.CampaignContentInterface.mergeCampaignWithDefaults(campaign);
+        if (logger) logger.debug('📦 After merge - currentCampaign has enemies?', !!this.currentCampaign.enemies);
+        if (logger) logger.debug('📦 After merge - enemy count:', this.currentCampaign.enemies?.length || 0);
 
         // Load content into engine systems
         try {

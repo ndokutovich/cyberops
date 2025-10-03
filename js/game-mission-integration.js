@@ -51,7 +51,7 @@ CyberOpsGame.prototype.breachNearestGate = function(agent) {
 };
 
 // Update the ability usage to use the new system
-CyberOpsGame.prototype.useAbilityForAllSelectedUpdated = function(abilityIndex) {
+CyberOpsGame.prototype.useAbilityForAllSelected = function(abilityIndex) {
     if (this.isPaused) return;
 
     // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
@@ -98,22 +98,22 @@ CyberOpsGame.prototype.useAbilityForAllSelectedUpdated = function(abilityIndex) 
     }
 };
 
-// Replace the old useAbilityForAllSelected
-CyberOpsGame.prototype.useAbilityForAllSelected = CyberOpsGame.prototype.useAbilityForAllSelectedUpdated;
+// Save base mission init from game-flow.js
+const baseInitMission = CyberOpsGame.prototype.initMission;
 
-// Update mission initialization to use the new system
-CyberOpsGame.prototype.initMissionUpdated = function() {
-    if (this.logger) this.logger.info('🚀 initMissionUpdated STARTED');
+// Override mission initialization to use the new system
+CyberOpsGame.prototype.initMission = function() {
+    if (this.logger) this.logger.info('🚀 initMission with MissionService integration STARTED');
 
     // Reset mission failure flag
     this.missionFailed = false;
 
-    // Call the original init for basic setup
-    if (this.initMissionOriginal) {
-        if (this.logger) this.logger.info('📞 Calling initMissionOriginal');
-        this.initMissionOriginal.call(this);
+    // Call the base init for basic setup (from game-flow.js)
+    if (baseInitMission) {
+        if (this.logger) this.logger.info('📞 Calling base initMission');
+        baseInitMission.call(this);
     } else {
-        if (this.logger) this.logger.error('❌ initMissionOriginal NOT FOUND!');
+        if (this.logger) this.logger.error('❌ Base initMission NOT FOUND!');
     }
 
     // Initialize from mission definition - get the FULL mission data
@@ -196,7 +196,7 @@ CyberOpsGame.prototype.initMissionUpdated = function() {
     if (this.currentMissionDef && this.currentMissionDef.objectives) {
         if (this.logger) this.logger.info('✅ Mission initialized with objectives:', this.currentMissionDef.objectives.length);
     } else {
-        if (this.logger) this.logger.error('❌ CRITICAL: No objectives at end of initMissionUpdated!', {
+        if (this.logger) this.logger.error('❌ CRITICAL: No objectives at end of initMission!', {
             hasDef: !!this.currentMissionDef,
             hasObjectives: !!(this.currentMissionDef && this.currentMissionDef.objectives),
             missionService: !!(window.GameServices && window.GameServices.missionService),
@@ -204,15 +204,6 @@ CyberOpsGame.prototype.initMissionUpdated = function() {
         });
     }
 };
-
-// Save original and replace
-if (!CyberOpsGame.prototype.initMissionOriginal) {
-    if (integrationLogger) integrationLogger.info('🔄 REPLACING initMission with updated version');
-    CyberOpsGame.prototype.initMissionOriginal = CyberOpsGame.prototype.initMission;
-    CyberOpsGame.prototype.initMission = CyberOpsGame.prototype.initMissionUpdated;
-} else {
-    if (integrationLogger) integrationLogger.warn('⚠️ initMission ALREADY REPLACED');
-}
 
 // Update the game loop to check objectives
 CyberOpsGame.prototype.updateMissionObjectives = function() {
@@ -328,34 +319,20 @@ CyberOpsGame.prototype.updateMissionObjectives = function() {
     }
 };
 
-// Hook into the game loop
-CyberOpsGame.prototype.gameLoopUpdated = function() {
-    // Call original game loop
-    if (this.gameLoopOriginal) {
-        this.gameLoopOriginal.call(this);
+// Save base game loop from game-loop.js
+const baseGameLoop = CyberOpsGame.prototype.gameLoop;
+
+// Hook into the game loop to add mission objective tracking
+CyberOpsGame.prototype.gameLoop = function() {
+    // Call base game loop
+    if (baseGameLoop) {
+        baseGameLoop.call(this);
     }
 
     // Update mission objectives
     if (this.currentScreen === 'game' && !this.isPaused) {
         this.updateMissionObjectives();
     }
-};
-
-// Save original and replace
-if (!CyberOpsGame.prototype.gameLoopOriginal) {
-    if (integrationLogger) integrationLogger.info('🔄 REPLACING gameLoop with updated version');
-    CyberOpsGame.prototype.gameLoopOriginal = CyberOpsGame.prototype.gameLoop;
-    CyberOpsGame.prototype.gameLoop = CyberOpsGame.prototype.gameLoopUpdated;
-} else {
-    if (integrationLogger) integrationLogger.warn('⚠️ gameLoop ALREADY REPLACED');
-}
-
-// Interaction tracking now handled by MissionService
-CyberOpsGame.prototype.performInteractionUpdated = function(agent, targetType, target) {
-    // Call the new performInteraction
-    this.performInteraction(agent, targetType, target);
-
-    // MissionService handles all tracking now
 };
 
 // Override the original hackNearestTerminal completely

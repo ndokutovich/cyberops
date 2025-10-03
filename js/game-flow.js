@@ -208,11 +208,11 @@ CyberOpsGame.prototype.startMission = function() {
             if (this.logger) this.logger.info(`✅ Starting mission with ${this.selectedAgents?.length || 0} agents`);
         }
 
-        // Auto-save before mission if enabled
+        // Auto-save before mission if enabled (silent save, no dialog)
         if (this.autoSaveEnabled) {
             if (this.logger) this.logger.debug('🔄 Creating pre-mission autosave...');
-            const missionName = this.currentMission ? this.currentMission.title : 'Unknown Mission';
-            this.saveToSlot('pre_mission_autosave', `Pre-Mission: ${missionName}`);
+            // Use GameStateService directly for silent save (no modal)
+            this.gameServices.gameStateService.saveGame(this, 'pre_mission_autosave', false);
         }
 
         // Initialize InventoryService with current weapons before mission starts

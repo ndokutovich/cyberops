@@ -35,7 +35,18 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
                     ...campaignContent,
                     // Keep acts and folder from campaignConfig if not in content
                     acts: campaignContent.acts || campaignConfig.acts,
-                    folder: campaignContent.folder || campaignConfig.folder
+                    folder: campaignContent.folder || campaignConfig.folder,
+                    // Map enemyTypes to enemies for ContentLoader compatibility
+                    enemies: campaignContent.enemyTypes || campaignContent.enemies || [],
+                    // Create metadata for validation if missing
+                    metadata: campaignContent.metadata || {
+                        id: campaignContent.id || campaignId,
+                        name: campaignContent.name || 'Campaign',
+                        version: '1.0.0',
+                        description: campaignContent.description || ''
+                    },
+                    // Missions will be loaded separately by campaign system
+                    missions: []
                 };
 
                 const success = await window.ContentLoader.loadCampaign(campaign, this);

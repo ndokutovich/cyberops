@@ -343,14 +343,9 @@ CyberOpsGame.prototype.applyMissionResearchBonuses = function(agent) {
 }
     
     // Apply medical healing between missions
-CyberOpsGame.prototype.applyMedicalHealing = function() {
-        if (!this.completedResearch || !this.completedResearch.includes(5)) return;
-        
-        this.activeAgents.forEach(agent => {
-            const healAmount = Math.floor(agent.maxHealth * 0.2);
-            agent.health = Math.min(agent.health + healAmount, agent.maxHealth);
-        });
-}
+// REMOVED: applyMedicalHealing - Dead code, overwritten by game-screens.js version
+// This version was never called because game-screens.js loads later and replaces it
+// See DUPLICATE_ANALYSIS.md for details
     
     // Apply stealth bonus for detection  
 CyberOpsGame.prototype.getStealthDetectionRange = function(agent) {
