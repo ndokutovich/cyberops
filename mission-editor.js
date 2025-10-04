@@ -3870,6 +3870,8 @@ class CampaignManager {
     }
 
     // Initialize IndexedDB for campaign storage
+    // Note: Missions are stored embedded within campaign objects, not as separate records
+    // This simplifies export/import and ensures campaigns are self-contained units
     async initIndexedDB() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open('CampaignDatabase', 2);
@@ -3896,12 +3898,7 @@ class CampaignManager {
                         campaignsStore.createIndex('lastModified', 'lastModified', { unique: false });
                     }
 
-                    // Create missions store if it doesn't exist
-                    if (!db.objectStoreNames.contains('missions')) {
-                        const missionsStore = db.createObjectStore('missions', { keyPath: 'id' });
-                        missionsStore.createIndex('campaignId', 'campaignId', { unique: false });
-                        missionsStore.createIndex('missionId', 'missionId', { unique: false });
-                    }
+                    // Note: missions are stored as part of the campaign object, not separately
 
                     this.editor.eventLogger.log('IndexedDB schema created/updated', 'success');
                 } catch (upgradeError) {
@@ -3910,6 +3907,43 @@ class CampaignManager {
                 }
             };
         });
+    }
+
+    // Sanitize campaign data for IndexedDB storage (remove functions)
+    sanitizeCampaignForStorage(campaign) {
+        // Deep clone the campaign to avoid modifying the original
+        const cleanCampaign = JSON.parse(JSON.stringify(campaign, (key, value) => {
+            // Skip functions - they can't be stored in IndexedDB
+            if (typeof value === 'function') {
+                // Store function as a string identifier for later reconstruction
+                if (key === 'action') {
+                    // For NPC dialog actions, store as string command
+                    return 'function:showShop'; // Will be handled by game code
+                }
+                return undefined; // Skip other functions
+            }
+            return value;
+        }));
+
+        // Additional cleanup for NPCs if they have dialog with functions
+        if (cleanCampaign.npcs) {
+            Object.values(cleanCampaign.npcs).forEach(npc => {
+                if (npc.dialog && Array.isArray(npc.dialog)) {
+                    npc.dialog.forEach(dialogNode => {
+                        if (dialogNode.options) {
+                            dialogNode.options.forEach(option => {
+                                // Convert function actions to string identifiers
+                                if (typeof option.action === 'function') {
+                                    option.action = 'function:custom';
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        return cleanCampaign;
     }
 
     // Save campaign to IndexedDB
@@ -3924,8 +3958,10 @@ class CampaignManager {
             const transaction = this.db.transaction(['campaigns'], 'readwrite');
             const store = transaction.objectStore('campaigns');
 
-            campaign.lastModified = new Date().toISOString();
-            const request = store.put(campaign);
+            // Create a clean copy without functions for IndexedDB storage
+            const cleanCampaign = this.sanitizeCampaignForStorage(campaign);
+            cleanCampaign.lastModified = new Date().toISOString();
+            const request = store.put(cleanCampaign);
 
             request.onsuccess = () => {
                 this.editor.eventLogger.log(`Campaign "${campaign.name}" saved to IndexedDB`, 'success');
@@ -3994,28 +4030,17 @@ class CampaignManager {
         }
 
         return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['campaigns', 'missions'], 'readwrite');
+            const transaction = this.db.transaction(['campaigns'], 'readwrite');
             const campaignStore = transaction.objectStore('campaigns');
-            const missionStore = transaction.objectStore('missions');
 
-            // Delete campaign
-            campaignStore.delete(campaignId);
+            // Delete campaign (missions are embedded within the campaign object)
+            const deleteRequest = campaignStore.delete(campaignId);
 
-            // Delete associated missions
-            const index = missionStore.index('campaignId');
-            const range = IDBKeyRange.only(campaignId);
-            const request = index.openCursor(range);
-
-            request.onsuccess = (event) => {
-                const cursor = event.target.result;
-                if (cursor) {
-                    missionStore.delete(cursor.primaryKey);
-                    cursor.continue();
-                }
+            deleteRequest.onsuccess = () => {
+                this.editor.eventLogger.log(`Campaign "${campaignId}" deleted from IndexedDB`, 'success', true);
             };
 
             transaction.oncomplete = () => {
-                this.editor.eventLogger.log(`Campaign "${campaignId}" deleted from IndexedDB`, 'success', true);
                 resolve();
             };
 
@@ -4056,79 +4081,89 @@ class CampaignManager {
 
                 this.editor.eventLogger.log(`Loaded campaign "${campaign.name}" from IndexedDB`, 'success');
                 return;
-            }
-        }
-
-        // Fall back to window.MAIN_CAMPAIGN_CONTENT
-        if (window.MAIN_CAMPAIGN_CONTENT) {
-            this.currentCampaign = window.MAIN_CAMPAIGN_CONTENT;
-            this.currentCampaignId = this.currentCampaign.id;
-
-            // If the campaign doesn't have missions but CAMPAIGN_MISSIONS exists, add them
-            if (!this.currentCampaign.missions && window.CAMPAIGN_MISSIONS) {
-                this.currentCampaign.missions = Object.values(window.CAMPAIGN_MISSIONS);
-                this.editor.eventLogger.log(`Added ${this.currentCampaign.missions.length} missions from CAMPAIGN_MISSIONS to campaign`, 'success');
+                }
             }
 
-            // Sync missions to global CAMPAIGN_MISSIONS (in case we loaded from IndexedDB)
-            this.syncMissionsToGlobal();
+            // Fall back to window.MAIN_CAMPAIGN_CONTENT
+            if (window.MAIN_CAMPAIGN_CONTENT) {
+                this.currentCampaign = window.MAIN_CAMPAIGN_CONTENT;
+                this.currentCampaignId = this.currentCampaign.id;
 
-            // Load NPCs from templates if not already in campaign
-            if (!this.currentCampaign.npcs) {
-                this.currentCampaign.npcs = {};
-            }
-            const campaignId = this.currentCampaign.id || 'main';
-            if (window.CAMPAIGN_NPC_TEMPLATES && window.CAMPAIGN_NPC_TEMPLATES[campaignId]) {
-                const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES[campaignId];
-                Object.keys(npcTemplates).forEach(npcId => {
-                    if (!this.currentCampaign.npcs[npcId]) {
-                        this.currentCampaign.npcs[npcId] = { ...npcTemplates[npcId] };
-                    }
-                });
-                this.editor.eventLogger.log(`Loaded ${Object.keys(npcTemplates).length} NPC templates`, 'success');
-            }
+                // If the campaign doesn't have missions but CAMPAIGN_MISSIONS exists, add them
+                if (!this.currentCampaign.missions && window.CAMPAIGN_MISSIONS) {
+                    this.currentCampaign.missions = Object.values(window.CAMPAIGN_MISSIONS);
+                    this.editor.eventLogger.log(`Added ${this.currentCampaign.missions.length} missions from CAMPAIGN_MISSIONS to campaign`, 'success');
+                }
 
-            this.editor.eventLogger.log('Loaded existing campaign content from window', 'success');
-            // Save it to IndexedDB for future use (now with missions)
-            if (this.db) {
-                await this.saveCampaignToDB(this.currentCampaign);
-            }
-        } else {
-            // Create default campaign structure
-            this.createDefaultCampaign();
-            this.editor.eventLogger.log('Created new campaign structure', 'info');
+                // Sync missions to global CAMPAIGN_MISSIONS (in case we loaded from IndexedDB)
+                this.syncMissionsToGlobal();
 
-            // Add missions from CAMPAIGN_MISSIONS if available
-            if (window.CAMPAIGN_MISSIONS) {
-                this.currentCampaign.missions = Object.values(window.CAMPAIGN_MISSIONS);
-                this.editor.eventLogger.log(`Added ${this.currentCampaign.missions.length} missions to default campaign`, 'success');
-            }
+                // Load NPCs from templates if not already in campaign
+                if (!this.currentCampaign.npcs) {
+                    this.currentCampaign.npcs = {};
+                }
+                const campaignId = this.currentCampaign.id || 'main';
+                if (window.CAMPAIGN_NPC_TEMPLATES && window.CAMPAIGN_NPC_TEMPLATES[campaignId]) {
+                    const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES[campaignId];
+                    Object.keys(npcTemplates).forEach(npcId => {
+                        if (!this.currentCampaign.npcs[npcId]) {
+                            this.currentCampaign.npcs[npcId] = { ...npcTemplates[npcId] };
+                        }
+                    });
+                    this.editor.eventLogger.log(`Loaded ${Object.keys(npcTemplates).length} NPC templates`, 'success');
+                }
 
-            // Load NPCs from templates
-            const defaultCampaignId = this.currentCampaign.id || 'main';
-            if (window.CAMPAIGN_NPC_TEMPLATES && window.CAMPAIGN_NPC_TEMPLATES[defaultCampaignId]) {
-                const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES[defaultCampaignId];
-                Object.keys(npcTemplates).forEach(npcId => {
-                    if (!this.currentCampaign.npcs[npcId]) {
-                        this.currentCampaign.npcs[npcId] = { ...npcTemplates[npcId] };
-                    }
-                });
-                this.editor.eventLogger.log(`Loaded ${Object.keys(npcTemplates).length} NPC templates to default campaign`, 'success');
-            }
+                this.editor.eventLogger.log('Loaded existing campaign content from window', 'success');
+                // Save it to IndexedDB for future use (now with missions)
+                if (this.db) {
+                    await this.saveCampaignToDB(this.currentCampaign);
+                }
+            } else {
+                // Create default campaign structure
+                this.createDefaultCampaign();
+                this.editor.eventLogger.log('Created new campaign structure', 'info');
 
-            // Save the default campaign to IndexedDB
-            if (this.db) {
-                await this.saveCampaignToDB(this.currentCampaign);
-                this.editor.eventLogger.log('Default campaign saved to storage', 'success');
+                // Add missions from CAMPAIGN_MISSIONS if available
+                if (window.CAMPAIGN_MISSIONS) {
+                    this.currentCampaign.missions = Object.values(window.CAMPAIGN_MISSIONS);
+                    this.editor.eventLogger.log(`Added ${this.currentCampaign.missions.length} missions to default campaign`, 'success');
+                }
+
+                // Load NPCs from templates
+                const defaultCampaignId = this.currentCampaign.id || 'main';
+                if (window.CAMPAIGN_NPC_TEMPLATES && window.CAMPAIGN_NPC_TEMPLATES[defaultCampaignId]) {
+                    const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES[defaultCampaignId];
+                    Object.keys(npcTemplates).forEach(npcId => {
+                        if (!this.currentCampaign.npcs[npcId]) {
+                            this.currentCampaign.npcs[npcId] = { ...npcTemplates[npcId] };
+                        }
+                    });
+                    this.editor.eventLogger.log(`Loaded ${Object.keys(npcTemplates).length} NPC templates to default campaign`, 'success');
+                }
+
+                // Save the default campaign to IndexedDB
+                if (this.db) {
+                    await this.saveCampaignToDB(this.currentCampaign);
+                    this.editor.eventLogger.log('Default campaign saved to storage', 'success');
+                }
             }
-        }
         } catch (error) {
             console.error('Error in loadCampaignContent:', error);
             const errorMsg = error ? (error.message || error.toString()) : 'Unknown error';
-            this.editor.eventLogger.log(`Error loading campaign content: ${errorMsg}`, 'error', true);
-            // Create default campaign as fallback
+
+            // Provide specific error messages for common issues
+            if (error.message && error.message.includes('could not be cloned')) {
+                this.editor.eventLogger.log('Campaign contains functions that cannot be saved to storage. Creating clean version...', 'warning', true);
+            } else {
+                this.editor.eventLogger.log(`Error loading campaign content: ${errorMsg}`, 'error', true);
+            }
+
+            // Fallback: Create a default campaign if none exists
+            // This ensures the editor always has a working campaign to edit
             if (!this.currentCampaign) {
+                this.editor.eventLogger.log('Creating default campaign as fallback...', 'info');
                 this.createDefaultCampaign();
+                // Don't try to save the default campaign if IndexedDB is having issues
             }
         }
     }
@@ -6905,6 +6940,12 @@ ${node.text || ''}
             const contentJs = this.generateCampaignContentFile();
             campaignFolder.file('campaign-content.js', contentJs);
 
+            // Export npcs.js if we have NPCs
+            if (this.currentCampaign.npcs && Object.keys(this.currentCampaign.npcs).length > 0) {
+                const npcsJs = this.generateNPCsFile();
+                campaignFolder.file('npcs.js', npcsJs);
+            }
+
             // Export campaign.json
             const campaignJson = {
                 id: campaignId,
@@ -6958,6 +6999,23 @@ ${node.text || ''}
     // Export for Node.js if needed
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = ${this.currentCampaign.id || 'main'}CampaignContent;
+    }
+})();`;
+    }
+
+    generateNPCsFile() {
+        const campaignId = this.currentCampaign.id || 'main';
+        return `// NPC Templates for ${this.currentCampaign.name || 'Campaign'}
+// These are referenced by mission files
+// Generated by Mission Editor
+
+(function() {
+    const npcTemplates = ${JSON.stringify(this.currentCampaign.npcs || {}, null, 8).replace(/\n/g, '\n    ')};
+
+    // Export for use by missions
+    if (typeof window !== 'undefined') {
+        window.CAMPAIGN_NPC_TEMPLATES = window.CAMPAIGN_NPC_TEMPLATES || {};
+        window.CAMPAIGN_NPC_TEMPLATES['${campaignId}'] = npcTemplates;
     }
 })();`;
     }
