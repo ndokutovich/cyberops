@@ -118,8 +118,10 @@ class RPGManager {
             level: baseAgent.level || 1,
             xp: baseAgent.experience || baseAgent.xp || 0, // RPGAgent uses 'xp', not 'experience'
             stats: this.generateInitialStats(classType),
-            skills: this.getClassSkills(classType),
-            perks: [],
+            // Preserve agent's existing skills or use class defaults
+            skills: baseAgent.skills || this.getClassSkills(classType),
+            // Preserve agent's existing perks or use empty array
+            perks: baseAgent.perks || [],
             // Give starting points for customization
             statPoints: 3,
             skillPoints: 1,

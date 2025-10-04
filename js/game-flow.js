@@ -1359,8 +1359,11 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
         const grenadeX = targetX;
         const grenadeY = targetY;
 
+        // Store reference to this for use in setTimeout
+        const self = this;
+
         setTimeout(() => {
-            this.effects.push({
+            self.effects.push({
                 type: 'explosion',
                 x: grenadeX,
                 y: grenadeY,
@@ -1371,13 +1374,15 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
             });
 
             // Big shake and freeze for grenade explosion
-            if (this.triggerVisualEffect) {
-                this.triggerVisualEffect('freezeEffects', 'explosion', { x: grenadeX, y: grenadeY });
-                this.triggerVisualEffect('screenShake', 'explosion', { x: grenadeX, y: grenadeY });
+            if (self.triggerVisualEffect) {
+                self.triggerVisualEffect('freezeEffects', 'explosion', { x: grenadeX, y: grenadeY });
+                self.triggerVisualEffect('screenShake', 'explosion', { x: grenadeX, y: grenadeY });
             }
 
             // Play explosion sound
-            this.playSound('explosion', 0.6);
+            if (self.playSound) {
+                self.playSound('explosion', 0.6);
+            }
 
             // Strong vibration for explosion
             if ('vibrate' in navigator) {
@@ -1386,7 +1391,7 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
 
             // Deal damage to enemies in blast radius
             let enemiesHit = 0;
-            this.enemies.forEach(enemy => {
+            self.enemies.forEach(enemy => {
                 if (!enemy.alive) return;
                 const dist = Math.sqrt(
                     Math.pow(enemy.x - grenadeX, 2) +
@@ -1395,8 +1400,8 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                 if (dist < 3) {
                     // Use RPG damage calculation if available
                     let damage = 50;
-                    if (this.calculateDamage) {
-                        damage = this.calculateDamage(agent, enemy, 'grenade');
+                    if (self.calculateDamage) {
+                        damage = self.calculateDamage(agent, enemy, 'grenade');
                     }
 
                     // Use FormulaService to apply damage
@@ -1405,38 +1410,40 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
 
                     if (enemy.health <= 0) {
                         enemy.alive = false;
-                        this.totalEnemiesDefeated++;
+                        self.totalEnemiesDefeated++;
 
                         // Track enemy elimination for mission objectives
                         // onEnemyEliminated already tracks through MissionService
-                        if (this.onEnemyEliminated) {
-                            this.onEnemyEliminated(enemy);
+                        if (self.onEnemyEliminated) {
+                            self.onEnemyEliminated(enemy);
                         }
 
-                        if (this.logger) this.logger.debug(`💥 Grenade killed enemy at (${enemy.x}, ${enemy.y})`);
+                        if (self.logger) self.logger.debug(`💥 Grenade killed enemy at (${enemy.x}, ${enemy.y})`);
 
-                        if (this.logEvent) {
-                            this.logEvent(`Grenade eliminated enemy!`, 'combat');
+                        if (self.logEvent) {
+                            self.logEvent(`Grenade eliminated enemy!`, 'combat');
                         }
 
                         // Grant XP for grenade kills!
-                        if (this.onEntityDeath) {
-                            if (this.logger) this.logger.debug(`🎯 Granting XP for grenade kill`);
-                            this.onEntityDeath(enemy, agent);
+                        if (self.onEntityDeath) {
+                            if (self.logger) self.logger.debug(`🎯 Granting XP for grenade kill`);
+                            self.onEntityDeath(enemy, agent);
                         }
                     } else {
-                        if (this.logEvent) {
-                            this.logEvent(`Grenade damaged enemy (50 damage)`, 'combat');
+                        if (self.logEvent) {
+                            self.logEvent(`Grenade damaged enemy (50 damage)`, 'combat');
                         }
                     }
                 }
             });
 
-            if (enemiesHit === 0 && this.logEvent) {
-                this.logEvent(`Grenade exploded (no enemies hit)`, 'combat');
+            if (enemiesHit === 0 && self.logEvent) {
+                self.logEvent(`Grenade exploded (no enemies hit)`, 'combat');
             }
 
-            this.alertEnemies(grenadeX, grenadeY, 10);
+            if (self.alertEnemies) {
+                self.alertEnemies(grenadeX, grenadeY, 10);
+            }
         }, 500);
 }
 

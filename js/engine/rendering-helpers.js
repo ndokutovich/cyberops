@@ -358,14 +358,22 @@ class RenderingHelpers {
      */
     renderEffect(effect, ctx, worldToIsometric) {
         const isoPos = worldToIsometric(effect.x, effect.y);
-        const progress = effect.age / effect.lifetime;
+        // Effects use frame/duration, not age/lifetime
+        // Default values if properties are missing
+        const frame = effect.frame || 0;
+        const duration = effect.duration || 30; // Default 30 frames
+        const progress = Math.min(frame / duration, 1); // Clamp to 0-1
 
         ctx.save();
         ctx.translate(isoPos.x, isoPos.y);
 
         if (effect.type === 'explosion') {
             // Explosion effect
-            const radius = effect.radius * (1 + progress);
+            // Visual scale: multiply by tile size for proper visual representation
+            // effect.radius is in world units (3 = damage radius), visual needs to be bigger
+            const visualScale = 15; // Scale factor for visual size
+            const baseRadius = (effect.radius || 3) * visualScale;
+            const radius = baseRadius * (1 + progress);
             const alpha = 1 - progress;
 
             // Shockwave

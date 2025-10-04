@@ -825,6 +825,20 @@ class DeclarativeDialogEngine {
             if (game.currentScreen === 'hub') {
                 if (game.updateHubStats) game.updateHubStats();
             }
+
+            // Restore focus to canvas if in game screen
+            if (game.currentScreen === 'game' && game.canvas) {
+                game.canvas.focus();
+                // Reset any agent movement that might have been interrupted
+                if (game.agents) {
+                    game.agents.forEach(agent => {
+                        if (agent.moveTarget) {
+                            // Keep their current move target, don't reset to spawn
+                            // This preserves their intended movement
+                        }
+                    });
+                }
+            }
         }
     }
 

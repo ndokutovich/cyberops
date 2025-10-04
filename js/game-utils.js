@@ -57,6 +57,13 @@ Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
             stack: new Error().stack.split('\n')[1] // Show where it was called from
         });
 
+        // Clear squad selection when selecting a single agent
+        // (unless this is being called from selectAllSquad)
+        const callerStack = new Error().stack;
+        if (!callerStack.includes('selectAllSquad')) {
+            this._selectedAgentIds = null;
+        }
+
         // CRITICAL: Track when selection is being cleared
         if (value === null && oldValue !== null) {
             if (this.logger) this.logger.error('🚨 SELECTION BEING CLEARED!', {
@@ -89,8 +96,19 @@ Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
     }
 });
 
-// Check if an agent is selected (unidirectional - reads from _selectedAgent only)
+// Check if an agent is selected (checks _selectedAgentIds array and _selectedAgent)
 CyberOpsGame.prototype.isAgentSelected = function(agent) {
+    // Check if agent is in the selected agent IDs array (for squad selection)
+    if (this._selectedAgentIds && this._selectedAgentIds.length > 0) {
+        // Handle both string and number IDs
+        const agentIdStr = String(agent.id);
+        const isSelected = this._selectedAgentIds.some(id => String(id) === agentIdStr);
+        if (!isSelected && this.logger) {
+            this.logger.trace(`isAgentSelected: agent.id=${agent.id} (${typeof agent.id}) not in _selectedAgentIds=${JSON.stringify(this._selectedAgentIds)}`);
+        }
+        return isSelected;
+    }
+    // Fallback to checking against _selectedAgent (for single selection)
     if (!this._selectedAgent) return false;
     return agent.id === this._selectedAgent.id || agent.name === this._selectedAgent.name;
 };

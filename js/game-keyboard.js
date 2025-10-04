@@ -75,6 +75,9 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
             if (this.logger) this.logger.debug('T key handler called - selectAllSquad');
             if (this.selectAllSquad) {
                 this.selectAllSquad();
+            } else if (game && game.selectAllSquad) {
+                // Fallback to game reference if this doesn't work
+                game.selectAllSquad();
             } else {
                 if (this.logger) this.logger.warn('selectAllSquad function not found!');
             }
@@ -83,6 +86,9 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
             if (this.logger) this.logger.debug('t key handler called - selectAllSquad');
             if (this.selectAllSquad) {
                 this.selectAllSquad();
+            } else if (game && game.selectAllSquad) {
+                // Fallback to game reference if this doesn't work
+                game.selectAllSquad();
             } else {
                 if (this.logger) this.logger.warn('selectAllSquad function not found!');
             }

@@ -8,6 +8,11 @@ class CyberOpsGame {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
 
+        // Enable keyboard focus on canvas
+        if (this.canvas) {
+            this.canvas.tabIndex = 0;
+        }
+
         // Initialize HUD elements
         this.gameHUD = document.getElementById('gameHUD');
 

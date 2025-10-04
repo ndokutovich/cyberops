@@ -43,7 +43,7 @@ class GameFacade {
         // REMOVED: this.enemies - will be computed property!
         // REMOVED: this.npcs - will be computed property!
         // REMOVED: this.projectiles - will be computed property!
-        this.effects = [];
+        // REMOVED: this.effects - will be computed property!
         this.items = [];
 
         // Selection state
@@ -228,6 +228,22 @@ class GameFacade {
     set projectiles(value) {
         if (this.legacyGame) {
             this.legacyGame.projectiles = value;
+        }
+    }
+
+    /**
+     * Effects - reads from legacy game
+     */
+    get effects() {
+        if (this.legacyGame && this.legacyGame.effects) {
+            return this.legacyGame.effects;
+        }
+        return [];
+    }
+
+    set effects(value) {
+        if (this.legacyGame) {
+            this.legacyGame.effects = value;
         }
     }
 

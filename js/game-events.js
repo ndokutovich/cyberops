@@ -8,18 +8,26 @@ CyberOpsGame.prototype.selectAllSquad = function() {
             return;
         }
 
+        // CRITICAL: Store selected agent IDs in a persistent property
+        // this.agents is a computed property that returns NEW objects each time
+        // So we can't rely on setting .selected flags on them
+        this._selectedAgentIds = [];
         let selectedCount = 0;
+
+        // Select ALL alive agents in the current mission
+        // Don't confuse with this.selectedAgents which is for mission selection from hub
         this.agents.forEach(agent => {
             if (agent.alive) {
+                this._selectedAgentIds.push(agent.id);
                 selectedCount++;
             }
         });
 
         // Update selected agent reference to first alive agent
-        // Use setter to properly sync .selected flags
-        this.selectedAgent = this.agents.find(a => a.alive);
+        // This is still needed for other UI elements that use _selectedAgent
+        this._selectedAgent = this.agents.find(a => a.alive);
 
-        if (this.logger) this.logger.debug(`👥 SQUAD SELECT: Selected all ${selectedCount} alive agents`);
+        if (this.logger) this.logger.debug(`👥 SQUAD SELECT: Selected all ${selectedCount} alive agents with IDs:`, JSON.stringify(this._selectedAgentIds));
         this.updateSquadHealth();
         this.updateCooldownDisplay();
 
@@ -555,6 +563,8 @@ CyberOpsGame.prototype.handleTap = function(x, y, shiftKey = false) {
         // Get all selected agents
         // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
         const selectedAgents = this.agents.filter(a => this.isAgentSelected(a) && a.alive);
+
+        if (this.logger) this.logger.debug(`🎯 Movement: _selectedAgentIds = ${JSON.stringify(this._selectedAgentIds)}, selectedAgents.length = ${selectedAgents.length}`);
 
         if (selectedAgents.length > 0) {
             // Handle turn-based movement differently
