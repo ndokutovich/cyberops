@@ -254,10 +254,13 @@
 
     <!-- Dialogs -->
     <div id="objective-dialog" class="dialog" style="display:none;">
-        <div class="dialog-content">
+        <div class="dialog-content" style="max-width: 700px;">
             <h2>Edit Objective</h2>
+
+            <!-- Basic Fields -->
+            <label>ID: <input type="text" id="obj-id" placeholder="unique_objective_id"></label>
             <label>Type:
-                <select id="obj-type">
+                <select id="obj-type" onchange="editor.updateObjectiveFields()">
                     <option value="interact">Interact</option>
                     <option value="eliminate">Eliminate</option>
                     <option value="collect">Collect</option>
@@ -265,14 +268,182 @@
                     <option value="survive">Survive</option>
                     <option value="defend">Defend</option>
                     <option value="escort">Escort</option>
+                    <option value="hack">Hack</option>
+                    <option value="stealth">Stealth</option>
+                    <option value="protect">Protect</option>
                     <option value="custom">Custom</option>
                 </select>
             </label>
-            <label>Target: <input type="text" id="obj-target"></label>
-            <label>Count: <input type="number" id="obj-count" value="1" min="1"></label>
-            <label>Description: <textarea id="obj-desc" rows="2"></textarea></label>
-            <label>Required: <input type="checkbox" id="obj-required" checked></label>
-            <label>Hidden: <input type="checkbox" id="obj-hidden"></label>
+
+            <!-- Target Structure Section -->
+            <div id="target-section" style="border: 1px solid #3a3a3a; padding: 10px; margin: 10px 0;">
+                <h3 style="color: #00ffff; margin-top: 0;">Target Configuration</h3>
+                <label>Target Type:
+                    <select id="obj-target-type" onchange="editor.updateTargetFields()">
+                        <option value="simple">Simple (text)</option>
+                        <option value="enemy">Enemy</option>
+                        <option value="terminal">Terminal</option>
+                        <option value="item">Item</option>
+                        <option value="location">Location</option>
+                        <option value="npc">NPC</option>
+                        <option value="all">All/Any</option>
+                        <option value="specific">Specific IDs</option>
+                    </select>
+                </label>
+
+                <!-- Dynamic target fields -->
+                <div id="target-simple" class="target-config">
+                    <label>Target: <input type="text" id="obj-target" placeholder="guard, terminal, item_id, etc."></label>
+                </div>
+
+                <div id="target-enemy" class="target-config" style="display:none;">
+                    <label>Enemy Type: <input type="text" id="obj-enemy-type" placeholder="guard, soldier, heavy, boss"></label>
+                    <label>Specific Enemy ID: <input type="text" id="obj-enemy-id" placeholder="Optional: enemy_01"></label>
+                </div>
+
+                <div id="target-terminal" class="target-config" style="display:none;">
+                    <label>Terminal ID: <input type="text" id="obj-terminal-id" placeholder="mainframe_01 or leave empty for any"></label>
+                    <label>Multiple Terminals (comma-separated): <input type="text" id="obj-terminal-list" placeholder="t1,t2,t3"></label>
+                </div>
+
+                <div id="target-location" class="target-config" style="display:none;">
+                    <label>X Coordinate: <input type="number" id="obj-location-x" placeholder="0"></label>
+                    <label>Y Coordinate: <input type="number" id="obj-location-y" placeholder="0"></label>
+                    <label>Radius: <input type="number" id="obj-location-radius" value="3" min="1"></label>
+                </div>
+
+                <div id="target-item" class="target-config" style="display:none;">
+                    <label>Item Type: <input type="text" id="obj-item-type" placeholder="keycard, data_disk, weapon"></label>
+                </div>
+
+                <div id="target-specific" class="target-config" style="display:none;">
+                    <label>Specific IDs (comma-separated): <input type="text" id="obj-specific-ids" placeholder="id1,id2,id3"></label>
+                </div>
+            </div>
+
+            <!-- Count and Progress -->
+            <div id="count-section">
+                <label>Count/Max Progress: <input type="number" id="obj-count" value="1" min="1"></label>
+            </div>
+
+            <!-- Failure Conditions (for certain types) -->
+            <div id="failure-section" style="display:none; border: 1px solid #3a3a3a; padding: 10px; margin: 10px 0;">
+                <h3 style="color: #ff0066; margin-top: 0;">Failure Conditions</h3>
+                <label id="max-losses-label" style="display:none;">Max Agent Losses: <input type="number" id="obj-max-losses" value="0" min="0"></label>
+                <label id="max-alerts-label" style="display:none;">Max Alerts: <input type="number" id="obj-max-alerts" value="0" min="0"></label>
+                <label id="max-casualties-label" style="display:none;">Max Civilian Casualties: <input type="number" id="obj-max-casualties" value="0" min="0"></label>
+                <label id="time-limit-label" style="display:none;">Time Limit (seconds): <input type="number" id="obj-time-limit" value="0" min="0"></label>
+            </div>
+
+            <!-- Tracking Configuration -->
+            <div style="border: 1px solid #3a3a3a; padding: 10px; margin: 10px 0;">
+                <h3 style="color: #00ff00; margin-top: 0;">Tracking & Display</h3>
+                <label>Tracker:
+                    <select id="obj-tracker">
+                        <option value="">Auto (based on type)</option>
+                        <option value="enemiesEliminated">Enemies Eliminated (Total)</option>
+                        <option value="enemiesEliminatedByType">Enemies Eliminated (By Type)</option>
+                        <option value="terminalsHacked">Terminals Hacked</option>
+                        <option value="itemsCollected">Items Collected</option>
+                        <option value="areasReached">Areas Reached</option>
+                        <option value="alertsTriggered">Alerts Triggered</option>
+                        <option value="civiliansCasualties">Civilian Casualties</option>
+                        <option value="agentsLost">Agents Lost</option>
+                        <option value="objectivesCompleted">Objectives Completed</option>
+                        <option value="custom">Custom Tracker</option>
+                    </select>
+                </label>
+                <label id="custom-tracker-label" style="display:none;">Custom Tracker Name: <input type="text" id="obj-custom-tracker" placeholder="myCustomTracker"></label>
+
+                <label>Display Text: <input type="text" id="obj-display-text" placeholder="Enemies eliminated: {current}/{required}"></label>
+                <label>Description: <textarea id="obj-desc" rows="2" placeholder="Objective description shown to player"></textarea></label>
+            </div>
+
+            <!-- Custom Logic (for custom type) -->
+            <div id="custom-section" style="display:none; border: 1px solid #3a3a3a; padding: 10px; margin: 10px 0;">
+                <h3 style="color: #ff00ff; margin-top: 0;">Custom Logic</h3>
+                <label>Check Method:
+                    <select id="obj-check-method" onchange="editor.updateCustomCheckMethod()">
+                        <option value="predefined">Use Predefined Function</option>
+                        <option value="reference">Reference Existing Function</option>
+                        <option value="inline">Write Custom Code</option>
+                    </select>
+                </label>
+
+                <!-- Predefined functions -->
+                <div id="predefined-function-section">
+                    <label>Check Function:
+                        <select id="obj-check-function">
+                            <option value="">None</option>
+                            <option value="checkNoCivilianCasualties">Check No Civilian Casualties</option>
+                            <option value="checkAgentsAlive">Check Agents Alive</option>
+                            <option value="checkTimeLimit">Check Time Limit</option>
+                            <option value="checkStealthMaintained">Check Stealth Maintained</option>
+                            <option value="checkAllTerminalsHacked">Check All Terminals Hacked</option>
+                        </select>
+                    </label>
+                    <label id="min-agents-label" style="display:none;">Min Agents Alive: <input type="number" id="obj-min-agents" value="1" min="1"></label>
+                </div>
+
+                <!-- Reference existing function -->
+                <div id="reference-function-section" style="display:none;">
+                    <label>Function Name: <input type="text" id="obj-custom-function" placeholder="myCheckFunction"></label>
+                </div>
+
+                <!-- Inline custom code -->
+                <div id="inline-code-section" style="display:none;">
+                    <label>Custom Check Code:
+                        <select id="code-template" onchange="editor.applyCodeTemplate()" style="margin-bottom: 5px;">
+                            <option value="">-- Select Template --</option>
+                            <option value="basic">Basic Check</option>
+                            <option value="counter">Counter Check</option>
+                            <option value="location">Location Check</option>
+                            <option value="inventory">Inventory Check</option>
+                            <option value="complex">Complex Condition</option>
+                        </select>
+                    </label>
+                    <textarea id="obj-custom-code" rows="12" style="width: 100%; font-family: 'Courier New', monospace; font-size: 12px; background: #0a0a0a; color: #00ff00; border: 1px solid #00ff00;" placeholder="// Write your check function code here
+// Available variables:
+//   game - The game instance
+//   objective - This objective
+//   missionService - Mission service instance
+//
+// Return true when objective is complete, false otherwise
+// Example:
+//   return game.agents.filter(a => a.alive).length >= 2;"></textarea>
+
+                    <div style="margin-top: 10px;">
+                        <button type="button" onclick="editor.validateCustomCode()" style="padding: 5px 10px; background: #2a2a2a; color: #00ff00; border: 1px solid #00ff00; cursor: pointer;">Validate Syntax</button>
+                        <button type="button" onclick="editor.formatCustomCode()" style="padding: 5px 10px; background: #2a2a2a; color: #00ffff; border: 1px solid #00ffff; cursor: pointer;">Format Code</button>
+                        <span id="code-validation-result" style="margin-left: 10px;"></span>
+                    </div>
+
+                    <div id="code-help" style="margin-top: 10px; padding: 10px; background: #1a1a1a; border: 1px solid #444; font-size: 11px; color: #888;">
+                        <strong style="color: #00ffff;">Available Game Properties:</strong><br>
+                        • game.agents - Array of player agents<br>
+                        • game.enemies - Array of enemies<br>
+                        • game.terminalsHacked - Set of hacked terminal IDs<br>
+                        • game.gameServices.missionService.trackers - All tracking counters<br>
+                        • game.currentMissionDef - Current mission definition<br>
+                        <br>
+                        <strong style="color: #00ffff;">Common Patterns:</strong><br>
+                        • Check alive agents: <code>game.agents.filter(a => a.health > 0).length</code><br>
+                        • Check position: <code>game.agents.some(a => Math.abs(a.x - targetX) < 5)</code><br>
+                        • Check inventory: <code>game.agents.some(a => a.inventory?.includes('keycard'))</code><br>
+                        • Custom counter: <code>missionService.trackers.myCounter >= 10</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flags -->
+            <div style="border: 1px solid #3a3a3a; padding: 10px; margin: 10px 0;">
+                <h3 style="color: #ffaa00; margin-top: 0;">Flags</h3>
+                <label>Required: <input type="checkbox" id="obj-required" checked></label>
+                <label>Hidden: <input type="checkbox" id="obj-hidden"></label>
+                <label>Optional: <input type="checkbox" id="obj-optional"></label>
+                <label>Bonus: <input type="checkbox" id="obj-bonus"></label>
+            </div>
+
             <div class="dialog-buttons">
                 <button id="save-objective">Save</button>
                 <button id="cancel-objective">Cancel</button>

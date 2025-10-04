@@ -473,6 +473,26 @@ class MissionEditor {
         document.getElementById('save-npc')?.addEventListener('click', () => this.saveNPC());
         document.getElementById('cancel-npc')?.addEventListener('click', () => this.hideNPCDialog());
 
+        // Advanced objective field handlers
+        document.getElementById('obj-tracker')?.addEventListener('change', (e) => {
+            const customLabel = document.getElementById('custom-tracker-label');
+            if (customLabel) {
+                customLabel.style.display = e.target.value === 'custom' ? 'block' : 'none';
+            }
+        });
+
+        document.getElementById('obj-check-function')?.addEventListener('change', (e) => {
+            const customFuncLabel = document.getElementById('custom-function-label');
+            const minAgentsLabel = document.getElementById('min-agents-label');
+
+            if (customFuncLabel) {
+                customFuncLabel.style.display = e.target.value === 'checkCustom' ? 'block' : 'none';
+            }
+            if (minAgentsLabel) {
+                minAgentsLabel.style.display = e.target.value === 'checkAgentsAlive' ? 'block' : 'none';
+            }
+        });
+
         // Quest and Dialog tree editors - removed after simplifying NPC controls
         // document.getElementById('add-dialog-node')?.addEventListener('click', () => this.addDialogNode());
         // document.getElementById('add-quest')?.addEventListener('click', () => this.addQuest());
@@ -1299,8 +1319,51 @@ class MissionEditor {
         this.mission.objectives.forEach((obj, index) => {
             const div = document.createElement('div');
             div.className = 'objective-item';
+
+            // Build objective display text
+            let displayText = `<strong style="color: #00ff00;">${obj.type.toUpperCase()}</strong>`;
+            if (obj.id) displayText += ` <em style="color: #888;">[${obj.id}]</em>`;
+            displayText += ': ';
+
+            // Add target info
+            if (obj.target) {
+                if (typeof obj.target === 'string') {
+                    displayText += obj.target;
+                } else if (typeof obj.target === 'object') {
+                    if (obj.target.type) displayText += `${obj.target.type} `;
+                    if (obj.target.specific) {
+                        if (Array.isArray(obj.target.specific)) {
+                            displayText += `(${obj.target.specific.join(', ')})`;
+                        } else {
+                            displayText += `(${obj.target.specific})`;
+                        }
+                    }
+                    if (obj.target.id) displayText += `#${obj.target.id}`;
+                    if (obj.target.x !== undefined) displayText += `@(${obj.target.x},${obj.target.y})`;
+                }
+            }
+
+            // Add description or display text
+            if (obj.description) {
+                displayText += ` - ${obj.description}`;
+            } else if (obj.displayText) {
+                displayText += ` - ${obj.displayText}`;
+            }
+
+            // Add flags
+            const flags = [];
+            if (!obj.required) flags.push('Optional');
+            if (obj.hidden) flags.push('Hidden');
+            if (obj.bonus) flags.push('Bonus');
+            if (obj.tracker) flags.push(`Track:${obj.tracker}`);
+            if (obj.customCode) flags.push('Custom Code');
+            if (obj.checkFunction && !obj.customCode) flags.push(`Func:${obj.checkFunction}`);
+            if (flags.length > 0) {
+                displayText += ` <em style="color: #ffaa00; font-size: 10px;">[${flags.join(', ')}]</em>`;
+            }
+
             div.innerHTML = `
-                <span>${obj.type}: ${obj.description || obj.target}</span>
+                <span>${displayText}</span>
                 <span class="delete-btn" onclick="editor.removeObjective(${index})">✖</span>
             `;
             div.addEventListener('click', () => this.editObjective(index));
@@ -1329,25 +1392,157 @@ class MissionEditor {
     showObjectiveDialog(index = -1) {
         const dialog = document.getElementById('objective-dialog');
         dialog.style.display = 'flex';
+        this.editingObjectiveIndex = index;
+
+        // Reset all fields first
+        this.resetObjectiveDialog();
 
         if (index >= 0) {
             const obj = this.mission.objectives[index];
+
+            // Basic fields
+            document.getElementById('obj-id').value = obj.id || '';
             document.getElementById('obj-type').value = obj.type;
-            document.getElementById('obj-target').value = obj.target || '';
-            document.getElementById('obj-count').value = obj.count || 1;
+            document.getElementById('obj-count').value = obj.count || obj.maxProgress || 1;
             document.getElementById('obj-desc').value = obj.description || '';
             document.getElementById('obj-required').checked = obj.required !== false;
             document.getElementById('obj-hidden').checked = obj.hidden === true;
+            document.getElementById('obj-optional').checked = obj.optional === true;
+            document.getElementById('obj-bonus').checked = obj.bonus === true;
+
+            // Tracking fields
+            document.getElementById('obj-tracker').value = obj.tracker || '';
+            document.getElementById('obj-display-text').value = obj.displayText || '';
+            document.getElementById('obj-custom-tracker').value = obj.customTracker || '';
+
+            // Parse target structure
+            if (obj.target) {
+                if (typeof obj.target === 'string') {
+                    // Simple target
+                    document.getElementById('obj-target-type').value = 'simple';
+                    document.getElementById('obj-target').value = obj.target;
+                } else if (typeof obj.target === 'object') {
+                    // Complex target structure
+                    if (obj.target.type === 'enemy') {
+                        document.getElementById('obj-target-type').value = 'enemy';
+                        document.getElementById('obj-enemy-type').value = obj.target.specific || '';
+                        document.getElementById('obj-enemy-id').value = obj.target.id || '';
+                    } else if (obj.target.type === 'terminal') {
+                        document.getElementById('obj-target-type').value = 'terminal';
+                        document.getElementById('obj-terminal-id').value = obj.target.id || '';
+                        if (obj.target.specific && Array.isArray(obj.target.specific)) {
+                            document.getElementById('obj-terminal-list').value = obj.target.specific.join(',');
+                        }
+                    } else if (obj.target.type === 'item') {
+                        document.getElementById('obj-target-type').value = 'item';
+                        document.getElementById('obj-item-type').value = obj.target.item || obj.target.id || '';
+                    } else if (obj.target.x !== undefined && obj.target.y !== undefined) {
+                        document.getElementById('obj-target-type').value = 'location';
+                        document.getElementById('obj-location-x').value = obj.target.x || 0;
+                        document.getElementById('obj-location-y').value = obj.target.y || 0;
+                        document.getElementById('obj-location-radius').value = obj.target.radius || 3;
+                    } else if (obj.target.specific && Array.isArray(obj.target.specific)) {
+                        document.getElementById('obj-target-type').value = 'specific';
+                        document.getElementById('obj-specific-ids').value = obj.target.specific.join(',');
+                    }
+
+                    // Failure conditions
+                    if (obj.target.maxLosses !== undefined) {
+                        document.getElementById('obj-max-losses').value = obj.target.maxLosses;
+                    }
+                    if (obj.target.maxAlerts !== undefined) {
+                        document.getElementById('obj-max-alerts').value = obj.target.maxAlerts;
+                    }
+                    if (obj.target.maxCasualties !== undefined) {
+                        document.getElementById('obj-max-casualties').value = obj.target.maxCasualties;
+                    }
+                }
+            }
+
+            // Custom logic fields
+            if (obj.checkFunction) {
+                // Determine check method based on function value
+                if (obj.customCode) {
+                    // Has inline custom code
+                    document.getElementById('obj-check-method').value = 'inline';
+                    document.getElementById('obj-custom-code').value = obj.customCode;
+                } else if (['checkNoCivilianCasualties', 'checkAgentsAlive', 'checkTimeLimit',
+                           'checkStealthMaintained', 'checkAllTerminalsHacked'].includes(obj.checkFunction)) {
+                    // Predefined function
+                    document.getElementById('obj-check-method').value = 'predefined';
+                    document.getElementById('obj-check-function').value = obj.checkFunction;
+                } else {
+                    // Reference to existing function
+                    document.getElementById('obj-check-method').value = 'reference';
+                    document.getElementById('obj-custom-function').value = obj.checkFunction;
+                }
+
+                if (obj.checkFunction === 'checkAgentsAlive' && obj.minAgents) {
+                    document.getElementById('obj-min-agents').value = obj.minAgents;
+                }
+            }
+
+            // Time limit
+            if (obj.duration) {
+                document.getElementById('obj-time-limit').value = obj.duration;
+            }
         } else {
-            document.getElementById('obj-type').value = 'interact';
-            document.getElementById('obj-target').value = '';
-            document.getElementById('obj-count').value = 1;
-            document.getElementById('obj-desc').value = '';
+            // Defaults for new objective
+            document.getElementById('obj-type').value = 'eliminate';
             document.getElementById('obj-required').checked = true;
-            document.getElementById('obj-hidden').checked = false;
         }
 
-        this.editingObjectiveIndex = index;
+        // Update field visibility based on type
+        this.updateObjectiveFields();
+        this.updateTargetFields();
+
+        // Update custom check method display if it's a custom objective
+        if (document.getElementById('obj-type').value === 'custom') {
+            this.updateCustomCheckMethod();
+        }
+    }
+
+    resetObjectiveDialog() {
+        // Reset all input fields to defaults
+        document.getElementById('obj-id').value = '';
+        document.getElementById('obj-type').value = 'interact';
+        document.getElementById('obj-target').value = '';
+        document.getElementById('obj-count').value = 1;
+        document.getElementById('obj-desc').value = '';
+        document.getElementById('obj-display-text').value = '';
+        document.getElementById('obj-tracker').value = '';
+        document.getElementById('obj-custom-tracker').value = '';
+        document.getElementById('obj-required').checked = true;
+        document.getElementById('obj-hidden').checked = false;
+        document.getElementById('obj-optional').checked = false;
+        document.getElementById('obj-bonus').checked = false;
+
+        // Reset target fields
+        document.getElementById('obj-target-type').value = 'simple';
+        document.getElementById('obj-enemy-type').value = '';
+        document.getElementById('obj-enemy-id').value = '';
+        document.getElementById('obj-terminal-id').value = '';
+        document.getElementById('obj-terminal-list').value = '';
+        document.getElementById('obj-item-type').value = '';
+        document.getElementById('obj-location-x').value = 0;
+        document.getElementById('obj-location-y').value = 0;
+        document.getElementById('obj-location-radius').value = 3;
+        document.getElementById('obj-specific-ids').value = '';
+
+        // Reset failure conditions
+        document.getElementById('obj-max-losses').value = 0;
+        document.getElementById('obj-max-alerts').value = 0;
+        document.getElementById('obj-max-casualties').value = 0;
+        document.getElementById('obj-time-limit').value = 0;
+
+        // Reset custom fields
+        document.getElementById('obj-check-method').value = 'predefined';
+        document.getElementById('obj-check-function').value = '';
+        document.getElementById('obj-custom-function').value = '';
+        document.getElementById('obj-custom-code').value = '';
+        document.getElementById('obj-min-agents').value = 1;
+        document.getElementById('code-template').value = '';
+        document.getElementById('code-validation-result').innerHTML = '';
     }
 
     hideObjectiveDialog() {
@@ -1355,15 +1550,152 @@ class MissionEditor {
     }
 
     saveObjective() {
+        const objType = document.getElementById('obj-type').value;
+        const targetType = document.getElementById('obj-target-type').value;
+
+        // Build the objective structure
         const obj = {
-            type: document.getElementById('obj-type').value,
-            target: document.getElementById('obj-target').value,
-            count: parseInt(document.getElementById('obj-count').value),
+            type: objType,
             description: document.getElementById('obj-desc').value,
             required: document.getElementById('obj-required').checked,
-            hidden: document.getElementById('obj-hidden').checked
+            hidden: document.getElementById('obj-hidden').checked,
+            optional: document.getElementById('obj-optional').checked,
+            bonus: document.getElementById('obj-bonus').checked
         };
 
+        // Add ID if specified
+        const objId = document.getElementById('obj-id').value.trim();
+        if (objId) {
+            obj.id = objId;
+        } else {
+            // Generate ID based on type and index
+            obj.id = `${objType}_${Date.now()}`;
+        }
+
+        // Add count/maxProgress for relevant types
+        const countValue = parseInt(document.getElementById('obj-count').value);
+        if (objType !== 'reach' && objType !== 'survive') {
+            obj.count = countValue;
+            obj.maxProgress = countValue;
+        }
+
+        // Build target structure based on target type
+        if (targetType === 'simple') {
+            const targetValue = document.getElementById('obj-target').value.trim();
+            if (targetValue) {
+                obj.target = targetValue;
+            }
+        } else if (targetType === 'enemy') {
+            obj.target = { type: 'enemy' };
+            const enemyType = document.getElementById('obj-enemy-type').value.trim();
+            const enemyId = document.getElementById('obj-enemy-id').value.trim();
+            if (enemyType) obj.target.specific = enemyType;
+            if (enemyId) obj.target.id = enemyId;
+        } else if (targetType === 'terminal') {
+            obj.target = { type: 'terminal' };
+            const terminalId = document.getElementById('obj-terminal-id').value.trim();
+            const terminalList = document.getElementById('obj-terminal-list').value.trim();
+            if (terminalId) obj.target.id = terminalId;
+            if (terminalList) {
+                obj.target.specific = terminalList.split(',').map(id => id.trim()).filter(id => id);
+            }
+        } else if (targetType === 'item') {
+            obj.target = { type: 'item' };
+            const itemType = document.getElementById('obj-item-type').value.trim();
+            if (itemType) obj.target.item = itemType;
+        } else if (targetType === 'location') {
+            obj.target = {
+                x: parseInt(document.getElementById('obj-location-x').value),
+                y: parseInt(document.getElementById('obj-location-y').value),
+                radius: parseInt(document.getElementById('obj-location-radius').value)
+            };
+        } else if (targetType === 'specific') {
+            const specificIds = document.getElementById('obj-specific-ids').value.trim();
+            if (specificIds) {
+                obj.target = {
+                    specific: specificIds.split(',').map(id => id.trim()).filter(id => id)
+                };
+            }
+        } else if (targetType === 'all') {
+            obj.target = 'all';
+        }
+
+        // Add failure conditions for certain types
+        if (objType === 'survive' || objType === 'stealth' || objType === 'protect') {
+            if (!obj.target) obj.target = {};
+
+            const maxLosses = parseInt(document.getElementById('obj-max-losses').value);
+            const maxAlerts = parseInt(document.getElementById('obj-max-alerts').value);
+            const maxCasualties = parseInt(document.getElementById('obj-max-casualties').value);
+
+            if (objType === 'survive' && maxLosses > 0) {
+                obj.target.maxLosses = maxLosses;
+            }
+            if (objType === 'stealth' && maxAlerts >= 0) {
+                obj.target.maxAlerts = maxAlerts;
+            }
+            if (objType === 'protect' && maxCasualties >= 0) {
+                obj.target.maxCasualties = maxCasualties;
+            }
+        }
+
+        // Add time limit if specified
+        const timeLimit = parseInt(document.getElementById('obj-time-limit').value);
+        if (timeLimit > 0) {
+            obj.duration = timeLimit;
+        }
+
+        // Add tracker configuration
+        const tracker = document.getElementById('obj-tracker').value;
+        if (tracker && tracker !== '') {
+            if (tracker === 'custom') {
+                const customTracker = document.getElementById('obj-custom-tracker').value.trim();
+                if (customTracker) obj.tracker = customTracker;
+            } else {
+                obj.tracker = tracker;
+            }
+        }
+
+        // Add display text if specified
+        const displayText = document.getElementById('obj-display-text').value.trim();
+        if (displayText) {
+            obj.displayText = displayText;
+        }
+
+        // Add custom check function for custom objectives
+        if (objType === 'custom') {
+            const checkMethod = document.getElementById('obj-check-method').value;
+
+            if (checkMethod === 'predefined') {
+                // Use predefined function
+                const checkFunc = document.getElementById('obj-check-function').value;
+                if (checkFunc && checkFunc !== '') {
+                    obj.checkFunction = checkFunc;
+
+                    // Add minAgents for checkAgentsAlive
+                    if (checkFunc === 'checkAgentsAlive') {
+                        obj.minAgents = parseInt(document.getElementById('obj-min-agents').value);
+                    }
+                }
+            } else if (checkMethod === 'reference') {
+                // Reference existing function
+                const customFunc = document.getElementById('obj-custom-function').value.trim();
+                if (customFunc) {
+                    obj.checkFunction = customFunc;
+                }
+            } else if (checkMethod === 'inline') {
+                // Inline custom code
+                const customCode = document.getElementById('obj-custom-code').value.trim();
+                if (customCode) {
+                    // Generate a unique function name
+                    const funcName = `checkCustom_${obj.id || Date.now()}`;
+                    obj.checkFunction = funcName;
+                    obj.customCode = customCode;  // Store the code
+                }
+            }
+        }
+
+        // Save the objective
         if (this.editingObjectiveIndex >= 0) {
             this.mission.objectives[this.editingObjectiveIndex] = obj;
         } else {
@@ -1383,6 +1715,267 @@ class MissionEditor {
         this.mission.objectives.splice(index, 1);
         this.updatePropertiesPanel();
         this.saveToHistory();
+    }
+
+    // Update objective dialog fields based on type
+    updateObjectiveFields() {
+        const type = document.getElementById('obj-type').value;
+
+        // Hide all type-specific sections first
+        document.getElementById('failure-section').style.display = 'none';
+        document.getElementById('custom-section').style.display = 'none';
+        document.getElementById('max-losses-label').style.display = 'none';
+        document.getElementById('max-alerts-label').style.display = 'none';
+        document.getElementById('max-casualties-label').style.display = 'none';
+        document.getElementById('time-limit-label').style.display = 'none';
+        document.getElementById('min-agents-label').style.display = 'none';
+        document.getElementById('count-section').style.display = 'block';
+
+        // Show relevant fields based on type
+        switch(type) {
+            case 'eliminate':
+                document.getElementById('obj-target-type').value = 'enemy';
+                this.updateTargetFields();
+                break;
+
+            case 'hack':
+            case 'interact':
+                if (type === 'hack') {
+                    document.getElementById('obj-target-type').value = 'terminal';
+                }
+                this.updateTargetFields();
+                break;
+
+            case 'collect':
+                document.getElementById('obj-target-type').value = 'item';
+                this.updateTargetFields();
+                break;
+
+            case 'reach':
+                document.getElementById('obj-target-type').value = 'location';
+                this.updateTargetFields();
+                document.getElementById('count-section').style.display = 'none';
+                break;
+
+            case 'survive':
+                document.getElementById('failure-section').style.display = 'block';
+                document.getElementById('max-losses-label').style.display = 'block';
+                document.getElementById('time-limit-label').style.display = 'block';
+                break;
+
+            case 'stealth':
+                document.getElementById('failure-section').style.display = 'block';
+                document.getElementById('max-alerts-label').style.display = 'block';
+                break;
+
+            case 'protect':
+                document.getElementById('failure-section').style.display = 'block';
+                document.getElementById('max-casualties-label').style.display = 'block';
+                break;
+
+            case 'custom':
+                document.getElementById('custom-section').style.display = 'block';
+                break;
+        }
+
+        // Update tracker dropdown suggestion
+        this.suggestTracker(type);
+    }
+
+    // Update target fields based on target type selection
+    updateTargetFields() {
+        const targetType = document.getElementById('obj-target-type').value;
+
+        // Hide all target configs
+        document.querySelectorAll('.target-config').forEach(el => {
+            el.style.display = 'none';
+        });
+
+        // Show the selected target config
+        const targetEl = document.getElementById('target-' + targetType);
+        if (targetEl) {
+            targetEl.style.display = 'block';
+        }
+    }
+
+    // Suggest appropriate tracker based on objective type
+    suggestTracker(type) {
+        const trackerSelect = document.getElementById('obj-tracker');
+        const displayText = document.getElementById('obj-display-text');
+
+        switch(type) {
+            case 'eliminate':
+                trackerSelect.value = 'enemiesEliminated';
+                displayText.value = 'Enemies eliminated: {current}/{required}';
+                break;
+            case 'hack':
+                trackerSelect.value = 'terminalsHacked';
+                displayText.value = 'Terminals hacked: {current}/{required}';
+                break;
+            case 'collect':
+                trackerSelect.value = 'itemsCollected';
+                displayText.value = 'Items collected: {current}/{required}';
+                break;
+            case 'reach':
+                trackerSelect.value = 'areasReached';
+                displayText.value = 'Reach the target location';
+                break;
+            case 'stealth':
+                trackerSelect.value = 'alertsTriggered';
+                displayText.value = 'Maintain stealth (Max {required} alerts)';
+                break;
+            case 'protect':
+                trackerSelect.value = 'civiliansCasualties';
+                displayText.value = 'Protect civilians (Max {required} casualties)';
+                break;
+            default:
+                trackerSelect.value = '';
+                displayText.value = '';
+        }
+    }
+
+    // Update custom check method display
+    updateCustomCheckMethod() {
+        const method = document.getElementById('obj-check-method').value;
+
+        // Hide all sections
+        document.getElementById('predefined-function-section').style.display = 'none';
+        document.getElementById('reference-function-section').style.display = 'none';
+        document.getElementById('inline-code-section').style.display = 'none';
+
+        // Show selected section
+        switch(method) {
+            case 'predefined':
+                document.getElementById('predefined-function-section').style.display = 'block';
+                break;
+            case 'reference':
+                document.getElementById('reference-function-section').style.display = 'block';
+                break;
+            case 'inline':
+                document.getElementById('inline-code-section').style.display = 'block';
+                break;
+        }
+    }
+
+    // Apply code template
+    applyCodeTemplate() {
+        const template = document.getElementById('code-template').value;
+        const codeArea = document.getElementById('obj-custom-code');
+
+        const templates = {
+            basic: `// Basic completion check
+return game.agents.filter(a => a.health > 0).length >= 2;`,
+
+            counter: `// Counter-based check
+const trackers = game.gameServices.missionService.trackers;
+const targetCount = 10;
+
+// Check if custom counter reached target
+return (trackers.customCounter || 0) >= targetCount;`,
+
+            location: `// Location-based check
+const targetX = 50;
+const targetY = 50;
+const radius = 5;
+
+// Check if any agent is near target location
+return game.agents.some(agent => {
+    const distance = Math.sqrt(
+        Math.pow(agent.x - targetX, 2) +
+        Math.pow(agent.y - targetY, 2)
+    );
+    return distance <= radius;
+});`,
+
+            inventory: `// Inventory check
+const requiredItem = 'keycard';
+const requiredCount = 3;
+
+// Count total items across all agents
+let totalItems = 0;
+game.agents.forEach(agent => {
+    if (agent.inventory) {
+        totalItems += agent.inventory.filter(
+            item => item === requiredItem
+        ).length;
+    }
+});
+
+return totalItems >= requiredCount;`,
+
+            complex: `// Complex multi-condition check
+const missionService = game.gameServices.missionService;
+
+// Multiple conditions must be met
+const conditions = {
+    // At least 2 agents alive
+    agentsAlive: game.agents.filter(a => a.health > 0).length >= 2,
+
+    // All terminals hacked
+    terminalsHacked: game.terminalsHacked &&
+                     game.terminalsHacked.size >= 3,
+
+    // No alerts triggered
+    stealthMaintained: (missionService.trackers.alertsTriggered || 0) === 0,
+
+    // Time limit not exceeded (300 seconds)
+    withinTimeLimit: (Date.now() - game.missionStartTime) < 300000
+};
+
+// Check if all conditions are met
+return Object.values(conditions).every(c => c === true);`
+        };
+
+        if (template && templates[template]) {
+            codeArea.value = templates[template];
+        }
+    }
+
+    // Validate custom code syntax
+    validateCustomCode() {
+        const code = document.getElementById('obj-custom-code').value;
+        const resultSpan = document.getElementById('code-validation-result');
+
+        if (!code.trim()) {
+            resultSpan.innerHTML = '<span style="color: #ffaa00;">⚠ No code to validate</span>';
+            return;
+        }
+
+        try {
+            // Try to create a function to check syntax
+            // We wrap in a function to validate but not execute
+            new Function('game', 'objective', 'missionService', code);
+            resultSpan.innerHTML = '<span style="color: #00ff00;">✓ Syntax valid</span>';
+        } catch (error) {
+            resultSpan.innerHTML = `<span style="color: #ff0066;">✗ Syntax error: ${error.message}</span>`;
+        }
+    }
+
+    // Format custom code (basic formatting)
+    formatCustomCode() {
+        const codeArea = document.getElementById('obj-custom-code');
+        let code = codeArea.value;
+
+        // Basic formatting rules
+        code = code
+            // Remove extra blank lines
+            .replace(/\n{3,}/g, '\n\n')
+            // Ensure space after //
+            .replace(/\/\/([^ ])/g, '// $1')
+            // Ensure space around operators
+            .replace(/([^=!<>])=([^=])/g, '$1 = $2')
+            .replace(/([^=])=>([^=])/g, '$1 => $2')
+            // Trim trailing spaces
+            .split('\n').map(line => line.trimEnd()).join('\n');
+
+        codeArea.value = code;
+
+        // Show formatted message
+        const resultSpan = document.getElementById('code-validation-result');
+        resultSpan.innerHTML = '<span style="color: #00ffff;">✓ Code formatted</span>';
+        setTimeout(() => {
+            resultSpan.innerHTML = '';
+        }, 2000);
     }
 
     showNPCDialog(index = -1) {
@@ -2484,7 +3077,7 @@ ${formattedTiles}
         },
 
         // Objectives
-        objectives: ${JSON.stringify(this.mission.objectives || [], null, 8).replace(/\n/g, '\n        ')},
+        objectives: ${JSON.stringify(this.prepareObjectivesForExport(this.mission.objectives || []), null, 8).replace(/\n/g, '\n        ')},
 
         // Rewards
         rewards: {
@@ -2501,6 +3094,8 @@ ${formattedTiles}
         }
     };
 
+    ${this.generateCustomCheckFunctions()}
+
     // Self-registration with campaign system
     if (typeof CampaignSystem !== 'undefined' && CampaignSystem.registerMission) {
         CampaignSystem.registerMission('${campaignId}', ${parseInt(actNumber)}, '${missionId}', mission);
@@ -2510,10 +3105,64 @@ ${formattedTiles}
     if (typeof window !== 'undefined') {
         window.CAMPAIGN_MISSIONS = window.CAMPAIGN_MISSIONS || {};
         window.CAMPAIGN_MISSIONS['${missionId}'] = mission;
+
+        ${this.generateCustomCheckFunctionAssignments()}
     }
 })();`;
 
         return jsContent;
+    }
+
+    // Prepare objectives for export (remove internal properties like customCode)
+    prepareObjectivesForExport(objectives) {
+        return objectives.map(obj => {
+            const cleanObj = { ...obj };
+            // Remove customCode property (it's handled separately)
+            delete cleanObj.customCode;
+            return cleanObj;
+        });
+    }
+
+    // Generate custom check function definitions
+    generateCustomCheckFunctions() {
+        const customFunctions = [];
+
+        this.mission.objectives.forEach(obj => {
+            if (obj.customCode && obj.checkFunction) {
+                // Generate function definition
+                customFunctions.push(`
+    // Custom check function for objective: ${obj.id || obj.description}
+    window.${obj.checkFunction} = function(game, objective, missionService) {
+        ${obj.customCode.split('\n').map(line => '        ' + line).join('\n')}
+    };`);
+            }
+        });
+
+        if (customFunctions.length > 0) {
+            return `
+    // Custom Objective Check Functions
+    // These functions are called to check if objectives are complete${customFunctions.join('')}
+`;
+        }
+
+        return '';
+    }
+
+    // Generate custom check function assignments for browser context
+    generateCustomCheckFunctionAssignments() {
+        const assignments = [];
+
+        this.mission.objectives.forEach(obj => {
+            if (obj.customCode && obj.checkFunction) {
+                // Also ensure function is available globally
+                assignments.push(`        // Make ${obj.checkFunction} available globally for objective checking`);
+                assignments.push(`        if (!window.${obj.checkFunction}) {`);
+                assignments.push(`            console.warn('Custom check function ${obj.checkFunction} not found');`);
+                assignments.push(`        }`);
+            }
+        });
+
+        return assignments.join('\n');
     }
 
     showIntegrationInstructions(filename) {
