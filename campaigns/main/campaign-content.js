@@ -729,10 +729,18 @@
         }
     };
 
-    // Register with the campaign system
-    if (typeof CampaignSystem !== 'undefined' && CampaignSystem.registerCampaignContent) {
-        CampaignSystem.registerCampaignContent('main', mainCampaignContent);
+    // Register campaign content - FAIL FAST if CampaignSystem not available
+    if (typeof CampaignSystem === 'undefined') {
+        throw new Error('❌ CampaignSystem not available! Load campaign-system.js before campaign-content.js');
     }
+
+    if (!CampaignSystem.registerCampaignContent) {
+        throw new Error('❌ CampaignSystem.registerCampaignContent not available! Update campaign-system.js');
+    }
+
+    // Register using unified method (throws if fails)
+    CampaignSystem.registerCampaignContent('main', mainCampaignContent);
+    console.log('✅ Main campaign content registered successfully');
 
     // Also set as global for fallback access
     window.MAIN_CAMPAIGN_CONTENT = mainCampaignContent;

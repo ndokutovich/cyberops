@@ -5,8 +5,6 @@ const campaignLogger = window.Logger ? new window.Logger('CampaignSystem') : nul
 
 const CampaignSystem = {
     campaigns: {}, // UNIFIED STORE: Contains structure + content + config
-    campaignContent: {}, // DEPRECATED: Use campaigns[id] instead
-    campaignConfigs: {}, // DEPRECATED: Use campaigns[id].rpgConfig instead
     currentCampaign: null,
     currentAct: null,
     currentMission: null,
@@ -473,6 +471,13 @@ const CampaignSystem = {
     // Register campaign content (agents, weapons, enemies, etc.)
     // Register campaign configuration (rpgConfig, economy, etc.)
     registerCampaignConfig(campaignId, config) {
+        if (!campaignId) {
+            throw new Error('❌ registerCampaignConfig: campaignId is required');
+        }
+        if (!config) {
+            throw new Error(`❌ registerCampaignConfig: config is required for campaign '${campaignId}'`);
+        }
+
         // Ensure campaign exists
         if (!this.campaigns[campaignId]) {
             this.campaigns[campaignId] = { id: campaignId };
@@ -481,14 +486,18 @@ const CampaignSystem = {
         // Merge config into campaigns (unified store)
         Object.assign(this.campaigns[campaignId], config);
 
-        // Also store in deprecated campaignConfigs for backward compatibility
-        this.campaignConfigs[campaignId] = config;
-
         if (campaignLogger) campaignLogger.info(`✅ Registered config for campaign: ${campaignId}`);
     },
 
     // Register campaign content (agents, weapons, etc.)
     registerCampaignContent(campaignId, content) {
+        if (!campaignId) {
+            throw new Error('❌ registerCampaignContent: campaignId is required');
+        }
+        if (!content) {
+            throw new Error(`❌ registerCampaignContent: content is required for campaign '${campaignId}'`);
+        }
+
         // Ensure campaign exists
         if (!this.campaigns[campaignId]) {
             this.campaigns[campaignId] = { id: campaignId };
@@ -497,25 +506,21 @@ const CampaignSystem = {
         // Merge content into campaigns (unified store)
         Object.assign(this.campaigns[campaignId], content);
 
-        // Also store in deprecated campaignContent for backward compatibility
-        this.campaignContent[campaignId] = content;
-
         if (campaignLogger) campaignLogger.info(`✅ Registered content for campaign: ${campaignId}`);
     },
 
-    // Get complete campaign (structure + content + config)
+    // Get complete campaign (structure + content + config) - FAIL FAST
     getCampaign(campaignId) {
-        return this.campaigns[campaignId] || null;
-    },
+        if (!campaignId) {
+            throw new Error('❌ getCampaign: campaignId is required');
+        }
 
-    // DEPRECATED: Get campaign content (use getCampaign instead)
-    getCampaignContent(campaignId) {
-        return this.campaigns[campaignId] || this.campaignContent[campaignId] || null;
-    },
+        const campaign = this.campaigns[campaignId];
+        if (!campaign) {
+            throw new Error(`❌ Campaign '${campaignId}' not found. Available: ${Object.keys(this.campaigns).join(', ')}`);
+        }
 
-    // DEPRECATED: Get campaign config (use getCampaign instead)
-    getCampaignConfig(campaignId) {
-        return this.campaigns[campaignId] || this.campaignConfigs[campaignId] || null;
+        return campaign;
     }
 };
 

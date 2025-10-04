@@ -959,25 +959,18 @@
     console.log('🔍 [campaign-config] After merge - mainCampaign has rpgConfig:', !!mainCampaign.rpgConfig);
     console.log('🔍 [campaign-config] After merge - mainCampaign keys:', Object.keys(mainCampaign));
 
-    // Register the campaign using unified registration method
-    if (window.CampaignSystem) {
-        // Use new registerCampaignConfig method (merges into unified store)
-        if (window.CampaignSystem.registerCampaignConfig) {
-            window.CampaignSystem.registerCampaignConfig('main', mainCampaign);
-            console.log('✅ Main campaign config registered via registerCampaignConfig');
-        } else {
-            // Fallback for old code
-            window.CampaignSystem.campaignConfigs = window.CampaignSystem.campaignConfigs || {};
-            window.CampaignSystem.campaignConfigs['main'] = mainCampaign;
-            console.log('⚠️ Main campaign config registered via legacy method');
-        }
-
-        console.log('📦 Registered campaign has enemies:', !!mainCampaign.enemies);
-        console.log('📦 Registered campaign has missions:', !!mainCampaign.missions);
-        console.log('📦 Registered campaign has rpgConfig:', !!mainCampaign.rpgConfig);
-    } else {
-        console.error('❌ [campaign-config] window.CampaignSystem not available - registration failed');
+    // Register campaign - FAIL FAST if CampaignSystem not available
+    if (!window.CampaignSystem) {
+        throw new Error('❌ CampaignSystem not available! Load campaign-system.js before campaign-config.js');
     }
+
+    if (!window.CampaignSystem.registerCampaignConfig) {
+        throw new Error('❌ CampaignSystem.registerCampaignConfig not available! Update campaign-system.js');
+    }
+
+    // Register using unified method (throws if fails)
+    window.CampaignSystem.registerCampaignConfig('main', mainCampaign);
+    console.log('✅ Main campaign config registered successfully');
 
     // Export for direct access if needed
     window.MAIN_CAMPAIGN_CONFIG = mainCampaign;
