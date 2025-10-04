@@ -375,14 +375,14 @@ class MissionEditor {
 
     setupEventListeners() {
         // Toolbar buttons
-        document.getElementById('new-mission').addEventListener('click', () => this.newMission());
-        document.getElementById('load-mission').addEventListener('click', () => this.loadMission());
-        document.getElementById('save-mission').addEventListener('click', () => this.saveMission());
-        document.getElementById('export-mission').addEventListener('click', () => this.exportMission());
-        document.getElementById('import-mission').addEventListener('click', () => this.importMission());
-        document.getElementById('test-mission').addEventListener('click', () => this.testMission());
-        document.getElementById('validate-mission').addEventListener('click', () => this.validateMission());
-        document.getElementById('campaign-config').addEventListener('click', () => this.showCampaignConfig());
+        document.getElementById('new-mission')?.addEventListener('click', () => this.newMission());
+        document.getElementById('load-mission')?.addEventListener('click', () => this.loadMission());
+        document.getElementById('save-mission')?.addEventListener('click', () => this.saveMission());
+        document.getElementById('export-mission')?.addEventListener('click', () => this.exportMission());
+        document.getElementById('import-mission')?.addEventListener('click', () => this.importMission());
+        document.getElementById('test-mission')?.addEventListener('click', () => this.testMission());
+        document.getElementById('validate-mission')?.addEventListener('click', () => this.validateMission());
+        document.getElementById('campaign-config')?.addEventListener('click', () => this.showCampaignConfig());
 
         // Tool buttons
         document.querySelectorAll('.tool-btn').forEach(btn => {
@@ -411,76 +411,80 @@ class MissionEditor {
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
         // Settings
-        document.getElementById('show-grid').addEventListener('change', (e) => {
+        document.getElementById('show-grid')?.addEventListener('change', (e) => {
             this.showGrid = e.target.checked;
             this.render();
         });
 
-        document.getElementById('snap-to-grid').addEventListener('change', (e) => {
+        document.getElementById('snap-to-grid')?.addEventListener('change', (e) => {
             this.snapToGrid = e.target.checked;
         });
 
-        document.getElementById('zoom-level').addEventListener('input', (e) => {
+        document.getElementById('zoom-level')?.addEventListener('input', (e) => {
             this.zoom = parseFloat(e.target.value);
             this.canvas.width = this.mission.width * this.tileSize * this.zoom;
             this.canvas.height = this.mission.height * this.tileSize * this.zoom;
             this.render();
         });
 
-        document.getElementById('brush-size').addEventListener('input', (e) => {
+        document.getElementById('brush-size')?.addEventListener('input', (e) => {
             this.brushSize = parseInt(e.target.value);
         });
 
         // Mission properties
-        document.getElementById('mission-name').addEventListener('change', (e) => {
+        document.getElementById('mission-name')?.addEventListener('change', (e) => {
             this.mission.name = e.target.value;
         });
 
-        document.getElementById('mission-desc').addEventListener('change', (e) => {
+        document.getElementById('mission-desc')?.addEventListener('change', (e) => {
             this.mission.description = e.target.value;
         });
 
-        document.getElementById('map-type').addEventListener('change', (e) => {
+        document.getElementById('map-type')?.addEventListener('change', (e) => {
             this.mission.mapType = e.target.value;
         });
 
-        document.getElementById('map-width').addEventListener('change', (e) => {
+        document.getElementById('map-width')?.addEventListener('change', (e) => {
             this.resizeMap(parseInt(e.target.value), this.mission.height);
         });
 
-        document.getElementById('map-height').addEventListener('change', (e) => {
+        document.getElementById('map-height')?.addEventListener('change', (e) => {
             this.resizeMap(this.mission.width, parseInt(e.target.value));
         });
 
         // Quick actions
-        document.getElementById('generate-room').addEventListener('click', () => this.generateRoom());
-        document.getElementById('generate-corridor').addEventListener('click', () => this.generateCorridor());
-        document.getElementById('clear-map').addEventListener('click', () => this.clearMap());
-        document.getElementById('auto-walls').addEventListener('click', () => this.autoWalls());
+        document.getElementById('generate-room')?.addEventListener('click', () => this.generateRoom());
+        document.getElementById('generate-corridor')?.addEventListener('click', () => this.generateCorridor());
+        document.getElementById('clear-map')?.addEventListener('click', () => this.clearMap());
+        document.getElementById('auto-walls')?.addEventListener('click', () => this.autoWalls());
 
         // Objectives
-        document.getElementById('add-objective').addEventListener('click', () => this.showObjectiveDialog());
+        document.getElementById('add-objective')?.addEventListener('click', () => this.showObjectiveDialog());
 
         // NPCs
-        document.getElementById('add-npc').addEventListener('click', () => this.showNPCDialog());
+        document.getElementById('add-npc')?.addEventListener('click', () => this.showNPCDialog());
 
         // Events
-        document.getElementById('add-event').addEventListener('click', () => this.addEvent());
+        document.getElementById('add-event')?.addEventListener('click', () => this.addEvent());
 
         // Dialog buttons
-        document.getElementById('save-objective').addEventListener('click', () => this.saveObjective());
-        document.getElementById('cancel-objective').addEventListener('click', () => this.hideObjectiveDialog());
-        document.getElementById('save-npc').addEventListener('click', () => this.saveNPC());
-        document.getElementById('cancel-npc').addEventListener('click', () => this.hideNPCDialog());
+        document.getElementById('save-objective')?.addEventListener('click', () => this.saveObjective());
+        document.getElementById('cancel-objective')?.addEventListener('click', () => this.hideObjectiveDialog());
+        document.getElementById('save-npc')?.addEventListener('click', () => this.saveNPC());
+        document.getElementById('cancel-npc')?.addEventListener('click', () => this.hideNPCDialog());
+
+        // Quest and Dialog tree editors - removed after simplifying NPC controls
+        // document.getElementById('add-dialog-node')?.addEventListener('click', () => this.addDialogNode());
+        // document.getElementById('add-quest')?.addEventListener('click', () => this.addQuest());
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
 
         // File input
-        document.getElementById('file-input').addEventListener('change', (e) => this.handleFileLoad(e));
+        document.getElementById('file-input')?.addEventListener('change', (e) => this.handleFileLoad(e));
 
         // Load game mission dropdown
-        document.getElementById('load-game-mission').addEventListener('change', (e) => {
+        document.getElementById('load-game-mission')?.addEventListener('change', (e) => {
             if (e.target.value) {
                 this.loadGameMission(e.target.value);
                 // Don't reset - the loadGameMission will update the dropdown properly
@@ -504,8 +508,8 @@ class MissionEditor {
                 this.applyTool(x, y);
             } else if (this.currentTool === 'select') {
                 this.selectEntity(x, y);
-            } else {
-                // Place entity
+            } else if (this.currentTool !== 'select') {
+                // Place entity only if not in select mode
                 this.placeEntity(x, y);
             }
         } else if (e.button === 2) { // Right click
@@ -527,7 +531,50 @@ class MissionEditor {
         // Update coordinates display
         document.getElementById('coordinates').textContent = `X: ${x}, Y: ${y}`;
 
-        if (this.isDrawing) {
+        // Update cursor style based on tool
+        if (this.currentTool === 'select') {
+            // Check if we're hovering over an entity
+            const hoveredEntity = this.mission.entities.find(e => e.x === x && e.y === y);
+            this.canvas.style.cursor = hoveredEntity ? 'move' : 'default';
+        } else {
+            this.canvas.style.cursor = 'crosshair';
+        }
+
+        // Handle entity dragging with select tool
+        if (this.draggingEntity && this.currentTool === 'select' && e.buttons === 1) {
+            // Only update position if we've actually moved to a new tile
+            if (x !== this.draggingEntity.x || y !== this.draggingEntity.y) {
+                // Validate new position
+                if (x >= 0 && x < this.mission.width && y >= 0 && y < this.mission.height) {
+                    // Update entity position
+                    this.draggingEntity.x = x;
+                    this.draggingEntity.y = y;
+
+                    // Also update spawn position for NPCs
+                    if (this.draggingEntity.type === 'npc') {
+                        if (this.draggingEntity.spawn) {
+                            this.draggingEntity.spawn.x = x;
+                            this.draggingEntity.spawn.y = y;
+                        }
+                        // Update in mission.npcs array too
+                        const npcInMission = this.mission.npcs.find(n => n.id === this.draggingEntity.id);
+                        if (npcInMission) {
+                            npcInMission.x = x;
+                            npcInMission.y = y;
+                            if (npcInMission.spawn) {
+                                npcInMission.spawn.x = x;
+                                npcInMission.spawn.y = y;
+                            }
+                        }
+                    }
+
+                    // Refresh display
+                    this.renderEntities();
+                    this.showEntityProperties(this.draggingEntity);
+                    this.updatePropertiesPanel();
+                }
+            }
+        } else if (this.isDrawing) {
             if (this.brushMode === 'line') {
                 this.render();
                 this.drawLine(this.startX, this.startY, x, y, true);
@@ -550,6 +597,12 @@ class MissionEditor {
         const rect = this.canvas.getBoundingClientRect();
         const x = Math.floor((e.clientX - rect.left) / (this.tileSize * this.zoom));
         const y = Math.floor((e.clientY - rect.top) / (this.tileSize * this.zoom));
+
+        // If we were dragging an entity, save the changes to history
+        if (this.draggingEntity && this.currentTool === 'select') {
+            this.saveToHistory();
+            this.draggingEntity = null;
+        }
 
         if (this.isDrawing) {
             if (this.brushMode === 'line') {
@@ -582,6 +635,17 @@ class MissionEditor {
             e.preventDefault();
             this.finishPatrolRoute();
             return;
+        }
+        // V - Select tool
+        if ((e.key === 'v' || e.key === 'V') && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            const selectBtn = document.querySelector('.tool-btn[data-tool="select"]');
+            if (selectBtn) {
+                selectBtn.classList.add('active');
+                this.currentTool = 'select';
+                this.currentTile = -1;
+            }
         }
         // Ctrl+Z - Undo
         if (e.ctrlKey && e.key === 'z') {
@@ -773,9 +837,14 @@ class MissionEditor {
         if (entity) {
             this.selectedEntity = entity;
             this.showEntityProperties(entity);
+            // Store the drag start position for entity dragging
+            this.draggingEntity = entity;
+            this.dragStartX = x;
+            this.dragStartY = y;
         } else {
             this.selectedEntity = null;
             this.hideEntityProperties();
+            this.draggingEntity = null;
         }
         this.renderEntities();
     }
@@ -1086,7 +1155,14 @@ class MissionEditor {
         const content = document.getElementById('entity-props-content');
 
         let html = `<label>Type: ${entity.type}</label>`;
-        html += `<label>Position: X: ${entity.x}, Y: ${entity.y}</label>`;
+        html += `
+            <label>Position X:
+                <input type="number" id="entity-pos-x" value="${entity.x}" min="0" max="${this.mission.width - 1}">
+            </label>
+            <label>Position Y:
+                <input type="number" id="entity-pos-y" value="${entity.y}" min="0" max="${this.mission.height - 1}">
+            </label>
+        `;
 
         switch (entity.type) {
             case 'enemy':
@@ -1117,10 +1193,12 @@ class MissionEditor {
             case 'npc':
                 html += `
                     <label>Name:
-                        <input type="text" id="entity-npc-name" value="${entity.name || 'NPC'}">
+                        <input type="text" id="entity-npc-name" value="${entity.name || 'NPC'}" readonly style="background: #222;">
                     </label>
-                    <button class="action-btn" onclick="editor.editNPCDialog(${entity.id})">Edit Dialog</button>
-                    <button class="action-btn" onclick="editor.editNPCQuests(${entity.id})">Edit Quests</button>
+                    <p style="color: #888; font-size: 12px;">
+                        This NPC references template: <strong>${entity.id}</strong><br>
+                        Edit the template in Campaign Editor → NPCs tab
+                    </p>
                 `;
                 break;
             case 'waypoint':
@@ -1149,7 +1227,7 @@ class MissionEditor {
         }
 
         html += `
-            <button class="action-btn" onclick="editor.updateEntity(${entity.id})">Update</button>
+            <button class="action-btn" onclick="editor.updateEntity('${entity.id}')">Update</button>
             <button class="action-btn" style="background: #ff0066;" onclick="editor.removeEntity(editor.selectedEntity)">Delete</button>
         `;
 
@@ -1165,13 +1243,40 @@ class MissionEditor {
         const entity = this.mission.entities.find(e => e.id === entityId);
         if (!entity) return;
 
+        // Update position for all entity types
+        const newX = parseInt(document.getElementById('entity-pos-x').value);
+        const newY = parseInt(document.getElementById('entity-pos-y').value);
+
+        // Validate positions
+        if (newX >= 0 && newX < this.mission.width && newY >= 0 && newY < this.mission.height) {
+            entity.x = newX;
+            entity.y = newY;
+
+            // Also update spawn position for NPCs if they have it
+            if (entity.type === 'npc' && entity.spawn) {
+                entity.spawn.x = newX;
+                entity.spawn.y = newY;
+            }
+        }
+
         switch (entity.type) {
             case 'enemy':
                 entity.enemyType = document.getElementById('entity-enemy-type').value;
                 entity.alertLevel = parseInt(document.getElementById('entity-alert').value);
                 break;
             case 'npc':
-                entity.name = document.getElementById('entity-npc-name').value;
+                // NPC names come from templates, not editable here
+                // entity.name is display-only and comes from the template
+                // Also update in the mission.npcs array if it exists there
+                const npcInMission = this.mission.npcs.find(n => n.id === entity.id);
+                if (npcInMission) {
+                    npcInMission.x = newX;
+                    npcInMission.y = newY;
+                    if (npcInMission.spawn) {
+                        npcInMission.spawn.x = newX;
+                        npcInMission.spawn.y = newY;
+                    }
+                }
                 break;
             case 'waypoint':
                 entity.label = document.getElementById('entity-waypoint-label').value;
@@ -1183,6 +1288,7 @@ class MissionEditor {
         }
 
         this.renderEntities();
+        this.updatePropertiesPanel();  // Update NPC list if name changed
         this.saveToHistory();
     }
 
@@ -1283,24 +1389,245 @@ class MissionEditor {
         const dialog = document.getElementById('npc-dialog');
         dialog.style.display = 'flex';
 
+        // Populate NPC template dropdown from campaign
+        this.populateNPCTemplates();
+
         if (index >= 0) {
             const npc = this.mission.npcs[index];
-            document.getElementById('npc-name').value = npc.name;
-            document.getElementById('npc-type').value = npc.type || 'civilian';
+
+            // Set template selection
+            const templateSelect = document.getElementById('npc-template-select');
+            templateSelect.value = npc.id || '';
+
+            // Set position
             document.getElementById('npc-x').value = npc.x;
             document.getElementById('npc-y').value = npc.y;
-            document.getElementById('npc-dialog').value = JSON.stringify(npc.dialog || [], null, 2);
-            document.getElementById('npc-quests-data').value = JSON.stringify(npc.quests || [], null, 2);
+
+            // Load quest checkboxes for this NPC
+            if (npc.id) {
+                this.loadNPCQuestCheckboxes(npc.id, npc.quests || []);
+            }
         } else {
-            document.getElementById('npc-name').value = 'New NPC';
-            document.getElementById('npc-type').value = 'civilian';
-            document.getElementById('npc-x').value = 40;
-            document.getElementById('npc-y').value = 40;
-            document.getElementById('npc-dialog').value = '[]';
-            document.getElementById('npc-quests-data').value = '[]';
+            // New NPC
+            document.getElementById('npc-template-select').value = '';
+            document.getElementById('npc-x').value = 10;
+            document.getElementById('npc-y').value = 10;
+            document.getElementById('quest-checkboxes').innerHTML =
+                '<p style="opacity: 0.7; font-size: 12px;">Select an NPC template first</p>';
         }
 
         this.editingNPCIndex = index;
+    }
+
+    // Populate NPC template dropdown from campaign
+    populateNPCTemplates() {
+        const select = document.getElementById('npc-template-select');
+        const campaignId = this.currentCampaignId || 'main';
+        const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES?.[campaignId];
+
+        // Clear existing options except the first
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+
+        if (npcTemplates) {
+            Object.keys(npcTemplates).forEach(npcId => {
+                const template = npcTemplates[npcId];
+                const option = document.createElement('option');
+                option.value = npcId;
+                option.textContent = `${template.name} (${npcId})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Add change handler
+        select.onchange = () => {
+            const selectedId = select.value;
+            if (selectedId) {
+                this.loadNPCTemplateInfo(selectedId);
+                this.loadNPCQuestCheckboxes(selectedId, []);
+            } else {
+                document.getElementById('npc-template-info').style.display = 'none';
+                document.getElementById('quest-checkboxes').innerHTML =
+                    '<p style="opacity: 0.7; font-size: 12px;">Select an NPC template first</p>';
+            }
+        };
+    }
+
+    // Show info about selected NPC template
+    loadNPCTemplateInfo(npcId) {
+        const campaignId = this.currentCampaignId || 'main';
+        const template = window.CAMPAIGN_NPC_TEMPLATES?.[campaignId]?.[npcId];
+
+        if (template) {
+            const infoDiv = document.getElementById('npc-template-info');
+            const contentDiv = document.getElementById('npc-info-content');
+
+            contentDiv.innerHTML = `
+                <p><strong>Name:</strong> ${template.name}</p>
+                <p><strong>Sprite:</strong> ${template.sprite}</p>
+                <p><strong>Type:</strong> ${template.movementType || 'stationary'}</p>
+                ${template.dialog?.length ? '<p><strong>Has Dialog:</strong> Yes</p>' : ''}
+                ${template.quests?.length ? `<p><strong>Available Quests:</strong> ${template.quests.length}</p>` : ''}
+            `;
+
+            infoDiv.style.display = 'block';
+        }
+    }
+
+    // Load quest checkboxes for selected NPC
+    loadNPCQuestCheckboxes(npcId, activeQuests = []) {
+        const campaignId = this.currentCampaignId || 'main';
+        const template = window.CAMPAIGN_NPC_TEMPLATES?.[campaignId]?.[npcId];
+        const container = document.getElementById('quest-checkboxes');
+
+        if (!template || !template.quests || template.quests.length === 0) {
+            container.innerHTML = '<p style="opacity: 0.7; font-size: 12px;">This NPC has no quests</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        template.quests.forEach(quest => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display: block; margin: 5px 0; font-size: 13px;';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = quest.id;
+            checkbox.checked = activeQuests.includes(quest.id);
+            checkbox.style.marginRight = '8px';
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(`${quest.name || quest.id}`));
+
+            if (quest.description) {
+                const desc = document.createElement('span');
+                desc.style.cssText = 'display: block; margin-left: 20px; font-size: 11px; opacity: 0.7;';
+                desc.textContent = quest.description;
+                label.appendChild(desc);
+            }
+
+            container.appendChild(label);
+        });
+    }
+
+    // Load dialog tree into visual editor
+    loadDialogTree(dialogData) {
+        const container = document.getElementById('dialog-nodes');
+        container.innerHTML = '';
+
+        if (Array.isArray(dialogData)) {
+            dialogData.forEach((node, index) => {
+                this.createDialogNodeElement(node, index, container);
+            });
+        }
+    }
+
+    // Create a visual dialog node
+    createDialogNodeElement(node, index, container) {
+        const nodeEl = document.createElement('div');
+        nodeEl.className = 'dialog-node';
+        nodeEl.dataset.index = index;
+
+        const greeting = node.greeting || node.text || 'Dialog node';
+        const options = node.options || [];
+
+        nodeEl.innerHTML = `
+            <div class="node-header">
+                <div class="node-title">Dialog ${index + 1}</div>
+                <div class="node-actions">
+                    <button class="mini-btn" onclick="editor.editDialogNode(${index})">Edit</button>
+                    <button class="mini-btn delete" onclick="editor.removeDialogNode(${index})">Delete</button>
+                </div>
+            </div>
+            <input type="text" class="tree-input" value="${greeting}" placeholder="Greeting text" data-field="greeting">
+            <div class="dialog-options">
+                ${options.map((opt, i) => `
+                    <div class="dialog-option">
+                        Option ${i + 1}: ${opt.text || 'Option'}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        container.appendChild(nodeEl);
+    }
+
+    // Load quest tree into visual editor
+    loadQuestTree(questData) {
+        const container = document.getElementById('quest-list');
+        container.innerHTML = '';
+
+        // Quest data can be an array of quest IDs or quest objects
+        if (Array.isArray(questData)) {
+            questData.forEach((quest, index) => {
+                if (typeof quest === 'string') {
+                    // Just a quest ID reference
+                    this.createQuestReferenceElement(quest, index, container);
+                } else {
+                    // Full quest object
+                    this.createQuestElement(quest, index, container);
+                }
+            });
+        }
+    }
+
+    // Create a visual quest element
+    createQuestElement(quest, index, container) {
+        const questEl = document.createElement('div');
+        questEl.className = 'quest-item';
+        questEl.dataset.index = index;
+
+        const questName = quest.name || quest.id || 'Quest';
+        const description = quest.description || '';
+        const objectives = quest.objectives || [];
+        const rewards = quest.rewards || {};
+
+        questEl.innerHTML = `
+            <div class="quest-header">
+                <div class="quest-title">${questName}</div>
+                <div class="quest-actions">
+                    <button class="mini-btn" onclick="editor.editQuest(${index})">Edit</button>
+                    <button class="mini-btn delete" onclick="editor.removeQuest(${index})">Delete</button>
+                </div>
+            </div>
+            <input type="text" class="tree-input" value="${quest.id || ''}" placeholder="Quest ID" data-field="id">
+            <input type="text" class="tree-input" value="${questName}" placeholder="Quest Name" data-field="name">
+            <textarea class="tree-input" placeholder="Description" data-field="description">${description}</textarea>
+            <div class="quest-objectives">
+                ${objectives.map((obj, i) => `
+                    <div class="objective-item">
+                        ${obj.type || 'objective'}: ${obj.description || obj.id || ''}
+                    </div>
+                `).join('')}
+            </div>
+            <div class="quest-rewards">
+                ${rewards.credits ? `<span class="reward-badge">💰 ${rewards.credits}</span>` : ''}
+                ${rewards.experience ? `<span class="reward-badge">⭐ ${rewards.experience} XP</span>` : ''}
+                ${rewards.researchPoints ? `<span class="reward-badge">🔬 ${rewards.researchPoints} RP</span>` : ''}
+            </div>
+        `;
+
+        container.appendChild(questEl);
+    }
+
+    // Create a quest reference element (just ID)
+    createQuestReferenceElement(questId, index, container) {
+        const questEl = document.createElement('div');
+        questEl.className = 'quest-item';
+        questEl.dataset.index = index;
+
+        questEl.innerHTML = `
+            <div class="quest-header">
+                <div class="quest-title">Quest Reference: ${questId}</div>
+                <div class="quest-actions">
+                    <button class="mini-btn delete" onclick="editor.removeQuest(${index})">Delete</button>
+                </div>
+            </div>
+            <input type="text" class="tree-input" value="${questId}" placeholder="Quest ID" data-field="questId">
+        `;
+
+        container.appendChild(questEl);
     }
 
     hideNPCDialog() {
@@ -1309,26 +1636,68 @@ class MissionEditor {
 
     saveNPC() {
         try {
-            const npc = {
-                name: document.getElementById('npc-name').value,
-                type: document.getElementById('npc-type').value,
-                x: parseInt(document.getElementById('npc-x').value),
-                y: parseInt(document.getElementById('npc-y').value),
-                dialog: JSON.parse(document.getElementById('npc-dialog').value),
-                quests: JSON.parse(document.getElementById('npc-quests-data').value)
+            const templateSelect = document.getElementById('npc-template-select');
+            const npcId = templateSelect.value;
+
+            if (!npcId) {
+                alert('Please select an NPC template');
+                return;
+            }
+
+            // Get selected quests
+            const questCheckboxes = document.querySelectorAll('#quest-checkboxes input[type="checkbox"]:checked');
+            const activeQuests = Array.from(questCheckboxes).map(cb => cb.value);
+
+            // Get position
+            const x = parseInt(document.getElementById('npc-x').value);
+            const y = parseInt(document.getElementById('npc-y').value);
+
+            // Get template info for display name
+            const campaignId = this.currentCampaignId || 'main';
+            const template = window.CAMPAIGN_NPC_TEMPLATES?.[campaignId]?.[npcId];
+            const displayName = template?.name || npcId;
+
+            // Create NPC data matching the mission file format
+            const npcData = {
+                id: npcId,
+                spawn: { x, y },
+                quests: activeQuests
+            };
+
+            // For editor display, add extra fields
+            const editorNpc = {
+                ...npcData,
+                name: displayName,
+                x: x,
+                y: y
             };
 
             if (this.editingNPCIndex >= 0) {
-                this.mission.npcs[this.editingNPCIndex] = npc;
+                // Update existing
+                this.mission.npcs[this.editingNPCIndex] = editorNpc;
+
+                // Also update in entities
+                const entity = this.mission.entities.find(e =>
+                    e.type === 'npc' && e.id === npcId
+                );
+                if (entity) {
+                    entity.x = x;
+                    entity.y = y;
+                    entity.name = displayName;
+                    entity.quests = activeQuests;
+                }
             } else {
-                this.mission.npcs.push(npc);
-                // Also add to entities
+                // Add new
+                this.mission.npcs.push(editorNpc);
+
+                // Also add to entities for map rendering
                 this.mission.entities.push({
                     type: 'npc',
-                    x: npc.x,
-                    y: npc.y,
-                    id: Date.now(),
-                    name: npc.name
+                    x: x,
+                    y: y,
+                    id: npcId,
+                    name: displayName,
+                    quests: activeQuests
                 });
             }
 
@@ -1345,10 +1714,171 @@ class MissionEditor {
         this.showNPCDialog(index);
     }
 
+    // Gather dialog data from visual editor
+    gatherDialogData() {
+        const nodes = document.querySelectorAll('#dialog-nodes .dialog-node');
+        const dialogData = [];
+
+        nodes.forEach(node => {
+            const greeting = node.querySelector('input[data-field="greeting"]').value;
+            // For now, just save the greeting text
+            // Full dialog tree editing would need more complex UI
+            if (greeting) {
+                dialogData.push({
+                    greeting: greeting,
+                    options: [] // Would be edited in detail dialog
+                });
+            }
+        });
+
+        // If no visual data, fallback to JSON
+        if (dialogData.length === 0) {
+            try {
+                return JSON.parse(document.getElementById('npc-dialog').value);
+            } catch {
+                return [];
+            }
+        }
+
+        return dialogData;
+    }
+
+    // Gather quest data from visual editor
+    gatherQuestData() {
+        const items = document.querySelectorAll('#quest-list .quest-item');
+        const questData = [];
+
+        items.forEach(item => {
+            const idField = item.querySelector('input[data-field="id"]');
+            const questIdField = item.querySelector('input[data-field="questId"]');
+
+            if (questIdField) {
+                // Just a quest ID reference
+                questData.push(questIdField.value);
+            } else if (idField) {
+                // Full quest object
+                const quest = {
+                    id: idField.value,
+                    name: item.querySelector('input[data-field="name"]')?.value || '',
+                    description: item.querySelector('textarea[data-field="description"]')?.value || ''
+                };
+                questData.push(quest);
+            }
+        });
+
+        // If no visual data, fallback to JSON
+        if (questData.length === 0) {
+            try {
+                return JSON.parse(document.getElementById('npc-quests-data').value);
+            } catch {
+                return [];
+            }
+        }
+
+        return questData;
+    }
+
+    // Add a new dialog node
+    addDialogNode() {
+        const container = document.getElementById('dialog-nodes');
+        const index = container.children.length;
+        const newNode = {
+            greeting: 'Hello, traveler.',
+            options: []
+        };
+        this.createDialogNodeElement(newNode, index, container);
+    }
+
+    // Add a new quest
+    addQuest() {
+        const container = document.getElementById('quest-list');
+        const index = container.children.length;
+
+        // Prompt for quest type
+        const isReference = confirm('Add quest reference (OK) or create new quest (Cancel)?');
+
+        if (isReference) {
+            this.createQuestReferenceElement('quest_id', index, container);
+        } else {
+            const newQuest = {
+                id: `quest_${Date.now()}`,
+                name: 'New Quest',
+                description: 'Quest description',
+                objectives: [],
+                rewards: {}
+            };
+            this.createQuestElement(newQuest, index, container);
+        }
+    }
+
+    // Remove dialog node
+    removeDialogNode(index) {
+        const container = document.getElementById('dialog-nodes');
+        const nodes = container.querySelectorAll('.dialog-node');
+        if (nodes[index]) {
+            nodes[index].remove();
+            // Re-index remaining nodes
+            this.reindexDialogNodes();
+        }
+    }
+
+    // Remove quest
+    removeQuest(index) {
+        const container = document.getElementById('quest-list');
+        const items = container.querySelectorAll('.quest-item');
+        if (items[index]) {
+            items[index].remove();
+            // Re-index remaining quests
+            this.reindexQuests();
+        }
+    }
+
+    // Re-index dialog nodes after deletion
+    reindexDialogNodes() {
+        const nodes = document.querySelectorAll('#dialog-nodes .dialog-node');
+        nodes.forEach((node, index) => {
+            node.dataset.index = index;
+            const title = node.querySelector('.node-title');
+            if (title) title.textContent = `Dialog ${index + 1}`;
+        });
+    }
+
+    // Re-index quests after deletion
+    reindexQuests() {
+        const items = document.querySelectorAll('#quest-list .quest-item');
+        items.forEach((item, index) => {
+            item.dataset.index = index;
+        });
+    }
+
+    // Placeholder for detailed dialog editing
+    editDialogNode(index) {
+        alert('Full dialog tree editing would open a detailed editor here. For now, edit the greeting text directly or use the JSON fallback.');
+    }
+
+    // Placeholder for detailed quest editing
+    editQuest(index) {
+        alert('Full quest editing would open a detailed editor here. For now, edit the fields directly or use the JSON fallback.');
+    }
+
     removeNPC(index) {
         this.mission.npcs.splice(index, 1);
         this.updatePropertiesPanel();
         this.saveToHistory();
+    }
+
+    // Legacy NPC editing functions - no longer used after simplification
+    editNPCDialog(entityId) {
+        // Deprecated - NPCs are now edited via Campaign Editor
+        this.eventLogger.log('NPC editing has moved to Campaign Editor → NPCs tab', 'info');
+        alert('To edit NPC templates, use Campaign Editor → NPCs tab');
+    }
+
+    // Legacy NPC quest editing - no longer used after simplification
+    editNPCQuests(entityId) {
+        // Deprecated - NPCs are now edited via Campaign Editor
+        this.eventLogger.log('NPC quest editing has moved to Campaign Editor → NPCs tab', 'info');
+        alert('To edit NPC templates and quests, use Campaign Editor → NPCs tab');
     }
 
     showEnemyDialog(index = -1) {
@@ -3027,13 +3557,14 @@ ADVANTAGES:
         const dialog = document.getElementById('campaign-dialog');
         dialog.style.display = 'block';
 
-        // Initialize campaign manager if not already done
-        if (!window.campaignManager) {
-            window.campaignManager = new CampaignManager(this);
-            // Wait for async initialization to complete
+        // Check if campaign manager exists and is ready
+        if (window.campaignManager && window.campaignManager.isInitialized) {
+            window.campaignManager.switchTab('overview');
+        } else {
+            // Wait for campaign manager to be ready
             await new Promise(resolve => {
                 const checkInit = setInterval(() => {
-                    if (window.campaignManager && window.campaignManager.currentCampaign) {
+                    if (window.campaignManager && window.campaignManager.isInitialized) {
                         clearInterval(checkInit);
                         resolve();
                     }
@@ -3044,13 +3575,12 @@ ADVANTAGES:
                     resolve();
                 }, 5000);
             });
-        }
 
-        // Only switch tab if campaign manager is ready
-        if (window.campaignManager && window.campaignManager.currentCampaign) {
-            window.campaignManager.switchTab('overview');
-        } else {
-            this.eventLogger.log('Campaign manager not ready', 'error', true);
+            if (window.campaignManager && window.campaignManager.isInitialized) {
+                window.campaignManager.switchTab('overview');
+            } else {
+                this.eventLogger.log('Campaign manager not ready', 'error', true);
+            }
         }
 
         // Old code for backward compatibility - skip if elements don't exist
@@ -3296,7 +3826,11 @@ class CampaignManager {
             this.isInitialized = true;
             this.editor.eventLogger.log('CampaignManager fully initialized', 'success');
         } catch (error) {
-            this.editor.eventLogger.log(`Failed to initialize CampaignManager: ${error.message}`, 'error', true);
+            // Log full error details
+            console.error('CampaignManager initialization error:', error);
+            const errorMsg = error ? (error.message || error.toString()) : 'Unknown error';
+            this.editor.eventLogger.log(`Failed to initialize CampaignManager: ${errorMsg}`, 'error', true);
+
             // Create a default campaign even if IndexedDB fails
             this.createDefaultCampaign();
             this.setupEventListeners();
@@ -3318,6 +3852,7 @@ class CampaignManager {
             agents: [],
             weapons: [],
             equipment: [],
+            npcs: {},  // Initialize NPCs
             enemyTypes: [],
             researchTree: {},
             intelReports: [],
@@ -3351,29 +3886,40 @@ class CampaignManager {
             };
 
             request.onupgradeneeded = (event) => {
-                const db = event.target.result;
+                try {
+                    const db = event.target.result;
 
-                // Create campaigns store if it doesn't exist
-                if (!db.objectStoreNames.contains('campaigns')) {
-                    const campaignsStore = db.createObjectStore('campaigns', { keyPath: 'id' });
-                    campaignsStore.createIndex('name', 'name', { unique: false });
-                    campaignsStore.createIndex('lastModified', 'lastModified', { unique: false });
+                    // Create campaigns store if it doesn't exist
+                    if (!db.objectStoreNames.contains('campaigns')) {
+                        const campaignsStore = db.createObjectStore('campaigns', { keyPath: 'id' });
+                        campaignsStore.createIndex('name', 'name', { unique: false });
+                        campaignsStore.createIndex('lastModified', 'lastModified', { unique: false });
+                    }
+
+                    // Create missions store if it doesn't exist
+                    if (!db.objectStoreNames.contains('missions')) {
+                        const missionsStore = db.createObjectStore('missions', { keyPath: 'id' });
+                        missionsStore.createIndex('campaignId', 'campaignId', { unique: false });
+                        missionsStore.createIndex('missionId', 'missionId', { unique: false });
+                    }
+
+                    this.editor.eventLogger.log('IndexedDB schema created/updated', 'success');
+                } catch (upgradeError) {
+                    console.error('IndexedDB upgrade error:', upgradeError);
+                    this.editor.eventLogger.log(`IndexedDB upgrade failed: ${upgradeError.message}`, 'error', true);
                 }
-
-                // Create missions store if it doesn't exist
-                if (!db.objectStoreNames.contains('missions')) {
-                    const missionsStore = db.createObjectStore('missions', { keyPath: 'id' });
-                    missionsStore.createIndex('campaignId', 'campaignId', { unique: false });
-                    missionsStore.createIndex('missionId', 'missionId', { unique: false });
-                }
-
-                this.editor.eventLogger.log('IndexedDB schema created/updated', 'success');
             };
         });
     }
 
     // Save campaign to IndexedDB
     async saveCampaignToDB(campaign) {
+        // Check if database is initialized
+        if (!this.db) {
+            this.editor.eventLogger.log('IndexedDB not initialized, cannot save campaign', 'warning');
+            return Promise.resolve();
+        }
+
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['campaigns'], 'readwrite');
             const store = transaction.objectStore('campaigns');
@@ -3395,6 +3941,12 @@ class CampaignManager {
 
     // Load all campaigns from IndexedDB
     async loadAllCampaigns() {
+        // Check if database is initialized
+        if (!this.db) {
+            this.editor.eventLogger.log('IndexedDB not initialized, cannot load campaigns', 'warning');
+            return Promise.resolve([]);
+        }
+
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['campaigns'], 'readonly');
             const store = transaction.objectStore('campaigns');
@@ -3412,6 +3964,12 @@ class CampaignManager {
 
     // Load specific campaign from IndexedDB
     async loadCampaignFromDB(campaignId) {
+        // Check if database is initialized
+        if (!this.db) {
+            this.editor.eventLogger.log('IndexedDB not initialized, cannot load campaign', 'warning');
+            return Promise.resolve(null);
+        }
+
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['campaigns'], 'readonly');
             const store = transaction.objectStore('campaigns');
@@ -3429,6 +3987,12 @@ class CampaignManager {
 
     // Delete campaign from IndexedDB
     async deleteCampaignFromDB(campaignId) {
+        // Check if database is initialized
+        if (!this.db) {
+            this.editor.eventLogger.log('IndexedDB not initialized, cannot delete campaign', 'warning');
+            return Promise.resolve();
+        }
+
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction(['campaigns', 'missions'], 'readwrite');
             const campaignStore = transaction.objectStore('campaigns');
@@ -3462,17 +4026,33 @@ class CampaignManager {
     }
 
     async loadCampaignContent() {
-        // Try to load last used campaign from localStorage
-        const lastCampaignId = localStorage.getItem('lastCampaignId');
+        try {
+            // Try to load last used campaign from localStorage
+            const lastCampaignId = localStorage.getItem('lastCampaignId');
 
-        if (lastCampaignId && this.db) {
-            const campaign = await this.loadCampaignFromDB(lastCampaignId);
-            if (campaign) {
+            if (lastCampaignId && this.db) {
+                const campaign = await this.loadCampaignFromDB(lastCampaignId);
+                if (campaign) {
                 this.currentCampaign = campaign;
                 this.currentCampaignId = lastCampaignId;
 
                 // Sync missions to global CAMPAIGN_MISSIONS
                 this.syncMissionsToGlobal();
+
+                // Ensure NPCs are loaded from templates
+                if (!this.currentCampaign.npcs) {
+                    this.currentCampaign.npcs = {};
+                }
+                const dbCampaignId = this.currentCampaign.id || 'main';
+                if (window.CAMPAIGN_NPC_TEMPLATES && window.CAMPAIGN_NPC_TEMPLATES[dbCampaignId]) {
+                    const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES[dbCampaignId];
+                    Object.keys(npcTemplates).forEach(npcId => {
+                        if (!this.currentCampaign.npcs[npcId]) {
+                            this.currentCampaign.npcs[npcId] = { ...npcTemplates[npcId] };
+                        }
+                    });
+                    this.editor.eventLogger.log(`Loaded ${Object.keys(npcTemplates).length} NPC templates for campaign`, 'success');
+                }
 
                 this.editor.eventLogger.log(`Loaded campaign "${campaign.name}" from IndexedDB`, 'success');
                 return;
@@ -3493,6 +4073,21 @@ class CampaignManager {
             // Sync missions to global CAMPAIGN_MISSIONS (in case we loaded from IndexedDB)
             this.syncMissionsToGlobal();
 
+            // Load NPCs from templates if not already in campaign
+            if (!this.currentCampaign.npcs) {
+                this.currentCampaign.npcs = {};
+            }
+            const campaignId = this.currentCampaign.id || 'main';
+            if (window.CAMPAIGN_NPC_TEMPLATES && window.CAMPAIGN_NPC_TEMPLATES[campaignId]) {
+                const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES[campaignId];
+                Object.keys(npcTemplates).forEach(npcId => {
+                    if (!this.currentCampaign.npcs[npcId]) {
+                        this.currentCampaign.npcs[npcId] = { ...npcTemplates[npcId] };
+                    }
+                });
+                this.editor.eventLogger.log(`Loaded ${Object.keys(npcTemplates).length} NPC templates`, 'success');
+            }
+
             this.editor.eventLogger.log('Loaded existing campaign content from window', 'success');
             // Save it to IndexedDB for future use (now with missions)
             if (this.db) {
@@ -3509,10 +4104,31 @@ class CampaignManager {
                 this.editor.eventLogger.log(`Added ${this.currentCampaign.missions.length} missions to default campaign`, 'success');
             }
 
+            // Load NPCs from templates
+            const defaultCampaignId = this.currentCampaign.id || 'main';
+            if (window.CAMPAIGN_NPC_TEMPLATES && window.CAMPAIGN_NPC_TEMPLATES[defaultCampaignId]) {
+                const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES[defaultCampaignId];
+                Object.keys(npcTemplates).forEach(npcId => {
+                    if (!this.currentCampaign.npcs[npcId]) {
+                        this.currentCampaign.npcs[npcId] = { ...npcTemplates[npcId] };
+                    }
+                });
+                this.editor.eventLogger.log(`Loaded ${Object.keys(npcTemplates).length} NPC templates to default campaign`, 'success');
+            }
+
             // Save the default campaign to IndexedDB
             if (this.db) {
                 await this.saveCampaignToDB(this.currentCampaign);
                 this.editor.eventLogger.log('Default campaign saved to storage', 'success');
+            }
+        }
+        } catch (error) {
+            console.error('Error in loadCampaignContent:', error);
+            const errorMsg = error ? (error.message || error.toString()) : 'Unknown error';
+            this.editor.eventLogger.log(`Error loading campaign content: ${errorMsg}`, 'error', true);
+            // Create default campaign as fallback
+            if (!this.currentCampaign) {
+                this.createDefaultCampaign();
             }
         }
     }
@@ -3686,6 +4302,9 @@ class CampaignManager {
             case 'inventory':
                 this.loadInventoryTab();
                 break;
+            case 'npcs':
+                this.loadNPCs();
+                break;
         }
     }
 
@@ -3724,6 +4343,69 @@ class CampaignManager {
 
         // Load agent loadouts
         this.loadAgentLoadouts();
+    }
+
+    loadNPCs() {
+        const npcsList = document.getElementById('npc-templates-list');
+        if (!npcsList) {
+            this.eventLogger.log('NPCs list element not found', 'error');
+            return;
+        }
+
+        // Get campaign NPCs if they exist
+        const campaignId = this.currentCampaign?.id || 'main';
+        const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES?.[campaignId] || {};
+
+        // Initialize NPCs in campaign if not exists
+        if (!this.currentCampaign.npcs) {
+            this.currentCampaign.npcs = {};
+        }
+
+        // Merge templates with campaign NPCs
+        Object.keys(npcTemplates).forEach(npcId => {
+            if (!this.currentCampaign.npcs[npcId]) {
+                this.currentCampaign.npcs[npcId] = { ...npcTemplates[npcId] };
+            }
+        });
+
+        // Display NPC list
+        npcsList.innerHTML = '';
+
+        const npcIds = Object.keys(this.currentCampaign.npcs);
+        if (npcIds.length === 0) {
+            npcsList.innerHTML = '<p style="color: #888;">No NPCs defined. Click "Add New NPC Template" to create one.</p>';
+        } else {
+            npcIds.forEach((npcId, index) => {
+                const npc = this.currentCampaign.npcs[npcId];
+                const npcDiv = document.createElement('div');
+                npcDiv.style.cssText = 'border: 1px solid #00ff41; padding: 10px; margin-bottom: 10px; background: rgba(0,255,65,0.05); position: relative;';
+
+                // Escape the npcId for use in HTML attributes
+                const escapedId = npcId.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+                npcDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h4 style="color: #00ff41; margin: 0;">${npc.sprite || '👤'} ${npc.name || npcId}</h4>
+                            <p style="color: #888; margin: 5px 0; font-size: 12px;">ID: ${npcId}</p>
+                            <p style="color: #00ffff; margin: 5px 0;">Quests: ${npc.quests?.length || 0}</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="window.campaignManager.editNPCTemplate('${escapedId}')"
+                                    style="background: #00ff41; color: #000; border: none; padding: 5px 10px; cursor: pointer;">
+                                Edit
+                            </button>
+                            <button onclick="window.campaignManager.deleteNPCTemplate('${escapedId}')"
+                                    style="background: #ff0000; color: #fff; border: none; padding: 5px 10px; cursor: pointer;">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                npcsList.appendChild(npcDiv);
+            });
+        }
     }
 
     loadAgentLoadouts() {
@@ -3818,6 +4500,548 @@ class CampaignManager {
         this.currentCampaign.agentLoadouts[agentId][slot] = value || null;
         this.saveCampaignToDB(this.currentCampaign);
         this.editor.eventLogger.log(`Updated loadout for agent ${agentId}`, 'info');
+    }
+
+    async addNPCTemplate() {
+        const npcId = prompt('Enter unique NPC ID (e.g., "merchant", "guard", "informant"):');
+        if (!npcId || npcId.trim() === '') return;
+
+        if (!this.currentCampaign.npcs) {
+            this.currentCampaign.npcs = {};
+        }
+
+        if (this.currentCampaign.npcs[npcId]) {
+            alert('NPC with this ID already exists!');
+            return;
+        }
+
+        // Create new NPC template
+        this.currentCampaign.npcs[npcId] = {
+            name: 'New NPC',
+            sprite: '👤',
+            dialog: [
+                { text: 'Hello, traveler.', options: [] }
+            ],
+            quests: []
+        };
+
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.loadNPCs();
+        this.editNPCTemplate(npcId);
+    }
+
+    editNPCTemplate(npcId) {
+        const npc = this.currentCampaign.npcs[npcId];
+        if (!npc) {
+            this.editor.eventLogger.log(`NPC ${npcId} not found`, 'error');
+            return;
+        }
+
+        // Escape the npcId for use in HTML attributes
+        const escapedId = npcId.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+        // Create edit dialog
+        const dialog = document.createElement('div');
+        dialog.className = 'dialog';
+        dialog.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 10000;';
+
+        const content = document.createElement('div');
+        content.className = 'dialog-content';
+        content.style.cssText = 'background: #0a0e27; border: 2px solid #00ff41; padding: 20px; min-width: 600px; max-width: 800px; max-height: 80vh; overflow-y: auto;';
+
+        content.innerHTML = `
+            <h2 style="color: #00ff41;">Edit NPC Template: ${npcId}</h2>
+
+            <label style="color: #00ffff;">Name:
+                <input type="text" id="npc-name" value="${(npc.name || '').replace(/"/g, '&quot;')}"
+                       style="width: 100%; background: #111; border: 1px solid #00ff41; color: #fff; padding: 5px;">
+            </label>
+
+            <label style="color: #00ffff; margin-top: 10px; display: block;">Sprite (Emoji):
+                <input type="text" id="npc-sprite" value="${npc.sprite || '👤'}" maxlength="2"
+                       style="width: 100px; background: #111; border: 1px solid #00ff41; color: #fff; padding: 5px; font-size: 20px;">
+            </label>
+
+            <h3 style="color: #00ff41; margin-top: 20px;">General Dialog</h3>
+            <p style="color: #888; font-size: 12px; margin: 5px 0;">
+                Optional generic dialog nodes. Most dialog comes from quest intro/completion text below.
+            </p>
+            <div id="npc-dialog-editor" style="border: 1px solid #333; padding: 10px; background: #111;">
+                ${this.generateDialogEditor(npc.dialog || [])}
+            </div>
+
+            <h3 style="color: #00ff41; margin-top: 20px;">Quests</h3>
+            <div id="npc-quests-editor" style="border: 1px solid #333; padding: 10px; background: #111;">
+                ${this.generateQuestsEditor(npc.quests || [], npcId)}
+            </div>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button onclick="window.campaignManager.saveNPCTemplate('${escapedId}')"
+                        style="background: #00ff41; color: #000; border: none; padding: 10px 20px; cursor: pointer;">
+                    Save NPC
+                </button>
+                <button onclick="this.parentElement.parentElement.parentElement.remove()"
+                        style="background: #ff0000; color: #fff; border: none; padding: 10px 20px; cursor: pointer;">
+                    Cancel
+                </button>
+            </div>
+        `;
+
+        dialog.appendChild(content);
+        document.body.appendChild(dialog);
+    }
+
+    generateDialogEditor(dialogs) {
+        if (!dialogs || dialogs.length === 0) {
+            dialogs = [{ text: 'Hello!', options: [] }];
+        }
+
+        let html = '<div id="dialog-nodes">';
+        dialogs.forEach((node, index) => {
+            html += `
+                <div style="border: 1px solid #00ff41; padding: 10px; margin-bottom: 10px;">
+                    <label style="color: #00ffff;">Dialog ${index + 1}:
+                        <textarea data-dialog-index="${index}"
+                                  style="width: 100%; background: #222; border: 1px solid #00ff41; color: #fff; padding: 5px; height: 60px;"
+                                  placeholder="General dialog text (not quest-related)...">
+${node.text || ''}
+                        </textarea>
+                    </label>
+                    <button onclick="window.campaignManager.removeDialogNode(${index})"
+                            style="background: #ff0000; color: #fff; border: none; padding: 5px 10px; cursor: pointer; margin-top: 5px;">
+                        Remove
+                    </button>
+                </div>
+            `;
+        });
+        html += '</div>';
+        html += `<button onclick="window.campaignManager.addDialogNode()"
+                         style="background: #00ff41; color: #000; border: none; padding: 5px 15px; cursor: pointer;">
+                    Add Dialog Node
+                 </button>`;
+        return html;
+    }
+
+    generateObjectivesEditor(objectives, questIndex) {
+        if (!objectives || objectives.length === 0) {
+            objectives = [];
+        }
+
+        let html = '<div style="border: 1px solid #444; padding: 10px; background: #1a1a1a;">';
+
+        objectives.forEach((obj, objIndex) => {
+            const escapeHtml = (str) => (str || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            html += `
+                <div data-objective-index="${objIndex}" style="border: 1px solid #666; padding: 8px; margin-bottom: 8px; background: #222;">
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
+                        <select data-quest-index="${questIndex}" data-objective-index="${objIndex}" data-field="objectives.type"
+                                onchange="window.campaignManager.updateObjectiveType(${questIndex}, ${objIndex}, this.value)"
+                                style="background: #333; border: 1px solid #00ff41; color: #fff; padding: 3px;">
+                            <option value="hack" ${obj.type === 'hack' ? 'selected' : ''}>Hack</option>
+                            <option value="eliminate" ${obj.type === 'eliminate' ? 'selected' : ''}>Eliminate</option>
+                            <option value="collect" ${obj.type === 'collect' ? 'selected' : ''}>Collect</option>
+                            <option value="reach" ${obj.type === 'reach' ? 'selected' : ''}>Reach Location</option>
+                            <option value="interact" ${obj.type === 'interact' ? 'selected' : ''}>Interact</option>
+                        </select>
+
+                        ${obj.type === 'collect' ? `
+                            <input type="text" data-quest-index="${questIndex}" data-objective-index="${objIndex}" data-field="objectives.item"
+                                   value="${escapeHtml(obj.item)}" placeholder="Item ID"
+                                   style="width: 120px; background: #333; border: 1px solid #00ff41; color: #fff; padding: 3px;">
+                        ` : ''}
+
+                        ${obj.type === 'reach' ? `
+                            X: <input type="number" data-quest-index="${questIndex}" data-objective-index="${objIndex}" data-field="objectives.x"
+                                      value="${obj.x || 0}" placeholder="X"
+                                      style="width: 50px; background: #333; border: 1px solid #00ff41; color: #fff; padding: 3px;">
+                            Y: <input type="number" data-quest-index="${questIndex}" data-objective-index="${objIndex}" data-field="objectives.y"
+                                      value="${obj.y || 0}" placeholder="Y"
+                                      style="width: 50px; background: #333; border: 1px solid #00ff41; color: #fff; padding: 3px;">
+                        ` : ''}
+
+                        ${obj.type === 'interact' ? `
+                            <input type="text" data-quest-index="${questIndex}" data-objective-index="${objIndex}" data-field="objectives.target"
+                                   value="${escapeHtml(obj.target)}" placeholder="Target (explosive, switch, etc)"
+                                   style="width: 150px; background: #333; border: 1px solid #00ff41; color: #fff; padding: 3px;">
+                        ` : ''}
+
+                        ${(obj.type === 'hack' || obj.type === 'eliminate' || obj.type === 'collect' || obj.type === 'interact') ? `
+                            Count: <input type="number" data-quest-index="${questIndex}" data-objective-index="${objIndex}" data-field="objectives.count"
+                                          value="${obj.count || 1}" min="1"
+                                          style="width: 50px; background: #333; border: 1px solid #00ff41; color: #fff; padding: 3px;">
+                        ` : ''}
+
+                        <button onclick="window.campaignManager.removeObjective(${questIndex}, ${objIndex})"
+                                style="background: #ff0000; color: #fff; border: none; padding: 3px 8px; cursor: pointer;">
+                            ×
+                        </button>
+                    </div>
+                    <input type="text" data-quest-index="${questIndex}" data-objective-index="${objIndex}" data-field="objectives.description"
+                           value="${escapeHtml(obj.description)}" placeholder="Objective description..."
+                           style="width: 100%; margin-top: 5px; background: #333; border: 1px solid #00ff41; color: #fff; padding: 3px;">
+                </div>
+            `;
+        });
+
+        html += `
+            <button onclick="window.campaignManager.addObjective(${questIndex})"
+                    style="background: #00ff41; color: #000; border: none; padding: 5px 10px; cursor: pointer; margin-top: 5px;">
+                + Add Objective
+            </button>
+        `;
+
+        html += '</div>';
+        return html;
+    }
+
+    generateQuestsEditor(quests, npcId) {
+        if (!quests || quests.length === 0) {
+            quests = [];
+        }
+
+        let html = '<div id="quest-list">';
+        quests.forEach((quest, index) => {
+            // Escape values for HTML attributes
+            const escapeHtml = (str) => (str || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            html += `
+                <div style="border: 1px solid #00ffff; padding: 10px; margin-bottom: 10px;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" data-quest-index="${index}" data-field="id"
+                               value="${escapeHtml(quest.id)}" placeholder="Quest ID"
+                               style="width: 150px; background: #222; border: 1px solid #00ff41; color: #fff; padding: 5px;">
+                        <input type="text" data-quest-index="${index}" data-field="name"
+                               value="${escapeHtml(quest.name)}" placeholder="Quest Name"
+                               style="flex: 1; background: #222; border: 1px solid #00ff41; color: #fff; padding: 5px;">
+                        <button onclick="window.campaignManager.removeQuestFromNPC('${npcId.replace(/'/g, "\\'")}', ${index})"
+                                style="background: #ff0000; color: #fff; border: none; padding: 5px 10px; cursor: pointer;">
+                            Remove
+                        </button>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <textarea data-quest-index="${index}" data-field="description"
+                                  style="width: 100%; background: #222; border: 1px solid #00ff41; color: #fff; padding: 5px; height: 40px;"
+                                  placeholder="Quest description...">${escapeHtml(quest.description)}</textarea>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="color: #88ff88; font-size: 12px;">Intro Dialog:</label>
+                        <textarea data-quest-index="${index}" data-field="introDialog"
+                                  style="width: 100%; background: #222; border: 1px solid #00ff41; color: #fff; padding: 5px; height: 40px; margin-top: 5px;"
+                                  placeholder="Dialog when quest is given...">${escapeHtml(quest.introDialog)}</textarea>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="color: #88ff88; font-size: 12px;">Completion Dialog:</label>
+                        <textarea data-quest-index="${index}" data-field="completionDialog"
+                                  style="width: 100%; background: #222; border: 1px solid #00ff41; color: #fff; padding: 5px; height: 40px; margin-top: 5px;"
+                                  placeholder="Dialog when quest is completed...">${escapeHtml(quest.completionDialog)}</textarea>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="color: #88ff88; font-size: 12px;">Objectives (Completion Conditions):</label>
+                        <div id="quest-${index}-objectives" style="margin-top: 5px;">
+                            ${this.generateObjectivesEditor(quest.objectives || [], index)}
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="color: #88ff88; font-size: 12px;">Rewards:</label>
+                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                            <input type="number" data-quest-index="${index}" data-field="rewards.credits"
+                                   value="${quest.rewards?.credits || 0}" placeholder="Credits"
+                                   style="width: 100px; background: #222; border: 1px solid #00ff41; color: #fff; padding: 5px;">
+                            <input type="number" data-quest-index="${index}" data-field="rewards.researchPoints"
+                                   value="${quest.rewards?.researchPoints || 0}" placeholder="Research"
+                                   style="width: 100px; background: #222; border: 1px solid #00ff41; color: #fff; padding: 5px;">
+                            <input type="number" data-quest-index="${index}" data-field="rewards.experience"
+                                   value="${quest.rewards?.experience || 0}" placeholder="XP"
+                                   style="width: 100px; background: #222; border: 1px solid #00ff41; color: #fff; padding: 5px;">
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        html += `<button onclick="window.campaignManager.addQuestToNPC('${npcId.replace(/'/g, "\\'")}')"
+                         style="background: #00ff41; color: #000; border: none; padding: 5px 15px; cursor: pointer;">
+                    Add Quest
+                 </button>`;
+        return html;
+    }
+
+    async addDialogNode() {
+        // Find the NPC template being edited
+        const dialogEl = document.querySelector('.dialog');
+        if (!dialogEl) return;
+
+        const npcIdInput = dialogEl.querySelector('#edit-npc-id');
+        if (!npcIdInput) return;
+
+        const npcId = npcIdInput.textContent;
+        const npc = this.currentCampaign.npcs[npcId];
+        if (!npc) return;
+
+        if (!npc.dialog) {
+            npc.dialog = [];
+        }
+
+        // Add new dialog node
+        npc.dialog.push({
+            text: 'Hello there!',
+            options: []
+        });
+
+        // Save and refresh
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.editNPCTemplate(npcId);
+    }
+
+    async removeDialogNode(index) {
+        if (!confirm('Are you sure you want to remove this dialog node?')) return;
+
+        // Find the NPC template being edited
+        const dialogEl = document.querySelector('.dialog');
+        if (!dialogEl) return;
+
+        const npcIdInput = dialogEl.querySelector('#edit-npc-id');
+        if (!npcIdInput) return;
+
+        const npcId = npcIdInput.textContent;
+        const npc = this.currentCampaign.npcs[npcId];
+        if (!npc || !npc.dialog) return;
+
+        // Remove the dialog node
+        npc.dialog.splice(index, 1);
+
+        // Save and refresh
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.editNPCTemplate(npcId);
+    }
+
+    // Legacy functions - no longer needed as we use quest editing in NPC templates
+    addQuest() {
+        console.warn('addQuest() is deprecated. Use addQuestToNPC(npcId) instead');
+    }
+
+    removeQuest(index) {
+        console.warn('removeQuest() is deprecated. Use removeQuestFromNPC(npcId, questIndex) instead');
+    }
+
+    async saveNPCTemplate(npcId) {
+        const npc = this.currentCampaign.npcs[npcId];
+        if (!npc) return;
+
+        // Get basic info
+        npc.name = document.getElementById('npc-name')?.value || 'Unnamed NPC';
+        npc.sprite = document.getElementById('npc-sprite')?.value || '👤';
+
+        // Get dialog nodes
+        const dialogTextareas = document.querySelectorAll('[data-dialog-index]');
+        npc.dialog = Array.from(dialogTextareas).map(textarea => ({
+            text: textarea.value,
+            options: []  // Simplified for now
+        }));
+
+        // Get quests
+        const questInputs = document.querySelectorAll('[data-quest-index]');
+        const questsMap = {};
+        questInputs.forEach(input => {
+            const index = input.dataset.questIndex;
+            const field = input.dataset.field;
+            if (!questsMap[index]) questsMap[index] = { rewards: {} };
+
+            // Handle nested rewards fields
+            if (field.startsWith('rewards.')) {
+                const rewardField = field.split('.')[1];
+                if (!questsMap[index].rewards) questsMap[index].rewards = {};
+                questsMap[index].rewards[rewardField] = parseInt(input.value) || 0;
+            } else {
+                questsMap[index][field] = input.value;
+            }
+        });
+
+        // Convert to array and filter out incomplete quests
+        npc.quests = Object.values(questsMap).filter(q => q.id && q.name).map(q => {
+            // Ensure rewards object exists even if empty
+            if (!q.rewards) q.rewards = {};
+            return q;
+        });
+
+        // Save and refresh
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.loadNPCs();
+
+        // Close dialog
+        const dialog = document.querySelector('.dialog');
+        if (dialog) dialog.remove();
+
+        this.editor.eventLogger.log(`Saved NPC template: ${npcId}`, 'success');
+    }
+
+    async deleteNPCTemplate(npcId) {
+        if (!confirm(`Are you sure you want to delete NPC "${npcId}"?`)) return;
+
+        delete this.currentCampaign.npcs[npcId];
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.loadNPCs();
+        this.editor.eventLogger.log(`Deleted NPC template: ${npcId}`, 'info');
+    }
+
+    // Quest objective helper functions
+    async updateObjectiveType(questIndex, objIndex, newType) {
+        // Find the NPC template being edited
+        const dialogEl = document.querySelector('.dialog');
+        if (!dialogEl) return;
+
+        const npcIdInput = dialogEl.querySelector('#edit-npc-id');
+        if (!npcIdInput) return;
+
+        const npcId = npcIdInput.textContent;
+        const npc = this.currentCampaign.npcs[npcId];
+        if (!npc || !npc.quests || !npc.quests[questIndex]) return;
+
+        const quest = npc.quests[questIndex];
+        if (!quest.objectives || !quest.objectives[objIndex]) return;
+
+        const objective = quest.objectives[objIndex];
+        objective.type = newType;
+
+        // Reset fields based on type
+        switch(newType) {
+            case 'hack':
+            case 'eliminate':
+                objective.count = objective.count || 1;
+                delete objective.x;
+                delete objective.y;
+                delete objective.item;
+                delete objective.targetId;
+                break;
+            case 'reach':
+                objective.x = objective.x || 0;
+                objective.y = objective.y || 0;
+                delete objective.count;
+                delete objective.item;
+                delete objective.targetId;
+                break;
+            case 'collect':
+                objective.item = objective.item || 'item_id';
+                objective.count = objective.count || 1;
+                delete objective.x;
+                delete objective.y;
+                delete objective.targetId;
+                break;
+            case 'interact':
+                objective.targetId = objective.targetId || 'target_id';
+                delete objective.count;
+                delete objective.x;
+                delete objective.y;
+                delete objective.item;
+                break;
+        }
+
+        // Save and refresh the dialog
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.editNPCTemplate(npcId); // Refresh the dialog
+    }
+
+    async addObjective(questIndex) {
+        // Find the NPC template being edited
+        const dialogEl = document.querySelector('.dialog');
+        if (!dialogEl) return;
+
+        const npcIdInput = dialogEl.querySelector('#edit-npc-id');
+        if (!npcIdInput) return;
+
+        const npcId = npcIdInput.textContent;
+        const npc = this.currentCampaign.npcs[npcId];
+        if (!npc || !npc.quests || !npc.quests[questIndex]) return;
+
+        const quest = npc.quests[questIndex];
+        if (!quest.objectives) {
+            quest.objectives = [];
+        }
+
+        // Add new objective with default values
+        quest.objectives.push({
+            id: `obj_${Date.now()}`,
+            type: 'hack',
+            description: 'New objective',
+            count: 1
+        });
+
+        // Save and refresh
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.editNPCTemplate(npcId);
+    }
+
+    async removeObjective(questIndex, objIndex) {
+        if (!confirm('Are you sure you want to remove this objective?')) return;
+
+        // Find the NPC template being edited
+        const dialogEl = document.querySelector('.dialog');
+        if (!dialogEl) return;
+
+        const npcIdInput = dialogEl.querySelector('#edit-npc-id');
+        if (!npcIdInput) return;
+
+        const npcId = npcIdInput.textContent;
+        const npc = this.currentCampaign.npcs[npcId];
+        if (!npc || !npc.quests || !npc.quests[questIndex]) return;
+
+        const quest = npc.quests[questIndex];
+        if (!quest.objectives || !quest.objectives[objIndex]) return;
+
+        // Remove the objective
+        quest.objectives.splice(objIndex, 1);
+
+        // Save and refresh
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.editNPCTemplate(npcId);
+    }
+
+    async addQuestToNPC(npcId) {
+        const npc = this.currentCampaign.npcs[npcId];
+        if (!npc) return;
+
+        if (!npc.quests) {
+            npc.quests = [];
+        }
+
+        // Add new quest with default values
+        npc.quests.push({
+            id: `quest_${Date.now()}`,
+            name: 'New Quest',
+            description: 'Quest description',
+            introDialog: 'Quest introduction dialog',
+            completionDialog: 'Quest completion dialog',
+            objectives: [
+                {
+                    id: 'obj_1',
+                    type: 'hack',
+                    description: 'Complete the objective',
+                    count: 1
+                }
+            ],
+            rewards: {
+                credits: 500,
+                experience: 100
+            }
+        });
+
+        // Save and refresh
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.editNPCTemplate(npcId);
+    }
+
+    async removeQuestFromNPC(npcId, questIndex) {
+        if (!confirm('Are you sure you want to remove this quest?')) return;
+
+        const npc = this.currentCampaign.npcs[npcId];
+        if (!npc || !npc.quests) return;
+
+        npc.quests.splice(questIndex, 1);
+
+        // Save and refresh
+        await this.saveCampaignToDB(this.currentCampaign);
+        this.editNPCTemplate(npcId);
     }
 
     loadFormulasTab() {
@@ -6280,7 +7504,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Initialize campaign manager (which will load from IndexedDB if available)
-    campaignManager = new CampaignManager(editor);
+    window.campaignManager = new CampaignManager(editor);
+    campaignManager = window.campaignManager;  // Keep local reference for compatibility
 
     // Wait for campaign manager to initialize and load from IndexedDB
     setTimeout(async () => {

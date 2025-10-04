@@ -38,6 +38,17 @@
             <div id="tools-panel">
                 <div class="panel-header">Tools</div>
 
+                <!-- Select Tool -->
+                <div class="tool-section">
+                    <h3>Select & Move</h3>
+                    <div class="tool-grid">
+                        <button class="tool-btn" data-tool="select" title="Click to select entities, drag to move them (Shortcut: V)">
+                            <div class="tool-preview" style="background: #4a8eff; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white;">↖</div>
+                            <span>Select</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Tile Tools -->
                 <div class="tool-section">
                     <h3>Map Tiles</h3>
@@ -271,49 +282,30 @@
 
     <div id="npc-dialog" class="dialog" style="display:none;">
         <div class="dialog-content">
-            <h2>Edit NPC</h2>
-            <label>Name: <input type="text" id="npc-name"></label>
-            <label>Type:
-                <select id="npc-type">
-                    <option value="civilian">Civilian</option>
-                    <option value="informant">Informant</option>
-                    <option value="merchant">Merchant</option>
-                    <option value="guard">Guard</option>
-                    <option value="scientist">Scientist</option>
-                    <option value="hacker">Hacker</option>
+            <h2>Place NPC in Mission</h2>
+
+            <label>NPC Template:
+                <select id="npc-template-select">
+                    <option value="">Select NPC from campaign...</option>
+                    <!-- Will be populated from campaign NPCs -->
                 </select>
             </label>
-            <label>Position: X: <input type="number" id="npc-x" min="0"> Y: <input type="number" id="npc-y" min="0"></label>
 
-            <h3>RPG Stats</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <label>Level: <input type="number" id="npc-level" value="1" min="1" max="20"></label>
-                <label>Class:
-                    <select id="npc-class">
-                        <option value="">None</option>
-                        <option value="civilian">Civilian</option>
-                        <option value="soldier">Soldier</option>
-                        <option value="infiltrator">Infiltrator</option>
-                        <option value="tech">Tech Specialist</option>
-                        <option value="medic">Medic</option>
-                    </select>
-                </label>
-                <label>Health: <input type="number" id="npc-health" value="100" min="1" max="500"></label>
-                <label>AP (Turn-based): <input type="number" id="npc-ap" value="8" min="1" max="20"></label>
-                <label>Strength: <input type="number" id="npc-strength" value="10" min="1" max="20"></label>
-                <label>Agility: <input type="number" id="npc-agility" value="10" min="1" max="20"></label>
-                <label>Intelligence: <input type="number" id="npc-intelligence" value="10" min="1" max="20"></label>
-                <label>Charisma: <input type="number" id="npc-charisma" value="10" min="1" max="20"></label>
+            <label>Position:
+                X: <input type="number" id="npc-x" min="0" max="200" value="10">
+                Y: <input type="number" id="npc-y" min="0" max="200" value="10">
+            </label>
+
+            <div id="npc-template-info" style="display:none; margin: 15px 0; padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px;">
+                <h4 style="color: var(--accent);">NPC Info</h4>
+                <div id="npc-info-content"></div>
             </div>
 
-            <h3>Dialog Tree</h3>
-            <div id="dialog-tree-editor">
-                <textarea id="npc-dialog" rows="10" placeholder="Enter dialog in JSON format"></textarea>
-            </div>
-
-            <h3>Quests</h3>
-            <div id="npc-quests">
-                <textarea id="npc-quests-data" rows="5" placeholder="Enter quests in JSON format"></textarea>
+            <h3>Active Quests</h3>
+            <div id="npc-quest-selection" style="background: var(--bg-tertiary); padding: 10px; border-radius: 4px; min-height: 50px;">
+                <div id="quest-checkboxes">
+                    <p style="opacity: 0.7; font-size: 12px;">Select an NPC template first</p>
+                </div>
             </div>
 
             <div class="dialog-buttons">
@@ -386,6 +378,7 @@
                 <button class="campaign-tab active" data-tab="overview" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Overview</button>
                 <button class="campaign-tab" data-tab="missions" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Missions</button>
                 <button class="campaign-tab" data-tab="agents" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Agents</button>
+                <button class="campaign-tab" data-tab="npcs" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">NPCs</button>
                 <button class="campaign-tab" data-tab="weapons" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Weapons & Equipment</button>
                 <button class="campaign-tab" data-tab="enemies" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Enemy Types</button>
                 <button class="campaign-tab" data-tab="research" style="background: #0a0e27; color: #00ff41; border: 1px solid #00ff41; border-bottom: none; padding: 10px 20px; cursor: pointer;">Research Tree</button>
@@ -472,6 +465,22 @@
                     <button id="add-agent" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">➕ Add New Agent</button>
                     <div id="agents-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 500px; overflow-y: auto;">
                         <!-- Will be populated with agents -->
+                    </div>
+                </div>
+
+                <!-- NPCs Tab -->
+                <div id="tab-npcs" class="campaign-tab-content" style="display: none;">
+                    <h3>Campaign NPCs</h3>
+                    <button id="add-npc-template" onclick="window.campaignManager.addNPCTemplate()" style="margin-bottom: 10px; padding: 10px; background: #00ff41; color: #1a1a2e; border: none; cursor: pointer;">➕ Add New NPC Template</button>
+                    <div id="npc-templates-list" style="background: #0a0e27; padding: 10px; border-radius: 4px; max-height: 400px; overflow-y: auto;">
+                        <!-- Will be populated with NPC templates -->
+                    </div>
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(0, 255, 65, 0.1); border: 1px solid #00ff41; border-radius: 4px;">
+                        <h4 style="color: #00ff41;">NPC Template Info</h4>
+                        <p style="color: #88ff88; font-size: 12px;">
+                            NPCs are defined here and referenced in missions. Each template needs:
+                            ID, Name, Sprite, Dialog trees, Quests, and Movement type.
+                        </p>
                     </div>
                 </div>
 
@@ -862,6 +871,9 @@
 
     <!-- Load campaign system for editor -->
     <script src="js/campaign-loader-editor.js"></script>
+
+    <!-- Load NPC templates -->
+    <script src="campaigns/main/npcs.js"></script>
 
     <!-- Editor script -->
     <script src="mission-editor.js"></script>

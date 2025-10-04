@@ -488,3 +488,152 @@ input[type="checkbox"] {
         opacity: 0;
     }
 }
+
+/* Quest and Dialog Tree Editors */
+.tree-editor {
+    margin: 10px 0;
+}
+
+.tree-nodes,
+.quest-list {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.dialog-node,
+.quest-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--text-secondary);
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.dialog-node:hover,
+.quest-item:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.node-header,
+.quest-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.node-title,
+.quest-title {
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.node-actions,
+.quest-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.mini-btn {
+    background: transparent;
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.mini-btn:hover {
+    background: var(--text-secondary);
+    color: var(--bg-primary);
+}
+
+.mini-btn.delete {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.mini-btn.delete:hover {
+    background: var(--danger);
+    color: var(--bg-primary);
+}
+
+.dialog-options {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.dialog-option {
+    background: var(--bg-primary);
+    border-left: 3px solid var(--accent);
+    padding: 5px 10px;
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+.quest-objectives {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.objective-item {
+    background: var(--bg-primary);
+    border-left: 3px solid var(--warning);
+    padding: 5px 10px;
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+.quest-rewards {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.reward-badge {
+    background: var(--bg-primary);
+    border: 1px solid var(--success);
+    color: var(--success);
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+.tree-input {
+    width: 100%;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 5px;
+    margin: 5px 0;
+    font-family: inherit;
+}
+
+.tree-input:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+.fallback-json {
+    opacity: 0.7;
+}
+
+.fallback-json textarea {
+    width: 100%;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    resize: vertical;
+}
