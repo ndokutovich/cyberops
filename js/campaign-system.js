@@ -42,7 +42,16 @@ const CampaignSystem = {
             script.src = 'campaigns/index.js';
 
             window.REGISTER_CAMPAIGNS = (campaigns) => {
-                this.campaigns = campaigns;
+                // Merge campaign structure with existing content (don't overwrite!)
+                for (const [id, campaign] of Object.entries(campaigns)) {
+                    if (this.campaigns[id]) {
+                        // Campaign already has content - merge structure into it
+                        Object.assign(this.campaigns[id], campaign);
+                    } else {
+                        // New campaign - just add it
+                        this.campaigns[id] = campaign;
+                    }
+                }
                 if (campaignLogger) campaignLogger.info(`✅ Loaded ${Object.keys(campaigns).length} campaigns from index`);
             };
 
@@ -58,7 +67,7 @@ const CampaignSystem = {
 
     // Load hardcoded campaign structure (no file scanning)
     loadHardcodedCampaigns() {
-        this.campaigns = {
+        const hardcodedCampaigns = {
             'main': {
                 id: 'main',
                 name: 'Main Campaign',
@@ -86,6 +95,17 @@ const CampaignSystem = {
                 ]
             }
         };
+
+        // Merge hardcoded structure with existing content (don't overwrite!)
+        for (const [id, campaign] of Object.entries(hardcodedCampaigns)) {
+            if (this.campaigns[id]) {
+                // Campaign already has content - merge structure into it
+                Object.assign(this.campaigns[id], campaign);
+            } else {
+                // New campaign - just add it
+                this.campaigns[id] = campaign;
+            }
+        }
 
         if (campaignLogger) campaignLogger.info('✅ Loaded hardcoded campaign structure');
     },

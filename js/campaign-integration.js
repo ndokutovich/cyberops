@@ -17,241 +17,61 @@ CyberOpsGame.prototype.initCampaignSystem = async function() {
 CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
     if (this.logger) this.logger.debug(`📦 Loading content for campaign: ${campaignId}`);
 
-    try {
-        // First try to use the new flexible content loader
-        if (window.ContentLoader && window.CampaignSystem) {
-            if (this.logger) this.logger.debug('🚀 Using flexible content loader system');
-
-            // Get complete campaign from unified store (includes structure + content + config)
-            // getCampaign throws if campaign not found (fail fast)
-            const campaign = window.CampaignSystem.getCampaign(campaignId);
-
-            // Campaign already has everything merged via registerCampaignConfig/Content
-            // Just ensure required fields for ContentLoader
-            const completeCampaign = {
-                ...campaign,
-                // Map enemyTypes to enemies for ContentLoader compatibility
-                enemies: campaign.enemyTypes || campaign.enemies || [],
-                // Ensure metadata exists
-                metadata: campaign.metadata || {
-                    id: campaign.id || campaignId,
-                    name: campaign.name || 'Campaign',
-                    version: '1.0.0',
-                    description: campaign.description || ''
-                },
-                // Missions will be loaded separately by campaign system
-                missions: campaign.missions || []
-            };
-
-            const success = await window.ContentLoader.loadCampaign(completeCampaign, this);
-
-            if (success) {
-                if (this.logger) this.logger.info('✅ Campaign loaded via flexible system');
-
-                // Apply starting resources if new game
-                if (!this.campaignStarted) {
-                    const economy = window.ContentLoader.getContent('economy');
-                    if (economy && this.gameServices?.resourceService) {
-                        // Use ResourceService ONLY
-                        this.gameServices.resourceService.set('credits', economy.startingCredits || 5000, 'campaign start');
-                        this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints || 100, 'campaign start');
-                        this.gameServices.resourceService.set('worldControl', economy.startingWorldControl || 0, 'campaign start');
-                    }
-                    this.campaignStarted = true;
-                }
-
-                // The flexible loader already set up agents, weapons, etc.
-                return;
-            } else {
-                if (this.logger) this.logger.warn('Campaign config or content not found, falling back to legacy loading');
-            }
-        }
-    } catch (flexibleLoaderError) {
-        if (this.logger) this.logger.warn('Flexible loader failed, falling back to legacy loading:', flexibleLoaderError);
+    // ONLY use the new flexible content loader - no fallback
+    if (!window.ContentLoader || !window.CampaignSystem) {
+        throw new Error('ContentLoader and CampaignSystem are required - legacy loading removed');
     }
 
-    // Fallback: Legacy loading path
-    try {
-        // Load the campaign content file
-        const script = document.createElement('script');
-        script.src = `campaigns/${campaignId}/campaign-content.js`;
-        await new Promise((resolve, reject) => {
-            script.onload = resolve;
-            script.onerror = () => {
-                if (this.logger) this.logger.warn(`No campaign content file for ${campaignId}, using defaults`);
-                resolve(); // Don't fail if no content file
-            };
-            document.head.appendChild(script);
-        });
+    if (this.logger) this.logger.debug('🚀 Using flexible content loader system');
 
-        // Check if content was loaded
-        const content = window.MAIN_CAMPAIGN_CONTENT ||
-                       (window.CampaignSystem && window.CampaignSystem.getCampaignContent && window.CampaignSystem.getCampaignContent(campaignId));
+    // Get complete campaign from unified store (includes structure + content + config)
+    // getCampaign throws if campaign not found (fail fast)
+    const campaign = window.CampaignSystem.getCampaign(campaignId);
 
-        if (content) {
-            if (this.logger) this.logger.info('✅ Campaign content loaded (legacy), applying to game...');
-            if (this.logger) this.logger.debug(`📦 Content has enemyTypes? ${!!content.enemyTypes}, count: ${content.enemyTypes?.length || 0}`);
+    // Debug: Check what we actually got
+    if (this.logger) this.logger.debug(`📊 Campaign object keys: ${Object.keys(campaign).join(', ')}`);
+    if (this.logger) this.logger.debug(`📊 Has agents? ${!!campaign.agents}, count: ${campaign.agents?.length || 0}`);
+    if (this.logger) this.logger.debug(`📊 Has weapons? ${!!campaign.weapons}, count: ${campaign.weapons?.length || 0}`);
+    if (this.logger) this.logger.debug(`📊 Has equipment? ${!!campaign.equipment}, count: ${campaign.equipment?.length || 0}`);
 
-            // Apply starting resources if this is a new game
-            if (!this.campaignStarted) {
-                // Use ResourceService ONLY
-                this.gameServices.resourceService.set('credits', content.startingResources.credits, 'campaign start');
-                this.gameServices.resourceService.set('researchPoints', content.startingResources.researchPoints, 'campaign start');
-                this.gameServices.resourceService.set('worldControl', content.startingResources.worldControl, 'campaign start');
-                this.campaignStarted = true;
-            }
+    // Campaign already has everything merged via registerCampaignConfig/Content
+    // Just ensure required fields for ContentLoader
+    const completeCampaign = {
+        ...campaign,
+        // Map enemyTypes to enemies for ContentLoader compatibility
+        enemies: campaign.enemyTypes || campaign.enemies || [],
+        // Ensure metadata exists
+        metadata: campaign.metadata || {
+            id: campaign.id || campaignId,
+            name: campaign.name || 'Campaign',
+            version: '1.0.0',
+            description: campaign.description || ''
+        },
+        // Missions will be loaded separately by campaign system
+        missions: campaign.missions || []
+    };
 
-            // Load agents
-            if (content.agents) {
-                // Use AgentService ONLY
-                this.gameServices.agentService.initialize(content.agents);
-                if (this.logger) this.logger.info(`✅ Loaded ${content.agents.length} agents`);
+    const success = await window.ContentLoader.loadCampaign(completeCampaign, this);
 
-                // Re-initialize equipment loadouts for newly loaded agents
-                if (this.activeAgents.length > 0) {
-                    if (this.logger) this.logger.debug('🔧 Initializing equipment loadouts for active agents...');
-                    if (!this.agentLoadouts) {
-                        this.agentLoadouts = {};
-                    }
-                    this.activeAgents.forEach(agent => {
-                        if (!this.agentLoadouts[agent.id]) {
-                            this.agentLoadouts[agent.id] = {
-                                weapon: null,
-                                armor: null,
-                                utility: null,
-                                special: null
-                            };
-                            if (this.logger) this.logger.debug(`   - Created loadout for ${agent.name} (ID: ${agent.id})`);
-                        }
-                    });
-                }
-            }
-
-            // Load weapons into InventoryService
-            if (content.weapons && this.gameServices.inventoryService) {
-                this.gameServices.inventoryService.initialize({
-                    weapons: content.weapons
-                });
-                if (this.logger) this.logger.info(`✅ Loaded ${content.weapons.length} weapons into InventoryService`);
-            }
-
-            // Load equipment into InventoryService
-            if (content.equipment && this.gameServices.inventoryService) {
-                this.gameServices.inventoryService.initialize({
-                    equipment: content.equipment
-                });
-                if (this.logger) this.logger.info(`✅ Loaded ${content.equipment.length} equipment items into InventoryService`);
-            }
-
-            // Store enemy types for mission spawning
-            if (content.enemyTypes) {
-                this.campaignEnemyTypes = content.enemyTypes;
-                if (this.logger) this.logger.info(`✅ Loaded ${content.enemyTypes.length} enemy types`);
-            } else {
-                if (this.logger) this.logger.warn('⚠️ No enemyTypes found in campaign content');
-            }
-
-            // Store research tree
-            if (content.researchTree) {
-                this.researchTree = content.researchTree;
-                if (this.logger) this.logger.info('✅ Loaded research tree');
-            }
-
-            // Store intel reports
-            if (content.intelReports) {
-                this.campaignIntelReports = content.intelReports;
-                if (this.logger) this.logger.info(`✅ Loaded ${content.intelReports.length} intel reports`);
-            }
-
-            // Store abilities
-            if (content.abilities) {
-                this.campaignAbilities = content.abilities;
-                if (this.logger) this.logger.info(`✅ Loaded ${content.abilities.length} abilities`);
-            }
-
-            // Store milestones
-            if (content.milestones) {
-                this.campaignMilestones = content.milestones;
-                if (this.logger) this.logger.info(`✅ Loaded ${content.milestones.length} milestones`);
-            }
-
-            // Load game configuration
-            if (content.gameConfig) {
-                // Apply configuration constants
-                if (content.gameConfig.demosceneIdleTimeout !== undefined) {
-                    this.DEMOSCENE_IDLE_TIMEOUT = content.gameConfig.demosceneIdleTimeout;
-                }
-                if (content.gameConfig.musicMenuStartTime !== undefined) {
-                    this.MUSIC_MENU_START_TIME = content.gameConfig.musicMenuStartTime;
-                }
-                if (content.gameConfig.speedIndicatorFadeTime !== undefined) {
-                    this.speedIndicatorFadeTime = content.gameConfig.speedIndicatorFadeTime;
-                }
-                if (content.gameConfig.defaultHackTime !== undefined) {
-                    this.defaultHackTime = content.gameConfig.defaultHackTime;
-                }
-                if (content.gameConfig.defaultMissionRewards) {
-                    this.defaultMissionRewards = content.gameConfig.defaultMissionRewards;
-                }
-                if (this.logger) this.logger.info('✅ Loaded game configuration');
-            }
-
-            // Load agent generation system
-            if (content.agentGeneration) {
-                this.agentGeneration = content.agentGeneration;
-                if (this.logger) this.logger.info('✅ Loaded agent generation system');
-            }
-
-            // Load death system
-            if (content.deathSystem) {
-                this.deathSystem = content.deathSystem;
-                if (this.logger) this.logger.info('✅ Loaded death system');
-            }
-
-            // Load skill definitions
-            if (content.skillDefinitions) {
-                this.skillDefinitions = content.skillDefinitions;
-                if (this.logger) this.logger.info(`✅ Loaded ${Object.keys(content.skillDefinitions).length} skill definitions`);
-            }
-
-            // Load UI text
-            if (content.uiText) {
-                this.uiText = content.uiText;
-                if (this.logger) this.logger.info('✅ Loaded UI text and labels');
-            }
-
-            // Load gameplay constants
-            if (content.gameplayConstants) {
-                // Apply tile dimensions
-                if (content.gameplayConstants.tileWidth !== undefined) {
-                    this.tileWidth = content.gameplayConstants.tileWidth;
-                }
-                if (content.gameplayConstants.tileHeight !== undefined) {
-                    this.tileHeight = content.gameplayConstants.tileHeight;
-                }
-
-                // Store all constants for reference
-                this.gameplayConstants = content.gameplayConstants;
-                if (this.logger) this.logger.info('✅ Loaded gameplay constants');
-            }
-
-            // Load music configuration
-            if (content.music) {
-                this.campaignMusic = content.music;
-                if (this.logger) this.logger.info('✅ Loaded music configuration');
-
-                // Could update the GAME_MUSIC_CONFIG here if we want to override the hardcoded one
-                // For now, just store it for use by music systems
-            }
-
-            if (this.logger) this.logger.info('✅ Campaign content fully loaded');
-        } else {
-            if (this.logger) this.logger.debug('⚠️ No campaign content found, using hardcoded defaults');
-        }
-    } catch (e) {
-        if (this.logger) this.logger.error('Failed to load campaign content:', e);
-        if (this.logger) this.logger.debug('⚠️ Using hardcoded defaults');
+    if (!success) {
+        throw new Error(`Failed to load campaign: ${campaignId}`);
     }
+
+    if (this.logger) this.logger.info('✅ Campaign loaded via flexible system');
+
+    // Apply starting resources if new game
+    if (!this.campaignStarted) {
+        const economy = window.ContentLoader.getContent('economy');
+        if (economy && this.gameServices?.resourceService) {
+            // Use ResourceService ONLY
+            this.gameServices.resourceService.set('credits', economy.startingCredits || 5000, 'campaign start');
+            this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints || 100, 'campaign start');
+            this.gameServices.resourceService.set('worldControl', economy.startingWorldControl || 0, 'campaign start');
+        }
+        this.campaignStarted = true;
+    }
+
+    // The flexible loader already set up agents, weapons, etc.
 };
 
 // Load missions from campaign system

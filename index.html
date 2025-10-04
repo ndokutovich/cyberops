@@ -498,12 +498,14 @@
     <script src="js/game-mission-constants.js"></script>
     <script src="js/game-mission-executor.js"></script>
     <script src="js/game-mission-integration.js"></script>
-    <script src="js/campaign-integration.js"></script>
 
-    <!-- Campaign Configuration -->
+    <!-- Campaign Configuration - MUST load BEFORE campaign-integration.js -->
     <script src="campaigns/main/campaign-content.js"></script>
     <script src="campaigns/main/campaign-config.js"></script>
     <script src="campaigns/main/npcs.js"></script>
+
+    <!-- Campaign Integration - loads after content is registered -->
+    <script src="js/campaign-integration.js"></script>
 
     <script src="js/game-init.js"></script>
 
