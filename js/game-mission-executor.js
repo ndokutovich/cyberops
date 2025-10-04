@@ -583,6 +583,38 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
             obj.active = true;
         }
 
+        // Check custom objectives with checkFunction
+        if (obj.type === 'custom' && obj.checkFunction && !obj.completed) {
+            let checkResult = false;
+
+            // Try to find and call the check function
+            try {
+                // First check if it's a window function (from exported mission)
+                if (window[obj.checkFunction]) {
+                    checkResult = window[obj.checkFunction](this, obj, this.gameServices?.missionService);
+                    if (this.logger) this.logger.trace(`  Custom check ${obj.checkFunction}: ${checkResult}`);
+                }
+                // Also check if it's a game method
+                else if (this[obj.checkFunction]) {
+                    checkResult = this[obj.checkFunction](obj);
+                    if (this.logger) this.logger.trace(`  Game method ${obj.checkFunction}: ${checkResult}`);
+                }
+
+                // If custom check returns true, complete the objective
+                if (checkResult && !obj.completed) {
+                    if (this.gameServices?.missionService) {
+                        this.gameServices.missionService.completeObjective(obj.id);
+                    } else {
+                        obj.completed = true;
+                        obj.status = 'completed';
+                    }
+                    if (this.logger) this.logger.info(`✅ Custom objective completed via ${obj.checkFunction}: ${obj.description}`);
+                }
+            } catch (error) {
+                if (this.logger) this.logger.error(`❌ Error in custom check function ${obj.checkFunction}:`, error);
+            }
+        }
+
         // MissionService already tracks completion, just check if status changed
         const wasComplete = obj.completed || (obj.status === 'completed');
         const isNowComplete = obj.status === 'completed' || obj.completed === true;

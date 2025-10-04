@@ -407,7 +407,79 @@
 
             items: {
                 weapons: {
-                    // This will be populated from existing weapons
+                    // Standard weapons (moved from campaign-content.js)
+                    silencedPistol: {
+                        id: "weapon_silenced_pistol",
+                        name: "Silenced Pistol",
+                        description: "Quiet and effective for stealth operations",
+                        icon: "🔫",
+                        type: "weapon",
+                        slot: "primary",
+                        weight: 3,
+                        value: 500,
+                        stats: {
+                            damage: 15,
+                            accuracy: 90,
+                            critChance: 10,
+                            silenced: true
+                        },
+                        rarity: "common",
+                        initialOwned: 3  // Starting inventory
+                    },
+                    assaultRifle: {
+                        id: "weapon_assault_rifle",
+                        name: "Assault Rifle",
+                        description: "Standard military-grade automatic weapon",
+                        icon: "🔫",
+                        type: "weapon",
+                        slot: "primary",
+                        weight: 5,
+                        value: 800,
+                        stats: {
+                            damage: 25,
+                            accuracy: 85,
+                            critChance: 12,
+                            fireRate: "auto"
+                        },
+                        rarity: "common",
+                        initialOwned: 1
+                    },
+                    sniperRifle: {
+                        id: "weapon_sniper_rifle",
+                        name: "Sniper Rifle",
+                        description: "Long-range precision weapon",
+                        icon: "🎯",
+                        type: "weapon",
+                        slot: "primary",
+                        weight: 6,
+                        value: 1200,
+                        stats: {
+                            damage: 40,
+                            accuracy: 95,
+                            critChance: 25,
+                            range: 15
+                        },
+                        rarity: "uncommon",
+                        initialOwned: 0
+                    },
+                    smg: {
+                        id: "weapon_smg",
+                        name: "SMG",
+                        description: "Rapid-fire close combat weapon",
+                        icon: "🔫",
+                        type: "weapon",
+                        slot: "primary",
+                        weight: 4,
+                        value: 600,
+                        stats: {
+                            damage: 20,
+                            accuracy: 75,
+                            critChance: 8,
+                            fireRate: "burst"
+                        },
+                        rarity: "common",
+                        initialOwned: 2
+                    },
 
                     // UNIQUE WEAPON - Only available from Viktor's shop
                     ghostPrototype: {
@@ -430,7 +502,77 @@
                     }
                 },
                 armor: {
-                    // This will be populated from existing equipment
+                    // Armor/Equipment (moved from campaign-content.js)
+                    bodyArmor: {
+                        id: "armor_body_armor",
+                        name: "Body Armor",
+                        description: "Reduces damage from enemy attacks",
+                        icon: "🛡️",
+                        type: "armor",
+                        slot: "chest",
+                        weight: 8,
+                        value: 300,
+                        stats: {
+                            protection: 10,
+                            moveSpeedPenalty: -1
+                        },
+                        rarity: "common",
+                        initialOwned: 3
+                    },
+                    stealthSuit: {
+                        id: "armor_stealth_suit",
+                        name: "Stealth Suit",
+                        description: "Reduces enemy detection range",
+                        icon: "🥷",
+                        type: "armor",
+                        slot: "chest",
+                        weight: 4,
+                        value: 800,
+                        stats: {
+                            protection: 5,
+                            stealthBonus: 25,
+                            detectionRadius: -2
+                        },
+                        rarity: "uncommon",
+                        initialOwned: 1
+                    }
+                },
+                utility: {
+                    // Utility items (moved/created from equipment)
+                    hackingKit: {
+                        id: "util_hacking_kit",
+                        name: "Hacking Kit",
+                        description: "Speeds up terminal hacking",
+                        icon: "💻",
+                        type: "utility",
+                        slot: "utility",
+                        weight: 2,
+                        value: 400,
+                        stats: {
+                            hackBonus: 20,
+                            hackSpeed: 1.5
+                        },
+                        rarity: "common",
+                        initialOwned: 2
+                    },
+                    explosivesKit: {
+                        id: "util_explosives_kit",
+                        name: "Explosives Kit",
+                        description: "Demolition charges for objectives",
+                        icon: "💣",
+                        type: "utility",
+                        slot: "utility",
+                        weight: 5,
+                        value: 600,
+                        stats: {
+                            explosiveDamage: 50,
+                            blastRadius: 3
+                        },
+                        rarity: "uncommon",
+                        initialOwned: 1,
+                        consumable: true,
+                        charges: 3
+                    }
                 },
                 consumables: {
                     medkit: {
@@ -458,7 +600,29 @@
                     priceMultiplier: 1.2,  // 20% markup
                     sellPriceMultiplier: 0.5,  // Buy back at 50% value
                     infiniteStock: true,
-                    itemCategories: ["weapons", "armor", "utility"],
+                    itemCategories: ["weapons", "armor", "utility", "consumables"],
+                    // Items available in shop (references to items defined above)
+                    availableItems: {
+                        weapons: [
+                            "weapon_silenced_pistol",
+                            "weapon_assault_rifle",
+                            "weapon_sniper_rifle",
+                            "weapon_smg",
+                            "weapon_ghost_prototype"  // Exclusive
+                        ],
+                        armor: [
+                            "armor_body_armor",
+                            "armor_stealth_suit"
+                        ],
+                        utility: [
+                            "util_hacking_kit",
+                            "util_explosives_kit"
+                        ],
+                        consumables: [
+                            "medkit",
+                            "stimpack"
+                        ]
+                    },
                     exclusiveItems: ["weapon_ghost_prototype"]  // Viktor's exclusive inventory
                 }
             }

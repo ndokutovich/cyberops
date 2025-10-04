@@ -191,14 +191,89 @@ class ContentLoader {
     }
 
     /**
-     * Load weapons and equipment
+     * Load weapons and equipment from RPG config
      */
     loadEquipment(game) {
-        if (logger) logger.debug('🔫 Loading equipment...');
+        if (logger) logger.debug('🔫 Loading equipment from RPG config...');
 
         const inventoryService = window.GameServices?.inventoryService;
-        if (inventoryService) {
-            // Load weapons
+        if (!inventoryService) return;
+
+        // Check both old location (for backward compatibility) and new RPG location
+        const rpgItems = this.currentCampaign.rpgConfig?.items || {};
+        const hasRPGItems = rpgItems.weapons || rpgItems.armor || rpgItems.utility;
+
+        // If we have items in the new RPG structure, use those
+        if (hasRPGItems) {
+            if (logger) logger.debug('📦 Loading items from RPG config structure');
+
+            // Convert RPG items to array format for inventory service
+            const weapons = [];
+            const equipment = [];
+
+            // Process weapons
+            if (rpgItems.weapons) {
+                Object.entries(rpgItems.weapons).forEach(([id, weapon]) => {
+                    weapons.push({
+                        ...weapon,
+                        id: weapon.id || id,
+                        owned: weapon.owned || 0,
+                        equipped: weapon.equipped || 0
+                    });
+                });
+            }
+
+            // Process armor
+            if (rpgItems.armor) {
+                Object.entries(rpgItems.armor).forEach(([id, armor]) => {
+                    equipment.push({
+                        ...armor,
+                        id: armor.id || id,
+                        type: 'armor',
+                        owned: armor.owned || 0,
+                        equipped: armor.equipped || 0
+                    });
+                });
+            }
+
+            // Process utility items
+            if (rpgItems.utility) {
+                Object.entries(rpgItems.utility).forEach(([id, utility]) => {
+                    equipment.push({
+                        ...utility,
+                        id: utility.id || id,
+                        type: 'utility',
+                        owned: utility.owned || 0,
+                        equipped: utility.equipped || 0
+                    });
+                });
+            }
+
+            // Process special items
+            if (rpgItems.special) {
+                Object.entries(rpgItems.special).forEach(([id, special]) => {
+                    equipment.push({
+                        ...special,
+                        id: special.id || id,
+                        type: 'special',
+                        owned: special.owned || 0,
+                        equipped: special.equipped || 0
+                    });
+                });
+            }
+
+            // Initialize inventory service with converted items
+            inventoryService.initialize({ weapons, equipment });
+            this.contentCache.set('weapons', weapons);
+            this.contentCache.set('equipment', equipment);
+
+            if (logger) logger.debug(`✅ Loaded ${weapons.length} weapons and ${equipment.length} equipment items from RPG config`);
+
+        } else if (this.currentCampaign.weapons || this.currentCampaign.equipment) {
+            // Fall back to old structure for backward compatibility
+            if (logger) logger.debug('⚠️ Using legacy weapons/equipment arrays (deprecated)');
+
+            // Load weapons from old location
             if (this.currentCampaign.weapons) {
                 const weapons = this.currentCampaign.weapons.map(w => ({
                     ...w,
@@ -209,7 +284,7 @@ class ContentLoader {
                 this.contentCache.set('weapons', weapons);
             }
 
-            // Load equipment
+            // Load equipment from old location
             if (this.currentCampaign.equipment) {
                 const equipment = this.currentCampaign.equipment.map(e => ({
                     ...e,
@@ -219,6 +294,8 @@ class ContentLoader {
                 inventoryService.initialize({ equipment });
                 this.contentCache.set('equipment', equipment);
             }
+        } else {
+            if (logger) logger.warn('⚠️ No items found in campaign');
         }
     }
 

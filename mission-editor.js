@@ -1229,18 +1229,66 @@ class MissionEditor {
                 `;
                 break;
             case 'item':
+                // Get available items from RPG config
+                let itemOptions = `
+                    <option value="credits" ${entity.itemType === 'credits' ? 'selected' : ''}>Credits</option>
+                    <option value="medkit" ${entity.itemType === 'medkit' ? 'selected' : ''}>Medkit</option>
+                    <option value="ammo" ${entity.itemType === 'ammo' ? 'selected' : ''}>Ammo</option>
+                    <option value="keycard" ${entity.itemType === 'keycard' ? 'selected' : ''}>Keycard</option>
+                    <option value="data" ${entity.itemType === 'data' ? 'selected' : ''}>Data</option>
+                `;
+
+                // Add items from RPG config if available
+                if (this.rpgConfig?.items) {
+                    // Add weapons
+                    if (this.rpgConfig.items.weapons) {
+                        itemOptions += '<optgroup label="Weapons">';
+                        Object.entries(this.rpgConfig.items.weapons).forEach(([id, weapon]) => {
+                            const itemId = weapon.id || id;
+                            itemOptions += `<option value="weapon_${itemId}" ${entity.itemType === `weapon_${itemId}` ? 'selected' : ''}>${weapon.name}</option>`;
+                        });
+                        itemOptions += '</optgroup>';
+                    }
+
+                    // Add armor
+                    if (this.rpgConfig.items.armor) {
+                        itemOptions += '<optgroup label="Armor">';
+                        Object.entries(this.rpgConfig.items.armor).forEach(([id, armor]) => {
+                            const itemId = armor.id || id;
+                            itemOptions += `<option value="armor_${itemId}" ${entity.itemType === `armor_${itemId}` ? 'selected' : ''}>${armor.name}</option>`;
+                        });
+                        itemOptions += '</optgroup>';
+                    }
+
+                    // Add utility items
+                    if (this.rpgConfig.items.utility) {
+                        itemOptions += '<optgroup label="Utility">';
+                        Object.entries(this.rpgConfig.items.utility).forEach(([id, utility]) => {
+                            const itemId = utility.id || id;
+                            itemOptions += `<option value="utility_${itemId}" ${entity.itemType === `utility_${itemId}` ? 'selected' : ''}>${utility.name}</option>`;
+                        });
+                        itemOptions += '</optgroup>';
+                    }
+
+                    // Add special items
+                    if (this.rpgConfig.items.special) {
+                        itemOptions += '<optgroup label="Special">';
+                        Object.entries(this.rpgConfig.items.special).forEach(([id, special]) => {
+                            const itemId = special.id || id;
+                            itemOptions += `<option value="special_${itemId}" ${entity.itemType === `special_${itemId}` ? 'selected' : ''}>${special.name}</option>`;
+                        });
+                        itemOptions += '</optgroup>';
+                    }
+                }
+
                 html += `
                     <label>Item Type:
                         <select id="entity-item-type">
-                            <option value="credits" ${entity.itemType === 'credits' ? 'selected' : ''}>Credits</option>
-                            <option value="medkit" ${entity.itemType === 'medkit' ? 'selected' : ''}>Medkit</option>
-                            <option value="ammo" ${entity.itemType === 'ammo' ? 'selected' : ''}>Ammo</option>
-                            <option value="keycard" ${entity.itemType === 'keycard' ? 'selected' : ''}>Keycard</option>
-                            <option value="data" ${entity.itemType === 'data' ? 'selected' : ''}>Data</option>
+                            ${itemOptions}
                         </select>
                     </label>
-                    <label>Value:
-                        <input type="number" id="entity-item-value" value="${entity.value || 100}" min="0">
+                    <label>Value/Count:
+                        <input type="number" id="entity-item-value" value="${entity.value || 1}" min="1">
                     </label>
                 `;
                 break;
@@ -1397,6 +1445,9 @@ class MissionEditor {
         // Reset all fields first
         this.resetObjectiveDialog();
 
+        // Populate item dropdown with RPG items
+        this.populateItemDropdown();
+
         if (index >= 0) {
             const obj = this.mission.objectives[index];
 
@@ -1435,7 +1486,21 @@ class MissionEditor {
                         }
                     } else if (obj.target.type === 'item') {
                         document.getElementById('obj-target-type').value = 'item';
-                        document.getElementById('obj-item-type').value = obj.target.item || obj.target.id || '';
+                        const itemId = obj.target.item || obj.target.id || '';
+
+                        // Check if it's a standard item in dropdown
+                        const dropdown = document.getElementById('obj-item-type');
+                        if (dropdown) {
+                            const hasOption = Array.from(dropdown.options).some(opt => opt.value === itemId);
+                            if (hasOption) {
+                                dropdown.value = itemId;
+                            } else {
+                                // Item not in dropdown, use custom field
+                                dropdown.value = '';
+                                const customField = document.getElementById('obj-item-custom');
+                                if (customField) customField.value = itemId;
+                            }
+                        }
                     } else if (obj.target.x !== undefined && obj.target.y !== undefined) {
                         document.getElementById('obj-target-type').value = 'location';
                         document.getElementById('obj-location-x').value = obj.target.x || 0;
@@ -1549,6 +1614,85 @@ class MissionEditor {
         document.getElementById('objective-dialog').style.display = 'none';
     }
 
+    populateItemDropdown() {
+        const dropdown = document.getElementById('obj-item-type');
+        if (!dropdown) return;
+
+        // Save current value
+        const currentValue = dropdown.value;
+
+        // Clear and rebuild options
+        dropdown.innerHTML = `
+            <option value="">-- Select Item --</option>
+            <option value="credits">Credits</option>
+            <option value="medkit">Medkit</option>
+            <option value="ammo">Ammo</option>
+            <option value="keycard">Keycard</option>
+            <option value="data">Data</option>
+            <option value="intel">Intel Documents</option>
+        `;
+
+        // Add items from RPG config if available
+        if (this.rpgConfig?.items) {
+            // Add weapons
+            if (this.rpgConfig.items.weapons) {
+                const weaponGroup = document.createElement('optgroup');
+                weaponGroup.label = 'Weapons';
+                Object.entries(this.rpgConfig.items.weapons).forEach(([id, weapon]) => {
+                    const option = document.createElement('option');
+                    option.value = weapon.id || `weapon_${id}`;
+                    option.textContent = weapon.name;
+                    weaponGroup.appendChild(option);
+                });
+                dropdown.appendChild(weaponGroup);
+            }
+
+            // Add armor
+            if (this.rpgConfig.items.armor) {
+                const armorGroup = document.createElement('optgroup');
+                armorGroup.label = 'Armor';
+                Object.entries(this.rpgConfig.items.armor).forEach(([id, armor]) => {
+                    const option = document.createElement('option');
+                    option.value = armor.id || `armor_${id}`;
+                    option.textContent = armor.name;
+                    armorGroup.appendChild(option);
+                });
+                dropdown.appendChild(armorGroup);
+            }
+
+            // Add utility items
+            if (this.rpgConfig.items.utility) {
+                const utilityGroup = document.createElement('optgroup');
+                utilityGroup.label = 'Utility';
+                Object.entries(this.rpgConfig.items.utility).forEach(([id, utility]) => {
+                    const option = document.createElement('option');
+                    option.value = utility.id || `utility_${id}`;
+                    option.textContent = utility.name;
+                    utilityGroup.appendChild(option);
+                });
+                dropdown.appendChild(utilityGroup);
+            }
+
+            // Add special items
+            if (this.rpgConfig.items.special) {
+                const specialGroup = document.createElement('optgroup');
+                specialGroup.label = 'Special';
+                Object.entries(this.rpgConfig.items.special).forEach(([id, special]) => {
+                    const option = document.createElement('option');
+                    option.value = special.id || `special_${id}`;
+                    option.textContent = special.name;
+                    specialGroup.appendChild(option);
+                });
+                dropdown.appendChild(specialGroup);
+            }
+        }
+
+        // Restore value if it exists
+        if (currentValue && Array.from(dropdown.options).some(opt => opt.value === currentValue)) {
+            dropdown.value = currentValue;
+        }
+    }
+
     saveObjective() {
         const objType = document.getElementById('obj-type').value;
         const targetType = document.getElementById('obj-target-type').value;
@@ -1601,7 +1745,14 @@ class MissionEditor {
             }
         } else if (targetType === 'item') {
             obj.target = { type: 'item' };
-            const itemType = document.getElementById('obj-item-type').value.trim();
+            let itemType = document.getElementById('obj-item-type').value.trim();
+            const customItem = document.getElementById('obj-item-custom')?.value.trim();
+
+            // Use custom item ID if provided, otherwise use dropdown selection
+            if (customItem) {
+                itemType = customItem;
+            }
+
             if (itemType) obj.target.item = itemType;
         } else if (targetType === 'location') {
             obj.target = {
@@ -1985,6 +2136,19 @@ return Object.values(conditions).every(c => c === true);`
         // Populate NPC template dropdown from campaign
         this.populateNPCTemplates();
 
+        // Setup shop checkbox handler
+        const shopCheckbox = document.getElementById('npc-has-shop');
+        const shopSection = document.getElementById('shop-items-section');
+
+        if (shopCheckbox && shopSection) {
+            shopCheckbox.onchange = () => {
+                shopSection.style.display = shopCheckbox.checked ? 'block' : 'none';
+                if (shopCheckbox.checked) {
+                    this.populateShopItemsList();
+                }
+            };
+        }
+
         if (index >= 0) {
             const npc = this.mission.npcs[index];
 
@@ -2000,6 +2164,21 @@ return Object.values(conditions).every(c => c === true);`
             if (npc.id) {
                 this.loadNPCQuestCheckboxes(npc.id, npc.quests || []);
             }
+
+            // Load shop configuration if NPC has a shop
+            if (npc.shop) {
+                shopCheckbox.checked = true;
+                shopSection.style.display = 'block';
+                this.populateShopItemsList(npc.shop.items || []);
+
+                const multiplier = document.getElementById('shop-price-multiplier');
+                const unlimited = document.getElementById('shop-unlimited-stock');
+                if (multiplier) multiplier.value = npc.shop.priceMultiplier || 1.0;
+                if (unlimited) unlimited.checked = npc.shop.unlimitedStock !== false;
+            } else {
+                shopCheckbox.checked = false;
+                shopSection.style.display = 'none';
+            }
         } else {
             // New NPC
             document.getElementById('npc-template-select').value = '';
@@ -2007,9 +2186,121 @@ return Object.values(conditions).every(c => c === true);`
             document.getElementById('npc-y').value = 10;
             document.getElementById('quest-checkboxes').innerHTML =
                 '<p style="opacity: 0.7; font-size: 12px;">Select an NPC template first</p>';
+
+            // Reset shop configuration
+            shopCheckbox.checked = false;
+            shopSection.style.display = 'none';
         }
 
         this.editingNPCIndex = index;
+    }
+
+    // Populate shop items list with campaign items
+    populateShopItemsList(selectedItems = []) {
+        const container = document.getElementById('shop-items-list');
+        if (!container) return;
+
+        let html = '';
+
+        // Get items from RPG config
+        if (this.currentCampaign?.rpgConfig?.items || window.MAIN_CAMPAIGN_CONFIG?.rpgConfig?.items) {
+            const rpgItems = this.currentCampaign?.rpgConfig?.items || window.MAIN_CAMPAIGN_CONFIG?.rpgConfig?.items;
+
+            // Add weapons
+            if (rpgItems.weapons) {
+                html += '<div style="margin-bottom: 10px;"><strong>Weapons:</strong></div>';
+                Object.entries(rpgItems.weapons).forEach(([key, weapon]) => {
+                    const id = weapon.id || key;
+                    const isChecked = selectedItems.includes(id) ? 'checked' : '';
+                    html += `
+                        <label style="display: block; margin-left: 10px; margin-bottom: 5px;">
+                            <input type="checkbox" value="${id}" ${isChecked} class="shop-item-checkbox">
+                            ${weapon.name} (${id})
+                        </label>
+                    `;
+                });
+            }
+
+            // Add armor
+            if (rpgItems.armor) {
+                html += '<div style="margin-top: 10px; margin-bottom: 10px;"><strong>Armor:</strong></div>';
+                Object.entries(rpgItems.armor).forEach(([key, armor]) => {
+                    const id = armor.id || key;
+                    const isChecked = selectedItems.includes(id) ? 'checked' : '';
+                    html += `
+                        <label style="display: block; margin-left: 10px; margin-bottom: 5px;">
+                            <input type="checkbox" value="${id}" ${isChecked} class="shop-item-checkbox">
+                            ${armor.name} (${id})
+                        </label>
+                    `;
+                });
+            }
+
+            // Add utility items
+            if (rpgItems.utility) {
+                html += '<div style="margin-top: 10px; margin-bottom: 10px;"><strong>Utility:</strong></div>';
+                Object.entries(rpgItems.utility).forEach(([key, item]) => {
+                    const id = item.id || key;
+                    const isChecked = selectedItems.includes(id) ? 'checked' : '';
+                    html += `
+                        <label style="display: block; margin-left: 10px; margin-bottom: 5px;">
+                            <input type="checkbox" value="${id}" ${isChecked} class="shop-item-checkbox">
+                            ${item.name} (${id})
+                        </label>
+                    `;
+                });
+            }
+
+            // Add special items
+            if (rpgItems.special) {
+                html += '<div style="margin-top: 10px; margin-bottom: 10px;"><strong>Special:</strong></div>';
+                Object.entries(rpgItems.special).forEach(([key, item]) => {
+                    const id = item.id || key;
+                    const isChecked = selectedItems.includes(id) ? 'checked' : '';
+                    html += `
+                        <label style="display: block; margin-left: 10px; margin-bottom: 5px;">
+                            <input type="checkbox" value="${id}" ${isChecked} class="shop-item-checkbox">
+                            ${item.name} (${id})
+                        </label>
+                    `;
+                });
+            }
+        }
+
+        // Fall back to legacy arrays if no RPG items
+        if (!html && this.currentCampaign) {
+            if (this.currentCampaign.weapons?.length > 0) {
+                html += '<div style="margin-bottom: 10px;"><strong>Weapons:</strong></div>';
+                this.currentCampaign.weapons.forEach(weapon => {
+                    const isChecked = selectedItems.includes(weapon.id) ? 'checked' : '';
+                    html += `
+                        <label style="display: block; margin-left: 10px; margin-bottom: 5px;">
+                            <input type="checkbox" value="${weapon.id}" ${isChecked} class="shop-item-checkbox">
+                            ${weapon.name} (${weapon.id})
+                        </label>
+                    `;
+                });
+            }
+
+            if (this.currentCampaign.equipment?.length > 0) {
+                html += '<div style="margin-top: 10px; margin-bottom: 10px;"><strong>Equipment:</strong></div>';
+                this.currentCampaign.equipment.forEach(item => {
+                    const isChecked = selectedItems.includes(item.id) ? 'checked' : '';
+                    html += `
+                        <label style="display: block; margin-left: 10px; margin-bottom: 5px;">
+                            <input type="checkbox" value="${item.id}" ${isChecked} class="shop-item-checkbox">
+                            ${item.name} (${item.id})
+                        </label>
+                    `;
+                });
+            }
+        }
+
+        if (!html) {
+            html = '<p style="opacity: 0.7;">No items available in campaign</p>';
+        }
+
+        container.innerHTML = html;
     }
 
     // Populate NPC template dropdown from campaign
@@ -2250,12 +2541,34 @@ return Object.values(conditions).every(c => c === true);`
             const template = window.CAMPAIGN_NPC_TEMPLATES?.[campaignId]?.[npcId];
             const displayName = template?.name || npcId;
 
+            // Get shop configuration if enabled
+            let shopConfig = null;
+            const hasShop = document.getElementById('npc-has-shop')?.checked;
+            if (hasShop) {
+                const selectedItems = Array.from(document.querySelectorAll('.shop-item-checkbox:checked'))
+                    .map(cb => cb.value);
+
+                const priceMultiplier = parseFloat(document.getElementById('shop-price-multiplier')?.value || 1.0);
+                const unlimitedStock = document.getElementById('shop-unlimited-stock')?.checked !== false;
+
+                shopConfig = {
+                    items: selectedItems,
+                    priceMultiplier: priceMultiplier,
+                    unlimitedStock: unlimitedStock
+                };
+            }
+
             // Create NPC data matching the mission file format
             const npcData = {
                 id: npcId,
                 spawn: { x, y },
                 quests: activeQuests
             };
+
+            // Add shop if configured
+            if (shopConfig) {
+                npcData.shop = shopConfig;
+            }
 
             // For editor display, add extra fields
             const editorNpc = {
@@ -4468,11 +4781,13 @@ class CampaignManager {
     }
 
     async initialize() {
+        console.log('🚀 [CampaignManager] Starting initialization...');
         try {
             await this.initIndexedDB();
             await this.loadCampaignContent();
             this.setupEventListeners();
             this.isInitialized = true;
+            console.log('✅ [CampaignManager] Initialization complete');
             this.editor.eventLogger.log('CampaignManager fully initialized', 'success');
         } catch (error) {
             // Log full error details
@@ -4700,15 +5015,24 @@ class CampaignManager {
     }
 
     async loadCampaignContent() {
+        console.log('📦 [loadCampaignContent] Starting campaign content loading...');
         try {
             // Try to load last used campaign from localStorage
             const lastCampaignId = localStorage.getItem('lastCampaignId');
+            console.log('📦 [loadCampaignContent] Last campaign ID from localStorage:', lastCampaignId);
 
             if (lastCampaignId && this.db) {
+                console.log('📦 [loadCampaignContent] Loading campaign from DB...');
                 const campaign = await this.loadCampaignFromDB(lastCampaignId);
                 if (campaign) {
-                this.currentCampaign = campaign;
-                this.currentCampaignId = lastCampaignId;
+                    console.log('✅ [loadCampaignContent] Campaign loaded from DB:', campaign);
+                    console.log('🔍 [loadCampaignContent] Has rpgConfig?', !!campaign.rpgConfig);
+                    console.log('🔍 [loadCampaignContent] Has rpgConfig.items?', !!campaign.rpgConfig?.items);
+                    if (campaign.rpgConfig?.items) {
+                        console.log('🔍 [loadCampaignContent] RPG items keys:', Object.keys(campaign.rpgConfig.items));
+                    }
+                    this.currentCampaign = campaign;
+                    this.currentCampaignId = lastCampaignId;
 
                 // Sync missions to global CAMPAIGN_MISSIONS
                 this.syncMissionsToGlobal();
@@ -4734,7 +5058,30 @@ class CampaignManager {
             }
 
             // Fall back to window.MAIN_CAMPAIGN_CONTENT
+            console.log('📦 [loadCampaignContent] Falling back to window.MAIN_CAMPAIGN_CONTENT');
             if (window.MAIN_CAMPAIGN_CONTENT) {
+                console.log('✅ [loadCampaignContent] MAIN_CAMPAIGN_CONTENT found:', window.MAIN_CAMPAIGN_CONTENT);
+                console.log('🔍 [loadCampaignContent] Has weapons?', !!window.MAIN_CAMPAIGN_CONTENT.weapons);
+                console.log('🔍 [loadCampaignContent] Weapons count:', window.MAIN_CAMPAIGN_CONTENT.weapons?.length || 0);
+                console.log('🔍 [loadCampaignContent] Has equipment?', !!window.MAIN_CAMPAIGN_CONTENT.equipment);
+                console.log('🔍 [loadCampaignContent] Equipment count:', window.MAIN_CAMPAIGN_CONTENT.equipment?.length || 0);
+
+                // Check for MAIN_CAMPAIGN_CONFIG
+                if (window.MAIN_CAMPAIGN_CONFIG) {
+                    console.log('🔍 [loadCampaignContent] MAIN_CAMPAIGN_CONFIG found:', window.MAIN_CAMPAIGN_CONFIG);
+                    console.log('🔍 [loadCampaignContent] Has rpgConfig?', !!window.MAIN_CAMPAIGN_CONFIG.rpgConfig);
+                    console.log('🔍 [loadCampaignContent] Has rpgConfig.items?', !!window.MAIN_CAMPAIGN_CONFIG.rpgConfig?.items);
+                    if (window.MAIN_CAMPAIGN_CONFIG.rpgConfig?.items) {
+                        console.log('🔍 [loadCampaignContent] RPG items keys:', Object.keys(window.MAIN_CAMPAIGN_CONFIG.rpgConfig.items));
+                    }
+
+                    // Merge rpgConfig from MAIN_CAMPAIGN_CONFIG if it exists
+                    if (window.MAIN_CAMPAIGN_CONFIG.rpgConfig) {
+                        window.MAIN_CAMPAIGN_CONTENT.rpgConfig = window.MAIN_CAMPAIGN_CONFIG.rpgConfig;
+                        console.log('✅ [loadCampaignContent] Merged rpgConfig from MAIN_CAMPAIGN_CONFIG');
+                    }
+                }
+
                 this.currentCampaign = window.MAIN_CAMPAIGN_CONTENT;
                 this.currentCampaignId = this.currentCampaign.id;
 
@@ -4923,6 +5270,8 @@ class CampaignManager {
     }
 
     switchTab(tabName) {
+        console.log(`🏷️ [switchTab] Switching to tab: ${tabName}`);
+
         // Hide all tabs
         document.querySelectorAll('.campaign-tab-content').forEach(content => {
             content.style.display = 'none';
@@ -4949,6 +5298,9 @@ class CampaignManager {
     }
 
     loadTabContent(tabName) {
+        console.log(`📋 [loadTabContent] Loading content for tab: ${tabName}`);
+        console.log(`📋 [loadTabContent] Current campaign:`, this.currentCampaign);
+
         switch(tabName) {
             case 'overview':
                 this.loadOverview();
@@ -4960,6 +5312,7 @@ class CampaignManager {
                 this.loadAgents();
                 break;
             case 'weapons':
+                console.log('🔫 [loadTabContent] Loading weapons tab...');
                 this.loadWeaponsEquipment();
                 break;
             case 'enemies':
@@ -5988,12 +6341,9 @@ ${node.text || ''}
 
     // Weapon CRUD operations
     addWeapon() {
-        if (!this.currentCampaign.weapons) {
-            this.currentCampaign.weapons = [];
-        }
-
+        const timestamp = Date.now();
         const newWeapon = {
-            id: this.currentCampaign.weapons.length + 1,
+            id: 'weapon_' + timestamp,
             name: 'New Weapon',
             type: 'weapon',
             cost: 500,
@@ -6014,33 +6364,75 @@ ${node.text || ''}
             }
         };
 
-        this.currentCampaign.weapons.push(newWeapon);
+        // Add to RPG config if it exists, otherwise use legacy array
+        if (this.currentCampaign.rpgConfig) {
+            // Ensure RPG items structure exists
+            if (!this.currentCampaign.rpgConfig.items) {
+                this.currentCampaign.rpgConfig.items = {};
+            }
+            if (!this.currentCampaign.rpgConfig.items.weapons) {
+                this.currentCampaign.rpgConfig.items.weapons = {};
+            }
+
+            // Add with a generated key
+            const key = 'weapon_' + timestamp;
+            this.currentCampaign.rpgConfig.items.weapons[key] = newWeapon;
+        } else {
+            // Fall back to legacy array
+            if (!this.currentCampaign.weapons) {
+                this.currentCampaign.weapons = [];
+            }
+            this.currentCampaign.weapons.push(newWeapon);
+        }
+
         this.loadWeaponsEquipment();
     }
 
     updateWeapon(index, field, value) {
-        if (this.currentCampaign.weapons && this.currentCampaign.weapons[index]) {
-            this.currentCampaign.weapons[index][field] = value;
+        // Check if we're working with RPG items or legacy arrays
+        if (this._displayWeapons && this._displayWeapons[index]) {
+            const weapon = this._displayWeapons[index];
+
+            if (weapon.rpgKey && this.currentCampaign.rpgConfig?.items?.weapons) {
+                // Update in RPG config structure
+                if (!this.currentCampaign.rpgConfig.items.weapons[weapon.rpgKey]) {
+                    this.currentCampaign.rpgConfig.items.weapons[weapon.rpgKey] = {};
+                }
+                this.currentCampaign.rpgConfig.items.weapons[weapon.rpgKey][field] = value;
+            } else if (this.currentCampaign.weapons && this.currentCampaign.weapons[index]) {
+                // Update in legacy array
+                this.currentCampaign.weapons[index][field] = value;
+            }
+
+            // Update display array
+            this._displayWeapons[index][field] = value;
         }
     }
 
     deleteWeapon(index) {
         if (confirm('Delete this weapon?')) {
-            this.currentCampaign.weapons.splice(index, 1);
+            if (this._displayWeapons && this._displayWeapons[index]) {
+                const weapon = this._displayWeapons[index];
+
+                if (weapon.rpgKey && this.currentCampaign.rpgConfig?.items?.weapons) {
+                    // Delete from RPG config
+                    delete this.currentCampaign.rpgConfig.items.weapons[weapon.rpgKey];
+                } else if (this.currentCampaign.weapons) {
+                    // Delete from legacy array
+                    this.currentCampaign.weapons.splice(index, 1);
+                }
+            }
             this.loadWeaponsEquipment();
         }
     }
 
     // Equipment CRUD operations
     addEquipment() {
-        if (!this.currentCampaign.equipment) {
-            this.currentCampaign.equipment = [];
-        }
-
+        const timestamp = Date.now();
         const newEquipment = {
-            id: this.currentCampaign.equipment.length + 1,
+            id: 'item_' + timestamp,
             name: 'New Equipment',
-            type: 'equipment',
+            type: 'utility',  // Default to utility category
             cost: 300,
             owned: 0,
             description: 'Equipment description',
@@ -6057,19 +6449,80 @@ ${node.text || ''}
             }
         };
 
-        this.currentCampaign.equipment.push(newEquipment);
+        // Add to RPG config if it exists, otherwise use legacy array
+        if (this.currentCampaign.rpgConfig) {
+            // Ensure RPG items structure exists
+            if (!this.currentCampaign.rpgConfig.items) {
+                this.currentCampaign.rpgConfig.items = {};
+            }
+
+            // Determine category based on type/slot
+            let category = 'utility';  // Default
+            if (newEquipment.protection > 0 || newEquipment.slot === 'armor') {
+                category = 'armor';
+            } else if (newEquipment.slot === 'special') {
+                category = 'special';
+            }
+
+            if (!this.currentCampaign.rpgConfig.items[category]) {
+                this.currentCampaign.rpgConfig.items[category] = {};
+            }
+
+            // Add with a generated key
+            const key = 'item_' + timestamp;
+            this.currentCampaign.rpgConfig.items[category][key] = newEquipment;
+        } else {
+            // Fall back to legacy array
+            if (!this.currentCampaign.equipment) {
+                this.currentCampaign.equipment = [];
+            }
+            this.currentCampaign.equipment.push(newEquipment);
+        }
+
         this.loadWeaponsEquipment();
     }
 
     updateEquipment(index, field, value) {
-        if (this.currentCampaign.equipment && this.currentCampaign.equipment[index]) {
-            this.currentCampaign.equipment[index][field] = value;
+        // Check if we're working with RPG items or legacy arrays
+        if (this._displayEquipment && this._displayEquipment[index]) {
+            const item = this._displayEquipment[index];
+
+            if (item.rpgKey && item.rpgCategory && this.currentCampaign.rpgConfig?.items) {
+                // Update in RPG config structure
+                const category = item.rpgCategory;
+                if (!this.currentCampaign.rpgConfig.items[category]) {
+                    this.currentCampaign.rpgConfig.items[category] = {};
+                }
+                if (!this.currentCampaign.rpgConfig.items[category][item.rpgKey]) {
+                    this.currentCampaign.rpgConfig.items[category][item.rpgKey] = {};
+                }
+                this.currentCampaign.rpgConfig.items[category][item.rpgKey][field] = value;
+            } else if (this.currentCampaign.equipment && this.currentCampaign.equipment[index]) {
+                // Update in legacy array
+                this.currentCampaign.equipment[index][field] = value;
+            }
+
+            // Update display array
+            this._displayEquipment[index][field] = value;
         }
     }
 
     deleteEquipment(index) {
         if (confirm('Delete this equipment?')) {
-            this.currentCampaign.equipment.splice(index, 1);
+            if (this._displayEquipment && this._displayEquipment[index]) {
+                const item = this._displayEquipment[index];
+
+                if (item.rpgKey && item.rpgCategory && this.currentCampaign.rpgConfig?.items) {
+                    // Delete from RPG config
+                    const category = item.rpgCategory;
+                    if (this.currentCampaign.rpgConfig.items[category]) {
+                        delete this.currentCampaign.rpgConfig.items[category][item.rpgKey];
+                    }
+                } else if (this.currentCampaign.equipment) {
+                    // Delete from legacy array
+                    this.currentCampaign.equipment.splice(index, 1);
+                }
+            }
             this.loadWeaponsEquipment();
         }
     }
@@ -6748,15 +7201,83 @@ ${node.text || ''}
         return actTitles[actNumber] || `Chapter ${actNumber}`;
     }
 
-    // Load weapons and equipment
+    // Load weapons and equipment from RPG config or legacy arrays
     loadWeaponsEquipment() {
+        console.log('🔫 [loadWeaponsEquipment] Starting to load weapons and equipment...');
+
         const weaponsContainer = document.getElementById('weapons-list');
         const equipmentContainer = document.getElementById('equipment-list');
 
+        console.log('📦 [loadWeaponsEquipment] Current campaign:', this.currentCampaign);
+        console.log('📦 [loadWeaponsEquipment] Has rpgConfig?', !!this.currentCampaign.rpgConfig);
+        console.log('📦 [loadWeaponsEquipment] Has rpgConfig.items?', !!this.currentCampaign.rpgConfig?.items);
+
+        // Convert RPG items to array format for display
+        let weapons = [];
+        let equipment = [];
+
+        // Check for items in RPG config first (new structure)
+        if (this.currentCampaign.rpgConfig?.items) {
+            const rpgItems = this.currentCampaign.rpgConfig.items;
+            console.log('🎮 [loadWeaponsEquipment] RPG items structure found:', rpgItems);
+            console.log('🎮 [loadWeaponsEquipment] RPG items keys:', Object.keys(rpgItems));
+
+            // Extract weapons
+            if (rpgItems.weapons) {
+                console.log('🔫 [loadWeaponsEquipment] Found weapons in RPG config:', Object.keys(rpgItems.weapons));
+                Object.entries(rpgItems.weapons).forEach(([id, weapon]) => {
+                    console.log(`  - Adding weapon: ${id}`, weapon);
+                    weapons.push({
+                        ...weapon,
+                        id: weapon.id || id,
+                        rpgKey: id  // Store the key for updates
+                    });
+                });
+                console.log(`✅ [loadWeaponsEquipment] Loaded ${weapons.length} weapons from RPG config`);
+            } else {
+                console.log('⚠️ [loadWeaponsEquipment] No weapons found in rpgConfig.items.weapons');
+            }
+
+            // Extract armor, utility, and special items as equipment
+            ['armor', 'utility', 'special'].forEach(category => {
+                console.log(`🛡️ [loadWeaponsEquipment] Checking category: ${category}`);
+                if (rpgItems[category]) {
+                    console.log(`  - Found ${Object.keys(rpgItems[category]).length} items in ${category}`);
+                    Object.entries(rpgItems[category]).forEach(([id, item]) => {
+                        console.log(`    - Adding ${category} item: ${id}`, item);
+                        equipment.push({
+                            ...item,
+                            id: item.id || id,
+                            type: item.type || category,
+                            rpgKey: id,  // Store the key for updates
+                            rpgCategory: category  // Store category for updates
+                        });
+                    });
+                } else {
+                    console.log(`  - No items in ${category}`);
+                }
+            });
+            console.log(`✅ [loadWeaponsEquipment] Loaded ${equipment.length} equipment items from RPG config`);
+        } else {
+            console.log('⚠️ [loadWeaponsEquipment] No rpgConfig.items found');
+        }
+
+        // Fall back to legacy arrays if no RPG items found
+        if (weapons.length === 0 && this.currentCampaign.weapons?.length > 0) {
+            console.log(`📦 [loadWeaponsEquipment] Using legacy weapons array with ${this.currentCampaign.weapons.length} items`);
+            weapons = this.currentCampaign.weapons;
+        }
+        if (equipment.length === 0 && this.currentCampaign.equipment?.length > 0) {
+            console.log(`📦 [loadWeaponsEquipment] Using legacy equipment array with ${this.currentCampaign.equipment.length} items`);
+            equipment = this.currentCampaign.equipment;
+        }
+
+        console.log(`📊 [loadWeaponsEquipment] Final counts - Weapons: ${weapons.length}, Equipment: ${equipment.length}`);
+
         // Load weapons
         let weaponsHtml = '';
-        if (this.currentCampaign.weapons && this.currentCampaign.weapons.length > 0) {
-            this.currentCampaign.weapons.forEach((weapon, index) => {
+        if (weapons.length > 0) {
+            weapons.forEach((weapon, index) => {
                 weaponsHtml += this.createWeaponCard(weapon, index);
             });
         } else {
@@ -6766,14 +7287,18 @@ ${node.text || ''}
 
         // Load equipment
         let equipmentHtml = '';
-        if (this.currentCampaign.equipment && this.currentCampaign.equipment.length > 0) {
-            this.currentCampaign.equipment.forEach((item, index) => {
+        if (equipment.length > 0) {
+            equipment.forEach((item, index) => {
                 equipmentHtml += this.createEquipmentCard(item, index);
             });
         } else {
             equipmentHtml = '<p style="color: #888; text-align: center;">No equipment defined. Click "Add Equipment" to create one.</p>';
         }
         equipmentContainer.innerHTML = equipmentHtml;
+
+        // Store the converted arrays for editing
+        this._displayWeapons = weapons;
+        this._displayEquipment = equipment;
     }
 
     createWeaponCard(weapon, index) {
@@ -6781,15 +7306,16 @@ ${node.text || ''}
             <div style="border: 1px solid #00ff41; padding: 15px; margin-bottom: 15px; background: rgba(0,255,65,0.05); border-radius: 5px;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
                     <div>
+                        <label style="color: #00ff41; font-size: 11px;">ID (Reference)</label>
+                        <input type="text" value="${weapon.id || ''}"
+                               readonly
+                               style="width: 100%; background: #0a0e27; border: 1px solid #00ff4166; color: #00ff41aa; padding: 5px; cursor: not-allowed;"
+                               title="Use this ID to reference the weapon in missions and shops">
+                    </div>
+                    <div>
                         <label style="color: #00ff41; font-size: 11px;">Name</label>
                         <input type="text" value="${weapon.name || ''}"
                                onchange="campaignManager.updateWeapon(${index}, 'name', this.value)"
-                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
-                    </div>
-                    <div>
-                        <label style="color: #00ff41; font-size: 11px;">Type</label>
-                        <input type="text" value="${weapon.type || 'weapon'}"
-                               onchange="campaignManager.updateWeapon(${index}, 'type', this.value)"
                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
                     </div>
                     <div>
@@ -6888,15 +7414,16 @@ ${node.text || ''}
             <div style="border: 1px solid #00ff41; padding: 15px; margin-bottom: 15px; background: rgba(0,255,65,0.05); border-radius: 5px;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
                     <div>
+                        <label style="color: #00ff41; font-size: 11px;">ID (Reference)</label>
+                        <input type="text" value="${item.id || ''}"
+                               readonly
+                               style="width: 100%; background: #0a0e27; border: 1px solid #00ff4166; color: #00ff41aa; padding: 5px; cursor: not-allowed;"
+                               title="Use this ID to reference the item in missions and shops">
+                    </div>
+                    <div>
                         <label style="color: #00ff41; font-size: 11px;">Name</label>
                         <input type="text" value="${item.name || ''}"
                                onchange="campaignManager.updateEquipment(${index}, 'name', this.value)"
-                               style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
-                    </div>
-                    <div>
-                        <label style="color: #00ff41; font-size: 11px;">Type</label>
-                        <input type="text" value="${item.type || 'equipment'}"
-                               onchange="campaignManager.updateEquipment(${index}, 'type', this.value)"
                                style="width: 100%; background: #111; border: 1px solid #00ff41; color: #00ff41; padding: 5px;">
                     </div>
                     <div>

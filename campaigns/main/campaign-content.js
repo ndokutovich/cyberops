@@ -91,85 +91,10 @@
             }
         ],
 
-        // Weapons available in this campaign
-        weapons: [
-            {
-                id: 1,
-                name: 'Silenced Pistol',
-                type: 'weapon',
-                cost: 500,
-                owned: 3,
-                damage: 15,
-                description: 'Quiet and effective for stealth operations'
-            },
-            {
-                id: 2,
-                name: 'Assault Rifle',
-                type: 'weapon',
-                cost: 800,
-                owned: 1,
-                damage: 25,
-                description: 'Standard military-grade automatic weapon'
-            },
-            {
-                id: 3,
-                name: 'Sniper Rifle',
-                type: 'weapon',
-                cost: 1200,
-                owned: 0,
-                damage: 40,
-                description: 'Long-range precision weapon'
-            },
-            {
-                id: 4,
-                name: 'SMG',
-                type: 'weapon',
-                cost: 600,
-                owned: 2,
-                damage: 20,
-                description: 'Rapid-fire close combat weapon'
-            }
-        ],
-
-        // Equipment available in this campaign
-        equipment: [
-            {
-                id: 1,
-                name: 'Body Armor',
-                type: 'equipment',
-                cost: 300,
-                owned: 3,
-                protection: 10,
-                description: 'Reduces damage from enemy attacks'
-            },
-            {
-                id: 2,
-                name: 'Hacking Kit',
-                type: 'equipment',
-                cost: 400,
-                owned: 2,
-                hackBonus: 20,
-                description: 'Speeds up terminal hacking'
-            },
-            {
-                id: 3,
-                name: 'Explosives Kit',
-                type: 'equipment',
-                cost: 600,
-                owned: 1,
-                damage: 50,
-                description: 'Demolition charges for objectives'
-            },
-            {
-                id: 4,
-                name: 'Stealth Suit',
-                type: 'equipment',
-                cost: 800,
-                owned: 1,
-                stealthBonus: 25,
-                description: 'Reduces enemy detection range'
-            }
-        ],
+        // DEPRECATED: Items moved to campaign-config.js -> rpgConfig.items
+        // Keeping empty arrays for backward compatibility
+        weapons: [],
+        equipment: [],
 
         // Enemy types for this campaign
         enemyTypes: [

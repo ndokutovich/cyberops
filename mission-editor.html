@@ -313,7 +313,18 @@
                 </div>
 
                 <div id="target-item" class="target-config" style="display:none;">
-                    <label>Item Type: <input type="text" id="obj-item-type" placeholder="keycard, data_disk, weapon"></label>
+                    <label>Item to Collect:
+                        <select id="obj-item-type">
+                            <option value="">-- Select Item --</option>
+                            <option value="credits">Credits</option>
+                            <option value="medkit">Medkit</option>
+                            <option value="ammo">Ammo</option>
+                            <option value="keycard">Keycard</option>
+                            <option value="data">Data</option>
+                            <option value="intel">Intel Documents</option>
+                        </select>
+                    </label>
+                    <label>Or Custom ID: <input type="text" id="obj-item-custom" placeholder="custom_item_id"></label>
                 </div>
 
                 <div id="target-specific" class="target-config" style="display:none;">
@@ -476,6 +487,28 @@
             <div id="npc-quest-selection" style="background: var(--bg-tertiary); padding: 10px; border-radius: 4px; min-height: 50px;">
                 <div id="quest-checkboxes">
                     <p style="opacity: 0.7; font-size: 12px;">Select an NPC template first</p>
+                </div>
+            </div>
+
+            <h3>Shop Configuration</h3>
+            <div id="npc-shop-config" style="background: var(--bg-tertiary); padding: 10px; border-radius: 4px; margin-top: 10px;">
+                <label style="display: block; margin-bottom: 10px;">
+                    <input type="checkbox" id="npc-has-shop"> This NPC has a shop
+                </label>
+
+                <div id="shop-items-section" style="display: none;">
+                    <h4>Available Items</h4>
+                    <div id="shop-items-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); padding: 10px; background: var(--bg-primary); border-radius: 4px;">
+                        <!-- Will be populated with checkboxes for available items -->
+                    </div>
+
+                    <h4 style="margin-top: 10px;">Shop Settings</h4>
+                    <label style="display: block; margin-bottom: 5px;">
+                        Price Multiplier: <input type="number" id="shop-price-multiplier" value="1.0" step="0.1" min="0.1" max="10" style="width: 80px;">
+                    </label>
+                    <label style="display: block;">
+                        <input type="checkbox" id="shop-unlimited-stock"> Unlimited stock
+                    </label>
                 </div>
             </div>
 
@@ -1042,6 +1075,10 @@
 
     <!-- Load campaign system for editor -->
     <script src="js/campaign-loader-editor.js"></script>
+
+    <!-- Campaign content and configuration -->
+    <script src="campaigns/main/campaign-content.js"></script>
+    <script src="campaigns/main/campaign-config.js"></script>
 
     <!-- Load NPC templates -->
     <script src="campaigns/main/npcs.js"></script>

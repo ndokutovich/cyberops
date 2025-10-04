@@ -187,6 +187,15 @@
                 displayText: 'Keep at least 2 agents alive',
                 checkFunction: 'checkAgentsAlive',
                 minAgents: 2
+            },
+            {
+                id: 'stealth_bonus',
+                type: 'custom',
+                required: false,
+                bonus: true,
+                description: 'Complete first 3 terminals without triggering alerts',
+                displayText: 'Stealth Hack: Complete 3 terminals undetected',
+                checkFunction: 'checkStealthHack'
             }
         ],
 
@@ -237,6 +246,43 @@
                 quests: []  // Merchant has no quests, just shop access
             }
         ]
+    };
+
+    // Custom Objective Check Functions
+    // These are called each frame to check if objectives are complete
+
+    // Check stealth hack bonus objective
+    window.checkStealthHack = function(game, objective, missionService) {
+        // Check if we've hacked at least 3 terminals
+        const terminalsHacked = missionService?.trackers?.terminalsHacked || 0;
+
+        // Check if any alerts have been triggered
+        const alertsTriggered = missionService?.trackers?.alertsTriggered || 0;
+
+        // Complete if 3+ terminals hacked with no alerts
+        return terminalsHacked >= 3 && alertsTriggered === 0;
+    };
+
+    // Example: Check if agents haven't used grenades (for a hypothetical stealth objective)
+    window.checkNoGrenadesUsed = function(game, objective, missionService) {
+        // This is an example that could track grenade usage
+        const grenadesUsed = missionService?.trackers?.grenadesUsed || 0;
+        return grenadesUsed === 0;
+    };
+
+    // Example: Check if mission completed within time limit
+    window.checkSpeedRun = function(game, objective, missionService) {
+        // Check if mission completed within 2 minutes (120 seconds)
+        const elapsedTime = (Date.now() - game.missionStartTime) / 1000;
+
+        // Don't complete this objective after time limit
+        if (elapsedTime > 120) {
+            return false;
+        }
+
+        // Check if main objectives are complete
+        const mainObjective = missionService?.objectives?.find(o => o.id === 'eliminate_hostiles');
+        return mainObjective?.completed === true;
     };
 
     // Register with campaign system
