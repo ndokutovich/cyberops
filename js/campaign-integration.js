@@ -22,34 +22,28 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
         if (window.ContentLoader && window.CampaignSystem) {
             if (this.logger) this.logger.debug('🚀 Using flexible content loader system');
 
-            // Merge campaign config (structure) with content (agents, weapons, etc.)
-            const campaignConfig = window.CampaignSystem.getCampaign(campaignId);
-            const campaignContent = window.CampaignSystem.getCampaignContent(campaignId);
+            // Get complete campaign from unified store (includes structure + content + config)
+            const campaign = window.CampaignSystem.getCampaign(campaignId);
 
-            if (campaignConfig && campaignContent) {
-                // Merge config and content
-                // campaignContent has the proper structure (metadata, agents, weapons, etc.)
-                // campaignConfig has the old structure (id, name, folder, acts)
-                // Merge campaignContent first so it takes precedence
-                const campaign = {
-                    ...campaignContent,
-                    // Keep acts and folder from campaignConfig if not in content
-                    acts: campaignContent.acts || campaignConfig.acts,
-                    folder: campaignContent.folder || campaignConfig.folder,
+            if (campaign) {
+                // Campaign already has everything merged via registerCampaignConfig/Content
+                // Just ensure required fields for ContentLoader
+                const completeCampaign = {
+                    ...campaign,
                     // Map enemyTypes to enemies for ContentLoader compatibility
-                    enemies: campaignContent.enemyTypes || campaignContent.enemies || [],
-                    // Create metadata for validation if missing
-                    metadata: campaignContent.metadata || {
-                        id: campaignContent.id || campaignId,
-                        name: campaignContent.name || 'Campaign',
+                    enemies: campaign.enemyTypes || campaign.enemies || [],
+                    // Ensure metadata exists
+                    metadata: campaign.metadata || {
+                        id: campaign.id || campaignId,
+                        name: campaign.name || 'Campaign',
                         version: '1.0.0',
-                        description: campaignContent.description || ''
+                        description: campaign.description || ''
                     },
                     // Missions will be loaded separately by campaign system
-                    missions: []
+                    missions: campaign.missions || []
                 };
 
-                const success = await window.ContentLoader.loadCampaign(campaign, this);
+                const success = await window.ContentLoader.loadCampaign(completeCampaign, this);
 
                 if (success) {
                     if (this.logger) this.logger.info('✅ Campaign loaded via flexible system');

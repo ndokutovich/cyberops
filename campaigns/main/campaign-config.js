@@ -204,6 +204,45 @@
                     maxLevel: 3,
                     effect: "revive",
                     perLevel: 20
+                },
+
+                // Heavy weapons skills
+                heavyWeapons: {
+                    name: "Heavy Weapons",
+                    description: "Mastery of heavy weapons and explosives",
+                    maxLevel: 5,
+                    effect: "heavyDamage",
+                    perLevel: 8
+                },
+                demolitions: {
+                    name: "Demolitions",
+                    description: "Expert use of explosives and grenades",
+                    maxLevel: 3,
+                    effect: "explosiveDamage",
+                    perLevel: 15
+                },
+                suppression: {
+                    name: "Suppression",
+                    description: "Pin down enemies with suppressive fire",
+                    maxLevel: 3,
+                    effect: "suppressionRadius",
+                    perLevel: 1
+                },
+
+                // Recon skills
+                scouting: {
+                    name: "Scouting",
+                    description: "Enhanced detection and vision range",
+                    maxLevel: 5,
+                    effect: "visionRange",
+                    perLevel: 10
+                },
+                tracking: {
+                    name: "Tracking",
+                    description: "Track enemy movements and predict paths",
+                    maxLevel: 3,
+                    effect: "tracking",
+                    perLevel: 20
                 }
             },
 
@@ -920,16 +959,22 @@
     console.log('🔍 [campaign-config] After merge - mainCampaign has rpgConfig:', !!mainCampaign.rpgConfig);
     console.log('🔍 [campaign-config] After merge - mainCampaign keys:', Object.keys(mainCampaign));
 
-    // Register the campaign
+    // Register the campaign using unified registration method
     if (window.CampaignSystem) {
-        // Store complete campaign config
-        window.CampaignSystem.campaignConfigs = window.CampaignSystem.campaignConfigs || {};
-        window.CampaignSystem.campaignConfigs['main'] = mainCampaign;
+        // Use new registerCampaignConfig method (merges into unified store)
+        if (window.CampaignSystem.registerCampaignConfig) {
+            window.CampaignSystem.registerCampaignConfig('main', mainCampaign);
+            console.log('✅ Main campaign config registered via registerCampaignConfig');
+        } else {
+            // Fallback for old code
+            window.CampaignSystem.campaignConfigs = window.CampaignSystem.campaignConfigs || {};
+            window.CampaignSystem.campaignConfigs['main'] = mainCampaign;
+            console.log('⚠️ Main campaign config registered via legacy method');
+        }
 
-        console.log('📦 Main campaign configuration registered');
-        console.log('📦 Registered campaign has enemies:', !!window.CampaignSystem.campaignConfigs['main'].enemies);
-        console.log('📦 Registered campaign has missions:', !!window.CampaignSystem.campaignConfigs['main'].missions);
-        console.log('📦 Registered campaign has rpgConfig:', !!window.CampaignSystem.campaignConfigs['main'].rpgConfig);
+        console.log('📦 Registered campaign has enemies:', !!mainCampaign.enemies);
+        console.log('📦 Registered campaign has missions:', !!mainCampaign.missions);
+        console.log('📦 Registered campaign has rpgConfig:', !!mainCampaign.rpgConfig);
     } else {
         console.error('❌ [campaign-config] window.CampaignSystem not available - registration failed');
     }

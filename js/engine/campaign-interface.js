@@ -178,7 +178,11 @@ class CampaignContentInterface {
                     type: "exponential",
                     baseXP: 100,
                     multiplier: 1.5
-                }
+                },
+                perks: {},        // Add missing perks
+                progression: {},  // Add missing progression
+                items: {},        // Add missing items
+                shops: {}         // Add missing shops
             },
 
             // Economy configuration
@@ -319,9 +323,13 @@ class CampaignContentInterface {
      */
     mergeCampaignWithDefaults(campaign) {
         // Version marker to ensure new code is loaded
-        console.log('[MERGE] Version: 2024-12-23-v4-fixed');
+        console.error('🔥🔥🔥 [MERGE] Version: 2024-12-23-v5-FINAL-WITH-8-PROPERTIES 🔥🔥🔥');
+
+        console.error('🔍 [MERGE] BEFORE - Campaign rpgConfig keys:', campaign?.rpgConfig ? Object.keys(campaign.rpgConfig) : 'NO rpgConfig');
+        console.error('🔍 [MERGE] BEFORE - Campaign has perks?', !!campaign?.rpgConfig?.perks);
 
         const defaults = this.getDefaultCampaign();
+        console.error('🔍 [MERGE] DEFAULTS - rpgConfig keys:', defaults.rpgConfig ? Object.keys(defaults.rpgConfig) : 'NO rpgConfig');
 
         // Deep copy defaults first
         const result = JSON.parse(JSON.stringify(defaults));
@@ -333,6 +341,21 @@ class CampaignContentInterface {
                     if (key === 'metadata' && result.metadata) {
                         // Special handling for metadata - merge it
                         result.metadata = Object.assign({}, result.metadata, campaign.metadata);
+                    } else if (key === 'rpgConfig' && campaign.rpgConfig && result.rpgConfig) {
+                        // Special deep merge for rpgConfig to preserve all nested properties
+                        result.rpgConfig = {
+                            ...result.rpgConfig,
+                            ...campaign.rpgConfig,
+                            // Ensure nested objects are properly merged
+                            classes: { ...result.rpgConfig.classes, ...campaign.rpgConfig.classes },
+                            skills: { ...result.rpgConfig.skills, ...campaign.rpgConfig.skills },
+                            stats: { ...result.rpgConfig.stats, ...campaign.rpgConfig.stats },
+                            levelCurve: { ...result.rpgConfig.levelCurve, ...campaign.rpgConfig.levelCurve },
+                            perks: { ...result.rpgConfig.perks, ...campaign.rpgConfig.perks },
+                            progression: { ...result.rpgConfig.progression, ...campaign.rpgConfig.progression },
+                            items: { ...result.rpgConfig.items, ...campaign.rpgConfig.items },
+                            shops: { ...result.rpgConfig.shops, ...campaign.rpgConfig.shops }
+                        };
                     } else if (typeof campaign[key] === 'object' && campaign[key] !== null && !Array.isArray(campaign[key])) {
                         // For other objects, merge them
                         result[key] = Object.assign({}, result[key] || {}, campaign[key]);
@@ -344,8 +367,12 @@ class CampaignContentInterface {
             }
         }
 
-        console.log('[MERGE] Result keys:', Object.keys(result));
-        console.log('[MERGE] Has agents?', 'agents' in result, Array.isArray(result.agents));
+        console.error('🔥 [MERGE] Result keys:', Object.keys(result));
+        console.error('🔥 [MERGE] Has agents?', 'agents' in result, Array.isArray(result.agents));
+        console.error('🔥 [MERGE] rpgConfig keys after merge:', result.rpgConfig ? Object.keys(result.rpgConfig) : 'no rpgConfig');
+        console.error('🔥 [MERGE] Has perks?', result.rpgConfig?.perks ? Object.keys(result.rpgConfig.perks).length : 0);
+        console.error('🔥 [MERGE] Perks object:', result.rpgConfig?.perks);
+        console.error('🔥 [MERGE] Campaign had perks?', campaign?.rpgConfig?.perks ? Object.keys(campaign.rpgConfig.perks).length : 'NO');
 
         return result;
     }

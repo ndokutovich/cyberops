@@ -4,8 +4,9 @@
 const campaignLogger = window.Logger ? new window.Logger('CampaignSystem') : null;
 
 const CampaignSystem = {
-    campaigns: {},
-    campaignContent: {}, // Store content for each campaign
+    campaigns: {}, // UNIFIED STORE: Contains structure + content + config
+    campaignContent: {}, // DEPRECATED: Use campaigns[id] instead
+    campaignConfigs: {}, // DEPRECATED: Use campaigns[id].rpgConfig instead
     currentCampaign: null,
     currentAct: null,
     currentMission: null,
@@ -470,14 +471,51 @@ const CampaignSystem = {
     },
 
     // Register campaign content (agents, weapons, enemies, etc.)
+    // Register campaign configuration (rpgConfig, economy, etc.)
+    registerCampaignConfig(campaignId, config) {
+        // Ensure campaign exists
+        if (!this.campaigns[campaignId]) {
+            this.campaigns[campaignId] = { id: campaignId };
+        }
+
+        // Merge config into campaigns (unified store)
+        Object.assign(this.campaigns[campaignId], config);
+
+        // Also store in deprecated campaignConfigs for backward compatibility
+        this.campaignConfigs[campaignId] = config;
+
+        if (campaignLogger) campaignLogger.info(`✅ Registered config for campaign: ${campaignId}`);
+    },
+
+    // Register campaign content (agents, weapons, etc.)
     registerCampaignContent(campaignId, content) {
+        // Ensure campaign exists
+        if (!this.campaigns[campaignId]) {
+            this.campaigns[campaignId] = { id: campaignId };
+        }
+
+        // Merge content into campaigns (unified store)
+        Object.assign(this.campaigns[campaignId], content);
+
+        // Also store in deprecated campaignContent for backward compatibility
         this.campaignContent[campaignId] = content;
+
         if (campaignLogger) campaignLogger.info(`✅ Registered content for campaign: ${campaignId}`);
     },
 
-    // Get campaign content
+    // Get complete campaign (structure + content + config)
+    getCampaign(campaignId) {
+        return this.campaigns[campaignId] || null;
+    },
+
+    // DEPRECATED: Get campaign content (use getCampaign instead)
     getCampaignContent(campaignId) {
-        return this.campaignContent[campaignId] || null;
+        return this.campaigns[campaignId] || this.campaignContent[campaignId] || null;
+    },
+
+    // DEPRECATED: Get campaign config (use getCampaign instead)
+    getCampaignConfig(campaignId) {
+        return this.campaigns[campaignId] || this.campaignConfigs[campaignId] || null;
     }
 };
 

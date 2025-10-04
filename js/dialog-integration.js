@@ -458,7 +458,11 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         // Initialize RPG entity if not present
         if (!agent.rpgEntity && this.rpgManager) {
-            agent.rpgEntity = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
+            // Map specialization to correct RPG class
+            const rpgClass = this.mapSpecializationToClass ?
+                            this.mapSpecializationToClass(agent.specialization) || agent.class || 'soldier' :
+                            agent.class || 'soldier';
+            agent.rpgEntity = this.rpgManager.createRPGAgent(agent, rpgClass);
         }
 
         if (!agent.rpgEntity) {
@@ -599,12 +603,28 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         // Skills is an object: { skillId: level }
         const learnedSkills = rpg.skills && typeof rpg.skills === 'object' ? Object.keys(rpg.skills) : [];
-        if (learnedSkills.length > 0) {
-            // Get RPG config to look up skill details
-            const rpgConfig = this.getRPGConfig ? this.getRPGConfig() :
-                             (window.ContentLoader?.getContent('rpgConfig') ||
-                              window.MAIN_CAMPAIGN_CONFIG?.rpgConfig ||
-                              window.RPG_CONFIG);
+
+        // Get RPG config to look up skill details
+        const rpgConfig = this.getRPGConfig ? this.getRPGConfig() :
+                         (window.ContentLoader?.getContent('rpgConfig') ||
+                          window.MAIN_CAMPAIGN_CONFIG?.rpgConfig ||
+                          window.RPG_CONFIG);
+
+        // Debug logging
+        const logger = window.Logger ? new window.Logger('CharacterSheet') : null;
+        if (logger) {
+            logger.debug('Skills check:', {
+                rpgSkills: rpg.skills,
+                learnedSkills: learnedSkills,
+                rpgConfig: rpgConfig ? 'found' : 'not found',
+                skillsInConfig: rpgConfig?.skills ? Object.keys(rpgConfig.skills) : [],
+                rpgConfigKeys: rpgConfig ? Object.keys(rpgConfig) : [],
+                hasPerks: rpgConfig?.perks ? 'YES' : 'NO',
+                perkCount: rpgConfig?.perks ? Object.keys(rpgConfig.perks).length : 0
+            });
+        }
+
+        if (learnedSkills.length > 0 && rpgConfig?.skills) {
 
             html += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
             learnedSkills.forEach(skillId => {
@@ -647,17 +667,29 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         // Perks is an array of objects: [{ id, name, effects, cooldown }]
         const acquiredPerks = Array.isArray(rpg.perks) ? rpg.perks : [];
-        if (acquiredPerks.length > 0) {
-            // Get RPG config to look up perk details
-            const rpgConfig = this.getRPGConfig ? this.getRPGConfig() :
-                             (window.ContentLoader?.getContent('rpgConfig') ||
-                              window.MAIN_CAMPAIGN_CONFIG?.rpgConfig ||
-                              window.RPG_CONFIG);
+
+        // Get RPG config to look up perk details
+        const rpgConfig2 = this.getRPGConfig ? this.getRPGConfig() :
+                          (window.ContentLoader?.getContent('rpgConfig') ||
+                           window.MAIN_CAMPAIGN_CONFIG?.rpgConfig ||
+                           window.RPG_CONFIG);
+
+        // Debug logging for perks
+        if (logger) {
+            logger.debug('Perks check:', {
+                rpgPerks: rpg.perks,
+                acquiredPerks: acquiredPerks,
+                rpgConfig2: rpgConfig2 ? 'found' : 'not found',
+                perksInConfig: rpgConfig2?.perks ? Object.keys(rpgConfig2.perks) : []
+            });
+        }
+
+        if (acquiredPerks.length > 0 && rpgConfig2?.perks) {
 
             html += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
             acquiredPerks.forEach(perk => {
                 // Get full config for description and icon
-                const perkConfig = rpgConfig?.perks?.[perk.id];
+                const perkConfig = rpgConfig2?.perks?.[perk.id];
                 if (perkConfig) {
                     // Show perk effects if available
                     let effectsText = '';

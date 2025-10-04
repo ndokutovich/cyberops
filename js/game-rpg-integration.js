@@ -110,6 +110,22 @@ class RPGManager {
         if (this.logger) this.logger.debug(`\n🎮 Creating RPG Agent: ${baseAgent.name}`);
         if (this.logger) this.logger.debug(`   Class: ${classType}`);
 
+        // Convert skills array to object format if needed
+        let skillsObject = {};
+        const skillsArray = baseAgent.skills || this.getClassSkills(classType);
+
+        // If skills is already an object, use it; otherwise convert array to object
+        if (Array.isArray(skillsArray)) {
+            // Convert array ['stealth', 'melee'] to object { stealth: 1, melee: 1 }
+            skillsArray.forEach(skillId => {
+                skillsObject[skillId] = 1; // Start at level 1
+            });
+            if (this.logger) this.logger.debug(`   Converting skills array to object:`, skillsArray, '→', skillsObject);
+        } else if (typeof skillsArray === 'object' && skillsArray !== null) {
+            // Already an object, use as-is
+            skillsObject = skillsArray;
+        }
+
         const classConfig = this.config?.classes?.[classType] || {};
         const rpgAgent = new RPGAgent({
             id: baseAgent.id || baseAgent.name, // Ensure ID is set
@@ -118,9 +134,9 @@ class RPGManager {
             level: baseAgent.level || 1,
             xp: baseAgent.experience || baseAgent.xp || 0, // RPGAgent uses 'xp', not 'experience'
             stats: this.generateInitialStats(classType),
-            // Preserve agent's existing skills or use class defaults
-            skills: baseAgent.skills || this.getClassSkills(classType),
-            // Preserve agent's existing perks or use empty array
+            // Use converted skills object
+            skills: skillsObject,
+            // Initialize perks (empty array if not present)
             perks: baseAgent.perks || [],
             // Give starting points for customization
             statPoints: 3,
@@ -310,7 +326,7 @@ class RPGManager {
 
     getClassSkills(classType) {
         const classConfig = this.config?.classes?.[classType];
-        return classConfig?.startingSkills || [];
+        return classConfig?.skills || [];
     }
 
     calculateDerivedStats(entity) {
@@ -667,6 +683,19 @@ class ShopManager {
     }
 }
 
+// Map specialization to RPG class
+CyberOpsGame.prototype.mapSpecializationToClass = function(specialization) {
+    const mapping = {
+        'assault': 'soldier',
+        'stealth': 'infiltrator',
+        'hacker': 'techSpecialist',
+        'demolition': 'heavy',
+        'sniper': 'recon',
+        'medic': 'medic'
+    };
+    return mapping[specialization] || 'soldier'; // Default to soldier if not mapped
+};
+
 // Override agent creation to use RPG system
 CyberOpsGame.prototype.createAgent = function(agent) {
     // Call original function first
@@ -676,7 +705,9 @@ CyberOpsGame.prototype.createAgent = function(agent) {
 
     // Enhance with RPG stats if system is initialized
     if (this.rpgManager) {
-        const rpgAgent = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
+        // Map specialization to correct RPG class
+        const rpgClass = this.mapSpecializationToClass(agent.specialization) || agent.class || 'soldier';
+        const rpgAgent = this.rpgManager.createRPGAgent(agent, rpgClass);
 
         // Update agent properties based on RPG stats
         const derived = this.rpgManager.calculateDerivedStats(rpgAgent);
@@ -747,7 +778,9 @@ CyberOpsGame.prototype.upgradeExistingEntities = function() {
     if (this.agents) {
         this.agents.forEach(agent => {
             if (!agent.rpgEntity && this.rpgManager) {
-                const rpgAgent = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
+                // Map specialization to correct RPG class
+                const rpgClass = this.mapSpecializationToClass(agent.specialization) || agent.class || 'soldier';
+                const rpgAgent = this.rpgManager.createRPGAgent(agent, rpgClass);
                 agent.rpgEntity = rpgAgent;
 
                 // Create inventory
