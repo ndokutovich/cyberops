@@ -734,20 +734,17 @@ CyberOpsGame.prototype.updateObjectiveDisplay = function() {
 
 // Give rewards to player
 CyberOpsGame.prototype.giveRewards = function(rewards) {
+    // Use ResourceService ONLY (NO PROXY FALLBACK)
+    if (!this.gameServices?.resourceService) {
+        throw new Error('ResourceService is required - legacy reward system removed');
+    }
+
     if (rewards.credits) {
-        if (this.gameServices?.resourceService) {
-            this.gameServices.resourceService.add('credits', rewards.credits, 'mission reward');
-        } else {
-            this.credits = (this.credits || 0) + rewards.credits;
-        }
+        this.gameServices.resourceService.add('credits', rewards.credits, 'mission reward');
         this.addNotification(`💰 +${rewards.credits} credits`);
     }
     if (rewards.researchPoints) {
-        if (this.gameServices?.resourceService) {
-            this.gameServices.resourceService.add('researchPoints', rewards.researchPoints, 'mission reward');
-        } else {
-            this.researchPoints = (this.researchPoints || 0) + rewards.researchPoints;
-        }
+        this.gameServices.resourceService.add('researchPoints', rewards.researchPoints, 'mission reward');
         this.addNotification(`🔬 +${rewards.researchPoints} research points`);
     }
     if (rewards.experience) {

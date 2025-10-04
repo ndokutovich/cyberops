@@ -12,21 +12,21 @@ describe('Service Integration Tests', () => {
 
     describe('ResourceService Integration', () => {
         it('should access credits through compatibility layer', () => {
-            // Set credits using legacy property
-            game.credits = 1000;
-            assertEqual(game.credits, 1000, 'Credits should be 1000');
-
-            // Verify service has the value
+            // Set credits using service
             if (game.gameServices?.resourceService) {
+                game.gameServices.resourceService.set('credits', 1000, 'test');
+                assertEqual(game.credits, 1000, 'Credits should be 1000');
+
+                // Verify service has the value
                 const serviceCredits = game.gameServices.resourceService.get('credits');
                 assertEqual(serviceCredits, 1000, 'Service should have same credits');
             }
         });
 
         it('should spend credits through service', () => {
-            game.credits = 5000;
-
             if (game.gameServices?.resourceService) {
+                game.gameServices.resourceService.set('credits', 5000, 'test');
+
                 const success = game.gameServices.resourceService.spend('credits', 1000, 'test');
                 assertTruthy(success, 'Should be able to spend 1000 credits');
                 assertEqual(game.credits, 4000, 'Credits should be 4000 after spending');
@@ -34,9 +34,9 @@ describe('Service Integration Tests', () => {
         });
 
         it('should prevent overspending', () => {
-            game.credits = 500;
-
             if (game.gameServices?.resourceService) {
+                game.gameServices.resourceService.set('credits', 500, 'test');
+
                 const success = game.gameServices.resourceService.spend('credits', 1000, 'test');
                 assertFalsy(success, 'Should not be able to spend more than available');
                 assertEqual(game.credits, 500, 'Credits should remain 500');
@@ -44,10 +44,10 @@ describe('Service Integration Tests', () => {
         });
 
         it('should handle research points', () => {
-            game.researchPoints = 100;
-            assertEqual(game.researchPoints, 100, 'Research points should be 100');
-
             if (game.gameServices?.resourceService) {
+                game.gameServices.resourceService.set('researchPoints', 100, 'test');
+                assertEqual(game.researchPoints, 100, 'Research points should be 100');
+
                 game.gameServices.resourceService.add('researchPoints', 50, 'test');
                 assertEqual(game.researchPoints, 150, 'Research points should be 150');
             }
@@ -55,8 +55,8 @@ describe('Service Integration Tests', () => {
 
         it('should handle transactions', () => {
             if (game.gameServices?.resourceService) {
-                game.credits = 1000;
-                game.researchPoints = 100;
+                game.gameServices.resourceService.set('credits', 1000, 'test');
+                game.gameServices.resourceService.set('researchPoints', 100, 'test');
 
                 const success = game.gameServices.resourceService.transaction([
                     { resource: 'credits', amount: 500, operation: 'spend' },
@@ -97,7 +97,7 @@ describe('Service Integration Tests', () => {
 
         it('should hire agent with credit deduction', () => {
             if (game.gameServices?.agentService && game.gameServices?.resourceService) {
-                game.credits = 5000;
+                game.gameServices.resourceService.set('credits', 5000, 'test');
 
                 const success = game.gameServices.agentService.hireAgent('test1');
                 assertTruthy(success, 'Should be able to hire agent');
@@ -110,7 +110,7 @@ describe('Service Integration Tests', () => {
 
         it('should not hire without sufficient credits', () => {
             if (game.gameServices?.agentService && game.gameServices?.resourceService) {
-                game.credits = 500;
+                game.gameServices.resourceService.set('credits', 500, 'test');
 
                 const success = game.gameServices.agentService.hireAgent('test3'); // Costs 2000
                 assertFalsy(success, 'Should not be able to hire expensive agent');
@@ -152,8 +152,8 @@ describe('Service Integration Tests', () => {
     describe('Save/Load Integration', () => {
         it('should export service states', () => {
             if (game.gameServices?.resourceService) {
-                game.credits = 7777;
-                game.researchPoints = 333;
+                game.gameServices.resourceService.set('credits', 7777, 'test');
+                game.gameServices.resourceService.set('researchPoints', 333, 'test');
 
                 const resourceState = game.gameServices.resourceService.exportState();
                 assertTruthy(resourceState, 'Should export resource state');
@@ -181,22 +181,16 @@ describe('Service Integration Tests', () => {
         });
     });
 
-    describe('Backward Compatibility', () => {
-        it('should work with legacy credit operations', () => {
-            // Direct assignment
-            game.credits = 1000;
-            assertEqual(game.credits, 1000, 'Direct assignment should work');
+    describe('Read-Only Properties', () => {
+        it('should read credits through compatibility layer', () => {
+            if (game.gameServices?.resourceService) {
+                game.gameServices.resourceService.set('credits', 1000, 'test');
+                assertEqual(game.credits, 1000, 'Should read credits');
 
-            // Direct math operations
-            game.credits += 500;
-            assertEqual(game.credits, 1500, 'Addition should work');
-
-            game.credits -= 200;
-            assertEqual(game.credits, 1300, 'Subtraction should work');
-
-            // Compound operations
-            game.credits = game.credits * 2;
-            assertEqual(game.credits, 2600, 'Multiplication should work');
+                // Verify reading via service
+                const serviceCredits = game.gameServices.resourceService.get('credits');
+                assertEqual(serviceCredits, 1000, 'Service should have same value');
+            }
         });
 
         it('should work with legacy agent arrays', () => {

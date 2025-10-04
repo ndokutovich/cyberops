@@ -70,20 +70,22 @@ describe('MissionStateService Tests', () => {
         };
 
         const mockResourceService = {
-            resources: { credits: 0, researchPoints: 0 },
+            resources: { credits: 5000, researchPoints: 100, worldControl: 10 },
+            get: function(type) {
+                return this.resources[type] || 0;
+            },
+            set: function(type, value, reason) {
+                this.resources[type] = value;
+            },
             add: function(type, amount, reason) {
                 this.resources[type] = (this.resources[type] || 0) + amount;
             }
         };
 
-        return {
-            credits: 5000,
-            researchPoints: 100,
-            worldControl: 10,
+        // Create mock game with computed properties that delegate to services
+        const mockGame = {
             currentMissionIndex: 2,
             selectedAgents: ['agent_1'],
-            agents: [mockAgentService.activeAgents[0]],
-            activeAgents: mockAgentService.activeAgents,
             gameServices: {
                 agentService: mockAgentService,
                 rpgService: {
@@ -93,6 +95,28 @@ describe('MissionStateService Tests', () => {
                 resourceService: mockResourceService
             }
         };
+
+        // Add computed properties for backward compatibility
+        Object.defineProperty(mockGame, 'credits', {
+            get: function() { return mockResourceService.get('credits'); },
+            set: function(val) { mockResourceService.set('credits', val, 'test'); }
+        });
+        Object.defineProperty(mockGame, 'researchPoints', {
+            get: function() { return mockResourceService.get('researchPoints'); },
+            set: function(val) { mockResourceService.set('researchPoints', val, 'test'); }
+        });
+        Object.defineProperty(mockGame, 'worldControl', {
+            get: function() { return mockResourceService.get('worldControl'); },
+            set: function(val) { mockResourceService.set('worldControl', val, 'test'); }
+        });
+        Object.defineProperty(mockGame, 'activeAgents', {
+            get: function() { return mockAgentService.activeAgents; }
+        });
+        Object.defineProperty(mockGame, 'agents', {
+            get: function() { return mockAgentService.activeAgents; }
+        });
+
+        return mockGame;
     }
 
     describe('MissionStateService Initialization', () => {
@@ -396,8 +420,10 @@ describe('MissionStateService Tests', () => {
 
             service.mergeResults(mockGame);
 
-            assertEqual(mockGame.gameServices.resourceService.resources.credits, 2000, 'Credits should be added');
-            assertEqual(mockGame.gameServices.resourceService.resources.researchPoints, 75, 'Research should be added');
+            // Should have snapshot credits (5000) + earned credits (2000) = 7000
+            assertEqual(mockGame.gameServices.resourceService.resources.credits, 7000, 'Credits should be added');
+            // Should have snapshot research (100) + earned research (75) = 175
+            assertEqual(mockGame.gameServices.resourceService.resources.researchPoints, 175, 'Research should be added');
         });
 
         it('should clear snapshot after merge', () => {

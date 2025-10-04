@@ -182,11 +182,11 @@ describe('Comprehensive Service Tests', () => {
         });
 
         it('should save and load game state', () => {
-            if (!game.gameServices?.gameStateService) return;
+            if (!game.gameServices?.gameStateService || !game.gameServices?.resourceService) return;
 
-            // Set test state
-            game.credits = 7777;
-            game.researchPoints = 333;
+            // Set test state using services
+            game.gameServices.resourceService.set('credits', 7777, 'test');
+            game.gameServices.resourceService.set('researchPoints', 333, 'test');
             game.currentScreen = 'hub';
 
             // Save state
@@ -194,8 +194,8 @@ describe('Comprehensive Service Tests', () => {
             assertTruthy(success, 'Should save game successfully');
 
             // Change state
-            game.credits = 1000;
-            game.researchPoints = 50;
+            game.gameServices.resourceService.set('credits', 1000, 'test');
+            game.gameServices.resourceService.set('researchPoints', 50, 'test');
 
             // Load state
             const loadSuccess = game.gameServices.gameStateService.loadGame(game, 99);
@@ -431,7 +431,7 @@ describe('Comprehensive Service Tests', () => {
 
             if (game.gameServices?.resourceService) {
                 // Try to spend more than available
-                game.credits = 100;
+                game.gameServices.resourceService.set('credits', 100, 'test');
                 const result = game.gameServices.resourceService.spend('credits', 1000, 'test');
                 assertFalsy(result, 'Should fail to overspend');
                 assertEqual(game.credits, 100, 'Credits should remain unchanged');

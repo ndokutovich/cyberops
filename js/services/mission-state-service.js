@@ -96,7 +96,7 @@ class MissionStateService {
 
         const rpgService = game.gameServices.rpgService;
         const snapshot = {
-            entities: new Map()
+            entities: [] // Array of [agentId, entityData] pairs for JSON serialization
         };
 
         // Snapshot each agent's RPG state
@@ -104,13 +104,13 @@ class MissionStateService {
             game.selectedAgents.forEach(agentId => {
                 const entity = rpgService.rpgManager?.getEntity(agentId);
                 if (entity) {
-                    snapshot.entities.set(agentId, {
+                    snapshot.entities.push([agentId, {
                         xp: entity.xp,
                         level: entity.level,
                         skillPoints: entity.skillPoints,
                         stats: { ...entity.stats },
                         skills: { ...entity.skills }
-                    });
+                    }]);
                 }
             });
         }
@@ -137,9 +137,11 @@ class MissionStateService {
             }
 
             // Restore resources (credits not spent on retry)
-            game.credits = this.snapshot.credits;
-            game.researchPoints = this.snapshot.researchPoints;
-            game.worldControl = this.snapshot.worldControl;
+            if (game.gameServices?.resourceService) {
+                game.gameServices.resourceService.set('credits', this.snapshot.credits, 'mission retry');
+                game.gameServices.resourceService.set('researchPoints', this.snapshot.researchPoints, 'mission retry');
+                game.gameServices.resourceService.set('worldControl', this.snapshot.worldControl, 'mission retry');
+            }
             if (this.logger) this.logger.debug('✓ Resources restored');
 
             // Restore inventory
@@ -213,7 +215,8 @@ class MissionStateService {
 
         const rpgService = game.gameServices.rpgService;
 
-        rpgSnapshot.entities.forEach((entityData, agentId) => {
+        // Iterate over array of [agentId, entityData] pairs
+        rpgSnapshot.entities.forEach(([agentId, entityData]) => {
             const entity = rpgService.rpgManager?.getEntity(agentId);
             if (entity) {
                 entity.xp = entityData.xp;

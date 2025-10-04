@@ -497,16 +497,12 @@ CyberOpsGame.prototype.initializeServices = function() {
     if (this.logger) this.logger.info('✅ Services initialized with game data');
 }
 
-// Define compatibility layer properties for backward compatibility
-// These delegate to the services when available, fallback to internal properties
+// Define READ-ONLY properties that delegate to services
+// SETTERS REMOVED - All code now uses services directly for maximum clarity
 Object.defineProperty(CyberOpsGame.prototype, 'credits', {
     get: function() {
         if (!this.gameServices || !this.gameServices.resourceService) return 0;
         return this.gameServices.resourceService.get('credits');
-    },
-    set: function(value) {
-        if (!this.gameServices || !this.gameServices.resourceService) return;
-        this.gameServices.resourceService.set('credits', value, 'direct assignment');
     },
     enumerable: true,
     configurable: true
@@ -517,10 +513,6 @@ Object.defineProperty(CyberOpsGame.prototype, 'researchPoints', {
         if (!this.gameServices || !this.gameServices.resourceService) return 0;
         return this.gameServices.resourceService.get('researchPoints');
     },
-    set: function(value) {
-        if (!this.gameServices || !this.gameServices.resourceService) return;
-        this.gameServices.resourceService.set('researchPoints', value, 'direct assignment');
-    },
     enumerable: true,
     configurable: true
 });
@@ -529,10 +521,6 @@ Object.defineProperty(CyberOpsGame.prototype, 'worldControl', {
     get: function() {
         if (!this.gameServices || !this.gameServices.resourceService) return 0;
         return this.gameServices.resourceService.get('worldControl');
-    },
-    set: function(value) {
-        if (!this.gameServices || !this.gameServices.resourceService) return;
-        this.gameServices.resourceService.set('worldControl', value, 'direct assignment');
     },
     enumerable: true,
     configurable: true

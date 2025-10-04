@@ -2896,29 +2896,14 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         });
 
         if (agent && !agent.hired && game.credits >= agent.cost) {
-            // Use AgentService to properly hire the agent
-            if (game.gameServices && game.gameServices.agentService) {
-                const success = game.gameServices.agentService.hireAgent(agent.id);
-                if (success) {
-                    if (this.logger) this.logger.info(`✅ Successfully hired ${agent.name} through AgentService`);
+            // Use AgentService to properly hire the agent (NO FALLBACK)
+            if (!game.gameServices || !game.gameServices.agentService) {
+                throw new Error('AgentService is required - legacy hiring removed');
+            }
 
-                    // Initialize equipment loadout for new agent
-                    if (game.agentLoadouts && !game.agentLoadouts[agent.id]) {
-                        game.agentLoadouts[agent.id] = {
-                            weapon: null,
-                            armor: null,
-                            utility: null,
-                            special: null
-                        };
-                        if (this.logger) this.logger.info(`Initialized loadout for ${agent.name}`);
-                    }
-                }
-            } else {
-                // Fallback if AgentService not available
-                if (this.logger) this.logger.warn('AgentService not available, using legacy hiring');
-                game.credits -= agent.cost;
-                agent.hired = true;
-                game.activeAgents.push(agent);
+            const success = game.gameServices.agentService.hireAgent(agent.id);
+            if (success) {
+                if (this.logger) this.logger.info(`✅ Successfully hired ${agent.name} through AgentService`);
 
                 // Initialize equipment loadout for new agent
                 if (game.agentLoadouts && !game.agentLoadouts[agent.id]) {
@@ -2970,8 +2955,13 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
     engine.registerAction('purchaseItem', function(itemId, context) {
         const item = this.stateData.selectedItem;
         if (item && game.credits >= item.price) {
-            game.credits -= item.price;
+            // Use ResourceService for payment (NO FALLBACK)
+            if (!game.gameServices?.resourceService) {
+                throw new Error('ResourceService is required - legacy shop removed');
+            }
+            game.gameServices.resourceService.spend('credits', item.price, `purchase ${item.name}`);
 
+            // Update item owned count (PRESERVED LOGIC)
             if (item.type === 'weapon' && game.weapons) {
                 const weapon = game.weapons.find(w => w.id === item.id);
                 if (weapon) weapon.owned++;

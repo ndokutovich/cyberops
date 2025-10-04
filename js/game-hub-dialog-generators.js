@@ -151,12 +151,11 @@ CyberOpsGame.prototype.generateTrainingContent = function() {
                     const cost = parseInt(e.target.dataset.cost);
                     if (this.credits >= cost) {
                         // UNIDIRECTIONAL: Use ResourceService for spending
-                        if (this.gameServices && this.gameServices.resourceService) {
-                            this.gameServices.resourceService.spend('credits', cost, `training: ${stat}`);
-                        } else {
-                            // Property proxy handles this
-                            this.credits -= cost;
+                        // Use ResourceService ONLY (NO PROXY)
+                        if (!this.gameServices?.resourceService) {
+                            throw new Error('ResourceService is required - legacy training removed');
                         }
+                        this.gameServices.resourceService.spend('credits', cost, `training: ${stat}`);
                         this.activeAgents.forEach(agent => {
                             // Use FormulaService to modify stats properly
                             const formulaService = window.GameServices.formulaService;
