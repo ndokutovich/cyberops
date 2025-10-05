@@ -12,7 +12,7 @@ CyberOpsGame.prototype.initPathCache = function() {
     this.maxPathCacheSize = 50; // Limit cache size
 }
 
-CyberOpsGame.prototype.findPath = function(startX, startY, endX, endY) {
+CyberOpsGame.prototype.findPath = function(startX, startY, endX, endY, smooth = true) {
     // Convert to grid coordinates
     const start = { x: Math.floor(startX), y: Math.floor(startY) };
     const end = { x: Math.floor(endX), y: Math.floor(endY) };
@@ -73,12 +73,12 @@ CyberOpsGame.prototype.findPath = function(startX, startY, endX, endY) {
 
         // Check if we reached the goal
         if (current.x === end.x && current.y === end.y) {
-            const path = this.reconstructPath(cameFrom, current);
+            const path = this.reconstructPath(cameFrom, current, smooth);
 
             // Cache the result
             if (this.pathCache) {
                 // Clean old cache entries if needed
-                if (this.pathCache.size > this.maxPathCacheSize) {
+                if (this.pathCache.size >= this.maxPathCacheSize) {
                     const firstKey = this.pathCache.keys().next().value;
                     this.pathCache.delete(firstKey);
                 }
@@ -175,7 +175,7 @@ CyberOpsGame.prototype.heuristic = function(a, b) {
 }
 
 // Reconstruct path from A* result
-CyberOpsGame.prototype.reconstructPath = function(cameFrom, current) {
+CyberOpsGame.prototype.reconstructPath = function(cameFrom, current, smooth = true) {
     const path = [{ x: current.x, y: current.y }];
     let key = `${current.x},${current.y}`;
 
@@ -185,8 +185,8 @@ CyberOpsGame.prototype.reconstructPath = function(cameFrom, current) {
         key = `${current.x},${current.y}`;
     }
 
-    // Smooth the path for more natural movement
-    return this.smoothPath(path);
+    // Smooth the path for more natural movement (unless disabled)
+    return smooth ? this.smoothPath(path) : path;
 }
 
 // Smooth path by removing unnecessary waypoints

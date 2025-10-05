@@ -22,6 +22,14 @@ describe('Turn-Based Mode Tests', () => {
             enemies: [],
             npcs: [],
 
+            // Mock map data
+            map: {
+                width: 100,
+                height: 100,
+                tiles: new Array(100 * 100).fill('.')
+            },
+            movementPreviewTiles: [],
+
             // Turn-based methods
             initTurnBasedMode: CyberOpsGame.prototype.initTurnBasedMode,
             toggleTurnBasedMode: CyberOpsGame.prototype.toggleTurnBasedMode,
@@ -31,12 +39,21 @@ describe('Turn-Based Mode Tests', () => {
             calculateInitiative: CyberOpsGame.prototype.calculateInitiative,
             startTurn: CyberOpsGame.prototype.startTurn,
             endTurn: CyberOpsGame.prototype.endTurn,
+            calculateMovementRange: CyberOpsGame.prototype.calculateMovementRange,
+            toggleGridSnap: CyberOpsGame.prototype.toggleGridSnap,
 
             // Mock methods to prevent undefined errors
             updateTurnBasedAPDisplay: function() {},
             logEvent: function() {},
             audioSystem: null,
-            playSound: function() {}
+            playSound: function() {},
+            isWalkable: function(x, y) {
+                if (x < 0 || y < 0 || x >= this.map.width || y >= this.map.height) {
+                    return false;
+                }
+                const index = y * this.map.width + x;
+                return this.map.tiles[index] !== '#';
+            }
         };
 
         mockGame.initTurnBasedMode();

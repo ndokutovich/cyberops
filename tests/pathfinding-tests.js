@@ -20,6 +20,8 @@ describe('Pathfinding Tests', () => {
             heuristic: CyberOpsGame.prototype.heuristic,
             reconstructPath: CyberOpsGame.prototype.reconstructPath,
             initPathCache: CyberOpsGame.prototype.initPathCache,
+            smoothPath: CyberOpsGame.prototype.smoothPath,
+            hasDirectPath: CyberOpsGame.prototype.hasDirectPath,
 
             // Map checking
             isWalkable: function(x, y) {
@@ -177,7 +179,7 @@ describe('Pathfinding Tests', () => {
                 }
             }
             const game = createMockGame(createMapWithWalls(10, 10, walls));
-            const path = game.findPath(3, 5, 7, 5);
+            const path = game.findPath(3, 5, 7, 5, false); // Disable smoothing to check waypoints
 
             assertTruthy(path, 'Should find path through corridor');
 
@@ -443,7 +445,7 @@ describe('Pathfinding Tests', () => {
 
         it('should produce continuous path', () => {
             const game = createMockGame(createOpenMap(10, 10));
-            const path = game.findPath(0, 0, 9, 9);
+            const path = game.findPath(0, 0, 9, 9, false); // Disable smoothing for step-by-step path
 
             // Each step should be adjacent to previous
             for (let i = 1; i < path.length; i++) {
