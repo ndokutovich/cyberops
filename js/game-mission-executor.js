@@ -1136,9 +1136,20 @@ CyberOpsGame.prototype.loadMapFromEmbeddedTiles = function(mapDef) {
         items: [],
         doors: mapDef.embedded.doors || mapDef.doors || [],
         terminals: [],
+        collectables: mapDef.embedded.collectables || [], // Load collectables from mission definition
         coverPositions: mapDef.embedded.coverCount || mapDef.coverPositions || 0,
         enemySpawns: mapDef.enemySpawns || []
     };
+
+    // Debug: Log collectables loading
+    if (mapDef.embedded.collectables && mapDef.embedded.collectables.length > 0) {
+        console.log('🔍 [MAP LOAD] Loading collectables from mission:', {
+            count: mapDef.embedded.collectables.length,
+            collectables: mapDef.embedded.collectables.map(c => ({ id: c.id, x: c.x, y: c.y, questRequired: c.questRequired }))
+        });
+    } else {
+        console.log('🔍 [MAP LOAD] No collectables in mission embedded data');
+    }
 
     // DEBUG: Log spawn and extraction to verify they're not swapped
     if (this.logger) {

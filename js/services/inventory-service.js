@@ -42,11 +42,60 @@ class InventoryService {
 
         // Import weapons data
         if (data.weapons) {
-            this.inventory.weapons = data.weapons.map(w => ({
-                ...w,
-                equipped: w.equipped || 0
-            }));
+            // Debug Ghost Prototype coming in
+            const ghost = data.weapons.find(w => w.name === "Ghost Prototype");
+            if (ghost) {
+                console.log('🔍 [INIT] Ghost Prototype coming into initialize():', {
+                    owned: ghost.owned,
+                    hasOwnProperty: ghost.hasOwnProperty('owned'),
+                    ownedType: typeof ghost.owned,
+                    callStack: new Error().stack.split('\n').slice(1, 5).join('\n')
+                });
+            }
+
+            const mappedWeapons = data.weapons.map(w => {
+                const weapon = {
+                    ...w,
+                    equipped: w.equipped || 0
+                };
+
+                // Add setter trap for Ghost Prototype
+                if (weapon.name === "Ghost Prototype") {
+                    let _owned = weapon.owned;
+                    Object.defineProperty(weapon, 'owned', {
+                        get() { return _owned; },
+                        set(val) {
+                            console.log('🚨 [MUTATION] Ghost Prototype owned changed!', {
+                                from: _owned,
+                                to: val,
+                                stack: new Error().stack.split('\n').slice(1, 6).join('\n')
+                            });
+                            _owned = val;
+                        },
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+
+                return weapon;
+            });
+
+            this.inventory.weapons = mappedWeapons;
+
+            // Also trap the array itself being replaced
+            const ghost = mappedWeapons.find(w => w.name === "Ghost Prototype");
+            if (ghost) {
+                console.log('🔍 [TRAP] Set up mutation trap for Ghost Prototype, current owned:', ghost.owned);
+            }
             if (this.logger) this.logger.debug(`Imported ${data.weapons.length} weapons`);
+
+            // Debug Ghost Prototype after mapping
+            const ghostAfter = this.inventory.weapons.find(w => w.name === "Ghost Prototype");
+            if (ghostAfter) {
+                console.log('🔍 [INIT] Ghost Prototype after mapping:', {
+                    owned: ghostAfter.owned
+                });
+            }
         }
 
         // Import equipment data
@@ -54,6 +103,16 @@ class InventoryService {
             if (this.logger) this.logger.debug(`Processing ${data.equipment.length} equipment items`);
             data.equipment.forEach(item => {
                 let category = this.getItemCategory(item.type || item.slot);
+
+                // Debug Ghost Prototype
+                if (item.name === "Ghost Prototype") {
+                    console.log('🔍 [EQUIPMENT] Processing Ghost Prototype as equipment:', {
+                        type: item.type,
+                        slot: item.slot,
+                        category: category,
+                        owned: item.owned
+                    });
+                }
 
                 // For generic 'equipment' type, categorize based on item properties
                 if (category === 'equipment') {
@@ -69,7 +128,7 @@ class InventoryService {
                 if (category && this.inventory[category]) {
                     this.inventory[category].push({
                         ...item,
-                        owned: item.owned || 1,
+                        owned: item.owned || 1,  // BUG: Defaults to 1 for equipment!
                         equipped: item.equipped || 0
                     });
                     if (this.logger) this.logger.debug(`Added ${item.name} to ${category}`);
@@ -101,6 +160,14 @@ class InventoryService {
      */
     initializeFromGame(game) {
         if (this.logger) this.logger.warn('DEPRECATED: initializeFromGame called, use initialize() instead');
+
+        // CRITICAL FIX: Check for circular reference
+        // If game.weapons is already the same array as inventory.weapons, skip re-initialization
+        if (game.weapons === this.inventory.weapons) {
+            if (this.logger) this.logger.warn('⚠️ Skipping re-initialization - circular reference detected (game.weapons === inventory.weapons)');
+            return;
+        }
+
         // Extract data from game object for backward compatibility
         this.initialize({
             weapons: game.weapons,
@@ -441,12 +508,31 @@ class InventoryService {
         if (!category) return { success: false, error: 'Invalid item type' };
 
         const items = this.inventory[category];
+
+        // Debug: Log Ghost Prototype purchase attempt
+        if (itemData.name === "Ghost Prototype") {
+            console.log('🔍 [SHOP] Attempting to buy Ghost Prototype:', {
+                itemDataId: itemData.id,
+                itemDataIdType: typeof itemData.id,
+                existingItems: items.map(i => ({ id: i.id, idType: typeof i.id, name: i.name, owned: i.owned }))
+            });
+        }
+
         // Handle both string and numeric IDs
         let existingItem = items.find(i =>
             i.id == itemData.id ||
             (typeof i.id === 'string' && typeof itemData.id === 'number' && i.id == String(itemData.id)) ||
             (typeof i.id === 'number' && typeof itemData.id === 'string' && String(i.id) == itemData.id)
         );
+
+        // Debug: Log match result
+        if (itemData.name === "Ghost Prototype") {
+            console.log('🔍 [SHOP] Ghost Prototype match result:', {
+                found: !!existingItem,
+                existingId: existingItem?.id,
+                existingOwned: existingItem?.owned
+            });
+        }
 
         if (existingItem) {
             // Already own this item, increment count

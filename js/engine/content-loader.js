@@ -214,12 +214,42 @@ class ContentLoader {
             // Process weapons
             if (rpgItems.weapons) {
                 Object.entries(rpgItems.weapons).forEach(([id, weapon]) => {
-                    weapons.push({
+                    const ownedCount = weapon.owned || weapon.initialOwned || 0;
+
+                    const weaponObj = {
                         ...weapon,
                         id: weapon.id || id,
-                        owned: weapon.owned || weapon.initialOwned || 0,  // Check initialOwned for starting inventory
+                        owned: ownedCount,
                         equipped: weapon.equipped || 0
-                    });
+                    };
+
+                    // Debug: Log Ghost Prototype initialization
+                    if (weapon.name === "Ghost Prototype") {
+                        console.log('🔍 [INVENTORY] Initializing Ghost Prototype:', {
+                            id: weapon.id || id,
+                            owned: weapon.owned,
+                            initialOwned: weapon.initialOwned,
+                            finalOwned: ownedCount
+                        });
+
+                        // Add getter/setter to track changes
+                        let _owned = ownedCount;
+                        Object.defineProperty(weaponObj, 'owned', {
+                            get() { return _owned; },
+                            set(val) {
+                                console.log('🔍 [INVENTORY] Ghost Prototype owned changed:', {
+                                    from: _owned,
+                                    to: val,
+                                    stack: new Error().stack
+                                });
+                                _owned = val;
+                            },
+                            configurable: true,
+                            enumerable: true
+                        });
+                    }
+
+                    weapons.push(weaponObj);
                 });
             }
 

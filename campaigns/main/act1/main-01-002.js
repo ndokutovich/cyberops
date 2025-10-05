@@ -120,6 +120,16 @@
                     { x: 45, y: 24, locked: false },  // North door to command center
                     { x: 45, y: 46, locked: false }   // South door to command center
                 ],
+                collectables: [
+                    // Intel documents in checkpoint rooms
+                    { type: 'collectable', x: 16, y: 16, id: 'intel_checkpoint1', name: 'Research Data', sprite: '📄', credits: 150 },
+                    { type: 'collectable', x: 76, y: 16, id: 'intel_checkpoint2', name: 'Security Codes', sprite: '📄', credits: 150 },
+                    // Credits cache in command center
+                    { type: 'collectable', x: 44, y: 36, id: 'credits_command', name: 'Emergency Fund', sprite: '💰', credits: 300 },
+                    // Medical supplies in corners
+                    { type: 'collectable', x: 10, y: 60, id: 'medkit_1', name: 'First Aid Kit', sprite: '💊', health: 50 },
+                    { type: 'collectable', x: 80, y: 60, id: 'medkit_2', name: 'Medical Supplies', sprite: '💊', health: 50 }
+                ],
                 coverCount: 80
             },
 

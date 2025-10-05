@@ -280,6 +280,24 @@ NPC.prototype.giveQuest = function(quest, game) {
         game.quests[quest.id] = quest;
         quest.active = true;
 
+        // Initialize npcActiveQuests array if needed
+        if (!game.npcActiveQuests) {
+            game.npcActiveQuests = [];
+            console.log('🔍 [NPC QUEST] Initialized npcActiveQuests array');
+        }
+
+        // Add quest to active NPC quests (for collectible visibility)
+        if (!game.npcActiveQuests.some(q => q.id === quest.id)) {
+            game.npcActiveQuests.push(quest);
+            console.log('🔍 [NPC QUEST] Quest added to npcActiveQuests:', {
+                questId: quest.id,
+                questName: quest.name,
+                npcActiveQuestsCount: game.npcActiveQuests.length
+            });
+        } else {
+            console.log('🔍 [NPC QUEST] Quest already in array:', quest.id);
+        }
+
         // Use introDialog if available, otherwise use description
         const questText = quest.introDialog || quest.description || `I have a task for you: ${quest.name}`;
 
@@ -313,6 +331,14 @@ NPC.prototype.completeQuest = function(quest, game) {
         quest.active = false;
         quest.completed = true;
         quest.rewardClaimed = true;
+
+        // Remove from active NPC quests (hide collectibles)
+        if (game.npcActiveQuests) {
+            const index = game.npcActiveQuests.findIndex(q => q.id === quest.id);
+            if (index !== -1) {
+                game.npcActiveQuests.splice(index, 1);
+            }
+        }
 
         // Give rewards through ResourceService
         if (quest.rewards) {
@@ -420,6 +446,9 @@ Quest.prototype.checkObjective = function(objective, game) {
                 return game.inventory && game.inventory[objective.item] >= objective.count;
 
             case 'reach':
+                // Once reached, stay completed (don't require staying at location)
+                if (objective.completed) return true;
+
                 if (!game.agents || game.agents.length === 0) return false;
 
                 // Check if ANY agent is close to the objective
@@ -430,7 +459,8 @@ Quest.prototype.checkObjective = function(objective, game) {
                             Math.pow(agent.y - objective.y, 2)
                         );
                         if (dist < 2) {
-                            return true;  // Any agent reached the location
+                            objective.completed = true;  // Mark as permanently completed
+                            return true;
                         }
                     }
                 }

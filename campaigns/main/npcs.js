@@ -47,12 +47,16 @@
                     id: 'secret_passage',
                     name: 'Secret Passage',
                     description: 'Find the maintenance tunnel entrance.',
-                    introDialog: 'There\'s a maintenance tunnel that can get you past security. I marked it on your map.',
-                    completionDialog: 'You found it! That tunnel will save you a lot of trouble.',
+                    introDialog: 'There\'s a maintenance tunnel that can get you past security. I marked it on your map - you\'ll find some useful items there too.',
+                    completionDialog: 'You found it! That tunnel saved you a lot of trouble. Here\'s a bonus for your effort.',
                     objectives: [
                         { id: 'find_tunnel', type: 'reach', x: 72, y: 70, description: 'Find the maintenance tunnel in the southeast area' }
                     ],
-                    rewards: { credits: 300, experience: 100 }
+                    rewards: {
+                        credits: 300,
+                        experience: 100
+                        // Items appear as collectibles when quest is active (see mission collectables with questRequired: 'secret_passage')
+                    }
                 }
             ]
         },
