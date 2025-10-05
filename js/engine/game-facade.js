@@ -523,6 +523,13 @@ class GameFacade {
      * Initialize available agents
      */
     initializeAgents() {
+        // Guard against services not being available
+        if (!this.services || !this.services.agentService) {
+            if (this.logger) this.logger.warn('AgentService not available during initialization, skipping agent setup');
+            this.agents = [];
+            return;
+        }
+
         const availableAgents = this.services.agentService.getAvailableAgents();
         this.agents = availableAgents.slice(0, 4).map((agent, index) => ({
             ...agent,
@@ -539,6 +546,11 @@ class GameFacade {
      * Initialize agent loadouts
      */
     initializeLoadouts() {
+        if (!this.agents || this.agents.length === 0) {
+            if (this.logger) this.logger.warn('No agents available during loadout initialization');
+            return;
+        }
+
         this.agents.forEach(agent => {
             this.agentLoadouts[agent.id] = {
                 weapon: null,

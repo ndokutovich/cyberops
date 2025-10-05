@@ -760,6 +760,14 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         ? invService.inventory.weapons
         : this.weapons;
 
+    if (logger) {
+        logger.info(`🔍 Building weapon pool from ${weaponsToUse.length} weapons`);
+        weaponsToUse.forEach(w => {
+            const damage = w.stats?.damage || w.damage || 0;
+            logger.debug(`  - ${w.name}: owned=${w.owned}, damage=${damage}`);
+        });
+    }
+
     weaponsToUse.forEach(weapon => {
         if (weapon.owned > 0) {
             for (let i = 0; i < weapon.owned; i++) {
@@ -768,8 +776,23 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         }
     });
 
+    if (logger) logger.info(`📊 Weapon pool created with ${weaponPool.length} weapons (${weaponsToUse.filter(w => w.owned > 0).length} types)`);
+
     // Sort weapon pool by damage (best first)
-    weaponPool.sort((a, b) => b.damage - a.damage);
+    // Handle both nested stats.damage and flat damage
+    weaponPool.sort((a, b) => {
+        const damageA = a.stats?.damage || a.damage || 0;
+        const damageB = b.stats?.damage || b.damage || 0;
+        return damageB - damageA;
+    });
+
+    if (logger && weaponPool.length > 0) {
+        logger.info(`🎯 Top weapons by damage:`);
+        weaponPool.slice(0, 5).forEach((w, i) => {
+            const damage = w.stats?.damage || w.damage || 0;
+            logger.debug(`  ${i + 1}. ${w.name}: ${damage} damage`);
+        });
+    }
 
     // Assign best weapons to agents
     this.activeAgents.forEach((agent, index) => {

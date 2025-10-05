@@ -8,20 +8,44 @@ if (typeof GameServices === 'undefined') {
         // Logger instance
         this.logger = window.Logger ? new window.Logger('GameServices') : null;
 
-        // Initialize core services first
-        this.formulaService = new FormulaService();
-        this.resourceService = new ResourceService();
-        this.agentService = new AgentService(this.resourceService);
+        try {
+            // Initialize core services first
+            if (this.logger) this.logger.debug('Initializing FormulaService...');
+            this.formulaService = new FormulaService();
 
-        // Mission services
-        this.missionService = new MissionService(this.resourceService, this.agentService);
-        this.missionStateService = new MissionStateService(); // Mission state isolation
+            if (this.logger) this.logger.debug('Initializing ResourceService...');
+            this.resourceService = new ResourceService();
 
-        // Initialize dependent services
-        this.researchService = new ResearchService(this.formulaService);
-        this.equipmentService = new EquipmentService(this.formulaService);
-        this.rpgService = new RPGService(this.formulaService, this.resourceService);
-        this.inventoryService = new InventoryService(this.formulaService, this.equipmentService);
+            if (this.logger) this.logger.debug('Initializing AgentService...');
+            this.agentService = new AgentService(this.resourceService);
+
+            // Mission services
+            if (this.logger) this.logger.debug('Initializing MissionService...');
+            this.missionService = new MissionService(this.resourceService, this.agentService);
+
+            if (this.logger) this.logger.debug('Initializing MissionStateService...');
+            this.missionStateService = new MissionStateService(); // Mission state isolation
+
+            // Initialize dependent services
+            if (this.logger) this.logger.debug('Initializing ResearchService...');
+            this.researchService = new ResearchService(this.formulaService);
+
+            if (this.logger) this.logger.debug('Initializing EquipmentService...');
+            this.equipmentService = new EquipmentService(this.formulaService);
+
+            if (this.logger) this.logger.debug('Initializing RPGService...');
+            this.rpgService = new RPGService(this.formulaService, this.resourceService);
+
+            if (this.logger) this.logger.debug('Initializing CatalogService...');
+            this.catalogService = new CatalogService();
+
+            if (this.logger) this.logger.debug('Initializing InventoryService...');
+            this.inventoryService = new InventoryService(this.formulaService, this.equipmentService);
+        } catch (error) {
+            console.error('❌ CRITICAL: GameServices initialization failed:', error);
+            if (this.logger) this.logger.fatal('GameServices initialization failed', error);
+            throw error;
+        }
 
         // Item service for collectable handling
         if (window.ItemService) {

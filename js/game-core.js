@@ -460,14 +460,18 @@ CyberOpsGame.prototype.initializeServices = function() {
     }
 
     // Initialize ResourceService with current values
-    this.gameServices.resourceService.initialize({
-        credits: this._credits || 10000,
-        researchPoints: this._researchPoints || 0,
-        worldControl: this._worldControl || 0
-    });
+    if (this.gameServices.resourceService) {
+        this.gameServices.resourceService.initialize({
+            credits: this._credits || 10000,
+            researchPoints: this._researchPoints || 0,
+            worldControl: this._worldControl || 0
+        });
+    } else {
+        if (this.logger) this.logger.warn('⚠️ ResourceService not available, skipping initialization');
+    }
 
     // Initialize AgentService with campaign agents (if loaded)
-    if (this._availableAgents || this._activeAgents) {
+    if (this.gameServices.agentService && (this._availableAgents || this._activeAgents)) {
         const campaignAgents = [];
 
         // Add available agents
@@ -492,6 +496,8 @@ CyberOpsGame.prototype.initializeServices = function() {
         }
 
         this.gameServices.agentService.initialize(campaignAgents);
+    } else if (!this.gameServices.agentService) {
+        if (this.logger) this.logger.warn('⚠️ AgentService not available, skipping initialization');
     }
 
     if (this.logger) this.logger.info('✅ Services initialized with game data');

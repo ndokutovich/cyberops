@@ -554,63 +554,56 @@ class ShopManager {
 
     generateShopInventory(shop) {
         const inventory = [];
-        const rpgConfig = this.rpgConfig || window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {};
+        const catalogService = window.GameServices?.catalogService;
 
         console.log('🛒 generateShopInventory - shop has categories?', !!shop.itemCategories);
-        console.log('🛒 rpgConfig has items?', !!rpgConfig?.items);
+        console.log('🛒 CatalogService available?', !!catalogService);
 
-        if (shop.itemCategories) {
-            shop.itemCategories.forEach(category => {
-                console.log(`🛒 Looking for items in category: ${category}`);
-                if (rpgConfig?.items?.[category]) {
-                    console.log(`  ✓ Found ${Object.keys(rpgConfig.items[category]).length} items in ${category}`);
-                    Object.entries(rpgConfig.items[category]).forEach(([id, item]) => {
-                        inventory.push({
-                            id,
-                            ...item,
-                            stock: shop.infiniteStock ? -1 : (item.stock || 10),
-                            price: Math.floor(item.value * (shop.priceMultiplier || 1))
+        // Use CatalogService if available (NEW approach)
+        if (catalogService) {
+            if (shop.itemCategories) {
+                shop.itemCategories.forEach(category => {
+                    console.log(`🛒 Looking for items in category: ${category}`);
+                    const items = catalogService.getItemsByCategory(category);
+
+                    if (items && items.length > 0) {
+                        console.log(`  ✓ Found ${items.length} items in ${category}`);
+                        items.forEach(item => {
+                            inventory.push({
+                                id: item.id,
+                                ...item,
+                                stock: shop.infiniteStock ? -1 : (item.stock || 10),
+                                price: Math.floor(item.value * (shop.priceMultiplier || 1))
+                            });
                         });
-                    });
-                } else {
-                    console.warn(`  ✗ No items found in category: ${category}`);
-                }
-            });
-        }
-
-        // Add exclusive items for this shop
-        if (shop.exclusiveItems && Array.isArray(shop.exclusiveItems)) {
-            console.log(`🛒 Adding ${shop.exclusiveItems.length} exclusive items`);
-            shop.exclusiveItems.forEach(itemId => {
-                // Search for the exclusive item in all categories
-                let foundItem = null;
-                let foundId = itemId;
-
-                if (rpgConfig?.items) {
-                    for (const [category, items] of Object.entries(rpgConfig.items)) {
-                        for (const [id, item] of Object.entries(items)) {
-                            if (id === itemId || item.id === itemId) {
-                                foundItem = item;
-                                foundId = id;
-                                console.log(`  ✓ Found exclusive item "${item.name}" in ${category}`);
-                                break;
-                            }
-                        }
-                        if (foundItem) break;
+                    } else {
+                        console.warn(`  ✗ No items found in category: ${category}`);
                     }
-                }
+                });
+            }
 
-                if (foundItem) {
-                    inventory.push({
-                        id: foundId,
-                        ...foundItem,
-                        stock: shop.infiniteStock ? -1 : 1,  // Unique items usually have limited stock
-                        price: Math.floor(foundItem.value * (shop.priceMultiplier || 1))
-                    });
-                } else {
-                    console.warn(`  ✗ Exclusive item not found: ${itemId}`);
-                }
-            });
+            // Add exclusive items for this shop
+            if (shop.exclusiveItems && Array.isArray(shop.exclusiveItems)) {
+                console.log(`🛒 Adding ${shop.exclusiveItems.length} exclusive items`);
+                shop.exclusiveItems.forEach(itemId => {
+                    const foundItem = catalogService.getItem(itemId);
+
+                    if (foundItem) {
+                        console.log(`  ✓ Found exclusive item "${foundItem.name}"`);
+                        inventory.push({
+                            id: foundItem.id,
+                            ...foundItem,
+                            stock: shop.infiniteStock ? -1 : 1,  // Unique items usually have limited stock
+                            price: Math.floor(foundItem.value * (shop.priceMultiplier || 1))
+                        });
+                    } else {
+                        console.warn(`  ✗ Exclusive item not found: ${itemId}`);
+                    }
+                });
+            }
+        } else {
+            // CRITICAL: CatalogService should always be available
+            console.error('❌ CRITICAL: CatalogService not available! Shop inventory cannot be generated.');
         }
 
         return inventory;

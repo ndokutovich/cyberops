@@ -196,6 +196,7 @@ class ContentLoader {
     loadEquipment(game) {
         if (logger) logger.debug('🔫 Loading equipment from RPG config...');
 
+        const catalogService = window.GameServices?.catalogService;
         const inventoryService = window.GameServices?.inventoryService;
         if (!inventoryService) return;
 
@@ -207,90 +208,24 @@ class ContentLoader {
         if (hasRPGItems) {
             if (logger) logger.debug('📦 Loading items from RPG config structure');
 
-            // Convert RPG items to array format for inventory service
-            const weapons = [];
-            const equipment = [];
-
-            // Process weapons
-            if (rpgItems.weapons) {
-                Object.entries(rpgItems.weapons).forEach(([id, weapon]) => {
-                    const ownedCount = weapon.owned || weapon.initialOwned || 0;
-
-                    const weaponObj = {
-                        ...weapon,
-                        id: weapon.id || id,
-                        owned: ownedCount,
-                        equipped: weapon.equipped || 0
-                    };
-
-                    // Debug: Log Ghost Prototype initialization
-                    if (weapon.name === "Ghost Prototype") {
-                        console.log('🔍 [INVENTORY] Initializing Ghost Prototype:', {
-                            id: weapon.id || id,
-                            owned: weapon.owned,
-                            initialOwned: weapon.initialOwned,
-                            finalOwned: ownedCount
-                        });
-
-                        // Add getter/setter to track changes
-                        let _owned = ownedCount;
-                        Object.defineProperty(weaponObj, 'owned', {
-                            get() { return _owned; },
-                            set(val) {
-                                console.log('🔍 [INVENTORY] Ghost Prototype owned changed:', {
-                                    from: _owned,
-                                    to: val,
-                                    stack: new Error().stack
-                                });
-                                _owned = val;
-                            },
-                            configurable: true,
-                            enumerable: true
-                        });
-                    }
-
-                    weapons.push(weaponObj);
-                });
+            // Initialize catalog service with complete item database
+            if (catalogService) {
+                catalogService.initialize(this.currentCampaign.rpgConfig, this.currentCampaign.id || 'main');
+                if (logger) logger.info(`📚 Item catalog initialized: ${catalogService.getTotalItemCount()} items`);
             }
 
-            // Process armor
-            if (rpgItems.armor) {
-                Object.entries(rpgItems.armor).forEach(([id, armor]) => {
-                    equipment.push({
-                        ...armor,
-                        id: armor.id || id,
-                        type: 'armor',
-                        owned: armor.owned || armor.initialOwned || 0,  // Check initialOwned
-                        equipped: armor.equipped || 0
-                    });
-                });
+            // CRITICAL: CatalogService is required for proper item management
+            if (!catalogService) {
+                if (logger) logger.error('❌ CRITICAL: CatalogService not available! Cannot load items correctly.');
+                throw new Error('CatalogService is required for item loading. Check GameServices initialization.');
             }
 
-            // Process utility items
-            if (rpgItems.utility) {
-                Object.entries(rpgItems.utility).forEach(([id, utility]) => {
-                    equipment.push({
-                        ...utility,
-                        id: utility.id || id,
-                        type: 'utility',
-                        owned: utility.owned || utility.initialOwned || 0,  // Check initialOwned
-                        equipped: utility.equipped || 0
-                    });
-                });
-            }
+            // Use catalog service to get starting inventory (ONLY owned items)
+            const startingInventory = catalogService.getPlayerStartingInventory();
+            const weapons = startingInventory.weapons;
+            const equipment = [...startingInventory.armor, ...startingInventory.utility, ...startingInventory.special];
 
-            // Process special items
-            if (rpgItems.special) {
-                Object.entries(rpgItems.special).forEach(([id, special]) => {
-                    equipment.push({
-                        ...special,
-                        id: special.id || id,
-                        type: 'special',
-                        owned: special.owned || special.initialOwned || 0,  // Check initialOwned
-                        equipped: special.equipped || 0
-                    });
-                });
-            }
+            if (logger) logger.info(`📦 Player starting inventory: ${weapons.length} weapons, ${equipment.length} equipment`);
 
             // Initialize inventory service with converted items
             inventoryService.initialize({ weapons, equipment });
@@ -307,7 +242,7 @@ class ContentLoader {
             if (this.currentCampaign.weapons) {
                 const weapons = this.currentCampaign.weapons.map(w => ({
                     ...w,
-                    owned: w.owned || 0,
+                    owned: w.owned !== undefined ? w.owned : 0,
                     equipped: w.equipped || 0
                 }));
                 inventoryService.initialize({ weapons });
@@ -318,7 +253,7 @@ class ContentLoader {
             if (this.currentCampaign.equipment) {
                 const equipment = this.currentCampaign.equipment.map(e => ({
                     ...e,
-                    owned: e.owned || 0,
+                    owned: e.owned !== undefined ? e.owned : 0,
                     equipped: e.equipped || 0
                 }));
                 inventoryService.initialize({ equipment });
