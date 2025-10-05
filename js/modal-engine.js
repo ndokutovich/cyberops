@@ -693,15 +693,19 @@ class ModalEngine {
 
             .modal-close {
                 cursor: pointer;
-                color: #ff073a;
+                color: #ff0000;
                 font-weight: bold;
-                padding: 5px 10px;
-                transition: all 0.2s;
+                padding: 6px 12px;
+                background: transparent;
+                border: 1px solid #ff0000;
+                border-radius: 4px;
+                transition: all 0.3s;
             }
 
             .modal-close:hover {
-                background: rgba(255, 7, 58, 0.2);
+                background: rgba(255, 0, 0, 0.2);
                 color: #ff4466;
+                border-color: #ff4466;
             }
 
             .modal-body {

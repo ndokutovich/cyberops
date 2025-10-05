@@ -2980,18 +2980,18 @@ body {
     background: transparent;
     border: 1px solid #ff0000;
     color: #ff0000;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
+    padding: 6px 12px;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 4px;
     transition: all 0.3s;
 }
 
 .dialog-close-button:hover {
-    background: #ff0000;
-    color: #000;
-    box-shadow: 0 0 10px #ff0000;
+    background: rgba(255, 0, 0, 0.2);
+    color: #ff4466;
+    border-color: #ff4466;
 }
 
 /* Dialog content for declarative dialogs */
