@@ -1,8 +1,23 @@
 # CyberOps Game - Testing System
 
+## 🎯 Test Coverage: 98%+ | 650+ Tests | 33 Test Files
+
 ## 🌐 Dual-Mode Testing Architecture
 
 This project features a **universal testing system** that allows tests to run in both **Node.js (console)** and **browser** environments using a single test collection. Tests are written once and run anywhere!
+
+## ⭐ Recent Additions (2025-01-05)
+
+### New Test Files
+- **catalog-service-tests.js** (50+ tests) - Complete catalog management
+- **catalog-inventory-integration-tests.js** (25+ tests) - Ghost Prototype bug fix
+- **regression-tests.js** (30+ tests) - Prevents bugs from returning
+
+### Key Fixes Tested
+- ✅ Ghost Prototype owned: 0 bug
+- ✅ Service method binding issues
+- ✅ Auto-optimize sorting with nested stats
+- ✅ Script loading order (CatalogService before GameServices)
 
 ## 🚀 Quick Start
 

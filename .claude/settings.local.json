@@ -64,7 +64,14 @@
       "Bash(timeout:*)",
       "Bash(if exist \"w:\\_proj\\_own\\_ideator\\cyberops-game\\js\\dialog-integration-validators.js\" del \"w:\\_proj\\_own\\_ideator\\cyberops-game\\js\\dialog-integration-validators.js\")",
       "Bash(start \"w:\\_proj\\_own\\_ideator\\cyberops-game\\test-runner.html\")",
-      "Bash(start \"w:\\_proj\\_own\\_ideator\\cyberops-game\\index.html\")"
+      "Bash(start \"w:\\_proj\\_own\\_ideator\\cyberops-game\\index.html\")",
+      "Bash(Get-Content \"w:\\_proj\\_own\\_ideator\\cyberops-game\\js\\campaign-integration.js\")",
+      "Bash(Select-Object -First 75)",
+      "Bash(Select-Object -Last 15)",
+      "Bash(for file in act*/main-*.js)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(for:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
