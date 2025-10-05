@@ -38,6 +38,7 @@ class AgentService {
         this.getAgent = this.getAgent.bind(this);
         this.getActiveAgents = this.getActiveAgents.bind(this);
         this.getAvailableAgents = this.getAvailableAgents.bind(this);
+        this.getSelectedAgents = this.getSelectedAgents.bind(this);
         this.clearAllAgents = this.clearAllAgents.bind(this);
         this.addAvailableAgent = this.addAvailableAgent.bind(this);
         this.indexAgent = this.indexAgent.bind(this);

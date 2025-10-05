@@ -10,6 +10,12 @@ if (typeof RPGService === 'undefined') {
         this.rpgManager = null;
         this.inventoryManager = null;
         this.shopManager = null;
+
+        // Bind methods for external access
+        this.initialize = this.initialize.bind(this);
+        this.setConfig = this.setConfig.bind(this);
+        this.calculateRPGDamage = this.calculateRPGDamage.bind(this);
+        this.grantExperience = this.grantExperience.bind(this);
     }
 
     /**
