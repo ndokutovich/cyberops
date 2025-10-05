@@ -52,6 +52,65 @@ get agents() {
 If you're about to write sync code, STOP. Use a computed property instead.
 If you're about to write `game.credits = X`, STOP. Use `resourceService.set()` instead.
 
+---
+
+## 🔥 CORE ARCHITECTURE PRINCIPLE #2: CATALOG vs INVENTORY SEPARATION
+
+### This is THE SECOND MOST IMPORTANT RULE
+
+**The codebase maintains 100% separation between item CATALOG (definitions) and player INVENTORY (instances).** This is non-negotiable.
+
+#### Architecture Philosophy
+1. **CATALOG**: What items exist in the game world (read-only database)
+2. **INVENTORY**: What items the player owns (mutable state)
+3. **NEVER MIX**: These are completely separate concepts
+4. **SINGLE SOURCE**: CatalogService owns catalog, InventoryService owns inventory
+
+#### The Golden Rule
+```javascript
+// ✅ CORRECT - Query catalog, filter for owned
+const catalog = catalogService.initialize(rpgConfig);
+const startingInv = catalogService.getPlayerStartingInventory();
+inventoryService.initialize({ weapons: startingInv.weapons });
+
+// ❌ WRONG - Loading entire catalog into inventory
+Object.entries(rpgConfig.items.weapons).forEach(([id, weapon]) => {
+    inventory.push(weapon);  // NO! This adds items with owned: 0!
+});
+```
+
+#### Why This Matters
+- **The Ghost Prototype Bug**: Items with `owned: 0` were appearing in player inventory
+- **Catalog as Database**: rpgConfig.items is a DATABASE of all items, not starting inventory
+- **Filter at Boundary**: Must filter for `owned > 0` when converting catalog to inventory
+- **Shop Confusion**: Shops query catalog (all items), not inventory (owned items)
+
+#### Enforcement
+- **NEVER** access `rpgConfig.items` directly (use CatalogService)
+- **NEVER** load entire catalog into inventory
+- **NEVER** create fallback to legacy filtering
+- **ALWAYS** use `catalogService.getPlayerStartingInventory()` for starting items
+- **ALWAYS** use `catalogService.getItemsByCategory()` for catalog queries
+- **ALWAYS** use `inventoryService` methods for owned items
+- **ALWAYS** fail fast if CatalogService unavailable
+
+```javascript
+// ✅ CORRECT - Use CatalogService
+if (!catalogService) {
+    throw new Error('CatalogService required');
+}
+const items = catalogService.getItemsByCategory('weapons');
+
+// ❌ WRONG - Direct catalog access
+const items = rpgConfig.items.weapons;  // NO!
+Object.entries(items).forEach(...);     // NO!
+```
+
+If you're about to access `rpgConfig.items`, STOP. Use `catalogService` instead.
+If you're about to filter for `owned > 0`, STOP. Use `getPlayerStartingInventory()` instead.
+
+---
+
 #### Critical Update (2025-01): Proxy Setters Removed
 
 **Properties are now READ-ONLY.** Direct assignment no longer works:
