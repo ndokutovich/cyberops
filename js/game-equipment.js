@@ -181,7 +181,7 @@ CyberOpsGame.prototype.showWeaponInventory = function() {
                 <div>
                     <div style="color: #fff; font-weight: bold;">${weapon.name}</div>
                     <div style="color: #888; font-size: 0.85em;">
-                        DMG: ${weapon.damage} | Owned: ${weapon.owned} | Equipped: ${equippedCount} | Available: ${availableCount}
+                        DMG: ${weapon.stats?.damage || weapon.damage || 0} | Owned: ${weapon.owned} | Equipped: ${equippedCount} | Available: ${availableCount}
                     </div>
                 </div>
                 <div>
@@ -585,14 +585,14 @@ CyberOpsGame.prototype.showSellDialog = function() {
             html += `<h4 style="color: #00ffff; margin: 15px 0 10px;">${category}</h4>`;
 
             categories[category].forEach(item => {
-                const sellPrice = Math.floor(item.cost * 0.6);
+                const sellPrice = Math.floor((item.value || item.cost || 0) * 0.6);
 
                 html += `
                     <div style="background: rgba(255,102,0,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <div style="color: #fff; font-weight: bold;">${item.name}</div>
-                                <div style="color: #888; font-size: 0.9em;">Available: ${item.available} | Sell Price: ${sellPrice}</div>
+                                <div style="color: #888; font-size: 0.9em;">Available: ${item.available} | Sell Price: ${sellPrice} credits</div>
                             </div>
                             <div>
                                 <button class="menu-button" style="padding: 5px 10px; background: #8b4513;"
@@ -658,7 +658,8 @@ CyberOpsGame.prototype.showShopDialog = function() {
         html += `<h4 style="color: #00ffff; margin: 15px 0 10px;">${category}</h4>`;
 
         categories[category].forEach(item => {
-            const canAfford = this.gameServices.resourceService.canAfford('credits', item.cost);
+            const itemCost = item.value || item.cost || 0;
+            const canAfford = this.gameServices.resourceService.canAfford('credits', itemCost);
             const owned = item.owned || 0;
 
             html += `
@@ -667,7 +668,7 @@ CyberOpsGame.prototype.showShopDialog = function() {
                         <div>
                             <div style="color: ${canAfford ? '#fff' : '#666'}; font-weight: bold;">${item.name}</div>
                             <div style="color: #888; font-size: 0.9em;">${item.description || ''}</div>
-                            <div style="color: #ffa500; font-size: 0.9em;">Cost: ${item.cost} | Owned: ${owned}</div>
+                            <div style="color: #ffa500; font-size: 0.9em;">Cost: ${itemCost} credits | Owned: ${owned}</div>
                         </div>
                         <div>
                             ${canAfford ? `
@@ -1056,17 +1057,18 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
     }
 
     // Check affordability
-    const canAfford = this.gameServices.resourceService.canAfford('credits', itemData.cost);
+    const itemCost = itemData.value || itemData.cost || 0;
+    const canAfford = this.gameServices.resourceService.canAfford('credits', itemCost);
     if (!canAfford) {
         return;
     }
 
     // Use ONLY InventoryService
-    const result = inventoryService.buyItem(type, itemData, itemData.cost);
+    const result = inventoryService.buyItem(type, itemData, itemCost);
 
     if (result.success) {
         // Deduct credits via ResourceService
-        this.gameServices.resourceService.spend('credits', itemData.cost, `bought ${itemData.name}`);
+        this.gameServices.resourceService.spend('credits', itemCost, `bought ${itemData.name}`);
 
         // Sync inventory back
         if (type === 'weapon') {

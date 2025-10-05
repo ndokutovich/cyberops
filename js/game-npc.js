@@ -1022,6 +1022,26 @@ CyberOpsGame.prototype.updateNPCs = function() {
 
     for (let npc of this.npcs) {
         npc.update(this);
+
+        // Check quest completion every frame (not just on interaction)
+        if (npc.questsGiven.size > 0) {
+            for (let questId of npc.questsGiven) {
+                const quest = this.quests[questId];
+
+                // Only check active quests that haven't been completed
+                if (quest && quest.active && !this.completedQuests.has(questId)) {
+                    // Check if all objectives are complete
+                    if (quest.checkCompletion(this)) {
+                        // Mark as ready to complete (but don't auto-complete)
+                        if (!quest.readyToComplete) {
+                            quest.readyToComplete = true;
+                            this.addNotification(`✅ Quest Complete: Return to ${npc.name} for reward`);
+                            if (this.logger) this.logger.info(`✅ Quest "${quest.name}" ready to complete`);
+                        }
+                    }
+                }
+            }
+        }
     }
 };
 

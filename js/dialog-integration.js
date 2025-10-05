@@ -1086,7 +1086,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                     html += `
                         <div>
                             <span style="color: #00ffff; font-weight: bold;">${weapon?.name || 'Unknown'}</span>
-                            <span style="color: #888; font-size: 0.85em; margin-left: 10px;">DMG: ${weapon?.damage || 0}</span>
+                            <span style="color: #888; font-size: 0.85em; margin-left: 10px;">DMG: ${weapon?.stats?.damage || weapon?.damage || 0}</span>
                         </div>
                         <button class="dialog-button" style="padding: 5px 10px; font-size: 0.9em;"
                                 onclick="(function() {
@@ -1183,7 +1183,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
                 if (loadout.weapon && this.getItemById) {
                     const weapon = this.getItemById('weapon', loadout.weapon);
-                    if (weapon) totalDamage += weapon.damage || 0;
+                    if (weapon) totalDamage += weapon.stats?.damage || weapon.damage || 0;
                 }
 
                 if (loadout.armor && this.getItemById) {
@@ -1305,7 +1305,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                                     <div>
                                         <div style="color: #fff; font-weight: bold;">${weapon.name}</div>
                                         <div style="color: #888; font-size: 0.85em;">
-                                            DMG: ${weapon.damage} | Owned: ${weapon.owned} | Available: ${availableCount}
+                                            DMG: ${weapon.stats?.damage || weapon.damage || 0} | Owned: ${weapon.owned} | Available: ${availableCount}
                                         </div>
                                     </div>
                                     <div>
@@ -1334,7 +1334,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                     html += '<div style="color: #888; text-align: center; padding: 20px;">No weapons available</div>';
                 } else {
                     weapons.forEach(weapon => {
-                        const canAfford = this.credits >= weapon.cost;
+                        const weaponCost = weapon.value || weapon.cost || 0;
+                        const canAfford = this.credits >= weaponCost;
 
                         html += `
                             <div style="background: rgba(0,255,0,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
@@ -1342,7 +1343,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                                     <div>
                                         <div style="color: ${canAfford ? '#fff' : '#666'}; font-weight: bold;">${weapon.name}</div>
                                         <div style="color: #888; font-size: 0.85em;">
-                                            DMG: ${weapon.damage} | Cost: ${weapon.cost} | Owned: ${weapon.owned}
+                                            DMG: ${weapon.stats?.damage || weapon.damage || 0} | Cost: ${weaponCost} | Owned: ${weapon.owned}
                                         </div>
                                     </div>
                                     <div>
@@ -1378,7 +1379,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 } else {
                     sellableWeapons.forEach(weapon => {
                         const availableCount = this.getAvailableCount ? this.getAvailableCount('weapon', weapon.id) : weapon.owned || 0;
-                        const sellPrice = Math.floor(weapon.cost * 0.6);
+                        const weaponValue = weapon.value || weapon.cost || 0;
+                        const sellPrice = Math.floor(weaponValue * 0.6);
 
                         html += `
                             <div style="background: rgba(255,102,0,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
@@ -1386,7 +1388,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                                     <div>
                                         <div style="color: #fff; font-weight: bold;">${weapon.name}</div>
                                         <div style="color: #888; font-size: 0.85em;">
-                                            Available to sell: ${availableCount} | Sell price: ${sellPrice}
+                                            Available to sell: ${availableCount} | Sell price: ${sellPrice} credits
                                         </div>
                                     </div>
                                     <div>

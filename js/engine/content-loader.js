@@ -217,7 +217,7 @@ class ContentLoader {
                     weapons.push({
                         ...weapon,
                         id: weapon.id || id,
-                        owned: weapon.owned || 0,
+                        owned: weapon.owned || weapon.initialOwned || 0,  // Check initialOwned for starting inventory
                         equipped: weapon.equipped || 0
                     });
                 });
@@ -230,7 +230,7 @@ class ContentLoader {
                         ...armor,
                         id: armor.id || id,
                         type: 'armor',
-                        owned: armor.owned || 0,
+                        owned: armor.owned || armor.initialOwned || 0,  // Check initialOwned
                         equipped: armor.equipped || 0
                     });
                 });
@@ -243,7 +243,7 @@ class ContentLoader {
                         ...utility,
                         id: utility.id || id,
                         type: 'utility',
-                        owned: utility.owned || 0,
+                        owned: utility.owned || utility.initialOwned || 0,  // Check initialOwned
                         equipped: utility.equipped || 0
                     });
                 });
@@ -256,7 +256,7 @@ class ContentLoader {
                         ...special,
                         id: special.id || id,
                         type: 'special',
-                        owned: special.owned || 0,
+                        owned: special.owned || special.initialOwned || 0,  // Check initialOwned
                         equipped: special.equipped || 0
                     });
                 });

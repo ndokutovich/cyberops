@@ -514,7 +514,7 @@ class InventoryService {
 
         // Sell one item
         item.owned--;
-        const sellPrice = item.cost ? Math.floor(item.cost * 0.6) : 100;
+        const sellPrice = (item.value || item.cost) ? Math.floor((item.value || item.cost) * 0.6) : 100;
 
         if (this.logger) {
             this.logger.info(`💰 Sold ${item.name} for ${sellPrice} credits`);

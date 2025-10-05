@@ -929,16 +929,12 @@
             mainCampaign.agents = window.MAIN_CAMPAIGN_CONTENT.agents;
             console.log('✅ [campaign-config] Merged agents:', mainCampaign.agents.length);
         }
-        // Use weapons from campaign-content.js
-        if (window.MAIN_CAMPAIGN_CONTENT.weapons) {
-            mainCampaign.weapons = window.MAIN_CAMPAIGN_CONTENT.weapons;
-            console.log('✅ [campaign-config] Merged weapons:', mainCampaign.weapons.length);
-        }
-        // Use equipment from campaign-content.js
-        if (window.MAIN_CAMPAIGN_CONTENT.equipment) {
-            mainCampaign.equipment = window.MAIN_CAMPAIGN_CONTENT.equipment;
-            console.log('✅ [campaign-config] Merged equipment:', mainCampaign.equipment.length);
-        }
+        // DON'T merge weapons/equipment from campaign-content.js
+        // They're deprecated (empty arrays) and would overwrite rpgConfig.items.weapons
+        // Weapons are now defined in rpgConfig.items.weapons (lines 448-542)
+        // Equipment is now defined in rpgConfig.items.armor/utility (lines 543+)
+        console.log('✅ [campaign-config] Using weapons from rpgConfig.items.weapons');
+        console.log('✅ [campaign-config] Using equipment from rpgConfig.items.armor/utility');
         // Use enemy types from campaign-content.js (stored as "enemies" for validation)
         if (window.MAIN_CAMPAIGN_CONTENT.enemyTypes) {
             mainCampaign.enemies = window.MAIN_CAMPAIGN_CONTENT.enemyTypes;
