@@ -409,7 +409,8 @@ describe('Settings Functionality', () => {
 
     // ========== COVERAGE REPORT ==========
 
-    it('should generate settings functionality coverage report', () => {
+    describe('Coverage Report', () => {
+        it('should generate settings functionality coverage report', () => {
         const tests = {
             'Volume Multiplication': 7,
             'localStorage Persistence': 12,
@@ -431,7 +432,9 @@ describe('Settings Functionality', () => {
         console.log('  2. Settings load on game init');
         console.log('  3. Team mode respects defaultTeamMode');
         console.log('═══════════════════════════════════════');
+            });
     });
+
 });
 
 // Export for use

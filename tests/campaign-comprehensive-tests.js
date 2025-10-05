@@ -4,6 +4,7 @@
  * Validates that all campaign content has valid data and works correctly
  */
 
+(function() {
 // Load campaign config
 let campaignConfig = null;
 if (typeof process !== 'undefined' && process.versions && process.versions.node) {
@@ -394,5 +395,7 @@ describe('Campaign Content Comprehensive Tests', () => {
     });
 
 });
+
+})(); // End IIFE
 
 console.log('📊 Campaign Comprehensive Tests loaded - validates all agents, weapons, armor, enemies');
