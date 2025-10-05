@@ -42,12 +42,33 @@ get agents() {
 
 #### Enforcement
 - **NEVER** use `facade.property = game.property` (bidirectional sync)
+- **NEVER** use `game.property = value` (direct assignment - proxy setters removed 2025-01)
 - **NEVER** store copies with fallbacks
-- **ALWAYS** use computed properties
+- **ALWAYS** use computed properties for reads
+- **ALWAYS** use service methods for writes (resourceService.set/add/spend)
 - **ALWAYS** fail fast if data source is unavailable
 - **ALWAYS** have exactly ONE owner for each piece of state
 
 If you're about to write sync code, STOP. Use a computed property instead.
+If you're about to write `game.credits = X`, STOP. Use `resourceService.set()` instead.
+
+#### Critical Update (2025-01): Proxy Setters Removed
+
+**Properties are now READ-ONLY.** Direct assignment no longer works:
+
+```javascript
+// ❌ NO LONGER WORKS (proxy setters removed):
+game.credits = 5000;
+game.credits += 1000;
+game.researchPoints = 100;
+
+// ✅ REQUIRED (use service methods):
+game.gameServices.resourceService.set('credits', 5000, 'reason');
+game.gameServices.resourceService.add('credits', 1000, 'reason');
+game.gameServices.resourceService.set('researchPoints', 100, 'reason');
+```
+
+See "Read-Only Architecture" section below for complete details.
 
 ---
 
@@ -701,36 +722,7 @@ All interactions use the H key with context-sensitive behavior:
 
 ## Critical Architecture Principles
 
-### Unidirectional Data Flow - MANDATORY
-The codebase uses **100% unidirectional data flow** through computed properties. This is NOT optional.
-
-#### Single Source of Truth Pattern
-```javascript
-// ✅ CORRECT - Computed property
-class GameFacade {
-    get agents() {
-        return this.legacyGame?.agents ?? [];
-    }
-}
-
-// ❌ WRONG - Bidirectional sync
-class GameFacade {
-    constructor() {
-        this.agents = [];  // NO! Don't store copies
-    }
-    syncState() {
-        this.agents = game.agents;  // NO! Don't sync
-    }
-}
-```
-
-#### What This Means
-- **NEVER** store copies of data from other systems
-- **NEVER** implement bidirectional syncing
-- **ALWAYS** use computed properties for cross-system data
-- **ALWAYS** have one authoritative source for each piece of state
-
-The extraction bug that led to this architecture change proved that bidirectional syncing ALWAYS leads to bugs. The current architecture makes desync bugs impossible.
+**NOTE**: See "🚨 CORE ARCHITECTURE PRINCIPLE #1: UNIDIRECTIONAL DATA FLOW" at the top of this document for the complete unidirectional data flow specification, including the critical proxy setter removal and read-only architecture.
 
 ### Boy Scout Rule - Leave Code Cleaner Than You Found It
 - **ALWAYS** clean up unused code when you encounter it
@@ -751,9 +743,16 @@ The extraction bug that led to this architecture change proved that bidirectiona
 - **NEVER** create bidirectional data flows - always use computed properties
 - **NEVER** sync state between systems - use single source of truth
 - **NEVER** check objectives outside of MissionService
+- **NEVER** use direct assignment to game properties (`game.credits = X`) - use service methods
+- **NEVER** use `game.credits += X` or `game.credits -= X` - use resourceService.add() or .spend()
+- **NEVER** bypass services with direct manipulation - all writes go through services
+- **NEVER** create proxy setters - properties are read-only by design
 - **ALWAYS** keep complete separation between engine and content
 - **ALWAYS** use campaign files for all mission-specific content
 - **ALWAYS** use MissionService.trackEvent() for ALL mission events
+- **ALWAYS** use service methods for ALL state changes (resourceService.set/add/spend)
+- **ALWAYS** provide reason strings when modifying state ('mission reward', 'agent hire', etc.)
+- **ALWAYS** fail fast if services unavailable - don't create fallbacks
 
 ### Content Location Rules
 - **Mission Content**: ONLY in `campaigns/*/act*/mission.js` files
@@ -775,6 +774,11 @@ The extraction bug that led to this architecture change proved that bidirectiona
 9. **GameFacade Computed Properties**: 20+ properties now computed from legacy game or services
 10. **GameController Simplified**: From 48 sync operations to just 4 (UI state + camera)
 11. **Zero Desync Possible**: Single source of truth architecture prevents state inconsistencies
+12. **Proxy Setters Removed (2025-01)**: All setter functions removed from game-core.js (lines 502-539)
+13. **Read-Only Properties**: Game properties now read-only, enforcing service-only writes
+14. **Legacy Fallback Code**: ~110 lines of fallback code removed from 6 files (mission-state, dialog-integration, engine-integration, hub-dialogs, mission-executor)
+15. **Direct Assignment Support**: Removed all code paths that allowed `game.credits = X` style operations
+16. **Test Updates**: 22 failing tests updated to use service methods instead of direct assignment
 
 ### Storage Efficiency Achieved
 - **Old Format**: 14,000+ lines per mission (object per tile)
@@ -968,11 +972,12 @@ this.activeAgents;    // Automatically uses AgentService
 #### ALWAYS Follow These Patterns:
 - **Use Service Methods**: Never bypass services with direct manipulation
 - **Formula Consistency**: ALL calculations MUST go through FormulaService
-- **Resource Operations**: ALL credit/research changes MUST go through ResourceService
+- **Resource Operations**: ALL credit/research changes MUST go through ResourceService (set/add/spend)
 - **Agent Operations**: ALL agent management MUST go through AgentService
 - **Mission Tracking**: ALL objective tracking MUST go through MissionService
 - **Initialization Order**: Core services first (no deps), then dependent services
-- **Backward Compatibility**: Use compatibility layer for legacy code
+- **Read-Only Properties**: Properties are read-only - use service methods for ALL writes
+- **Explicit Reasons**: Always provide reason string when modifying state (e.g., 'mission reward', 'agent hire')
 
 ### Known Service Integration Issues (Fixed)
 
@@ -987,31 +992,176 @@ this.activeAgents;    // Automatically uses AgentService
    - **Fix**: Removed all legacy tracking, MissionService is single source of truth
    - **Compatibility**: `missionTrackers` property proxies to MissionService
 
-### Compatibility Layer
+### Read-Only Architecture (Enforced 2025-01)
 
-The game implements a transparent compatibility layer that allows legacy code to work unchanged while using the new service architecture:
+**CRITICAL: The game now enforces 100% read-only properties. Proxy setters have been removed.**
+
+#### Properties Are Read-Only
 
 ```javascript
-// These properties automatically delegate to services:
+// Properties only have getters, NO setters:
 Object.defineProperty(CyberOpsGame.prototype, 'credits', {
-    get: function() { return this.gameServices?.resourceService?.get('credits') ?? this._credits; },
-    set: function(val) {
-        if (this.gameServices?.resourceService) {
-            this.gameServices.resourceService.set('credits', val, 'direct assignment');
-        } else {
-            this._credits = val; // Fallback
-        }
-    }
+    get: function() { return this.gameServices?.resourceService?.get('credits') ?? 0; }
+    // NO SET FUNCTION - property is read-only
 });
 
 // Similarly for: researchPoints, worldControl, availableAgents, activeAgents, fallenAgents
 ```
 
-This means:
-- `game.credits -= 100` automatically uses ResourceService
-- `game.activeAgents` automatically returns from AgentService
-- All existing code continues to work without modification
-- New code can use services directly for enhanced features
+#### Reading vs Writing
+
+**Reading (Works via Getters):**
+```javascript
+const currentCredits = game.credits;           // ✅ Works
+const agents = game.activeAgents;              // ✅ Works
+const research = game.researchPoints;          // ✅ Works
+```
+
+**Writing (MUST Use Service Methods):**
+```javascript
+// ❌ REMOVED - These no longer work:
+game.credits = 5000;                           // Silent failure
+game.credits += 1000;                          // Won't modify value
+game.researchPoints = 100;                     // No effect
+
+// ✅ REQUIRED - Use service methods:
+game.gameServices.resourceService.set('credits', 5000, 'campaign start');
+game.gameServices.resourceService.add('credits', 1000, 'mission reward');
+game.gameServices.resourceService.spend('credits', 500, 'agent hire');
+```
+
+#### Why Read-Only Properties
+
+1. **Enforces Architecture**: Impossible to bypass services
+2. **Prevents Bugs**: Can't accidentally use direct assignment
+3. **Clear Intent**: All writes are explicit with reason tracking
+4. **Audit Trail**: ResourceService logs all changes with reasons
+5. **Fail-Fast**: Operations fail immediately if service unavailable
+
+#### Migration from Direct Assignment
+
+If you find code using direct assignment, convert it:
+
+```javascript
+// ❌ OLD (removed):
+game.credits -= 1000;
+
+// ✅ NEW (required):
+game.gameServices.resourceService.spend('credits', 1000, 'agent hire');
+
+// ❌ OLD (removed):
+game.credits += reward.credits;
+
+// ✅ NEW (required):
+game.gameServices.resourceService.add('credits', reward.credits, 'mission reward');
+
+// ❌ OLD (removed):
+game.credits = 5000;
+
+// ✅ NEW (required):
+game.gameServices.resourceService.set('credits', 5000, 'campaign start');
+```
+
+### Proxy Removal Details (2025-01)
+
+**All proxy setters were removed to enforce service-only architecture.**
+
+#### Files Modified to Remove Direct Assignment
+
+1. **game-core.js** (lines 502-539)
+   - Removed ALL setter functions from defineProperty calls
+   - Kept getters for read access
+   - Properties: credits, researchPoints, worldControl, availableAgents, activeAgents, fallenAgents
+
+2. **mission-state-service.js**
+   - Changed `game.credits = X` → `resourceService.set('credits', X, 'mission retry')`
+   - Updated snapshot restoration to use services
+
+3. **dialog-integration.js**
+   - Removed legacy fallback code (~17 lines)
+   - Agent hiring now requires AgentService (no fallback)
+   - Shop purchases use resourceService.spend()
+
+4. **engine-integration.js**
+   - Milestone rewards use resourceService.add()
+   - Changed from `this.credits += X` to service method
+
+5. **game-hub-dialog-generators.js**
+   - Training costs use resourceService.spend()
+   - Removed fallback to direct assignment
+
+6. **game-mission-executor.js**
+   - Mission rewards use resourceService.add()
+   - Removed all fallback code
+
+#### What Was Removed from game-core.js
+
+```javascript
+// ❌ REMOVED - Setter functions deleted:
+Object.defineProperty(CyberOpsGame.prototype, 'credits', {
+    get: function() { ... },
+    set: function(value) {  // ← THIS WAS DELETED
+        if (this.gameServices?.resourceService) {
+            this.gameServices.resourceService.set('credits', value, 'direct assignment');
+        } else {
+            this._credits = value;  // Fallback also removed
+        }
+    }
+});
+```
+
+#### What Remains in game-core.js
+
+```javascript
+// ✅ KEPT - Read-only getter:
+Object.defineProperty(CyberOpsGame.prototype, 'credits', {
+    get: function() {
+        return this.gameServices?.resourceService?.get('credits') ?? 0;
+    }
+    // NO SETTER - Property is read-only
+});
+```
+
+#### Properties Now Read-Only
+
+All these properties are read-only (getter only, no setter):
+- **credits** - Use `resourceService.set/add/spend()`
+- **researchPoints** - Use `resourceService.set/add/spend()`
+- **worldControl** - Use `resourceService.set/add/spend()`
+- **availableAgents** - Use `agentService` methods
+- **activeAgents** - Use `agentService` methods
+- **fallenAgents** - Use `agentService` methods
+
+#### Test Updates
+
+Updated test files to use service methods:
+- **service-integration-tests.js** - 7 tests fixed
+- **services-comprehensive-tests.js** - 2 tests fixed
+- **game-services-tests.js** - 8 tests fixed (use global instance)
+- **mission-state-service-tests.js** - 5 tests fixed (mock with computed properties)
+
+Mock objects now require:
+```javascript
+const mockResourceService = {
+    resources: { credits: 5000 },
+    get: function(type) { return this.resources[type]; },
+    set: function(type, val) { this.resources[type] = val; },
+    add: function(type, amt) { this.resources[type] += amt; },
+    spend: function(type, amt) {
+        if (this.resources[type] >= amt) {
+            this.resources[type] -= amt;
+            return true;
+        }
+        return false;
+    }
+};
+
+// Mock game needs computed properties:
+Object.defineProperty(mockGame, 'credits', {
+    get: function() { return mockResourceService.get('credits'); },
+    set: function(val) { mockResourceService.set('credits', val); }
+});
+```
 
 ### Clean Service Integration Examples
 
