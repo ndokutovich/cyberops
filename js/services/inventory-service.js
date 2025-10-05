@@ -473,8 +473,14 @@ class InventoryService {
 
             // Copy relevant stats based on type
             if (category === 'weapons') {
-                newItem.damage = itemData.damage || 10;
-                newItem.range = itemData.range || 5;
+                // Handle both nested stats and flat damage
+                newItem.damage = itemData.stats?.damage || itemData.damage || 10;
+                newItem.range = itemData.stats?.range || itemData.range || 5;
+
+                // Preserve nested stats structure if it exists
+                if (itemData.stats) {
+                    newItem.stats = { ...itemData.stats };
+                }
             } else if (category === 'armor') {
                 newItem.defense = itemData.defense || itemData.protection || 5;
             } else if (category === 'utility') {
