@@ -694,7 +694,7 @@ class MissionEditor {
         }
     }
 
-    applyTool(x, y) {
+    applyTool(x, y, skipRender = false) {
         if (x < 0 || x >= this.mission.width || y < 0 || y >= this.mission.height) return;
 
         if (this.brushMode === 'single' || this.brushMode === 'line' || this.brushMode === 'rect') {
@@ -709,7 +709,9 @@ class MissionEditor {
             }
         }
 
-        this.render();
+        if (!skipRender) {
+            this.render();
+        }
     }
 
     eraseTile(x, y) {
@@ -727,7 +729,7 @@ class MissionEditor {
 
         while (true) {
             if (!preview) {
-                this.applyTool(x1, y1);
+                this.applyTool(x1, y1, true);  // skipRender=true for batch operation
             } else {
                 this.renderTilePreview(x1, y1);
             }
@@ -744,6 +746,11 @@ class MissionEditor {
                 y1 += sy;
             }
         }
+
+        // Render once after all tiles applied
+        if (!preview) {
+            this.render();
+        }
     }
 
     drawRectangle(x1, y1, x2, y2, preview) {
@@ -755,11 +762,16 @@ class MissionEditor {
         for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
                 if (!preview) {
-                    this.applyTool(x, y);
+                    this.applyTool(x, y, true);  // skipRender=true for batch operation
                 } else {
                     this.renderTilePreview(x, y);
                 }
             }
+        }
+
+        // Render once after all tiles applied
+        if (!preview) {
+            this.render();
         }
     }
 
