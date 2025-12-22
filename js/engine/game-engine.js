@@ -609,7 +609,7 @@ class GameEngine {
     }
 
     /**
-     * Render the map tiles
+     * Render the map tiles (optimized - no save/restore per tile)
      */
     renderMap() {
         const ctx = this.ctx;
@@ -621,61 +621,71 @@ class GameEngine {
             return;
         }
 
-        for (let y = 0; y < map.height; y++) {
-            for (let x = 0; x < map.width; x++) {
-                if (!map.tiles[y]) {
-                    if (this.logger) this.logger.error(`❌ Map tiles row ${y} is undefined!`);
-                    continue;
-                }
+        // Cache fog state and colors to avoid repeated property access
+        const fogEnabled = this.facade.fogEnabled;
+        const floorFill = fogEnabled ? '#1a1a2e' : '#6a8ace';
+        const floorStroke = fogEnabled ? '#16213e' : '#80a0ff';
+        const wallFill = fogEnabled ? '#0f0f1e' : '#4a4a8e';
+        const wallStroke = fogEnabled ? '#2a2a3e' : '#6060a0';
+        const wallTopFill = fogEnabled ? '#1f1f3e' : '#5555aa';
+        const halfWidth = this.tileWidth / 2;
+        const halfHeight = this.tileHeight / 2;
+
+        // Calculate visible tile range (viewport culling)
+        const canvasWidth = this.canvas.width;
+        const canvasHeight = this.canvas.height;
+        const cameraX = this.facade.legacyGame?.cameraX || 0;
+        const cameraY = this.facade.legacyGame?.cameraY || 0;
+
+        // Estimate visible range with padding
+        const padding = 5;
+        const minX = Math.max(0, Math.floor(-cameraX / this.tileWidth) - padding);
+        const maxX = Math.min(map.width, Math.ceil((canvasWidth - cameraX) / this.tileWidth) + padding);
+        const minY = Math.max(0, Math.floor(-cameraY / this.tileHeight) - padding);
+        const maxY = Math.min(map.height, Math.ceil((canvasHeight - cameraY) / this.tileHeight) + padding);
+
+        // Set common properties once
+        ctx.lineWidth = 1;
+
+        for (let y = minY; y < maxY; y++) {
+            if (!map.tiles[y]) continue;
+
+            for (let x = minX; x < maxX; x++) {
                 const tile = map.tiles[y][x];
                 const isoPos = this.worldToIsometric(x, y);
+                const px = isoPos.x;
+                const py = isoPos.y;
 
-                ctx.save();
-                ctx.translate(isoPos.x, isoPos.y);
-
+                // Draw tile diamond without save/restore
                 ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(this.tileWidth / 2, this.tileHeight / 2);
-                ctx.lineTo(0, this.tileHeight);
-                ctx.lineTo(-this.tileWidth / 2, this.tileHeight / 2);
+                ctx.moveTo(px, py);
+                ctx.lineTo(px + halfWidth, py + halfHeight);
+                ctx.lineTo(px, py + this.tileHeight);
+                ctx.lineTo(px - halfWidth, py + halfHeight);
                 ctx.closePath();
 
                 if (tile === 0) {
-                    // Walkable floor - MUCH brighter when fog is disabled
-                    ctx.fillStyle = this.facade.fogEnabled ? '#1a1a2e' : '#6a8ace';
+                    // Walkable floor
+                    ctx.fillStyle = floorFill;
                     ctx.fill();
-                    ctx.strokeStyle = this.facade.fogEnabled ? '#16213e' : '#80a0ff';
-
-                    // Add stronger glow when fog is disabled
-                    if (!this.facade.fogEnabled) {
-                        ctx.shadowColor = '#8888ff';
-                        ctx.shadowBlur = 4;
-                    }
+                    ctx.strokeStyle = floorStroke;
+                    ctx.stroke();
                 } else {
-                    // Wall - also MUCH brighter when fog is disabled
-                    ctx.fillStyle = this.facade.fogEnabled ? '#0f0f1e' : '#4a4a8e';
+                    // Wall base
+                    ctx.fillStyle = wallFill;
                     ctx.fill();
-                    ctx.strokeStyle = this.facade.fogEnabled ? '#2a2a3e' : '#6060a0';
-                    ctx.fillStyle = this.facade.fogEnabled ? '#1f1f3e' : '#5555aa';
-                    ctx.fillRect(-this.tileWidth / 2, -20, this.tileWidth, 20);
-
-                    // Add stronger glow when fog is disabled
-                    if (!this.facade.fogEnabled) {
-                        ctx.shadowColor = '#aaaaff';
-                        ctx.shadowBlur = 5;
-                    }
+                    ctx.strokeStyle = wallStroke;
+                    ctx.stroke();
+                    // Wall top
+                    ctx.fillStyle = wallTopFill;
+                    ctx.fillRect(px - halfWidth, py - 20, this.tileWidth, 20);
                 }
-
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                ctx.shadowBlur = 0; // Reset shadow
-                ctx.restore();
             }
         }
     }
 
     /**
-     * Render fog of war overlay
+     * Render fog of war overlay (optimized - viewport culling, no save/restore)
      */
     renderFogOfWar() {
         if (!this.facade.fogOfWar || !this.facade.fogEnabled) {
@@ -684,27 +694,38 @@ class GameEngine {
 
         const ctx = this.ctx;
         const map = this.facade.currentMap;
+        const fogOfWar = this.facade.fogOfWar;
+        const halfWidth = this.tileWidth / 2;
+        const tileHeight = this.tileHeight;
 
-        for (let y = 0; y < map.height; y++) {
-            for (let x = 0; x < map.width; x++) {
-                const fogState = this.facade.fogOfWar[y][x];
+        // Calculate visible tile range (viewport culling)
+        const canvasWidth = this.canvas.width;
+        const canvasHeight = this.canvas.height;
+        const cameraX = this.facade.legacyGame?.cameraX || 0;
+        const cameraY = this.facade.legacyGame?.cameraY || 0;
+
+        const padding = 5;
+        const minX = Math.max(0, Math.floor(-cameraX / this.tileWidth) - padding);
+        const maxX = Math.min(map.width, Math.ceil((canvasWidth - cameraX) / this.tileWidth) + padding);
+        const minY = Math.max(0, Math.floor(-cameraY / this.tileHeight) - padding);
+        const maxY = Math.min(map.height, Math.ceil((canvasHeight - cameraY) / this.tileHeight) + padding);
+
+        for (let y = minY; y < maxY; y++) {
+            if (!fogOfWar[y]) continue;
+
+            for (let x = minX; x < maxX; x++) {
+                const fogState = fogOfWar[y][x];
 
                 if (fogState === 0) {
                     // Unexplored - fully dark (black)
                     const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
-                    ctx.save();
-                    ctx.translate(isoPos.x, isoPos.y);
-                    ctx.fillStyle = 'rgba(0, 0, 0, 1)';  // Completely black
-                    ctx.fillRect(-this.tileWidth/2, -this.tileHeight, this.tileWidth, this.tileHeight * 2);
-                    ctx.restore();
+                    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+                    ctx.fillRect(isoPos.x - halfWidth, isoPos.y - tileHeight, this.tileWidth, tileHeight * 2);
                 } else if (fogState === 1) {
-                    // Explored but not visible - very light blue tint for visibility
+                    // Explored but not visible - very light blue tint
                     const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
-                    ctx.save();
-                    ctx.translate(isoPos.x, isoPos.y);
-                    ctx.fillStyle = 'rgba(10, 20, 40, 0.15)';  // Very transparent dark blue - only 15% opacity
-                    ctx.fillRect(-this.tileWidth/2, -this.tileHeight, this.tileWidth, this.tileHeight * 2);
-                    ctx.restore();
+                    ctx.fillStyle = 'rgba(10, 20, 40, 0.15)';
+                    ctx.fillRect(isoPos.x - halfWidth, isoPos.y - tileHeight, this.tileWidth, tileHeight * 2);
                 }
                 // fogState === 2 is fully visible, no overlay needed
             }
