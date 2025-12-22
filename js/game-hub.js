@@ -375,15 +375,8 @@ CyberOpsGame.prototype.completeMissionRewards = function(victory) {
         }
 }
     
-// Intelligence - Now uses declarative dialog
-CyberOpsGame.prototype.showIntelligence = function() {
-    if (window.dialogManager && window.dialogManager.open) {
-        window.dialogManager.open('intelligence');
-    }
-}
-
-// showIntelligenceOld removed - now using declarative dialog system
-// All calls replaced with: this.dialogEngine.navigateTo('intel-missions');
+// showIntelligence removed - was only used by deprecated DialogManager
+// Intelligence functionality is part of the intel-missions declarative dialog
 
 // Helper function to get next intel threshold
 CyberOpsGame.prototype.getNextIntelThreshold = function() {
@@ -514,12 +507,8 @@ CyberOpsGame.prototype.viewAgentDetails = function(agentId) {
 }
     
     // Equipment Shop System
-// Shop - Now uses declarative dialog
-CyberOpsGame.prototype.showShopDialog = function() {
-    if (window.dialogManager && window.dialogManager.open) {
-        window.dialogManager.open('shop');
-    }
-}
+// showShopDialog removed - duplicate definition exists in game-equipment.js
+// Shop functionality is part of showShopInterface in game-equipment.js
 
 // Settings - Uses original implementation from game-settings.js
 CyberOpsGame.prototype.showSettingsFromHub = function() {

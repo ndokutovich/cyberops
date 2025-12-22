@@ -747,15 +747,19 @@ const DIALOG_CONFIG = {
                     <div class="npc-avatar">{{avatar}}</div>
                     <div class="npc-content">
                         <div class="npc-name">{{name}}</div>
-                        <div class="npc-text">{{content}}</div>
+                        <div class="npc-text dialog-content">{{content}}</div>
                         <div class="npc-choices">{{buttons}}</div>
                     </div>
                 </div>
             `,
             styles: {
-                maxWidth: '600px',
+                width: '900px',
+                maxWidth: '92vw',
+                maxHeight: '60vh',
+                overflowY: 'auto',
                 position: 'fixed',
-                bottom: '20px',
+                top: 'auto',
+                bottom: '250px',
                 left: '50%',
                 transform: 'translateX(-50%)'
             }

@@ -709,8 +709,13 @@ CyberOpsGame.prototype.interactWithNPC = function(agent, npc) {
         }
     }
 
-    // Always add a goodbye option at the end
-    if (!allChoices.find(c => c.text === "Goodbye" || c.text === "Leave")) {
+    // Always add a goodbye option at the end (check for Leave/Goodbye with or without emoji)
+    const hasExitOption = allChoices.find(c =>
+        c.text.toLowerCase().includes("goodbye") ||
+        c.text.toLowerCase().includes("leave") ||
+        c.action === 'close'
+    );
+    if (!hasExitOption) {
         const game = this;  // Capture game reference
         allChoices.push({
             text: "Goodbye",
@@ -721,11 +726,16 @@ CyberOpsGame.prototype.interactWithNPC = function(agent, npc) {
         });
     }
 
-    // Show dialog UI
+    // Store dialog.info on npc for later access by info action (don't show initially)
+    npc._dialogInfo = dialog.info;
+
+    // Show dialog UI - info is NOT shown initially, only when user clicks "info" option
     this.showDialog({
         npc: npc,
         text: dialogText,
-        choices: allChoices
+        choices: allChoices,
+        info: null,  // Info shown only when user clicks info option
+        quests: npc.quests  // Pass through quest data
     });
 
     // Track interaction
@@ -848,81 +858,76 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
     this.dialogActive = true;
     this.pauseGame();
 
-    // Modal engine is required
-    if (!window.modalEngine) {
-        if (this.logger) this.logger.error('Modal engine not available!');
-        return;
+    // Close any existing NPC dialog before showing new one
+    if (this.activeNPCModal) {
+        this.closeNPCDialog();
     }
-        // Close any existing NPC dialog before showing new one
-        if (this.activeNPCModal) {
-            this.closeNPCDialog();
-        }
 
-        // Convert choices to modal engine format
-        const modalChoices = dialogData.choices ? dialogData.choices.map((choice, index) => {
-            return {
-                text: choice.text,
-                action: () => {
-                    if (choice.action) {
-                        // Handle different action types
-                        if (typeof choice.action === 'function') {
-                            // Function action - call with NPC as context and game as parameter
-                            choice.action.call(dialogData.npc, this);
-                        } else if (typeof choice.action === 'string') {
-                            // String action - handle special cases
-                            switch (choice.action) {
-                                case 'info':
-                                    // Show info dialog if available
-                                    if (dialogData.npc.dialog && dialogData.npc.dialog[0] && dialogData.npc.dialog[0].info) {
-                                        this.closeNPCDialog();
-                                        window.modalEngine.show({
-                                            type: 'info',
-                                            title: dialogData.npc.name,
-                                            text: dialogData.npc.dialog[0].info,
-                                            choices: [
-                                                {
-                                                    text: 'Back',
-                                                    action: () => {
-                                                        // Re-show NPC dialog
-                                                        // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
-                                                        this.interactWithNPC(this.agents.find(a => this.isAgentSelected(a)), dialogData.npc);
-                                                    }
-                                                }
-                                            ]
-                                        });
+    // Use declarative dialog system for NPC interactions
+    // Prepare NPC data for dialog generator
+    this.currentNPC = {
+        ...dialogData.npc,
+        currentDialog: dialogData.text,
+        info: dialogData.info,  // Include info text
+        quests: dialogData.quests,  // Include quest data
+        choices: dialogData.choices ? dialogData.choices.map((choice, index) => ({
+            id: index,
+            text: choice.text,
+            originalAction: choice.action,
+            // Store handler for execution
+            executeAction: () => {
+                if (choice.action) {
+                    // Handle different action types
+                    if (typeof choice.action === 'function') {
+                        // Function action - call with NPC as context and game as parameter
+                        choice.action.call(dialogData.npc, this);
+                    } else if (typeof choice.action === 'string') {
+                        // String action - handle special cases
+                        switch (choice.action) {
+                            case 'info':
+                                // Show info text in the dialog
+                                const infoText = dialogData.npc._dialogInfo ||
+                                    (dialogData.npc.dialog && dialogData.npc.dialog[0] && dialogData.npc.dialog[0].info);
+                                if (infoText) {
+                                    // Set 'info' property so generator displays it
+                                    this.currentNPC.info = infoText;
+                                    // Refresh dialog to show info
+                                    if (this.dialogEngine) {
+                                        const context = {
+                                            avatar: dialogData.npc.avatar || '👤',
+                                            name: dialogData.npc.name || 'Unknown'
+                                        };
+                                        this.dialogEngine.navigateTo('npc-interaction', context, true);
                                     }
-                                    break;
-                                case 'close':
-                                    this.closeNPCDialog();
-                                    break;
-                                default:
-                                    if (this.logger) this.logger.warn(`Unknown string action: ${choice.action}`);
-                                    break;
-                            }
+                                } else {
+                                    if (this.logger) this.logger.warn('No info text found for NPC');
+                                }
+                                break;
+                            case 'close':
+                                this.closeNPCDialog();
+                                break;
+                            default:
+                                if (this.logger) this.logger.warn(`Unknown string action: ${choice.action}`);
+                                break;
                         }
                     }
-                },
-                closeAfter: false  // We handle closing manually
-            };
-        }) : [];
-
-        // Create NPC dialog with modal engine
-        this.activeNPCModal = window.modalEngine.show({
-            type: 'npc',
-            position: 'bottom',
-            avatar: dialogData.npc.avatar || '👤',
-            name: dialogData.npc.name,
-            text: dialogData.text,
-            choices: modalChoices,
-            closeButton: true,
-            backdrop: true,
-            closeOnBackdrop: false,
-            onClose: () => {
-                // Don't set activeNPCModal = null here, it's handled in closeNPCDialog
-                this.dialogActive = false;
-                this.resumeGame();
+                }
             }
-        });
+        })) : []
+    };
+
+    // Navigate to NPC interaction dialog
+    if (this.dialogEngine) {
+        this.activeNPCModal = { close: () => this.closeNPCDialog() }; // Compatibility shim
+
+        // Pass context data for layout placeholders
+        const context = {
+            avatar: dialogData.npc.avatar || '👤',
+            name: dialogData.npc.name || 'Unknown'
+        };
+
+        this.dialogEngine.navigateTo('npc-interaction', context);
+    }
 };
 
 // Check if an objective is complete
@@ -1035,13 +1040,22 @@ CyberOpsGame.prototype.showMissionList = function() {
 // Close dialog
 // Close NPC dialog specifically - Now works with Modal Engine
 CyberOpsGame.prototype.closeNPCDialog = function() {
-    // Close modal engine dialog if exists
+    // Close declarative dialog engine if active
+    if (this.dialogEngine && this.dialogEngine.currentState === 'npc-interaction') {
+        this.dialogEngine.close();
+    }
+
+    // Close modal engine dialog if exists (fallback for old system)
     if (this.activeNPCModal) {
         const modalToClose = this.activeNPCModal;
         this.activeNPCModal = null;  // Clear reference immediately
-        modalToClose.close();  // But close the actual modal
+        if (modalToClose.close && typeof modalToClose.close === 'function') {
+            modalToClose.close();
+        }
     }
 
+    // Clear NPC state
+    this.currentNPC = null;
     this.dialogActive = false;
     this.resumeGame();
 };

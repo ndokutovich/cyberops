@@ -1921,17 +1921,65 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         `;
     });
 
-    // NPC dialog
+    // NPC dialog - Enhanced to handle dialog trees, info text, and quests
     engine.registerGenerator('generateNPCDialog', function() {
         if (!this.currentNPC) {
             return '<p>No NPC selected</p>';
         }
 
-        return `
-            <div class="npc-text">
-                ${this.currentNPC.currentDialog || 'Hello, agent.'}
-            </div>
-        `;
+        let html = '<div class="npc-dialog-content">';
+
+        // Show main dialog text
+        html += `<div class="npc-text" style="margin-bottom: 15px; line-height: 1.6;">${this.currentNPC.currentDialog || 'Hello, agent.'}</div>`;
+
+        // Show additional info if available (from dialog.info)
+        if (this.currentNPC.info) {
+            html += `
+                <div class="npc-info" style="margin-top: 15px; padding: 10px; background: rgba(0,100,200,0.1); border-left: 3px solid #0af; font-size: 0.9em; color: #ccc; line-height: 1.5;">
+                    <strong style="color: #0af;">ℹ️ Info:</strong><br/>
+                    ${this.currentNPC.info}
+                </div>
+            `;
+        }
+
+        // Show quest status if applicable
+        if (this.currentNPC.quests && this.currentNPC.quests.length > 0) {
+            html += '<div class="npc-quests" style="margin-top: 15px; padding: 10px; background: rgba(100,100,0,0.1); border-left: 3px solid #ff0;">';
+            html += '<strong style="color: #ff0;">📜 Quests:</strong><br/>';
+            this.currentNPC.quests.forEach(quest => {
+                const icon = quest.completed ? '✅' : quest.active ? '🔄' : '❗';
+                const color = quest.completed ? '#0f0' : quest.active ? '#ff0' : '#f80';
+                const status = quest.completed ? 'Complete' : quest.active ? 'In Progress' : 'Available';
+                html += `
+                    <div style="color: ${color}; margin: 5px 0; padding: 5px 0;">
+                        ${icon} <strong>${quest.name}</strong> - <em>${status}</em>
+                    </div>
+                `;
+            });
+            html += '</div>';
+        }
+
+        // Render dialog choices INLINE (not as buttons at bottom)
+        if (this.currentNPC.choices && this.currentNPC.choices.length > 0) {
+            html += '<div class="npc-choices-list" style="margin-top: 20px; border-top: 2px solid rgba(0,255,255,0.3); padding-top: 15px;">';
+            this.currentNPC.choices.forEach((choice, index) => {
+                const num = index + 1;
+                html += `
+                    <div class="npc-choice-option"
+                         onclick="if(window.game && window.game.currentNPC && window.game.currentNPC.choices && window.game.currentNPC.choices[${index}] && window.game.currentNPC.choices[${index}].executeAction) { window.game.currentNPC.choices[${index}].executeAction(); }"
+                         style="padding: 12px 15px; margin: 8px 0; background: linear-gradient(90deg, rgba(0,255,255,0.1) 0%, rgba(0,255,255,0.05) 100%); border-left: 4px solid #0ff; cursor: pointer; transition: all 0.2s; border-radius: 4px;"
+                         onmouseover="this.style.background='linear-gradient(90deg, rgba(0,255,255,0.25) 0%, rgba(0,255,255,0.15) 100%)'; this.style.borderLeftColor='#fff'; this.style.paddingLeft='20px';"
+                         onmouseout="this.style.background='linear-gradient(90deg, rgba(0,255,255,0.1) 0%, rgba(0,255,255,0.05) 100%)'; this.style.borderLeftColor='#0ff'; this.style.paddingLeft='15px';">
+                        <span style="color: #0ff; font-weight: bold; margin-right: 10px;">${num}.</span>
+                        <span style="color: #fff; font-size: 1.05em;">${choice.text}</span>
+                    </div>
+                `;
+            });
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
     });
 
     // Loadouts content
@@ -2100,16 +2148,10 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
-    // NPC choices
+    // NPC choices - Choices are rendered inline in generateNPCDialog, so no separate buttons needed
     engine.registerGenerator('generateNPCChoices', function() {
-        if (!this.currentNPC || !this.currentNPC.choices) {
-            return [{ text: 'Continue', action: 'close' }];
-        }
-
-        return this.currentNPC.choices.map(choice => ({
-            text: choice.text,
-            action: `execute:selectNPCChoice:${choice.id}`
-        }));
+        // Return empty array - all choices including close are rendered inline
+        return [];
     });
 
     // Weapon selection
@@ -2778,63 +2820,109 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
-    // Save/Load UI generator
+    // Save/Load UI generator - Enhanced version matching modal engine features
     engine.registerGenerator('generateSaveLoadUI', function() {
-        let html = '<div class="save-load-ui">';
+        // Get mode from state data or default to 'save'
+        const mode = this.stateData?.saveLoadMode || 'save';
+        const saves = this.getAllSaves ? this.getAllSaves() : [];
 
+        let html = '<div class="save-load-ui" style="max-width: 800px; margin: 0 auto;">';
+
+        // Mode tabs
         html += `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div>
-                    <h4 style="color: #00ff00; margin-bottom: 15px;">SAVE GAME</h4>
-                    <div style="background: rgba(0,255,0,0.05); padding: 15px; border-radius: 5px;">
-                        <input type="text"
-                               id="save-name-input"
-                               placeholder="Enter save name..."
-                               style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #00ff00; border-radius: 5px; margin-bottom: 10px;">
-                        <button class="dialog-button" onclick="game.saveGameWithName(document.getElementById('save-name-input').value)">
-                            SAVE GAME
-                        </button>
-                    </div>
-                </div>
-
-                <div>
-                    <h4 style="color: #00ffff; margin-bottom: 15px;">LOAD GAME</h4>
-                    <div style="background: rgba(0,255,255,0.05); padding: 15px; border-radius: 5px; max-height: 300px; overflow-y: auto;">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.2);">
+                <button class="dialog-button"
+                        onclick="game.dialogEngine.stateData = { saveLoadMode: 'save' }; game.dialogEngine.navigateTo('save-load', null, true);"
+                        style="flex: 1; background: ${mode === 'save' ? 'rgba(0,255,0,0.2)' : 'transparent'}; border-bottom: ${mode === 'save' ? '3px solid #00ff00' : 'none'};">
+                    💾 SAVE GAME
+                </button>
+                <button class="dialog-button"
+                        onclick="game.dialogEngine.stateData = { saveLoadMode: 'load' }; game.dialogEngine.navigateTo('save-load', null, true);"
+                        style="flex: 1; background: ${mode === 'load' ? 'rgba(0,255,255,0.2)' : 'transparent'}; border-bottom: ${mode === 'load' ? '3px solid #00ffff' : 'none'};">
+                    📁 LOAD GAME
+                </button>
+            </div>
         `;
 
-        // List saved games
-        const saves = this.getAllSaves ? this.getAllSaves() : [];
+        // NEW SAVE button for save mode
+        if (mode === 'save') {
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <button class="dialog-button" onclick="game.createNewSave(); game.dialogEngine.navigateTo('save-load', null, true);"
+                            style="width: 100%; background: rgba(0,255,0,0.1); border: 2px solid #00ff00; font-weight: bold;">
+                        ➕ CREATE NEW SAVE
+                    </button>
+                </div>
+            `;
+        }
+
+        // Save list
+        html += '<div style="max-height: 400px; overflow-y: auto;">';
+
         if (saves.length === 0) {
-            html += '<p style="color: #888;">No saved games found</p>';
+            html += `
+                <div style="text-align: center; padding: 60px 20px; color: #888;">
+                    <div style="font-size: 3em; margin-bottom: 20px;">${mode === 'save' ? '💾' : '📁'}</div>
+                    <div style="font-size: 1.2em; margin-bottom: 10px;">No saved games found</div>
+                    <div style="font-size: 0.9em;">${mode === 'save' ? 'Click "CREATE NEW SAVE" to save your progress' : 'Start a new game first'}</div>
+                </div>
+            `;
         } else {
             saves.forEach((save, index) => {
+                const saveDate = new Date(save.timestamp);
+                const formattedDate = saveDate.toLocaleDateString() + ' ' + saveDate.toLocaleTimeString();
+                const missionNum = (save.gameState?.currentMissionIndex ?? 0) + 1;
+                const credits = (save.gameState?.credits ?? 0).toLocaleString();
+
                 html += `
-                    <div style="background: rgba(255,255,255,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="font-weight: bold;">${save.name || `Save ${index + 1}`}</div>
-                                <div style="color: #888; font-size: 0.8em;">${save.timestamp ? new Date(save.timestamp).toLocaleString() : 'Unknown date'}</div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; margin-bottom: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="font-size: 2em;">${mode === 'save' ? '💾' : '📁'}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold; font-size: 1.1em; color: #fff; margin-bottom: 5px;">
+                                    ${save.name || `Save Slot ${index + 1}`}
+                                </div>
+                                <div style="color: #888; font-size: 0.85em;">
+                                    📅 ${formattedDate} |
+                                    🎯 Mission ${missionNum} |
+                                    💰 ${credits} credits
+                                </div>
                             </div>
-                            <button class="dialog-button" onclick="game.loadSaveSlot('${save.id}')">LOAD</button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="dialog-button"
+                                        onclick="game.${mode === 'save' ? 'overwriteSave' : 'loadSaveSlot'}('${save.id}'); ${mode === 'load' ? 'game.dialogEngine.closeAll();' : 'game.dialogEngine.navigateTo(\'save-load\', null, true);'}"
+                                        style="background: ${mode === 'save' ? 'rgba(255,165,0,0.2)' : 'rgba(0,255,0,0.2)'}; border-color: ${mode === 'save' ? '#ffa500' : '#00ff00'}; min-width: 100px;">
+                                    ${mode === 'save' ? '⚠️ OVERWRITE' : '✓ LOAD'}
+                                </button>
+                                <button class="dialog-button"
+                                        onclick="game.deleteSave('${save.id}'); game.dialogEngine.navigateTo('save-load', null, true);"
+                                        style="background: rgba(255,0,0,0.2); border-color: #ff0000; min-width: 80px;">
+                                    🗑️ DELETE
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
             });
         }
 
-        html += `
-                    </div>
-                </div>
-            </div>
+        html += '</div>'; // Close scrollable list
 
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
-                <div style="color: #888; font-size: 0.9em; text-align: center;">
-                    Autosave: ${this.autosaveEnabled ? 'Enabled' : 'Disabled'}
-                </div>
+        // Quick save/load buttons at bottom
+        html += `
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid rgba(255,255,255,0.2); display: flex; gap: 10px;">
+                <button class="dialog-button" onclick="game.saveGame('quicksave'); game.dialogEngine.navigateTo('save-load', null, true);"
+                        style="flex: 1; background: rgba(255,215,0,0.1); border-color: #ffd700;">
+                    ⚡ QUICK SAVE
+                </button>
+                <button class="dialog-button" onclick="game.loadGame('quicksave'); game.dialogEngine.closeAll();"
+                        style="flex: 1; background: rgba(255,215,0,0.1); border-color: #ffd700;">
+                    ⚡ QUICK LOAD
+                </button>
             </div>
         `;
 
-        html += '</div>';
+        html += '</div>'; // Close save-load-ui
         return html;
     });
 };
@@ -3342,6 +3430,29 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
                 // User can manually navigate back when done
                 this.navigateTo('skill-tree', null, true);
             }
+        }
+    });
+
+    // Select NPC choice - executes the action associated with the choice
+    engine.registerAction('selectNPCChoice', function(choiceId) {
+        if (game.logger) {
+            game.logger.debug(`💬 selectNPCChoice action: choiceId="${choiceId}"`);
+        }
+
+        if (!game.currentNPC || !game.currentNPC.choices) {
+            if (game.logger) game.logger.warn('No NPC or choices available');
+            return;
+        }
+
+        const choice = game.currentNPC.choices.find(c => c.id == choiceId);
+        if (!choice) {
+            if (game.logger) game.logger.warn(`Choice ${choiceId} not found`);
+            return;
+        }
+
+        // Execute the choice's action
+        if (choice.executeAction) {
+            choice.executeAction();
         }
     });
 };

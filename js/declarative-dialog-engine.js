@@ -200,12 +200,14 @@ class DeclarativeDialogEngine {
         const buttons = this.generateButtons(state.buttons, stateId);
 
         // Build final HTML - use placeholder for content to insert later
+        // Spread params into template data so custom placeholders (avatar, name, etc.) get substituted
         const html = this.renderTemplate(layout.structure, {
             title: state.title || '',
             content: '__CONTENT_PLACEHOLDER__',
             buttons: buttons,
             stateId: stateId,
-            level: state.level
+            level: state.level,
+            ...params  // Include custom params like avatar, name for NPC dialogs
         });
 
         // Check if dialog already exists (refresh scenario)
@@ -550,7 +552,8 @@ class DeclarativeDialogEngine {
             // Dynamic buttons - call generator function
             const generatorFunc = this.generatorRegistry.get(buttonsConfig.generator);
             if (generatorFunc) {
-                const buttons = generatorFunc.call(this.game);
+                const game = window.game;
+                const buttons = generatorFunc.call(game);
                 if (Array.isArray(buttons)) {
                     buttons.forEach((btn, index) => {
                         html += this.createButton(btn, index, stateId);

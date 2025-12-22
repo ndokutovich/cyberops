@@ -1,14 +1,22 @@
     // Save/Load System with Multiple Slots
 
-// Show save list dialog
+// Show save list dialog - Now using declarative dialog system
 CyberOpsGame.prototype.showSaveList = function(mode = 'save') {
-    // Use modal engine if available
+    // Use declarative dialog system if available
+    if (this.dialogEngine) {
+        // Set mode in state data
+        this.dialogEngine.stateData = { saveLoadMode: mode };
+        this.dialogEngine.navigateTo('save-load');
+        return;
+    }
+
+    // Fallback to modal engine if declarative not available
     if (window.modalEngine) {
         this.showSaveListModalEngine(mode);
         return;
     }
 
-    // Legacy dialog removed - modal engine handles saves
+    // Legacy dialog removed
     this.saveListMode = mode;
 }
 

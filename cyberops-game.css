@@ -4314,3 +4314,105 @@ body {
     font-weight: bold;
     font-size: 16px;
 }
+}
+
+/* ========== NPC DIALOG STYLES ========== */
+
+/* NPC layout dialog - positioned at bottom center */
+.declarative-dialog.layout-npc-layout {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 250px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 900px;
+    max-width: 92vw;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: linear-gradient(135deg, rgba(0, 20, 40, 0.98), rgba(0, 40, 80, 0.98));
+    border: 2px solid rgba(0, 255, 255, 0.6);
+    border-radius: 12px;
+    padding: 0;
+}
+
+.npc-dialog {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 20px;
+}
+
+.npc-avatar {
+    font-size: 48px;
+    flex-shrink: 0;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 255, 255, 0.1);
+    border: 2px solid rgba(0, 255, 255, 0.4);
+    border-radius: 50%;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+/* Hide empty avatar */
+.npc-avatar:empty {
+    display: none;
+}
+
+.npc-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.npc-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00ffff;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+/* Hide empty name */
+.npc-name:empty {
+    display: none;
+}
+
+.npc-text {
+    color: #fff;
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+/* NPC text inside dialog-content wrapper */
+.npc-text.dialog-content {
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    min-height: auto;
+}
+
+.npc-choices {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+/* Hide empty choices container */
+.npc-choices:empty {
+    display: none;
+}
+
+/* NPC choice buttons inside the dialog */
+.npc-choices .dialog-button {
+    display: block;
+    width: 100%;
+    margin: 8px 0;
+    text-align: left;
+    padding: 12px 15px;
+    background: rgba(0, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+}
