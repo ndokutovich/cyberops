@@ -205,8 +205,8 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         // UI Controls
         'M': () => this.toggleEventLog(),
         'm': () => this.toggleEventLog(),
-        'J': () => this.showMissionList(),
-        'j': () => this.showMissionList(),
+        'J': () => this.dialogEngine?.navigateTo('mission-progress'),
+        'j': () => this.dialogEngine?.navigateTo('mission-progress'),
         '?': () => this.toggleHotkeyHelp(),
         '/': (e) => { if (e.shiftKey) this.toggleHotkeyHelp(); },
 

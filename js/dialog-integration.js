@@ -3112,8 +3112,8 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
     engine.registerAction('openEquipmentManager', function() {
         if (game.dialogEngine) {
             game.dialogEngine.closeAll();
+            game.dialogEngine.navigateTo('arsenal');
         }
-        game.showEquipmentManagement();
     });
 
     // Apply settings
@@ -3180,9 +3180,9 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         // Set selected agent
         game.selectedEquipmentAgent = parseInt(actualAgentId);
 
-        // Close declarative dialogs and open legacy equipment dialog
+        // Close declarative dialogs and open arsenal
         this.closeAll();
-        game.showEquipmentManagement();
+        game.dialogEngine.navigateTo('arsenal');
     });
 
     // Equip weapon

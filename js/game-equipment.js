@@ -44,18 +44,8 @@ CyberOpsGame.prototype.initializeEquipmentSystem = function() {
     });
 };
 
-// Open equipment management dialog
-CyberOpsGame.prototype.showEquipmentManagement = function() {
-    // Use declarative dialog system
-    if (this.dialogEngine) {
-        if (this.logger) this.logger.debug('🔫 Redirecting to declarative Arsenal dialog');
-        this.dialogEngine.navigateTo('arsenal');
-        return;
-    }
-
-    // No fallback - declarative system is required
-    if (this.logger) this.logger.error('❌ DeclarativeDialogEngine is required for equipment management');
-};
+// REMOVED: showEquipmentManagement - was pure wrapper to dialogEngine.navigateTo('arsenal')
+// All callers now use dialogEngine.navigateTo('arsenal') directly
 
 // Close equipment dialog
 CyberOpsGame.prototype.closeEquipmentDialog = function() {
@@ -534,166 +524,8 @@ CyberOpsGame.prototype.sellItem = function(type, itemId) {
 // This version was never called because game-rpg-ui.js loads later and replaces it
 // See DUPLICATE_ANALYSIS.md for details
 
-// Show sell dialog (for declarative dialog system)
-CyberOpsGame.prototype.showSellDialog = function() {
-    let html = '<div style="max-height: 400px; overflow-y: auto;">';
-    html += '<h3 style="color: #ff6600; margin-bottom: 15px;">💰 SELL ITEMS</h3>';
-    const currentCredits = this.gameServices.resourceService.get('credits');
-    html += `<div style="color: #ffa500; margin-bottom: 20px;">Credits: ${currentCredits}</div>`;
-
-    // Get all sellable items
-    const allItems = [];
-
-    // Add weapons
-    this.weapons.forEach(w => {
-        const available = this.getAvailableCount('weapon', w.id);
-        if (available > 0) {
-            allItems.push({
-                ...w,
-                type: 'weapon',
-                available: available,
-                category: 'Weapons'
-            });
-        }
-    });
-
-    // Add equipment
-    this.equipment.forEach(e => {
-        const available = this.getAvailableCount('equipment', e.id);
-        if (available > 0) {
-            allItems.push({
-                ...e,
-                type: 'equipment',
-                available: available,
-                category: 'Equipment'
-            });
-        }
-    });
-
-    if (allItems.length === 0) {
-        html += '<div style="color: #888; text-align: center; padding: 20px;">No items available to sell</div>';
-    } else {
-        // Group by category
-        const categories = {};
-        allItems.forEach(item => {
-            if (!categories[item.category]) categories[item.category] = [];
-            categories[item.category].push(item);
-        });
-
-        // Display each category
-        Object.keys(categories).forEach(category => {
-            html += `<h4 style="color: #00ffff; margin: 15px 0 10px;">${category}</h4>`;
-
-            categories[category].forEach(item => {
-                const sellPrice = Math.floor((item.value || item.cost || 0) * 0.6);
-
-                html += `
-                    <div style="background: rgba(255,102,0,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="color: #fff; font-weight: bold;">${item.name}</div>
-                                <div style="color: #888; font-size: 0.9em;">Available: ${item.available} | Sell Price: ${sellPrice} credits</div>
-                            </div>
-                            <div>
-                                <button class="menu-button" style="padding: 5px 10px; background: #8b4513;"
-                                        onclick="game.sellItem('${item.type}', ${item.id})">
-                                    SELL
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-        });
-    }
-
-    html += '</div>';
-
-    this.showHudDialog(
-        '💰 SELL ITEMS',
-        html,
-        [
-            { text: 'CLOSE', action: 'close' }
-        ]
-    );
-};
-
-// Show shop dialog (for declarative dialog system)
-CyberOpsGame.prototype.showShopDialog = function() {
-    let html = '<div style="max-height: 400px; overflow-y: auto;">';
-    html += '<h3 style="color: #00ff00; margin-bottom: 15px;">🛒 WEAPON & EQUIPMENT SHOP</h3>';
-    const currentCredits = this.gameServices.resourceService.get('credits');
-    html += `<div style="color: #ffa500; margin-bottom: 20px;">Credits: ${currentCredits}</div>`;
-
-    // Get all available items
-    const allItems = [];
-
-    // Add weapons
-    this.weapons.forEach(w => {
-        allItems.push({
-            ...w,
-            type: 'weapon',
-            category: 'Weapons'
-        });
-    });
-
-    // Add equipment
-    this.equipment.forEach(e => {
-        allItems.push({
-            ...e,
-            type: 'equipment',
-            category: 'Equipment'
-        });
-    });
-
-    // Group by category
-    const categories = {};
-    allItems.forEach(item => {
-        if (!categories[item.category]) categories[item.category] = [];
-        categories[item.category].push(item);
-    });
-
-    // Display each category
-    Object.keys(categories).forEach(category => {
-        html += `<h4 style="color: #00ffff; margin: 15px 0 10px;">${category}</h4>`;
-
-        categories[category].forEach(item => {
-            const itemCost = item.value || item.cost || 0;
-            const canAfford = this.gameServices.resourceService.canAfford('credits', itemCost);
-            const owned = item.owned || 0;
-
-            html += `
-                <div style="background: rgba(0,255,255,0.05); padding: 10px; margin: 5px 0; border-radius: 5px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="color: ${canAfford ? '#fff' : '#666'}; font-weight: bold;">${item.name}</div>
-                            <div style="color: #888; font-size: 0.9em;">${item.description || ''}</div>
-                            <div style="color: #ffa500; font-size: 0.9em;">Cost: ${itemCost} credits | Owned: ${owned}</div>
-                        </div>
-                        <div>
-                            ${canAfford ? `
-                                <button class="menu-button" style="padding: 5px 10px;"
-                                        onclick="game.buyItem('${item.type}', ${item.id})">
-                                    BUY
-                                </button>
-                            ` : '<span style="color: #ff0000;">Not enough credits</span>'}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-    });
-
-    html += '</div>';
-
-    this.showHudDialog(
-        '🛒 SHOP',
-        html,
-        [
-            { text: 'CLOSE', action: 'close' }
-        ]
-    );
-};
+// REMOVED: showSellDialog, showShopDialog - Dead code, never called
+// Buy/Sell functionality is integrated into the Arsenal dialog via currentInventoryMode
 
 // Auto-optimize loadouts
 CyberOpsGame.prototype.optimizeLoadouts = function() {
@@ -1032,19 +864,8 @@ CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
     });
 };
 
-// Show shop interface to buy items
-CyberOpsGame.prototype.showShopInterface = function() {
-    // Check if we're in declarative dialog mode
-    if (this.dialogEngine && this.dialogEngine.currentState) {
-        // Open shop as a separate HUD dialog
-        if (this.logger) this.logger.debug('🛒 Opening Shop interface as HUD dialog');
-        this.showShopDialog();
-        return;
-    }
-
-    // No fallback - declarative system is required
-    if (this.logger) this.logger.error('❌ DeclarativeDialogEngine is required for shop interface');
-};
+// REMOVED: showShopInterface - Dead code, never called
+// Buy/Sell mode switching is handled directly in Arsenal dialog
 
 // Buy item from shop
 CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
@@ -1123,16 +944,4 @@ CyberOpsGame.prototype.buyItemFromShop = function(type, itemId) {
     if (this.logger) this.logger.debug(`Purchased ${itemData.name} for ${itemData.cost} credits`);
 };
 
-// Show sell interface
-CyberOpsGame.prototype.showSellInterface = function() {
-    // Check if we're in declarative dialog mode
-    if (this.dialogEngine && this.dialogEngine.currentState) {
-        // Open sell interface as a separate HUD dialog
-        if (this.logger) this.logger.debug('💰 Opening Sell interface as HUD dialog');
-        this.showSellDialog();
-        return;
-    }
-
-    // No fallback - declarative system is required
-    if (this.logger) this.logger.error('❌ DeclarativeDialogEngine is required for sell interface');
-};
+// REMOVED: showSellInterface - Dead code, never called

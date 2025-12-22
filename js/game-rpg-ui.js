@@ -110,28 +110,27 @@ CyberOpsGame.prototype.calculateXPPercent = function(rpgEntity) {
     return Math.min(100, Math.max(0, percent));
 };
 
-// Inventory UI - Always use hub equipment system
+// Inventory UI - Always use hub equipment system (Arsenal dialog)
 CyberOpsGame.prototype.showInventory = function(agentIdOrName) {
     if (this.logger) this.logger.debug('showInventory called with:', agentIdOrName);
 
-    // Always use the hub equipment management UI for consistency
-    if (this.showEquipmentManagement) {
-        if (this.logger) this.logger.debug('📦 Opening unified equipment management UI');
-
-        // If we have a specific agent selected in game, pre-select them
-        if (agentIdOrName && this.currentScreen === 'game') {
-            const agent = this.agents.find(a =>
-                a.id === agentIdOrName ||
-                a.name === agentIdOrName ||
-                a.originalId === agentIdOrName
-            );
-            if (agent) {
-                // Use the original ID for equipment system
-                this.selectedEquipmentAgent = agent.originalId || agent.name || agent.id;
-            }
+    // If we have a specific agent selected in game, pre-select them
+    if (agentIdOrName && this.currentScreen === 'game') {
+        const agent = this.agents.find(a =>
+            a.id === agentIdOrName ||
+            a.name === agentIdOrName ||
+            a.originalId === agentIdOrName
+        );
+        if (agent) {
+            // Use the original ID for equipment system
+            this.selectedEquipmentAgent = agent.originalId || agent.name || agent.id;
         }
+    }
 
-        this.showEquipmentManagement();
+    // Use declarative Arsenal dialog
+    if (this.dialogEngine) {
+        if (this.logger) this.logger.debug('📦 Opening Arsenal dialog');
+        this.dialogEngine.navigateTo('arsenal');
         return;
     }
 

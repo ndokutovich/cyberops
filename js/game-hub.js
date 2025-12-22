@@ -434,7 +434,7 @@ CyberOpsGame.prototype.hireAgent = function(agentId) {
             Credits Remaining: ${this.credits.toLocaleString()}`,
             [
                 { text: 'HIRE MORE', action: () => { this.transitionDialog(() => this.showHiringDialog()); } },
-                { text: 'VIEW SQUAD', action: () => { this.closeDialog(); this.showEquipmentManagement(); } },
+                { text: 'VIEW SQUAD', action: () => { this.closeDialog(); this.dialogEngine.navigateTo('arsenal'); } },
                 { text: 'BACK TO AGENTS', action: () => { this.closeDialog(); this.showAgentManagement(); } }
             ]
         );
@@ -449,9 +449,9 @@ CyberOpsGame.prototype.showSquadManagement = function() {
         this.initializeEquipmentSystem();
     }
 
-    // Close current dialog and show equipment management
+    // Close current dialog and show arsenal
     this.closeDialog();
-    this.showEquipmentManagement();
+    this.dialogEngine.navigateTo('arsenal');
 }
     
 CyberOpsGame.prototype.manageAgentEquipment = function(agentId) {
@@ -506,20 +506,13 @@ CyberOpsGame.prototype.viewAgentDetails = function(agentId) {
         );
 }
     
-    // Equipment Shop System
-// showShopDialog removed - duplicate definition exists in game-equipment.js
-// Shop functionality is part of showShopInterface in game-equipment.js
+// Equipment Shop System - Buy/Sell integrated into Arsenal dialog (currentInventoryMode)
 
 // Settings - Uses original implementation from game-settings.js
 CyberOpsGame.prototype.showSettingsFromHub = function() {
     // Just call the original settings dialog
     this.showSettings();
 }
-
-// showShopDialogOld removed - now using declarative dialog system
-// Shop functionality integrated into arsenal dialog
-    
-// buyItem is now in game-equipment.js and uses InventoryService
 
 // Generate world map content for dialog system
 CyberOpsGame.prototype.generateWorldMapContent = function() {

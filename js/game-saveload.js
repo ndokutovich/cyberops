@@ -1,115 +1,13 @@
     // Save/Load System with Multiple Slots
 
-// Show save list dialog - Now using declarative dialog system
+// Show save list dialog - Using declarative dialog system
 CyberOpsGame.prototype.showSaveList = function(mode = 'save') {
-    // Use declarative dialog system if available
-    if (this.dialogEngine) {
-        // Set mode in state data
-        this.dialogEngine.stateData = { saveLoadMode: mode };
-        this.dialogEngine.navigateTo('save-load');
-        return;
-    }
-
-    // Fallback to modal engine if declarative not available
-    if (window.modalEngine) {
-        this.showSaveListModalEngine(mode);
-        return;
-    }
-
-    // Legacy dialog removed
-    this.saveListMode = mode;
+    // Set mode in state data and navigate to save-load dialog
+    this.dialogEngine.stateData = { saveLoadMode: mode };
+    this.dialogEngine.navigateTo('save-load');
 }
 
-// New modal engine version
-CyberOpsGame.prototype.showSaveListModalEngine = function(mode = 'save') {
-    this.saveListMode = mode;
-    const saves = this.getAllSaves();
-
-    // Build items list
-    const items = saves.map((save, index) => {
-        const saveDate = new Date(save.timestamp);
-        const formattedDate = saveDate.toLocaleDateString() + ' ' + saveDate.toLocaleTimeString();
-
-        return {
-            icon: mode === 'save' ? '💾' : '📁',
-            title: save.name || `Save Slot ${index + 1}`,
-            subtitle: `
-                📅 ${formattedDate} |
-                🎯 Mission ${save.gameState.currentMissionIndex + 1} |
-                💰 ${save.gameState.credits.toLocaleString()} credits
-            `,
-            actions: [
-                {
-                    type: mode === 'save' ? 'overwrite' : 'load',
-                    label: mode === 'save' ? 'OVERWRITE' : 'LOAD',
-                    handler: (item) => {
-                        if (mode === 'save') {
-                            this.overwriteSave(save.id);
-                        } else {
-                            this.loadSaveSlot(save.id);
-                        }
-                        if (this.activeSaveModal) {
-                            this.activeSaveModal.close();
-                        }
-                    }
-                },
-                {
-                    type: 'delete',
-                    label: 'DELETE',
-                    handler: (item) => {
-                        this.deleteSave(save.id);
-                        // Refresh the modal
-                        if (this.activeSaveModal) {
-                            this.activeSaveModal.close();
-                            this.showSaveListModalEngine(mode);
-                        }
-                    }
-                }
-            ]
-        };
-    });
-
-    // Add buttons
-    const buttons = [];
-
-    if (mode === 'save') {
-        buttons.push({
-            text: '➕ NEW SAVE',
-            primary: true,
-            action: () => {
-                this.createNewSave();
-                if (this.activeSaveModal) {
-                    this.activeSaveModal.close();
-                    this.showSaveListModalEngine(mode);
-                }
-            },
-            closeAfter: false
-        });
-    }
-
-    buttons.push({
-        text: 'CLOSE',
-        action: 'close'
-    });
-
-    // Show modal
-    this.activeSaveModal = window.modalEngine.show({
-        type: 'list',
-        size: 'medium',
-        title: mode === 'save' ? '💾 SAVE GAME' : '📁 LOAD GAME',
-        items: items,
-        buttons: buttons,
-        emptyMessage: mode === 'save' ?
-            'No saved games found. Click "NEW SAVE" to create one.' :
-            'No saved games found. Start a new game first.',
-        closeButton: true,
-        backdrop: true,
-        closeOnBackdrop: false,
-        onClose: () => {
-            this.activeSaveModal = null;
-        }
-    });
-}
+// REMOVED: showSaveListModalEngine - was fallback, never reached since dialogEngine always available
 
 CyberOpsGame.prototype.closeSaveList = function() {
     // Close modal engine dialog if exists

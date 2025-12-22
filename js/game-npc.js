@@ -1023,19 +1023,8 @@ CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
     }
 };
 
-// Show mission progress screen (uses same comprehensive system as completion modal)
-CyberOpsGame.prototype.showMissionList = function() {
-    if (this.logger) this.logger.debug('📜 Showing mission progress');
-
-    // Use declarative dialog system
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('mission-progress');
-        return;
-    }
-
-    // No fallback - declarative system is required
-    if (this.logger) this.logger.error('❌ DeclarativeDialogEngine is required for mission progress dialog');
-};
+// REMOVED: showMissionList - was pure wrapper to dialogEngine.navigateTo('mission-progress')
+// All callers now use dialogEngine.navigateTo('mission-progress') directly
 
 // Close dialog
 // Close NPC dialog specifically - Now works with Modal Engine
