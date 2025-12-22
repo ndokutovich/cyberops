@@ -274,6 +274,11 @@ const CampaignSystem = {
             this.campaigns[campaignId] = campaign;
         }
 
+        // Ensure acts array exists (campaign may have been created by registerCampaignConfig without acts)
+        if (!campaign.acts) {
+            campaign.acts = [];
+        }
+
         // Find or create act
         const actIdStr = String(actId).padStart(2, '0');
         let act = campaign.acts.find(a => a.id === actIdStr || a.id === String(actId));
@@ -498,13 +503,18 @@ const CampaignSystem = {
             throw new Error(`❌ registerCampaignConfig: config is required for campaign '${campaignId}'`);
         }
 
-        // Ensure campaign exists
+        // Ensure campaign exists with acts array
         if (!this.campaigns[campaignId]) {
-            this.campaigns[campaignId] = { id: campaignId };
+            this.campaigns[campaignId] = { id: campaignId, acts: [] };
         }
 
         // Merge config into campaigns (unified store)
         Object.assign(this.campaigns[campaignId], config);
+
+        // Ensure acts array exists after merge
+        if (!this.campaigns[campaignId].acts) {
+            this.campaigns[campaignId].acts = [];
+        }
 
         if (campaignLogger) campaignLogger.info(`✅ Registered config for campaign: ${campaignId}`);
     },
@@ -518,13 +528,18 @@ const CampaignSystem = {
             throw new Error(`❌ registerCampaignContent: content is required for campaign '${campaignId}'`);
         }
 
-        // Ensure campaign exists
+        // Ensure campaign exists with acts array
         if (!this.campaigns[campaignId]) {
-            this.campaigns[campaignId] = { id: campaignId };
+            this.campaigns[campaignId] = { id: campaignId, acts: [] };
         }
 
         // Merge content into campaigns (unified store)
         Object.assign(this.campaigns[campaignId], content);
+
+        // Ensure acts array exists after merge
+        if (!this.campaigns[campaignId].acts) {
+            this.campaigns[campaignId].acts = [];
+        }
 
         if (campaignLogger) campaignLogger.info(`✅ Registered content for campaign: ${campaignId}`);
     },
