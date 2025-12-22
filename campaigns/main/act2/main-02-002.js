@@ -159,7 +159,8 @@
                 items: [
                     { type: 'gate', x: 50, y: 10, id: 0 },
                     { type: 'gate', x: 50, y: 25, id: 1 },
-                    { type: 'gate', x: 50, y: 40, id: 2 }
+                    { type: 'gate', x: 50, y: 40, id: 2 },
+                    { type: 'terminal', x: 50, y: 50, id: 'mainframe', name: 'Central Mainframe', sprite: '🖥️' }
                 ],
                 doors: [],
                 coverCount: 120
@@ -169,6 +170,10 @@
                 { x: 50, y: 10, breached: false, id: 0 },
                 { x: 50, y: 25, breached: false, id: 1 },
                 { x: 50, y: 40, breached: false, id: 2 }
+            ],
+
+            terminals: [
+                { x: 50, y: 50, hacked: false, id: 'mainframe' }
             ],
 
             enemySpawns: [
