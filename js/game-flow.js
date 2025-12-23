@@ -34,10 +34,15 @@ CyberOpsGame.prototype.startCampaign = function() {
             this.initializeHub();
         }
 
-        // Hide main menu before cutscene
-        const mainMenu = document.getElementById('mainMenu');
-        if (mainMenu) {
-            mainMenu.style.display = 'none';
+        // Hide main menu before cutscene using screen manager
+        if (window.screenManager && window.screenManager.currentScreen === 'main-menu') {
+            window.screenManager.exitScreen('main-menu');
+            window.screenManager.currentScreen = null;
+        }
+        // Also hide by element ID (screen-main-menu is the generated container)
+        const menuScreen = document.getElementById('screen-main-menu');
+        if (menuScreen) {
+            menuScreen.style.display = 'none';
         }
 
         // Play game intro cutscene for new campaigns
