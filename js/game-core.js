@@ -24,6 +24,11 @@ class CyberOpsGame {
             this.initializeDeclarativeDialogs();
         }
 
+        // Initialize cutscene system
+        if (typeof this.initializeCutsceneSystem === 'function') {
+            this.initializeCutsceneSystem();
+        }
+
         // Enable audio on first user interaction
         this.setupAudioInteraction();
 

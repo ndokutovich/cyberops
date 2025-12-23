@@ -34,7 +34,16 @@ CyberOpsGame.prototype.startCampaign = function() {
             this.initializeHub();
         }
 
-        window.screenManager.navigateTo('hub');
+        // Play game intro cutscene for new campaigns
+        // Cutscene flow: game-intro → act1-intro → hub
+        if (this.playGameIntroCutscene) {
+            this.playGameIntroCutscene(() => {
+                // Cutscene handles navigation via onComplete
+            });
+        } else {
+            // No cutscene system, navigate directly to hub
+            window.screenManager.navigateTo('hub');
+        }
 }
 
 // Alias for compatibility with screen system

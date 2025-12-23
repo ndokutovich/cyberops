@@ -1555,9 +1555,31 @@ class MissionService {
             }
         }
 
-        // Navigate to victory/defeat screen using screen manager
+        // Play outro cutscene if available, then navigate to victory/defeat
         setTimeout(() => {
-            window.screenManager.navigateTo(victory ? 'victory' : 'defeat');
+            if (victory && game.currentMission && game.playMissionOutroCutscene) {
+                const missionId = game.currentMission.id;
+
+                // Determine if this is the final mission by checking mission list
+                const isLastMission = game.missions &&
+                    game.currentMissionIndex >= 0 &&
+                    game.currentMissionIndex === game.missions.length - 1;
+
+                if (isLastMission) {
+                    // Final mission - game finale cutscene will handle credits navigation
+                    game.playMissionOutroCutscene(missionId, () => {
+                        // Cutscene handles navigation via onComplete (chains to game-finale)
+                    });
+                } else {
+                    // Regular mission - play outro then victory screen
+                    game.playMissionOutroCutscene(missionId, () => {
+                        window.screenManager.navigateTo('victory');
+                    });
+                }
+            } else {
+                // No cutscene or defeat - navigate directly
+                window.screenManager.navigateTo(victory ? 'victory' : 'defeat');
+            }
         }, 1000); // Brief delay for dramatic effect
     }
 

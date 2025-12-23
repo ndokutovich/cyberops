@@ -331,9 +331,21 @@
             // NOTE: game.agents is now a computed property
             // It automatically filters activeAgents by selectedAgents
             if (game.selectedAgents && game.selectedAgents.length > 0) {
-                // Start the mission
-                if (game.startMission) {
-                    game.startMission(game.currentMissionIndex);
+                // Check if there's an intro cutscene for this mission
+                const missionId = game.currentMission?.id;
+                if (missionId && game.playMissionIntroCutscene) {
+                    // Play intro cutscene - it will call startMissionGameplay when done
+                    game.playMissionIntroCutscene(missionId, () => {
+                        // Cutscene done, start mission gameplay
+                        if (game.startMission) {
+                            game.startMission(game.currentMissionIndex);
+                        }
+                    });
+                } else {
+                    // No cutscene, start mission directly
+                    if (game.startMission) {
+                        game.startMission(game.currentMissionIndex);
+                    }
                 }
             }
         });
