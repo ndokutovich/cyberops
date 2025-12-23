@@ -494,13 +494,24 @@ class ScreenManager {
 
                     if (logger) logger.info(`✅ Starting mission with ${this.game.agents.length} agents`);
 
-                    if (this.game?.startMission) {
-                        if (logger) logger.info(`📍 Calling game.startMission()`);
-                        this.game.startMission();
-                        if (logger) logger.info(`📍 Navigating to game screen`);
-                        this.navigateTo('game');
+                    // Check if there's an intro cutscene for this mission
+                    const missionId = this.game.currentMission?.id;
+                    const cutsceneId = missionId ? `mission-${missionId.replace('main-', '')}-intro` : null;
+
+                    if (cutsceneId && window.CUTSCENE_CONFIG?.cutscenes?.[cutsceneId]) {
+                        // Navigate to cutscene screen - cutscene's onComplete handles starting gameplay
+                        if (logger) logger.info(`🎬 Playing mission intro: ${cutsceneId}`);
+                        this.navigateTo('cutscene', { cutsceneId: cutsceneId });
                     } else {
-                        if (logger) logger.error('❌ game.startMission function not found!');
+                        // No cutscene, start mission directly
+                        if (this.game?.startMission) {
+                            if (logger) logger.info(`📍 Calling game.startMission()`);
+                            this.game.startMission();
+                            if (logger) logger.info(`📍 Navigating to game screen`);
+                            this.navigateTo('game');
+                        } else {
+                            if (logger) logger.error('❌ game.startMission function not found!');
+                        }
                     }
                 } else {
                     if (logger) logger.warn('⚠️ No agents selected for mission');

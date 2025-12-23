@@ -171,8 +171,8 @@ class CutsceneEngine {
                 this.applyAnimation(el, element.animation);
             }
 
-            // Handle typewriter effect
-            if (element.typewriter && element.type === 'text') {
+            // Handle typewriter effect for text and dialog elements
+            if (element.typewriter && (element.type === 'text' || element.type === 'dialog')) {
                 this.typewriterEffect(el, element.content, () => {
                     // Delay before next element
                     setTimeout(() => {
