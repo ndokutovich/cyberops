@@ -267,23 +267,23 @@ const GAME_MUSIC_CONFIG = {
         // UI sounds
         ui: {
             click: {
-                file: 'sfx-click.wav',
-                fallback: 'sfx-click.mp3',
+                file: 'sfx/sfx-click.wav',
+                fallback: 'sfx/sfx-click.mp3',
                 volume: 0.3
             },
             hover: {
-                file: 'sfx-hover.wav',
-                fallback: 'sfx-hover.mp3',
+                file: 'sfx/sfx-hover.wav',
+                fallback: 'sfx/sfx-hover.mp3',
                 volume: 0.2
             },
             error: {
-                file: 'sfx-error.wav',
-                fallback: 'sfx-error.mp3',
+                file: 'sfx/sfx-error.wav',
+                fallback: 'sfx/sfx-error.mp3',
                 volume: 0.4
             },
             success: {
-                file: 'sfx-success.wav',
-                fallback: 'sfx-success.mp3',
+                file: 'sfx/sfx-success.wav',
+                fallback: 'sfx/sfx-success.mp3',
                 volume: 0.4
             }
         },
@@ -291,24 +291,24 @@ const GAME_MUSIC_CONFIG = {
         // Combat sounds
         combat: {
             shoot: {
-                file: 'sfx-shoot.wav',
-                fallback: 'sfx-shoot.mp3',
+                file: 'sfx/sfx-shoot.wav',
+                fallback: 'sfx/sfx-shoot.mp3',
                 volume: 0.5,
-                variations: ['sfx-shoot-1.wav', 'sfx-shoot-2.wav']
+                variations: ['sfx/sfx-shoot-1.wav', 'sfx/sfx-shoot-2.wav']
             },
             explosion: {
-                file: 'sfx-explosion.wav',
-                fallback: 'sfx-explosion.mp3',
+                file: 'sfx/sfx-explosion.wav',
+                fallback: 'sfx/sfx-explosion.mp3',
                 volume: 0.6
             },
             hit: {
-                file: 'sfx-hit.wav',
-                fallback: 'sfx-hit.mp3',
+                file: 'sfx/sfx-hit.wav',
+                fallback: 'sfx/sfx-hit.mp3',
                 volume: 0.4
             },
             shield: {
-                file: 'sfx-shield.wav',
-                fallback: 'sfx-shield.mp3',
+                file: 'sfx/sfx-shield.wav',
+                fallback: 'sfx/sfx-shield.mp3',
                 volume: 0.5
             }
         },
@@ -316,36 +316,36 @@ const GAME_MUSIC_CONFIG = {
         // Interaction sounds
         interaction: {
             hack: {
-                file: 'sfx-hack.wav',
-                fallback: 'sfx-hack.mp3',
+                file: 'sfx/sfx-hack.wav',
+                fallback: 'sfx/sfx-hack.mp3',
                 volume: 0.4,
                 duration: 1000,  // Sound duration for timing
                 vibration: [20, 10, 20]  // Haptic feedback pattern
             },
             plant: {
-                file: 'sfx-plant.wav',
-                fallback: 'sfx-plant.mp3',
+                file: 'sfx/sfx-plant.wav',
+                fallback: 'sfx/sfx-plant.mp3',
                 volume: 0.5,
                 description: 'Planting explosives'
             },
             door: {
-                file: 'sfx-door.wav',
-                fallback: 'sfx-door.mp3',
+                file: 'sfx/sfx-door.wav',
+                fallback: 'sfx/sfx-door.mp3',
                 volume: 0.5
             },
             terminal: {
-                file: 'sfx-terminal.wav',
-                fallback: 'sfx-terminal.mp3',
+                file: 'sfx/sfx-terminal.wav',
+                fallback: 'sfx/sfx-terminal.mp3',
                 volume: 0.3
             },
             pickup: {
-                file: 'sfx-pickup.wav',
-                fallback: 'sfx-pickup.mp3',
+                file: 'sfx/sfx-pickup.wav',
+                fallback: 'sfx/sfx-pickup.mp3',
                 volume: 0.4
             },
             type: {
-                file: 'sfx-type.wav',
-                fallback: 'sfx-type.mp3',
+                file: 'sfx/sfx-type.wav',
+                fallback: 'sfx/sfx-type.mp3',
                 volume: 0.1,
                 description: 'NPC dialog typing'
             }
@@ -354,14 +354,14 @@ const GAME_MUSIC_CONFIG = {
         // Movement sounds
         movement: {
             footstep: {
-                file: 'sfx-footstep.wav',
-                fallback: 'sfx-footstep.mp3',
+                file: 'sfx/sfx-footstep.wav',
+                fallback: 'sfx/sfx-footstep.mp3',
                 volume: 0.2,
-                variations: ['sfx-footstep-1.wav', 'sfx-footstep-2.wav']
+                variations: ['sfx/sfx-footstep-1.wav', 'sfx/sfx-footstep-2.wav']
             },
             move: {
-                file: 'sfx-move.wav',
-                fallback: 'sfx-move.mp3',
+                file: 'sfx/sfx-move.wav',
+                fallback: 'sfx/sfx-move.mp3',
                 volume: 0.1
             }
         }

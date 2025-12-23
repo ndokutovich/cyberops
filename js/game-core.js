@@ -878,6 +878,11 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
     if (result && result.success) {
         const effect = this.gameServices.itemService.createPickupEffect(item.x, item.y, item.type);
         this.effects.push(effect);
+
+        // Play pickup sound effect
+        if (this.playSound) {
+            this.playSound('pickup', 0.4);
+        }
     }
 
     if (result && result.effects && result.effects.keycardType) {
