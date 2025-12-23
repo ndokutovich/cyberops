@@ -903,6 +903,13 @@ const SCREEN_CONFIG = {
         music: false, // Cutscene handles its own music
         content: () => `<div id="cutscene-screen-container" style="width:100%;height:100%;"></div>`,
         onEnter: function(params) {
+            // Stop any playing music (mission music, menu music, etc.)
+            if (window.game) {
+                if (window.game.stopMusic) window.game.stopMusic();
+                if (window.game.pauseLevelMusic) window.game.pauseLevelMusic();
+                if (window.game.stopScreenMusic) window.game.stopScreenMusic();
+            }
+
             // Play the specified cutscene
             const cutsceneId = params?.cutsceneId;
             if (cutsceneId && window.game?.playCutscene) {
