@@ -70,6 +70,11 @@ class CutsceneEngine {
         this.container.style.display = 'flex';
         this.container.innerHTML = '';
 
+        // Play cutscene-level music if specified
+        if (cutscene.music) {
+            this.playCutsceneMusic(cutscene.music);
+        }
+
         // Add event listeners
         this.container.addEventListener('click', this.handleClick);
         document.addEventListener('keydown', this.handleKeyPress);
@@ -108,9 +113,9 @@ class CutsceneEngine {
         sceneWrapper.id = `cutscene-scene-${index}`;
         this.container.appendChild(sceneWrapper);
 
-        // Play music if specified
-        if (scene.music && window.game?.playMusic) {
-            window.game.playMusic(scene.music);
+        // Play scene-specific music if specified (overrides cutscene music)
+        if (scene.music) {
+            this.playCutsceneMusic(scene.music);
         }
 
         // Render elements sequentially
@@ -388,6 +393,60 @@ class CutsceneEngine {
     }
 
     /**
+     * Play cutscene music
+     * @param {string|Object} musicConfig - Music file path or config object
+     */
+    playCutsceneMusic(musicConfig) {
+        const musicPath = typeof musicConfig === 'string' ? musicConfig : musicConfig.file;
+        const volume = typeof musicConfig === 'object' ? (musicConfig.volume || 0.5) : 0.5;
+        const loop = typeof musicConfig === 'object' ? (musicConfig.loop !== false) : true;
+
+        if (this.logger) this.logger.info(`🎵 Playing cutscene music: ${musicPath}`);
+
+        // Create or reuse audio element
+        if (!this.cutsceneAudio) {
+            this.cutsceneAudio = new Audio();
+        }
+
+        this.cutsceneAudio.src = musicPath;
+        this.cutsceneAudio.volume = volume;
+        this.cutsceneAudio.loop = loop;
+
+        this.cutsceneAudio.play().catch(err => {
+            if (this.logger) this.logger.warn(`Could not play cutscene music: ${err.message}`);
+        });
+    }
+
+    /**
+     * Stop cutscene music with fade out
+     * @param {number} fadeTime - Fade duration in ms
+     */
+    stopCutsceneMusic(fadeTime = 500) {
+        if (!this.cutsceneAudio) return;
+
+        if (this.logger) this.logger.debug('🎵 Stopping cutscene music');
+
+        const audio = this.cutsceneAudio;
+        const startVolume = audio.volume;
+        const steps = 20;
+        const volumeStep = startVolume / steps;
+        const stepTime = fadeTime / steps;
+
+        let step = 0;
+        const fadeInterval = setInterval(() => {
+            step++;
+            audio.volume = Math.max(0, startVolume - (volumeStep * step));
+
+            if (step >= steps) {
+                clearInterval(fadeInterval);
+                audio.pause();
+                audio.currentTime = 0;
+                audio.volume = startVolume;
+            }
+        }, stepTime);
+    }
+
+    /**
      * Add skip hint to scene
      * @param {HTMLElement} wrapper - Scene wrapper
      */
@@ -484,6 +543,9 @@ class CutsceneEngine {
         // Store reference to cutscene before clearing
         const completedCutscene = this.currentCutscene;
         const callback = this.onCompleteCallback;
+
+        // Stop cutscene music with fade
+        this.stopCutsceneMusic(500);
 
         // Clean up
         this.isPlaying = false;
