@@ -155,21 +155,43 @@ class GameEngine {
     }
 
     /**
-     * Start render loop
+     * Start render loop (capped at 60 FPS for consistent game speed)
      */
     startRenderLoop(updateCallback, renderCallback) {
-        if (this.logger) this.logger.info('🎮 Starting GameEngine render loop');
+        if (this.logger) this.logger.info('🎮 Starting GameEngine render loop (60 FPS cap)');
+
+        const targetFPS = 60;
+        const frameInterval = 1000 / targetFPS; // ~16.67ms per frame
+        let lastFrameTime = performance.now();
+        let accumulator = 0;
 
         const loop = () => {
             requestAnimationFrame(loop);
 
-            // Calculate FPS
             const now = performance.now();
-            const delta = now - this.lastFrameTime;
-            this.lastFrameTime = now;
-            this.fps = Math.round(1000 / delta);
+            const elapsed = now - lastFrameTime;
 
-            // Update game logic
+            // Accumulate time and only update when enough has passed
+            accumulator += elapsed;
+            lastFrameTime = now;
+
+            // Skip frame if not enough time has passed (FPS cap)
+            if (accumulator < frameInterval) {
+                return;
+            }
+
+            // Use fixed delta for consistent game speed
+            const delta = frameInterval;
+            accumulator -= frameInterval;
+
+            // Prevent spiral of death if tab was inactive
+            if (accumulator > frameInterval * 5) {
+                accumulator = 0;
+            }
+
+            this.fps = Math.round(1000 / elapsed);
+
+            // Update game logic with fixed timestep
             if (updateCallback) {
                 updateCallback(delta);
             }
