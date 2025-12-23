@@ -453,11 +453,17 @@ class CutsceneEngine {
      */
     playCutsceneMusic(musicConfig) {
         const musicPath = typeof musicConfig === 'string' ? musicConfig : musicConfig.file;
-        const targetVolume = typeof musicConfig === 'object' ? (musicConfig.volume || 0.5) : 0.5;
+        const configVolume = typeof musicConfig === 'object' ? (musicConfig.volume || 0.5) : 0.5;
         const loop = typeof musicConfig === 'object' ? (musicConfig.loop !== false) : true;
         const fadeIn = typeof musicConfig === 'object' ? (musicConfig.fadeIn || 0) : 0;
 
-        if (this.logger) this.logger.info(`🎵 Playing cutscene music: ${musicPath}`);
+        // Apply master and music volume multipliers (same as rest of game)
+        const game = this.game || window.game;
+        const masterVolume = game?.masterVolume ?? 1.0;
+        const musicVolume = game?.musicVolume ?? 0.7;
+        const targetVolume = configVolume * masterVolume * musicVolume;
+
+        if (this.logger) this.logger.info(`🎵 Playing cutscene music: ${musicPath} (vol: ${targetVolume.toFixed(2)})`);
 
         // Create or reuse audio element
         if (!this.cutsceneAudio) {
