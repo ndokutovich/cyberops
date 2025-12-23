@@ -20,6 +20,7 @@ class CutsceneEngine {
         this.sceneCompleted = false;  // Track if current scene is fully displayed
         this.currentTypewriterElement = null;  // Track current typewriter element
         this.currentTypewriterText = null;  // Track full text for completion
+        this.musicFadeInterval = null;  // Track music fade interval for cleanup
 
         // Initialize logger
         this.logger = window.Logger ? new window.Logger('CutsceneEngine') : null;
@@ -463,6 +464,26 @@ class CutsceneEngine {
         const musicVolume = game?.musicVolume ?? 0.7;
         const targetVolume = configVolume * masterVolume * musicVolume;
 
+        // Clear any pending fade interval from previous music
+        if (this.musicFadeInterval) {
+            clearInterval(this.musicFadeInterval);
+            this.musicFadeInterval = null;
+        }
+
+        // Check if same track is already playing - just adjust volume
+        if (this.cutsceneAudio && !this.cutsceneAudio.paused &&
+            this.cutsceneAudio.src && this.cutsceneAudio.src.endsWith(musicPath)) {
+            if (this.logger) this.logger.debug(`🎵 Same track already playing, adjusting volume`);
+            this.cutsceneAudio.volume = targetVolume;
+            return;
+        }
+
+        // Stop any currently playing audio cleanly (no fade, immediate)
+        if (this.cutsceneAudio && !this.cutsceneAudio.paused) {
+            this.cutsceneAudio.pause();
+            this.cutsceneAudio.currentTime = 0;
+        }
+
         if (this.logger) this.logger.info(`🎵 Playing cutscene music: ${musicPath} (vol: ${targetVolume.toFixed(2)})`);
 
         // Create or reuse audio element
@@ -487,11 +508,12 @@ class CutsceneEngine {
             const stepTime = fadeIn / steps;
             let currentStep = 0;
 
-            const fadeInterval = setInterval(() => {
+            this.musicFadeInterval = setInterval(() => {
                 currentStep++;
                 this.cutsceneAudio.volume = Math.min(targetVolume, volumeStep * currentStep);
                 if (currentStep >= steps) {
-                    clearInterval(fadeInterval);
+                    clearInterval(this.musicFadeInterval);
+                    this.musicFadeInterval = null;
                 }
             }, stepTime);
         }
@@ -502,6 +524,12 @@ class CutsceneEngine {
      * @param {number} fadeTime - Fade duration in ms
      */
     stopCutsceneMusic(fadeTime = 500) {
+        // Clear any pending fade-in interval first
+        if (this.musicFadeInterval) {
+            clearInterval(this.musicFadeInterval);
+            this.musicFadeInterval = null;
+        }
+
         if (!this.cutsceneAudio) return;
 
         if (this.logger) this.logger.debug('🎵 Stopping cutscene music');
@@ -513,15 +541,15 @@ class CutsceneEngine {
         const stepTime = fadeTime / steps;
 
         let step = 0;
-        const fadeInterval = setInterval(() => {
+        this.musicFadeInterval = setInterval(() => {
             step++;
             audio.volume = Math.max(0, startVolume - (volumeStep * step));
 
             if (step >= steps) {
-                clearInterval(fadeInterval);
+                clearInterval(this.musicFadeInterval);
+                this.musicFadeInterval = null;
                 audio.pause();
                 audio.currentTime = 0;
-                audio.volume = startVolume;
             }
         }, stepTime);
     }
