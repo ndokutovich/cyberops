@@ -71,6 +71,20 @@ Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
         // (unless this is being called from selectAllSquad)
         const callerStack = new Error().stack;
         if (!callerStack.includes('selectAllSquad')) {
+            // FIX: Before clearing squad selection, update hold positions for ALL squad members
+            // This prevents them from returning to spawn when squad selection is cleared
+            if (this._selectedAgentIds && this._selectedAgentIds.length > 0 &&
+                this.holdPositions && this.teamMode === 'hold' && this.agents) {
+                this.agents.forEach(agent => {
+                    if (agent.alive && (!value || agent.id !== value.id)) {
+                        this.holdPositions[agent.id] = {
+                            x: agent.x,
+                            y: agent.y
+                        };
+                        if (this.logger) this.logger.debug(`🎯 Updated hold position for ${agent.name}: (${agent.x.toFixed(1)}, ${agent.y.toFixed(1)})`);
+                    }
+                });
+            }
             this._selectedAgentIds = null;
         }
 
