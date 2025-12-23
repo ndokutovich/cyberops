@@ -75,9 +75,23 @@ class CutsceneEngine {
         this.container.innerHTML = '';
 
         // Play cutscene-level music if specified, otherwise use default
-        // Skip if continueMusic flag is set - keeps current music playing
+        // Skip if continueMusic flag is set AND music is actually playing
         if (cutscene.continueMusic) {
-            if (this.logger) this.logger.debug(`🎵 continueMusic: true - keeping current music`);
+            // Check if music is actually playing (cutscene audio or screen music)
+            const game = this.game || window.game;
+            const cutsceneMusicPlaying = this.cutsceneAudio && !this.cutsceneAudio.paused;
+            const screenMusicPlaying = game?.screenMusic?.currentTrack && !game.screenMusic.currentTrack.paused;
+
+            if (cutsceneMusicPlaying || screenMusicPlaying) {
+                if (this.logger) this.logger.debug(`🎵 continueMusic: true - keeping current music`);
+            } else {
+                // No music playing, use fallback
+                if (this.logger) this.logger.debug(`🎵 continueMusic: true but no music playing - using fallback`);
+                const musicToPlay = cutscene.music || this.config.settings?.defaultMusic;
+                if (musicToPlay) {
+                    this.playCutsceneMusic(musicToPlay);
+                }
+            }
         } else {
             const musicToPlay = cutscene.music || this.config.settings?.defaultMusic;
             if (musicToPlay) {
