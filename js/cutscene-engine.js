@@ -17,6 +17,9 @@ class CutsceneEngine {
         this.typewriterInterval = null;
         this.sceneTimeout = null;
         this.onCompleteCallback = null;
+        this.sceneCompleted = false;  // Track if current scene is fully displayed
+        this.currentTypewriterElement = null;  // Track current typewriter element
+        this.currentTypewriterText = null;  // Track full text for completion
 
         // Initialize logger
         this.logger = window.Logger ? new window.Logger('CutsceneEngine') : null;
@@ -98,6 +101,9 @@ class CutsceneEngine {
 
         this.currentSceneIndex = index;
         this.currentElementIndex = 0;
+        this.sceneCompleted = false;  // Reset scene completion flag
+        this.currentTypewriterElement = null;
+        this.currentTypewriterText = null;
         const scene = this.currentCutscene.scenes[index];
 
         if (this.logger) this.logger.debug(`Playing scene ${index}: ${scene.id || 'unnamed'}`);
@@ -159,8 +165,12 @@ class CutsceneEngine {
      * @param {HTMLElement} wrapper - Scene wrapper element
      */
     renderNextElement(scene, wrapper) {
+        // Store wrapper for later use in completeCurrentScene
+        this.currentSceneWrapper = wrapper;
+
         if (!scene.elements || this.currentElementIndex >= scene.elements.length) {
-            // All elements rendered, add skip hint
+            // All elements rendered, mark scene as complete and add skip hint
+            this.sceneCompleted = true;
             this.addSkipHint(wrapper);
             return;
         }
@@ -362,7 +372,15 @@ class CutsceneEngine {
             clearInterval(this.typewriterInterval);
         }
 
+        // Store references for completion on click
+        this.currentTypewriterElement = textContainer;
+        this.currentTypewriterText = text;
+        this.currentTypewriterCallback = onComplete;
+
         textContainer.innerHTML = '';
+
+        // Add typing class to show cursor
+        textContainer.classList.add('typing');
 
         this.typewriterInterval = setInterval(() => {
             if (index < chars.length) {
@@ -376,13 +394,49 @@ class CutsceneEngine {
             } else {
                 clearInterval(this.typewriterInterval);
                 this.typewriterInterval = null;
+                // Remove typing class to hide cursor
+                textContainer.classList.remove('typing');
+                this.currentTypewriterElement = null;
+                this.currentTypewriterText = null;
+                this.currentTypewriterCallback = null;
                 if (onComplete) onComplete();
             }
         }, 30); // Speed of typewriter
     }
 
     /**
-     * Skip typewriter effect
+     * Complete typewriter effect instantly, showing full text
+     * @returns {boolean} True if there was a typewriter to complete
+     */
+    completeTypewriter() {
+        if (this.typewriterInterval && this.currentTypewriterElement && this.currentTypewriterText) {
+            clearInterval(this.typewriterInterval);
+            this.typewriterInterval = null;
+
+            // Show the full text immediately
+            this.currentTypewriterElement.innerHTML = this.formatText(this.currentTypewriterText);
+
+            // Remove typing class to hide cursor
+            this.currentTypewriterElement.classList.remove('typing');
+
+            // Store callback before clearing
+            const callback = this.currentTypewriterCallback;
+
+            // Clear references
+            this.currentTypewriterElement = null;
+            this.currentTypewriterText = null;
+            this.currentTypewriterCallback = null;
+
+            // Execute callback to continue rendering
+            if (callback) callback();
+
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Skip typewriter effect (legacy - now just clears interval)
      */
     skipTypewriter() {
         if (this.typewriterInterval) {
@@ -501,10 +555,13 @@ class CutsceneEngine {
 
     /**
      * Advance to next content
+     * First click: complete current scene instantly
+     * Second click: go to next scene
      */
     advance() {
-        // First try to skip typewriter
-        if (this.skipTypewriter()) {
+        // If scene not completed, complete it first
+        if (!this.sceneCompleted) {
+            this.completeCurrentScene();
             return;
         }
 
@@ -516,6 +573,54 @@ class CutsceneEngine {
 
         // Go to next scene
         this.nextScene();
+    }
+
+    /**
+     * Complete current scene instantly - show all remaining content
+     */
+    completeCurrentScene() {
+        // Complete any active typewriter
+        this.completeTypewriter();
+
+        // Get current scene
+        const scene = this.currentCutscene?.scenes?.[this.currentSceneIndex];
+        if (!scene || !scene.elements) {
+            this.sceneCompleted = true;
+            return;
+        }
+
+        // Render all remaining elements instantly
+        const wrapper = this.currentSceneWrapper;
+        if (!wrapper) {
+            this.sceneCompleted = true;
+            return;
+        }
+
+        // Render remaining elements without delays
+        while (this.currentElementIndex < scene.elements.length) {
+            const element = scene.elements[this.currentElementIndex];
+            this.currentElementIndex++;
+
+            const el = this.createElement(element);
+            if (el) {
+                wrapper.appendChild(el);
+
+                // For typewriter elements, show full text immediately
+                if (element.typewriter && (element.type === 'text' || element.type === 'dialog')) {
+                    const textContainer = el.querySelector('.cutscene-dialog-text') || el;
+                    textContainer.innerHTML = this.formatText(element.content);
+                }
+
+                // Apply animation class (will show instantly due to CSS)
+                if (element.animation) {
+                    this.applyAnimation(el, element.animation);
+                }
+            }
+        }
+
+        // Mark scene as completed and show hint
+        this.sceneCompleted = true;
+        this.addSkipHint(wrapper);
     }
 
     /**

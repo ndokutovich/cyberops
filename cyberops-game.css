@@ -4491,6 +4491,9 @@ body {
     line-height: 1.8;
     color: #ccc;
     max-width: 700px;
+    text-align: left;
+    align-self: flex-start;
+    width: 100%;
 }
 
 .cutscene-text p {
@@ -4514,6 +4517,7 @@ body {
 /* Dialog Styles */
 .cutscene-dialog {
     max-width: 800px;
+    width: 100%;
     text-align: left;
     padding: 20px 30px;
     background: rgba(0, 0, 0, 0.7);
@@ -4522,6 +4526,7 @@ body {
     display: flex;
     align-items: flex-start;
     gap: 20px;
+    align-self: flex-start;
 }
 
 .cutscene-avatar {
@@ -4659,10 +4664,12 @@ body {
 /* News Style */
 .cutscene-news {
     max-width: 700px;
+    width: 100%;
     text-align: left;
     background: rgba(50, 50, 80, 0.5);
     border: 1px solid rgba(100, 100, 150, 0.5);
     overflow: hidden;
+    align-self: flex-start;
 }
 
 .cutscene-news .news-header {
@@ -4805,9 +4812,9 @@ body {
     }
 }
 
-/* Typewriter Cursor */
-.cutscene-text::after,
-.cutscene-dialog-text::after {
+/* Typewriter Cursor - only show while typing */
+.cutscene-text.typing::after,
+.cutscene-dialog-text.typing::after {
     content: '';
     display: inline-block;
     width: 2px;
@@ -4816,6 +4823,12 @@ body {
     margin-left: 2px;
     animation: cutsceneCursor 0.5s infinite;
     vertical-align: middle;
+}
+
+/* Hide cursor when typing is complete */
+.cutscene-text:not(.typing)::after,
+.cutscene-dialog-text:not(.typing)::after {
+    display: none;
 }
 
 @keyframes cutsceneCursor {
