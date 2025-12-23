@@ -149,8 +149,8 @@ CyberOpsGame.prototype.playMissionIntroCutscene = function(missionId, onComplete
     const mission = this.currentMission || this.missions?.find(m => m.id === missionId);
     const actNumber = mission?.act;
 
-    // Check if this is the first mission of a new act
-    if (actNumber && actNumber >= 2) {
+    // Check if this is the first mission of an act (including Act 1)
+    if (actNumber && actNumber >= 1) {
         // Find if this is the first mission in this act
         const actMissions = this.missions?.filter(m => m.act === actNumber) || [];
         const isFirstMissionOfAct = actMissions.length > 0 && actMissions[0].id === missionId;

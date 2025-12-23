@@ -63,11 +63,11 @@
                         ]
                     }
                 ],
-                onComplete: 'cutscene:act1-intro'
+                onComplete: 'navigate:hub'
             },
 
             // ==========================================
-            // ACT 1 INTRO
+            // ACT 1 INTRO - Plays before first mission of Act 1
             // ==========================================
             'act1-intro': {
                 id: 'act1-intro',
