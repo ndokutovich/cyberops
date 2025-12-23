@@ -13,6 +13,35 @@
             fadeTransitionDuration: 500
         },
 
+        // Speaker avatars - used for dialog elements
+        speakers: {
+            'HANDLER': {
+                name: 'Handler',
+                avatar: 'assets/avatars/handler.png',
+                color: '#00ffff'
+            },
+            'GHOST': {
+                name: 'Ghost',
+                avatar: 'assets/avatars/ghost.png',
+                color: '#9966ff'
+            },
+            'NEXUS AI': {
+                name: 'Nexus AI',
+                avatar: 'assets/avatars/nexus-ai.png',
+                color: '#ff0000'
+            },
+            'DR. CHEN': {
+                name: 'Dr. Chen',
+                avatar: 'assets/avatars/dr-chen.png',
+                color: '#00ff00'
+            },
+            'ORTEGA': {
+                name: 'Ortega',
+                avatar: 'assets/avatars/ortega.png',
+                color: '#ff6600'
+            }
+        },
+
         // All cutscenes
         cutscenes: {
 

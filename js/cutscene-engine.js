@@ -224,21 +224,36 @@ class CutsceneEngine {
                 el = document.createElement('div');
                 el.className = `cutscene-dialog ${config.class || ''}`;
 
+                // Get avatar from config or from global speakers config
+                const avatarSrc = config.avatar || this.getSpeakerAvatar(config.speaker);
+
+                if (avatarSrc) {
+                    const avatar = document.createElement('div');
+                    avatar.className = 'cutscene-avatar';
+                    avatar.innerHTML = `<img src="${avatarSrc}" alt="${config.speaker || ''}" onerror="this.parentElement.innerHTML='<div class=\\'cutscene-avatar-fallback\\'>${(config.speaker || '?')[0]}</div>'">`;
+                    el.appendChild(avatar);
+                }
+
+                const dialogContent = document.createElement('div');
+                dialogContent.className = 'cutscene-dialog-content';
+
                 if (config.speaker) {
                     const speaker = document.createElement('div');
                     speaker.className = 'cutscene-speaker';
                     speaker.textContent = config.speaker;
-                    el.appendChild(speaker);
+                    dialogContent.appendChild(speaker);
                 }
 
                 const dialogText = document.createElement('div');
                 dialogText.className = 'cutscene-dialog-text';
                 if (config.typewriter) {
-                    el.appendChild(dialogText);
+                    dialogContent.appendChild(dialogText);
                 } else {
                     dialogText.innerHTML = this.formatText(config.content);
-                    el.appendChild(dialogText);
+                    dialogContent.appendChild(dialogText);
                 }
+
+                el.appendChild(dialogContent);
                 break;
 
             case 'image':
@@ -301,6 +316,19 @@ class CutsceneEngine {
     formatText(text) {
         if (!text) return '';
         return text.split('\n').map(line => `<p>${line}</p>`).join('');
+    }
+
+    /**
+     * Get avatar for a speaker from global config
+     * @param {string} speaker - Speaker name
+     * @returns {string|null} - Avatar URL or null
+     */
+    getSpeakerAvatar(speaker) {
+        if (!speaker) return null;
+        const speakers = this.config?.speakers || window.CUTSCENE_CONFIG?.speakers;
+        if (!speakers) return null;
+        const speakerConfig = speakers[speaker.toUpperCase()];
+        return speakerConfig?.avatar || null;
     }
 
     /**

@@ -4513,12 +4513,49 @@ body {
 
 /* Dialog Styles */
 .cutscene-dialog {
-    max-width: 700px;
+    max-width: 800px;
     text-align: left;
     padding: 20px 30px;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.7);
     border-left: 4px solid #00ffff;
     margin: 10px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.cutscene-avatar {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+.cutscene-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cutscene-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: bold;
+    color: #00ffff;
+    background: linear-gradient(135deg, #0a1a2a 0%, #1a2a3a 100%);
+    text-shadow: 0 0 10px #00ffff;
+}
+
+.cutscene-dialog-content {
+    flex: 1;
 }
 
 .cutscene-speaker {
