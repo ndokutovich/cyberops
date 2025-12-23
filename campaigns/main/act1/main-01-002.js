@@ -12,8 +12,9 @@
 
         name: 'Network Breach',
         title: 'Government Facility',
-        description: 'Infiltrate the government facility and access their secure network.',
-        briefing: 'A government facility is developing dangerous AI weapons. Break into their network and steal the plans.',
+        description: 'Infiltrate the government research facility funding Nexus Corp\'s weapons program.',
+        briefing: 'The intel from Nexus Corp was worse than we feared. They\'re not working alone - we found evidence of massive government funding flowing into something called "Project Convergence." This London facility is where the money trail leads. Break into their network and find out what Nexus is really building with taxpayer money. Be careful - government security is even tighter than corporate.',
+        storyContext: 'The conspiracy deepens. Nexus Corp has powerful allies in government who are funding their secret weapons research.',
         region: 'europe',
         location: 'London',
 

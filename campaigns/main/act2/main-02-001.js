@@ -12,8 +12,11 @@
 
         name: 'Assassination Contract',
         title: 'Slums Extraction',
-        description: 'Eliminate high-value targets in the slums district without civilian casualties.',
-        briefing: 'Crime lords have taken over the slums. Eliminate their leaders but avoid harming innocent civilians.',
+        description: 'Eliminate Nexus Corp\'s criminal enforcers who control the slums district.',
+        briefing: 'The recon data revealed something disturbing - Nexus Corp uses local crime syndicates as muscle and recruitment pools for their private army. This slums district in Manila is controlled by one such syndicate. Their boss and lieutenants are on Nexus payroll, kidnapping people for "test subjects." We\'re putting an end to this. Eliminate the crime boss and his lieutenants, but avoid harming civilians - they\'re victims here, not enemies.',
+        storyContext: 'Nexus Corp\'s reach extends into the criminal underworld. Cut off their enforcers before the final assault.',
+        region: 'asia',
+        location: 'Manila',
 
         agents: {
             max: 5,

@@ -13,8 +13,9 @@
         // Basic Info
         name: 'Corporate Infiltration',
         title: 'Data Heist',
-        description: 'Infiltrate SecureCorp and steal critical data while avoiding detection.',
-        briefing: 'Intelligence suggests Nexus Corp is developing illegal surveillance tech. We need you to infiltrate their facility and download evidence from their mainframe. Watch out for their security systems.',
+        description: 'Infiltrate Nexus Corp headquarters and uncover evidence of their illegal operations.',
+        briefing: 'Welcome to the Syndicate, operative. Nexus Corporation has grown too powerful - they control surveillance networks across the globe and rumors suggest they\'re developing something far more dangerous. Your first mission: infiltrate their New York headquarters and download evidence from their mainframe. We need proof of what they\'re really building. Watch out for their security systems - Nexus doesn\'t take kindly to intruders.',
+        storyContext: 'This is where it all begins. The evidence you recover here will reveal the true scope of Nexus Corp\'s conspiracy.',
         region: 'north_america',
         location: 'New York',
 
@@ -166,25 +167,44 @@
             coverPositions: 100
         },
 
-        // Objectives
+        // Objectives - Data Heist: hack terminals to download evidence, then extract
         objectives: [
+            {
+                id: 'hack_terminals',
+                type: 'interact',
+                target: 'terminal',
+                count: 3,
+                required: true,
+                description: 'Download evidence from terminals',
+                displayText: 'Evidence downloaded: {current}/{required}'
+            },
+            {
+                id: 'extract_with_data',
+                type: 'reach',
+                target: 'extraction',
+                required: true,
+                description: 'Extract with the evidence',
+                displayText: 'Reach extraction point',
+                triggerAfter: ['hack_terminals']
+            },
             {
                 id: 'eliminate_hostiles',
                 type: 'eliminate',
                 target: 'all',
                 count: 8,
-                required: true,
+                required: false,
                 description: 'Eliminate all hostiles',
                 tracker: 'enemiesEliminated',
                 displayText: 'Hostiles eliminated: {current}/{required}'
             },
             {
-                id: 'avoid_civilians',
+                id: 'stealth_bonus',
                 type: 'custom',
                 required: false,
-                description: 'Avoid civilian casualties',
-                displayText: 'Avoid civilian casualties',
-                checkFunction: 'checkNoCivilianCasualties'
+                bonus: true,
+                description: 'Complete mission without triggering alerts',
+                displayText: 'Ghost Protocol: No alerts triggered',
+                checkFunction: 'checkStealthHack'
             },
             {
                 id: 'keep_agents_alive',
@@ -194,15 +214,6 @@
                 displayText: 'Keep at least 2 agents alive',
                 checkFunction: 'checkAgentsAlive',
                 minAgents: 2
-            },
-            {
-                id: 'stealth_bonus',
-                type: 'custom',
-                required: false,
-                bonus: true,
-                description: 'Complete first 3 terminals without triggering alerts',
-                displayText: 'Stealth Hack: Complete 3 terminals undetected',
-                checkFunction: 'checkStealthHack'
             }
         ],
 

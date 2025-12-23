@@ -12,8 +12,9 @@
 
         name: 'Industrial Sabotage',
         title: 'Sabotage Operation',
-        description: 'Infiltrate industrial facility and sabotage critical infrastructure.',
-        briefing: 'An arms dealer is using this industrial complex to manufacture illegal weapons. Plant explosives at key points to shut down production permanently.',
+        description: 'Destroy Nexus Corp\'s secret weapons manufacturing facility in Tokyo.',
+        briefing: 'We\'ve traced Project Convergence to its source - this industrial complex in Tokyo. It\'s registered as an independent arms manufacturer, but it\'s actually a Nexus Corp shell company. This is where they\'re building the AI-controlled weapons the government is funding. We can\'t let this continue. Plant explosives at the production lines and destroy their manufacturing capability. Dr. Chen, a former Nexus engineer, is inside and willing to help - she knows where to hit them hardest.',
+        storyContext: 'Time to strike back. Destroying this facility will cripple Nexus Corp\'s weapons production.',
         region: 'asia',
         location: 'Tokyo',
 

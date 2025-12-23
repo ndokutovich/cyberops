@@ -171,6 +171,8 @@ class MissionService {
                 hidden: obj.hidden || false,
                 target: target,
                 tracker: obj.tracker, // Preserve tracker for compatibility
+                triggerAfter: obj.triggerAfter || null, // Preserve triggerAfter for sequential objectives
+                checkFunction: obj.checkFunction || null, // Preserve checkFunction for custom objectives
                 progress: 0,
                 maxProgress: this.getObjectiveMaxProgress(obj),
                 status: 'pending', // pending, active, completed, failed
@@ -555,7 +557,41 @@ class MissionService {
         if (this.extractionEnabled) return;
 
         // Check if all required objectives are complete
-        const requiredObjectives = this.objectives.filter(o => o.required !== false); // Treat undefined as required
+        // EXCLUDE extraction-type objectives (reach extraction) to avoid circular dependency
+        // Also exclude objectives with unmet triggerAfter prerequisites
+        const requiredObjectives = this.objectives.filter(o => {
+            if (o.required === false) {
+                if (this.logger) this.logger.trace(`  Skipping optional: ${o.id}`);
+                return false;
+            }
+            // Skip "reach extraction" objectives - they complete AFTER extraction is enabled
+            // Note: After parsing, o.target is an object like { type: 'extraction' }
+            if (o.type === 'reach' && o.target && o.target.type === 'extraction') {
+                if (this.logger) this.logger.trace(`  Skipping extraction objective: ${o.id}`);
+                return false;
+            }
+            // Skip objectives whose prerequisites aren't met yet
+            if (o.triggerAfter && o.triggerAfter.length > 0) {
+                const prereqsMet = o.triggerAfter.every(prereqId => {
+                    const prereq = this.objectives.find(p => p.id === prereqId);
+                    return prereq && (prereq.completed || prereq.status === 'completed');
+                });
+                if (!prereqsMet) {
+                    if (this.logger) this.logger.trace(`  Skipping (prereqs not met): ${o.id}`);
+                    return false;
+                }
+            }
+            if (this.logger) this.logger.trace(`  Including in check: ${o.id} (status: ${o.status}, completed: ${o.completed})`);
+            return true;
+        });
+
+        if (this.logger) {
+            this.logger.debug(`🔍 Extraction check: ${requiredObjectives.length} objectives to check`);
+            requiredObjectives.forEach(o => {
+                this.logger.debug(`  - ${o.id}: status=${o.status}, completed=${o.completed}, progress=${o.progress}/${o.maxProgress}`);
+            });
+        }
+
         const completedRequired = requiredObjectives.every(o => o.status === 'completed' || o.completed === true);
 
         // Debug logging for objective completion

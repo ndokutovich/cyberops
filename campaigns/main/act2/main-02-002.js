@@ -12,8 +12,11 @@
 
         name: 'Final Convergence',
         title: 'Research Lab Assault',
-        description: 'Assault heavily fortified research lab and capture the mainframe.',
-        briefing: 'The enemy has fortified their final research lab. This is our last chance to stop their weapon program. Breach their defenses and capture the mainframe.',
+        description: 'Assault Nexus Corp\'s fortified research lab and destroy Project Convergence.',
+        briefing: 'This is it. Everything we\'ve done has led to this moment. Nexus Corp\'s main research facility houses Project Convergence - an AI weapons system designed to create autonomous killing machines. Our recon shows they\'re days away from activation. We\'ve crippled their manufacturing, exposed their government allies, and eliminated their criminal network. Now we end this. Breach the outer defenses, fight through their security forces, and capture the mainframe. Once we have control, we can shut down Convergence permanently. The fate of millions depends on what happens in the next hour. Good luck, operatives.',
+        storyContext: 'The final battle. Stop Project Convergence and end Nexus Corp\'s threat once and for all.',
+        region: 'asia',
+        location: 'Singapore',
 
         agents: {
             max: 6,
@@ -242,7 +245,33 @@
         rewards: {
             credits: 5000,
             researchPoints: 150
-        }
+        },
+
+        // Victory/Ending content for campaign finale
+        victory: {
+            title: 'PROJECT CONVERGENCE DESTROYED',
+            message: 'You did it. The mainframe is ours, and Project Convergence has been permanently shut down. Nexus Corp\'s dream of autonomous weapons dies today.',
+            epilogue: [
+                'With the AI weapons system destroyed and their research erased, Nexus Corporation faces international investigation.',
+                'The evidence you gathered throughout the campaign has been leaked to every major news outlet.',
+                'Government officials who funded Project Convergence are being arrested as we speak.',
+                'The criminal syndicates that served as Nexus\'s muscle have scattered without their corporate backing.',
+                'The Syndicate remains in the shadows, watching. There will always be another corporation, another threat.',
+                'But today, you saved countless lives. Rest well, operatives. You\'ve earned it.'
+            ],
+            creditsRoll: true,
+            unlocks: ['new_game_plus', 'hard_mode']
+        },
+
+        // Defeat text
+        defeat: {
+            title: 'MISSION FAILED',
+            message: 'Project Convergence goes online. Autonomous weapons flood the streets. The world will never be the same.',
+            retryPrompt: 'The Syndicate doesn\'t give up. Try again?'
+        },
+
+        // Flag this as the campaign finale
+        isCampaignFinale: true
     };
 
     if (typeof CampaignSystem !== 'undefined') {

@@ -482,10 +482,16 @@ const SCREEN_CONFIG = {
             }
         },
         onExit: function() {
-            // Pause game when leaving
+            // Pause game loop when leaving game screen
+            // Note: Don't call togglePause() as that opens the pause menu dialog
+            // We just want to pause the game loop, not show the pause menu
             const game = window.game;
             if (game && !game.isPaused) {
-                game.togglePause();
+                game.isPaused = true;
+                // Also pause music if available
+                if (game.pauseLevelMusic) {
+                    game.pauseLevelMusic();
+                }
             }
         }
     },

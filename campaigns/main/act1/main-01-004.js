@@ -12,8 +12,11 @@
 
         name: 'Stealth Recon',
         title: 'Shadow Infiltration',
-        description: 'Complete reconnaissance without being detected.',
-        briefing: 'Infiltrate the enemy compound and gather intelligence without raising any alarms. Stealth is paramount.',
+        description: 'Gather intelligence on Nexus Corp\'s main research compound without detection.',
+        briefing: 'The Tokyo factory was just manufacturing - the real research happens at Nexus Corp\'s secure compound in Singapore. Before we can assault it, we need eyes inside. This is a pure reconnaissance mission: infiltrate the compound, hack their terminals for intel on Project Convergence, and get out without being detected. If they know we\'re coming, they\'ll move everything. Stealth is paramount - one alarm and the mission fails.',
+        storyContext: 'Intelligence gathering before the final push. What you learn here will determine our assault strategy.',
+        region: 'asia',
+        location: 'Singapore',
 
         agents: {
             max: 3,
