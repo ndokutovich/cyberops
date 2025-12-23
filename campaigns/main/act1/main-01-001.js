@@ -134,6 +134,9 @@
                     { type: 'collectable', x: 50, y: 50, id: 'intel_center', name: 'Data Files', sprite: '📄', credits: 75 },
                     { type: 'collectable', x: 70, y: 10, id: 'credits_northeast', name: 'Credits Cache', sprite: '💵', credits: 150 },
 
+                    // Quest-locked collectables (Broker's intel gathering quest)
+                    { type: 'collectable', x: 42, y: 42, id: 'classified_docs', name: 'CONVERGENCE-ALPHA File', sprite: '📁', item: 'classified_docs', questRequired: 'intel_gathering', hidden: true },
+
                     // Quest-locked collectables (Wrench's secret passage quest)
                     { type: 'collectable', x: 73, y: 70, id: 'tunnel_intel', name: 'Intel Documents', sprite: '📄', item: 'tunnel_intel', questRequired: 'secret_passage', hidden: true },
                     { type: 'collectable', x: 74, y: 70, id: 'credits_1', name: 'Credits Cache', sprite: '💰', credits: 200, questRequired: 'secret_passage', hidden: true },

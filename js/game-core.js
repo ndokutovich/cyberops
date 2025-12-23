@@ -885,6 +885,18 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
     if (result && result.success) {
         const effect = this.gameServices.itemService.createPickupEffect(item.x, item.y, item.type);
         this.effects.push(effect);
+
+        // Track specific quest items in inventory for quest completion checks
+        if (item.item) {
+            this.inventory = this.inventory || {};
+            this.inventory[item.item] = (this.inventory[item.item] || 0) + 1;
+            if (this.logger) this.logger.info(`📦 Quest item added to inventory: ${item.item}`);
+
+            // Check if any quests are now complete
+            if (this.checkQuestCompletion) {
+                this.checkQuestCompletion();
+            }
+        }
     }
 
     if (result && result.effects && result.effects.keycardType) {
