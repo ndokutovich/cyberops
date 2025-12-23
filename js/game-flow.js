@@ -34,12 +34,17 @@ CyberOpsGame.prototype.startCampaign = function() {
             this.initializeHub();
         }
 
+        // Hide main menu before cutscene
+        const mainMenu = document.getElementById('mainMenu');
+        if (mainMenu) {
+            mainMenu.style.display = 'none';
+        }
+
         // Play game intro cutscene for new campaigns
-        // Cutscene flow: game-intro → act1-intro → hub
+        // Cutscene flow: game-intro → act1-intro → hub (via onComplete chain)
         if (this.playGameIntroCutscene) {
-            this.playGameIntroCutscene(() => {
-                // Cutscene handles navigation via onComplete
-            });
+            // Don't pass callback - let cutscene chain handle navigation
+            this.playGameIntroCutscene();
         } else {
             // No cutscene system, navigate directly to hub
             window.screenManager.navigateTo('hub');
