@@ -800,6 +800,7 @@ CyberOpsGame.prototype.createObjectives3D = function() {
         this.world3D.explosiveTargets = [];
         this.world3D.targets = [];
         this.world3D.gates = [];
+        this.world3D.doors = [];
 
         // Create terminals
         const terminals = this.map.terminals || this.currentMission.terminals || [];
@@ -911,11 +912,38 @@ CyberOpsGame.prototype.createObjectives3D = function() {
             });
         }
 
+        // Create doors
+        const doors = this.map.doors || [];
+        doors.forEach((door, index) => {
+            const geometry = new THREE.BoxGeometry(2, 2.5, 0.3);
+            const material = new THREE.MeshLambertMaterial({
+                color: door.open ? 0x333333 : 0x8B4513,  // Brown for closed doors
+                emissive: door.locked ? 0xff0000 : 0x00ff00,  // Red if locked, green if unlocked
+                emissiveIntensity: 0.2,
+                transparent: door.open,
+                opacity: door.open ? 0.3 : 1
+            });
+
+            const doorMesh = new THREE.Mesh(geometry, material);
+            doorMesh.position.set(
+                (door.x - this.map.tiles[0].length / 2) * 2,
+                1.25,
+                (door.y - this.map.tiles.length / 2) * 2
+            );
+            doorMesh.castShadow = true;
+            doorMesh.userData = { type: 'door', index: index, door: door };
+            doorMesh.visible = !door.open;
+
+            this.scene3D.add(doorMesh);
+            this.world3D.doors.push(doorMesh);
+        });
+
         if (this.logger) this.logger.debug('📦 Created 3D objectives:', {
             terminals: this.world3D.terminals.length,
             explosiveTargets: this.world3D.explosiveTargets.length,
             targets: this.world3D.targets.length,
-            gates: this.world3D.gates.length
+            gates: this.world3D.gates.length,
+            doors: this.world3D.doors.length
         });
 }
 
@@ -1555,14 +1583,36 @@ CyberOpsGame.prototype.execute3DShooting = function() {
             return;
         }
 
+        const agent = this._selectedAgent;
+
+        // Find nearest enemy for 3D tracer (same logic as shootNearestEnemy)
+        let nearest = null;
+        let minDist = Infinity;
+        this.enemies.forEach(enemy => {
+            if (!enemy.alive) return;
+            const dist = Math.sqrt(
+                Math.pow(enemy.x - agent.x, 2) +
+                Math.pow(enemy.y - agent.y, 2)
+            );
+            if (dist < minDist && dist < 10) {
+                minDist = dist;
+                nearest = enemy;
+            }
+        });
+
         // Use the SAME logic as 2D mode - shoot NEAREST enemy
-        this.shootNearestEnemy(this._selectedAgent);
+        this.shootNearestEnemy(agent);
 
         // Create muzzle flash effect for visual feedback
         this.create3DMuzzleFlash();
 
+        // Create 3D tracer if we found a target
+        if (nearest && this.is3DMode) {
+            this.create3DProjectileTracer(agent.x, agent.y, nearest.x, nearest.y, 0x00ffff);
+        }
+
         // Set cooldown (already set in shootNearestEnemy but ensure consistency)
-        this._selectedAgent.cooldowns[1] = 60;
+        agent.cooldowns[1] = 60;
         this.update3DCooldowns();
 }
 
@@ -1863,7 +1913,117 @@ CyberOpsGame.prototype.create3DMuzzleFlash = function() {
             this.scene3D.remove(flash);
         }, 100);
 }
-    
+
+// Create 3D projectile tracer from shooter to target
+CyberOpsGame.prototype.create3DProjectileTracer = function(fromX, fromY, toX, toY, color = 0x00ffff) {
+        if (!this.scene3D) return;
+
+        // Convert 2D world coords to 3D
+        const mapOffsetX = this.map.tiles[0].length / 2;
+        const mapOffsetY = this.map.tiles.length / 2;
+
+        const startPos = new THREE.Vector3(
+            (fromX - mapOffsetX) * 2,
+            1.2,  // Weapon height
+            (fromY - mapOffsetY) * 2
+        );
+        const endPos = new THREE.Vector3(
+            (toX - mapOffsetX) * 2,
+            1.0,  // Target height
+            (toY - mapOffsetY) * 2
+        );
+
+        // Create tracer line
+        const geometry = new THREE.BufferGeometry().setFromPoints([startPos, endPos]);
+        const material = new THREE.LineBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 1.0,
+            linewidth: 2
+        });
+
+        const tracer = new THREE.Line(geometry, material);
+        this.scene3D.add(tracer);
+
+        // Create glowing projectile sphere traveling along path
+        const projectileGeometry = new THREE.SphereGeometry(0.1, 8, 6);
+        const projectileMaterial = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 1.0
+        });
+        const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+        projectile.position.copy(startPos);
+        this.scene3D.add(projectile);
+
+        // Animate projectile traveling to target
+        const duration = 150; // ms
+        const startTime = Date.now();
+
+        const animateProjectile = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Lerp position
+            projectile.position.lerpVectors(startPos, endPos, progress);
+
+            // Fade out tracer line
+            material.opacity = 1 - progress * 0.5;
+
+            if (progress < 1) {
+                requestAnimationFrame(animateProjectile);
+            } else {
+                // Create impact flash
+                this.create3DImpactFlash(toX, toY, color);
+
+                // Remove tracer and projectile
+                this.scene3D.remove(tracer);
+                this.scene3D.remove(projectile);
+            }
+        };
+
+        animateProjectile();
+}
+
+// Create impact flash at target location
+CyberOpsGame.prototype.create3DImpactFlash = function(x, y, color = 0xffff00) {
+        if (!this.scene3D) return;
+
+        const mapOffsetX = this.map.tiles[0].length / 2;
+        const mapOffsetY = this.map.tiles.length / 2;
+
+        // Create flash sphere
+        const geometry = new THREE.SphereGeometry(0.3, 8, 6);
+        const material = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const flash = new THREE.Mesh(geometry, material);
+        flash.position.set(
+            (x - mapOffsetX) * 2,
+            1.0,
+            (y - mapOffsetY) * 2
+        );
+        this.scene3D.add(flash);
+
+        // Animate expansion and fade
+        let scale = 1;
+        const animateFlash = () => {
+            scale += 0.2;
+            material.opacity -= 0.15;
+            flash.scale.set(scale, scale, scale);
+
+            if (material.opacity > 0) {
+                requestAnimationFrame(animateFlash);
+            } else {
+                this.scene3D.remove(flash);
+            }
+        };
+        animateFlash();
+}
+
 CyberOpsGame.prototype.sync3DTo2D = function() {
         // Update ALL agent positions in 3D based on 2D logic
         this.agents.forEach((agent, index) => {
@@ -1944,6 +2104,74 @@ CyberOpsGame.prototype.sync3DTo2D = function() {
                         } else {
                             npcMesh.children[0].material.emissiveIntensity = 0.2;
                         }
+                    }
+                }
+            });
+        }
+
+        // Update terminal states (hacked status)
+        const terminals = this.map.terminals || this.currentMission?.terminals || [];
+        if (this.world3D.terminals) {
+            terminals.forEach((terminal, index) => {
+                const terminalMesh = this.world3D.terminals[index];
+                if (terminalMesh) {
+                    // Update color based on hacked state
+                    const isHacked = terminal.hacked;
+                    terminalMesh.material.color.setHex(isHacked ? 0x00ff00 : 0x0088ff);
+                    terminalMesh.material.emissive.setHex(isHacked ? 0x00ff00 : 0x002244);
+                    terminalMesh.material.emissiveIntensity = isHacked ? 0.5 : 0.2;
+                }
+            });
+        }
+
+        // Update explosive target states (planted status)
+        if (this.map.explosiveTargets && this.world3D.explosiveTargets) {
+            this.map.explosiveTargets.forEach((target, index) => {
+                const targetMesh = this.world3D.explosiveTargets[index];
+                if (targetMesh) {
+                    const isPlanted = target.planted;
+                    targetMesh.material.color.setHex(isPlanted ? 0xff6600 : 0x666666);
+                    targetMesh.material.emissive.setHex(isPlanted ? 0xff0000 : 0x000000);
+                    targetMesh.material.emissiveIntensity = isPlanted ? 0.3 : 0;
+                }
+            });
+        }
+
+        // Update assassination targets (eliminated status)
+        if (this.map.targets && this.world3D.targets) {
+            this.map.targets.forEach((target, index) => {
+                const targetMesh = this.world3D.targets[index];
+                if (targetMesh) {
+                    targetMesh.visible = !target.eliminated;
+                }
+            });
+        }
+
+        // Update gate states (breached status)
+        if (this.map.gates && this.world3D.gates) {
+            this.map.gates.forEach((gate, index) => {
+                const gateMesh = this.world3D.gates[index];
+                if (gateMesh) {
+                    const isBreached = gate.breached;
+                    gateMesh.material.color.setHex(isBreached ? 0x333333 : 0xcccccc);
+                    gateMesh.material.emissive.setHex(isBreached ? 0x000000 : 0x0066cc);
+                    gateMesh.material.emissiveIntensity = isBreached ? 0 : 0.2;
+                    gateMesh.material.transparent = isBreached;
+                    gateMesh.material.opacity = isBreached ? 0.3 : 1;
+                }
+            });
+        }
+
+        // Update doors (open/locked status)
+        if (this.map.doors && this.world3D.doors) {
+            this.map.doors.forEach((door, index) => {
+                const doorMesh = this.world3D.doors[index];
+                if (doorMesh) {
+                    // Open doors become transparent/invisible
+                    doorMesh.visible = !door.open;
+                    // Locked doors glow red, unlocked glow green
+                    if (!door.open) {
+                        doorMesh.material.emissive.setHex(door.locked ? 0xff0000 : 0x00ff00);
                     }
                 }
             });

@@ -1704,6 +1704,11 @@ class GameFacade {
                             shooter: enemy, // Store shooter for RPG calculations
                             weaponType: enemy.weaponType || 'rifle'
                         });
+
+                        // Create 3D tracer if in 3D mode (red for enemy shots)
+                        if (game.is3DMode && game.create3DProjectileTracer) {
+                            game.create3DProjectileTracer(enemy.x, enemy.y, agent.x, agent.y, 0xff0000);
+                        }
                     }
                 }
             });

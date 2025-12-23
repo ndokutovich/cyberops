@@ -269,6 +269,11 @@ CyberOpsGame.prototype.autoFireAtEnemy = function(agent, enemy) {
         hostile: false
     });
 
+    // Create 3D tracer if in 3D mode
+    if (this.is3DMode && this.create3DProjectileTracer) {
+        this.create3DProjectileTracer(agent.x, agent.y, enemy.x, enemy.y, 0x00ff00);  // Green for friendlies
+    }
+
     agent.lastAutoFire = currentTime;
 
     // Log the auto-fire
