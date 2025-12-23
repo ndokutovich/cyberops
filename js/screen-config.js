@@ -898,10 +898,10 @@ const SCREEN_CONFIG = {
     // Cutscene Screen - plays cutscenes as a proper screen transition
     'cutscene': {
         type: 'generated',
-        background: 'transparent',
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)',
         hud: 'none',
         music: false, // Cutscene handles its own music
-        content: () => `<div id="cutscene-screen-container"></div>`,
+        content: () => `<div id="cutscene-screen-container" style="width:100%;height:100%;"></div>`,
         onEnter: function(params) {
             // Play the specified cutscene
             const cutsceneId = params?.cutsceneId;
