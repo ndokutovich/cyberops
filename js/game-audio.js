@@ -176,23 +176,47 @@ CyberOpsGame.prototype.playConfiguredSound = function(config, volume, soundType)
     }
 
     const tryPlayFile = (filename) => {
-        const audio = new Audio(filename);
-        audio.volume = (config.volume || 0.5) * volume;
-        return audio.play();
+        return new Promise((resolve, reject) => {
+            const audio = new Audio(filename);
+            audio.volume = (config.volume || 0.5) * volume;
+
+            // Handle successful load
+            audio.oncanplaythrough = () => {
+                audio.play()
+                    .then(resolve)
+                    .catch(err => {
+                        // Autoplay restriction - not a file error
+                        if (err.name === 'NotAllowedError') {
+                            reject({ type: 'autoplay', error: err });
+                        } else {
+                            reject({ type: 'play', error: err });
+                        }
+                    });
+            };
+
+            // Handle load error (file not found)
+            audio.onerror = () => reject({ type: 'load', error: audio.error });
+        });
     };
 
-    // Try to play primary file (WAV)
-    tryPlayFile(config.file).catch(() => {
-        // Try fallback file (MP3) if specified
+    // Try primary file first
+    tryPlayFile(config.file).catch((err) => {
+        if (err.type === 'autoplay') {
+            // Autoplay blocked - try fallback anyway (might work after interaction)
+            if (config.fallback) {
+                tryPlayFile(config.fallback).catch(() => {});
+            }
+            return;
+        }
+
+        // Primary file failed to load, try fallback
         if (config.fallback) {
-            if (this.logger) this.logger.warn(`Primary SFX not found: ${config.file}, trying fallback: ${config.fallback}`);
-            tryPlayFile(config.fallback).catch(() => {
-                // Both files failed - stay silent
-                if (this.logger) this.logger.debug(`No audio files found for: ${soundType}, staying silent`);
+            if (this.logger) this.logger.debug(`Primary SFX not found: ${config.file}, trying fallback`);
+            tryPlayFile(config.fallback).catch((fallbackErr) => {
+                if (fallbackErr.type !== 'autoplay') {
+                    if (this.logger) this.logger.debug(`No audio files found for: ${soundType}`);
+                }
             });
-        } else {
-            // No fallback file - stay silent
-            if (this.logger) this.logger.warn(`SFX file not found: ${config.file}, no fallback available for: ${soundType}`);
         }
     });
 }

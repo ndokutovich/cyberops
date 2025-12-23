@@ -860,6 +860,13 @@ CyberOpsGame.prototype.generateNewAgentsForHire = function() {
 
 // Item-related stubs that delegate to ItemService
 CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
+    // Always play pickup sound when item is collected
+    if (this.playSound) {
+        this.playSound('pickup', 0.4);
+    } else if (window.game && window.game.playSound) {
+        window.game.playSound('pickup', 0.4);
+    }
+
     if (!this.gameServices || !this.gameServices.itemService) return;
 
     const context = {
@@ -878,11 +885,6 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
     if (result && result.success) {
         const effect = this.gameServices.itemService.createPickupEffect(item.x, item.y, item.type);
         this.effects.push(effect);
-
-        // Play pickup sound effect
-        if (this.playSound) {
-            this.playSound('pickup', 0.4);
-        }
     }
 
     if (result && result.effects && result.effects.keycardType) {
