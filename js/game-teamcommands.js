@@ -17,7 +17,7 @@ CyberOpsGame.prototype.initTeamCommands = function() {
 
     this.patrolPoints = {}; // Store patrol points for each agent
     this.holdPositions = {}; // Store hold positions for each agent
-    this.autoFireRange = 5; // Range for automatic firing
+    this.autoFireRange = 10; // Range for automatic firing (increased for better squad support)
 
     // Set initial hold positions for all agents
     if (this.agents) {
@@ -227,6 +227,12 @@ CyberOpsGame.prototype.executeFollowBehavior = function(agent) {
         const moveRatio = (dist - followDistance) / dist;
         agent.targetX = agent.x + dx * moveRatio;
         agent.targetY = agent.y + dy * moveRatio;
+    }
+
+    // Face nearest enemy if any (like hold mode) - enables aiming while following
+    const enemy = this.findNearestEnemy(agent);
+    if (enemy) {
+        agent.facingAngle = Math.atan2(enemy.y - agent.y, enemy.x - agent.x);
     }
 };
 

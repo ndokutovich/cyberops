@@ -186,12 +186,25 @@ CyberOpsGame.prototype.switchCameraMode = function() {
             if (!document.pointerLockElement && this.canvas3D) {
                 this.canvas3D.requestPointerLock();
             }
+            // Auto-enable follow mode for squad in third/first person
+            // Store previous mode to restore later
+            if (this.teamMode !== 'follow') {
+                this._previousTeamMode = this.teamMode;
+                this.teamMode = 'follow';
+                if (this.logger) this.logger.debug('🎯 Auto-enabled follow mode for 3D FPS/TPS');
+            }
         } else if (this.cameraMode === 'isometric' || this.cameraMode === 'tactical') {
             if (document.pointerLockElement) {
                 document.exitPointerLock();
             }
+            // Restore previous team mode when leaving FPS/TPS
+            if (this._previousTeamMode) {
+                this.teamMode = this._previousTeamMode;
+                this._previousTeamMode = null;
+                if (this.logger) this.logger.debug(`🎯 Restored team mode: ${this.teamMode}`);
+            }
         }
-        
+
         this.update3DCamera();
 }
     
@@ -1088,32 +1101,40 @@ CyberOpsGame.prototype.update3DCamera = function() {
                 break;
 
             case 'third':
-                // Third person camera - behind and above agent with proper rotation
-                const distance = 5;
-                const height = 3;
+                // Over-the-shoulder camera (like Gears of War / The Last of Us)
+                // Agent on left side of screen, crosshair shows actual aim point
+                const distance = 4;           // Distance behind agent
+                const height = 2;             // Height above agent
+                const shoulderOffset = 0.8;   // Horizontal offset (agent appears on left)
+                const aimDistance = 50;       // How far ahead to look (for crosshair alignment)
 
                 // Reset FOV to normal for third person
-                this.camera3D.fov = 75;
+                this.camera3D.fov = 70;
                 this.camera3D.updateProjectionMatrix();
 
                 // Use same rotation system as FPS for consistency
                 const yaw = this.cameraRotationY || 0;
                 const pitch = this.cameraRotationX || 0;
 
-                // Position camera behind agent based on rotation (negative sin/cos for behind view)
+                // Calculate right vector for shoulder offset
+                const rightX = Math.cos(yaw);
+                const rightZ = -Math.sin(yaw);
+
+                // Camera position: behind agent + offset to the right (so agent is on left of screen)
                 this.camera3D.position.set(
-                    agentPos.x - Math.sin(yaw) * distance,
-                    agentPos.y + height + pitch * 2,
-                    agentPos.z - Math.cos(yaw) * distance
+                    agentPos.x - Math.sin(yaw) * distance + rightX * shoulderOffset,
+                    agentPos.y + height,
+                    agentPos.z - Math.cos(yaw) * distance + rightZ * shoulderOffset
                 );
 
-                // Look at point slightly above agent for better view
-                const lookTarget = new THREE.Vector3(
-                    agentPos.x,
-                    agentPos.y + 0.5,
-                    agentPos.z
+                // Look at point FAR AHEAD in aim direction (not at agent!)
+                // This makes crosshair represent actual aim point
+                const aimTarget = new THREE.Vector3(
+                    agentPos.x + Math.sin(yaw) * aimDistance,
+                    agentPos.y + 1.5 + pitch * aimDistance * 0.3,
+                    agentPos.z + Math.cos(yaw) * aimDistance
                 );
-                this.camera3D.lookAt(lookTarget);
+                this.camera3D.lookAt(aimTarget);
                 break;
 
             case 'first':
@@ -1234,12 +1255,8 @@ CyberOpsGame.prototype.setupPointerLock = function() {
                 // Update rotation values
                 this.cameraRotationY -= deltaX * sensitivity;
 
-                // Invert Y for TPS mode (camera looks down when mouse goes up)
-                if (this.cameraMode === 'third') {
-                    this.cameraRotationX += deltaY * sensitivity;  // Inverted for TPS
-                } else {
-                    this.cameraRotationX -= deltaY * sensitivity;  // Normal for FPS
-                }
+                // Same Y-axis behavior for both TPS and FPS (mouse up = look up)
+                this.cameraRotationX -= deltaY * sensitivity;
 
                 // Clamp vertical rotation
                 this.cameraRotationX = Math.max(-Math.PI/3, Math.min(Math.PI/3, this.cameraRotationX));
@@ -1394,12 +1411,22 @@ CyberOpsGame.prototype.updateAgent3DMovement = function() {
             }
         }
         
-        // Apply movement with collision detection
+        // Apply movement with collision detection (using radius buffer to prevent wall clipping)
         const newX = agent.x + moveX;
         const newY = agent.y + moveY;
+        const collisionRadius = 0.3; // Buffer zone around agent
+
+        // Check collision with radius buffer - check multiple points around agent
+        const canMoveToWithRadius = (x, y) => {
+            return this.canMoveTo(agent.x, agent.y, x, y) &&
+                   this.isWalkable(x + collisionRadius, y) &&
+                   this.isWalkable(x - collisionRadius, y) &&
+                   this.isWalkable(x, y + collisionRadius) &&
+                   this.isWalkable(x, y - collisionRadius);
+        };
 
         // Check collision before moving
-        if (this.canMoveTo(agent.x, agent.y, newX, newY)) {
+        if (canMoveToWithRadius(newX, newY)) {
             // Update both current position and target position
             agent.x = newX;
             agent.y = newY;
@@ -1408,12 +1435,12 @@ CyberOpsGame.prototype.updateAgent3DMovement = function() {
         } else {
             // Try to slide along walls
             // Try horizontal movement only
-            if (this.canMoveTo(agent.x, agent.y, newX, agent.y)) {
+            if (canMoveToWithRadius(newX, agent.y)) {
                 agent.x = newX;
                 agent.targetX = newX;
             }
             // Try vertical movement only
-            else if (this.canMoveTo(agent.x, agent.y, agent.x, newY)) {
+            else if (canMoveToWithRadius(agent.x, newY)) {
                 agent.y = newY;
                 agent.targetY = newY;
             }
