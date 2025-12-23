@@ -634,15 +634,26 @@ class GameEngine {
         // Set common properties once
         ctx.lineWidth = 1;
 
-        // Render all tiles (viewport culling disabled - isometric math complex)
+        // Screen bounds for culling (with padding for partially visible tiles)
+        const screenLeft = -this.tileWidth;
+        const screenRight = this.canvas.width + this.tileWidth;
+        const screenTop = -this.tileHeight - 20; // Extra for wall height
+        const screenBottom = this.canvas.height + this.tileHeight;
+
         for (let y = 0; y < map.height; y++) {
             if (!map.tiles[y]) continue;
 
             for (let x = 0; x < map.width; x++) {
-                const tile = map.tiles[y][x];
                 const isoPos = this.worldToIsometric(x, y);
                 const px = isoPos.x;
                 const py = isoPos.y;
+
+                // Screen-space culling: skip tiles outside visible area
+                if (px < screenLeft || px > screenRight || py < screenTop || py > screenBottom) {
+                    continue;
+                }
+
+                const tile = map.tiles[y][x];
 
                 // Draw tile diamond without save/restore
                 ctx.beginPath();
@@ -686,25 +697,37 @@ class GameEngine {
         const halfWidth = this.tileWidth / 2;
         const tileHeight = this.tileHeight;
 
-        // Render all tiles (viewport culling disabled - isometric math complex)
+        // Screen bounds for culling
+        const screenLeft = -this.tileWidth;
+        const screenRight = this.canvas.width + this.tileWidth;
+        const screenTop = -tileHeight * 2;
+        const screenBottom = this.canvas.height + tileHeight;
+
         for (let y = 0; y < map.height; y++) {
             if (!fogOfWar[y]) continue;
 
             for (let x = 0; x < map.width; x++) {
                 const fogState = fogOfWar[y][x];
+                if (fogState === 2) continue; // Fully visible, skip
+
+                const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
+                const px = isoPos.x;
+                const py = isoPos.y;
+
+                // Screen-space culling
+                if (px < screenLeft || px > screenRight || py < screenTop || py > screenBottom) {
+                    continue;
+                }
 
                 if (fogState === 0) {
                     // Unexplored - fully dark (black)
-                    const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
                     ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-                    ctx.fillRect(isoPos.x - halfWidth, isoPos.y - tileHeight, this.tileWidth, tileHeight * 2);
+                    ctx.fillRect(px - halfWidth, py - tileHeight, this.tileWidth, tileHeight * 2);
                 } else if (fogState === 1) {
                     // Explored but not visible - very light blue tint
-                    const isoPos = this.worldToIsometric(x + 0.5, y + 0.5);
                     ctx.fillStyle = 'rgba(10, 20, 40, 0.15)';
-                    ctx.fillRect(isoPos.x - halfWidth, isoPos.y - tileHeight, this.tileWidth, tileHeight * 2);
+                    ctx.fillRect(px - halfWidth, py - tileHeight, this.tileWidth, tileHeight * 2);
                 }
-                // fogState === 2 is fully visible, no overlay needed
             }
         }
     }
