@@ -139,6 +139,12 @@
             'act1-intro': {
                 id: 'act1-intro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/act1-intro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'act-title',
@@ -175,6 +181,12 @@
             'mission-01-001-intro': {
                 id: 'mission-01-001-intro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-01-001-intro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'location',
@@ -207,6 +219,12 @@
             'mission-01-001-outro': {
                 id: 'mission-01-001-outro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-01-001-outro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'escape',
@@ -244,6 +262,12 @@
             'mission-01-002-intro': {
                 id: 'mission-01-002-intro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-01-002-intro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'location',
@@ -276,6 +300,12 @@
             'mission-01-002-outro': {
                 id: 'mission-01-002-outro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-01-002-outro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'news-montage',
@@ -313,6 +343,12 @@
             'mission-01-003-intro': {
                 id: 'mission-01-003-intro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-01-003-intro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'location',
@@ -352,6 +388,12 @@
             'mission-01-003-outro': {
                 id: 'mission-01-003-outro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-01-003-outro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'explosion',
@@ -398,6 +440,12 @@
             'mission-01-004-intro': {
                 id: 'mission-01-004-intro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-01-004-intro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'location',
@@ -431,6 +479,12 @@
             'mission-01-004-outro': {
                 id: 'mission-01-004-outro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-01-004-outro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'data-received',
@@ -477,6 +531,12 @@
             'act1-outro': {
                 id: 'act1-outro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/act1-outro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'title',
@@ -529,6 +589,12 @@
             'act2-intro': {
                 id: 'act2-intro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/act2-intro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'title',
@@ -574,6 +640,12 @@
             'mission-02-001-intro': {
                 id: 'mission-02-001-intro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-02-001-intro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'location',
@@ -607,6 +679,12 @@
             'mission-02-001-outro': {
                 id: 'mission-02-001-outro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-02-001-outro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'aftermath',
@@ -646,6 +724,12 @@
             'mission-02-002-intro': {
                 id: 'mission-02-002-intro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-02-002-intro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'location',
@@ -686,6 +770,12 @@
             'mission-02-002-outro': {
                 id: 'mission-02-002-outro',
                 type: 'cinematic',
+                music: {
+                    file: 'music/cutscenes/mission-02-002-outro.mp3',
+                    volume: 0.5,
+                    loop: true,
+                    fadeIn: 1000
+                },
                 scenes: [
                     {
                         id: 'mainframe',
