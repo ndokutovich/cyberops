@@ -4491,9 +4491,6 @@ body {
     line-height: 1.8;
     color: #ccc;
     max-width: 700px;
-    text-align: left;
-    align-self: flex-start;
-    width: 100%;
 }
 
 .cutscene-text p {
