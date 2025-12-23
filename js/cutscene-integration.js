@@ -121,6 +121,11 @@ CyberOpsGame.prototype.isCutscenePlaying = function() {
 CyberOpsGame.prototype.startMissionGameplay = function() {
     if (this.logger) this.logger.info('🎮 Starting mission gameplay');
 
+    // Start the mission (load map, spawn agents, etc.)
+    if (this.startMission && this.currentMissionIndex !== undefined) {
+        this.startMission(this.currentMissionIndex);
+    }
+
     // Navigate to game screen
     if (window.screenManager) {
         window.screenManager.navigateTo('game');

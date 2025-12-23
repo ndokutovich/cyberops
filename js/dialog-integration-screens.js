@@ -363,18 +363,21 @@
             if (game.selectedAgents && game.selectedAgents.length > 0) {
                 // Check if there's an intro cutscene for this mission
                 const missionId = game.currentMission?.id;
-                if (missionId && game.playMissionIntroCutscene) {
-                    // Play intro cutscene - it will call startMissionGameplay when done
-                    game.playMissionIntroCutscene(missionId, () => {
-                        // Cutscene done, start mission gameplay
-                        if (game.startMission) {
-                            game.startMission(game.currentMissionIndex);
-                        }
-                    });
+                const cutsceneId = missionId ? `mission-${missionId.replace('main-', '')}-intro` : null;
+
+                if (cutsceneId && window.CUTSCENE_CONFIG?.cutscenes?.[cutsceneId]) {
+                    // Navigate to cutscene screen - cutscene's onComplete handles starting gameplay
+                    if (logger) logger.info(`🎬 Playing mission intro: ${cutsceneId}`);
+                    if (window.screenManager) {
+                        window.screenManager.navigateTo('cutscene', { cutsceneId: cutsceneId });
+                    }
                 } else {
                     // No cutscene, start mission directly
                     if (game.startMission) {
                         game.startMission(game.currentMissionIndex);
+                    }
+                    if (window.screenManager) {
+                        window.screenManager.navigateTo('game');
                     }
                 }
             }
