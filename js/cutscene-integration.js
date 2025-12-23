@@ -137,56 +137,18 @@ CyberOpsGame.prototype.startMissionGameplay = function() {
 
 /**
  * Play mission intro cutscene
- * Handles act transitions automatically (plays act intro before first mission of new act)
+ * Act intros are handled separately:
+ * - Act 1: Plays after game-intro (chained in cutscene-config)
+ * - Act 2+: Plays when returning to hub after last mission of previous act
  * @param {string} missionId - The mission ID (e.g., 'main-01-001')
  * @param {Function} onComplete - Called when cutscene ends
  */
 CyberOpsGame.prototype.playMissionIntroCutscene = function(missionId, onComplete) {
-    const game = this;
     const cutsceneId = `mission-${missionId.replace('main-', '')}-intro`;
 
-    // Get mission details from campaign data
-    const mission = this.currentMission || this.missions?.find(m => m.id === missionId);
-    const actNumber = mission?.act;
-
-    // Check if this is the first mission of an act (including Act 1)
-    if (actNumber && actNumber >= 1) {
-        // Find if this is the first mission in this act
-        const actMissions = this.missions?.filter(m => m.act === actNumber) || [];
-        const isFirstMissionOfAct = actMissions.length > 0 && actMissions[0].id === missionId;
-
-        if (isFirstMissionOfAct) {
-            // Check if act intro was already shown this session
-            if (!this._shownActIntros) this._shownActIntros = new Set();
-
-            if (!this._shownActIntros.has(actNumber)) {
-                this._shownActIntros.add(actNumber);
-
-                // Play act intro first, then mission intro
-                const actIntroId = `act${actNumber}-intro`;
-                if (window.CUTSCENE_CONFIG?.cutscenes?.[actIntroId]) {
-                    if (this.logger) this.logger.info(`🎬 Playing act ${actNumber} intro before mission`);
-                    this.playCutscene(actIntroId, () => {
-                        // Now play mission intro
-                        game.playMissionIntroOnly(cutsceneId, onComplete);
-                    });
-                    return;
-                }
-            }
-        }
-    }
-
-    // No act intro needed, play mission intro directly
-    this.playMissionIntroOnly(cutsceneId, onComplete);
-};
-
-/**
- * Play only the mission intro cutscene (without act transition logic)
- * @private
- */
-CyberOpsGame.prototype.playMissionIntroOnly = function(cutsceneId, onComplete) {
-    // Check if cutscene exists
+    // Check if mission intro cutscene exists
     if (window.CUTSCENE_CONFIG?.cutscenes?.[cutsceneId]) {
+        if (this.logger) this.logger.info(`🎬 Playing mission intro: ${cutsceneId}`);
         this.playCutscene(cutsceneId, onComplete);
     } else {
         // No cutscene, just call callback

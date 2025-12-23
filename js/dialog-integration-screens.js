@@ -197,6 +197,36 @@
             if (game && game.saveMissionProgress) {
                 game.saveMissionProgress();
             }
+
+            // Check if we're transitioning to a new act
+            const completedMission = game.currentMission;
+            const completedMissionIndex = game.currentMissionIndex;
+            const missions = game.missions || [];
+
+            // Find next mission (if any)
+            const nextMissionIndex = completedMissionIndex + 1;
+            const nextMission = missions[nextMissionIndex];
+
+            // Detect act transition: current mission's act is different from next mission's act
+            if (completedMission && nextMission &&
+                completedMission.act !== nextMission.act) {
+
+                const nextActNumber = nextMission.act;
+                const actIntroId = `act${nextActNumber}-intro`;
+
+                // Check if act intro cutscene exists
+                if (window.CUTSCENE_CONFIG?.cutscenes?.[actIntroId]) {
+                    if (logger) logger.info(`🎬 Act transition detected: Act ${completedMission.act} → Act ${nextActNumber}`);
+
+                    // Navigate to cutscene screen - cutscene's onComplete handles navigation to hub
+                    if (window.screenManager) {
+                        window.screenManager.navigateTo('cutscene', { cutsceneId: actIntroId });
+                    }
+                    return;
+                }
+            }
+
+            // No act transition or no cutscene - go directly to hub
             if (game && game.showSyndicateHub) {
                 game.showSyndicateHub();
             }
