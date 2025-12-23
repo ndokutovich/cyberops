@@ -631,26 +631,14 @@ class GameEngine {
         const halfWidth = this.tileWidth / 2;
         const halfHeight = this.tileHeight / 2;
 
-        // Calculate visible tile range (viewport culling)
-        const canvasWidth = this.canvas.width;
-        const canvasHeight = this.canvas.height;
-        const cameraX = this.facade.legacyGame?.cameraX || 0;
-        const cameraY = this.facade.legacyGame?.cameraY || 0;
-
-        // Estimate visible range with padding
-        const padding = 5;
-        const minX = Math.max(0, Math.floor(-cameraX / this.tileWidth) - padding);
-        const maxX = Math.min(map.width, Math.ceil((canvasWidth - cameraX) / this.tileWidth) + padding);
-        const minY = Math.max(0, Math.floor(-cameraY / this.tileHeight) - padding);
-        const maxY = Math.min(map.height, Math.ceil((canvasHeight - cameraY) / this.tileHeight) + padding);
-
         // Set common properties once
         ctx.lineWidth = 1;
 
-        for (let y = minY; y < maxY; y++) {
+        // Render all tiles (viewport culling disabled - isometric math complex)
+        for (let y = 0; y < map.height; y++) {
             if (!map.tiles[y]) continue;
 
-            for (let x = minX; x < maxX; x++) {
+            for (let x = 0; x < map.width; x++) {
                 const tile = map.tiles[y][x];
                 const isoPos = this.worldToIsometric(x, y);
                 const px = isoPos.x;
@@ -698,22 +686,11 @@ class GameEngine {
         const halfWidth = this.tileWidth / 2;
         const tileHeight = this.tileHeight;
 
-        // Calculate visible tile range (viewport culling)
-        const canvasWidth = this.canvas.width;
-        const canvasHeight = this.canvas.height;
-        const cameraX = this.facade.legacyGame?.cameraX || 0;
-        const cameraY = this.facade.legacyGame?.cameraY || 0;
-
-        const padding = 5;
-        const minX = Math.max(0, Math.floor(-cameraX / this.tileWidth) - padding);
-        const maxX = Math.min(map.width, Math.ceil((canvasWidth - cameraX) / this.tileWidth) + padding);
-        const minY = Math.max(0, Math.floor(-cameraY / this.tileHeight) - padding);
-        const maxY = Math.min(map.height, Math.ceil((canvasHeight - cameraY) / this.tileHeight) + padding);
-
-        for (let y = minY; y < maxY; y++) {
+        // Render all tiles (viewport culling disabled - isometric math complex)
+        for (let y = 0; y < map.height; y++) {
             if (!fogOfWar[y]) continue;
 
-            for (let x = minX; x < maxX; x++) {
+            for (let x = 0; x < map.width; x++) {
                 const fogState = fogOfWar[y][x];
 
                 if (fogState === 0) {
