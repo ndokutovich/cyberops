@@ -57,6 +57,16 @@ Object.defineProperty(CyberOpsGame.prototype, 'selectedAgent', {
             stack: new Error().stack.split('\n')[1] // Show where it was called from
         });
 
+        // FIX: Update hold position for the previously selected agent
+        // This prevents them from returning to spawn when becoming unselected
+        if (oldValue && oldValue !== value && this.holdPositions && this.teamMode === 'hold') {
+            this.holdPositions[oldValue.id] = {
+                x: oldValue.x,
+                y: oldValue.y
+            };
+            if (this.logger) this.logger.debug(`🎯 Updated hold position for ${oldValue.name}: (${oldValue.x.toFixed(1)}, ${oldValue.y.toFixed(1)})`);
+        }
+
         // Clear squad selection when selecting a single agent
         // (unless this is being called from selectAllSquad)
         const callerStack = new Error().stack;
