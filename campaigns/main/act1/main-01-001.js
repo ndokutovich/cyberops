@@ -232,6 +232,7 @@
         rewards: {
             credits: 2000,
             researchPoints: 50,
+            worldControl: 1,
             experience: 500
         },
 

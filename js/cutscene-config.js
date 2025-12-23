@@ -10,7 +10,15 @@
             defaultTextSpeed: 30,
             defaultSceneDuration: null, // null = manual advance
             skipEnabled: true,
-            fadeTransitionDuration: 500
+            fadeTransitionDuration: 500,
+            // Default music for cutscenes (used when cutscene doesn't specify its own)
+            defaultMusic: {
+                file: 'game-music.mp3',
+                volume: 0.5,
+                loop: true,
+                fadeIn: 1000,
+                fadeOut: 500
+            }
         },
 
         // Speaker avatars - used for dialog elements

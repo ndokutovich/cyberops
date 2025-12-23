@@ -248,6 +248,10 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                     }
                 }
 
+                // Build display name: "Mission 1: Corporate Infiltration" or with subtitle "Mission 1: Data Heist"
+                const displayName = mission.name || mission.title || 'Unknown Mission';
+                const subtitle = mission.title && mission.name ? ` - ${mission.title}` : '';
+
                 html += `
                     <div style="background: ${isCompleted ? 'rgba(0,255,0,0.1)' : isLocked ? 'rgba(128,128,128,0.1)' : 'rgba(0,255,255,0.1)'};
                                padding: 15px; margin: 10px 0; border-radius: 8px;
@@ -255,10 +259,10 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                         <div style="display: flex; justify-content: space-between;">
                             <div>
                                 <div style="font-weight: bold; color: ${isCompleted ? '#00ff00' : '#fff'};">
-                                    Mission ${mission.missionNumber || mission.id}: ${mission.name || mission.title}
+                                    Mission ${mission.missionNumber || index + 1}: ${displayName}${subtitle}
                                 </div>
                                 <div style="color: #ccc; margin: 10px 0;">
-                                    ${mission.briefing || mission.description || 'No briefing available.'}
+                                    ${mission.description || 'No description available.'}
                                 </div>
                                 <div style="color: #888;">
                                     Reward: ${mission.rewards?.credits || 0} credits |

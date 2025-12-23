@@ -244,7 +244,8 @@
 
         rewards: {
             credits: 5000,
-            researchPoints: 150
+            researchPoints: 150,
+            worldControl: 10
         },
 
         // Victory/Ending content for campaign finale

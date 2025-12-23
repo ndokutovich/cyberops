@@ -319,7 +319,7 @@ const SCREEN_CONFIG = {
 
                     <div class="briefing-content">
                         <div class="mission-location">📍 ${mission.location || 'Classified Location'}</div>
-                        <div class="mission-description">${mission.description || mission.briefing || 'Details classified.'}</div>
+                        <div class="mission-description">${mission.briefing || mission.description || 'Details classified.'}</div>
 
                         <div class="objectives-section">
                             <h4 style="margin-top: 20px; color: #00ffff;">OBJECTIVES:</h4>

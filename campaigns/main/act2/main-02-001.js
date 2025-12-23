@@ -171,7 +171,8 @@
 
         rewards: {
             credits: 4000,
-            researchPoints: 125
+            researchPoints: 125,
+            worldControl: 5
         }
     };
 

@@ -70,9 +70,10 @@ class CutsceneEngine {
         this.container.style.display = 'flex';
         this.container.innerHTML = '';
 
-        // Play cutscene-level music if specified
-        if (cutscene.music) {
-            this.playCutsceneMusic(cutscene.music);
+        // Play cutscene-level music if specified, otherwise use default
+        const musicToPlay = cutscene.music || this.config.settings?.defaultMusic;
+        if (musicToPlay) {
+            this.playCutsceneMusic(musicToPlay);
         }
 
         // Add event listeners
@@ -398,8 +399,9 @@ class CutsceneEngine {
      */
     playCutsceneMusic(musicConfig) {
         const musicPath = typeof musicConfig === 'string' ? musicConfig : musicConfig.file;
-        const volume = typeof musicConfig === 'object' ? (musicConfig.volume || 0.5) : 0.5;
+        const targetVolume = typeof musicConfig === 'object' ? (musicConfig.volume || 0.5) : 0.5;
         const loop = typeof musicConfig === 'object' ? (musicConfig.loop !== false) : true;
+        const fadeIn = typeof musicConfig === 'object' ? (musicConfig.fadeIn || 0) : 0;
 
         if (this.logger) this.logger.info(`🎵 Playing cutscene music: ${musicPath}`);
 
@@ -409,12 +411,30 @@ class CutsceneEngine {
         }
 
         this.cutsceneAudio.src = musicPath;
-        this.cutsceneAudio.volume = volume;
         this.cutsceneAudio.loop = loop;
+
+        // Start at 0 volume if fade in, otherwise target volume
+        this.cutsceneAudio.volume = fadeIn > 0 ? 0 : targetVolume;
 
         this.cutsceneAudio.play().catch(err => {
             if (this.logger) this.logger.warn(`Could not play cutscene music: ${err.message}`);
         });
+
+        // Apply fade in if configured
+        if (fadeIn > 0) {
+            const steps = 20;
+            const volumeStep = targetVolume / steps;
+            const stepTime = fadeIn / steps;
+            let currentStep = 0;
+
+            const fadeInterval = setInterval(() => {
+                currentStep++;
+                this.cutsceneAudio.volume = Math.min(targetVolume, volumeStep * currentStep);
+                if (currentStep >= steps) {
+                    clearInterval(fadeInterval);
+                }
+            }, stepTime);
+        }
     }
 
     /**

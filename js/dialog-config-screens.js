@@ -314,6 +314,17 @@
                 </div>
             </div>
 
+            {{#if hasCollectables}}
+            <div class="collectables-section" style="border-top: 1px solid #888; margin-top: 15px; padding-top: 15px;">
+                <h4 style="color: #00ffff;">Items Collected</h4>
+                {{#if intelCollected}}<div class="stat-row"><span>📄 Intel:</span><span>{{intelCollected}}</span></div>{{/if}}
+                {{#if creditsCollected}}<div class="stat-row"><span>💰 Credits Found:</span><span>+{{creditsCollected}}</span></div>{{/if}}
+                {{#if healthCollected}}<div class="stat-row"><span>💊 Health Packs:</span><span>{{healthCollected}}</span></div>{{/if}}
+                {{#if ammoCollected}}<div class="stat-row"><span>🔫 Ammo Crates:</span><span>{{ammoCollected}}</span></div>{{/if}}
+                {{#if weaponsCollectedCount}}<div class="stat-row"><span>⚔️ Weapons:</span><span>{{weaponsCollectedCount}}</span></div>{{/if}}
+            </div>
+            {{/if}}
+
             <div class="rewards-section" style="border-top: 1px solid #00ffff; margin-top: 20px; padding-top: 20px;">
                 <h3>Rewards</h3>
                 <div class="reward-row" style="color: #ffff00;">

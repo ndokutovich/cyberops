@@ -32,14 +32,20 @@ CyberOpsGame.prototype.showIntermissionDialog = function(victory) {
 
 // Gather comprehensive mission summary data (still needed by dialog system)
 CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
+    // Get item stats from ItemService if available
+    const itemService = this.gameServices?.itemService;
+    const itemStats = itemService?.getMissionStats?.() || {};
+
     const summary = {
         mainObjectives: [],
         sideQuests: [],
         rewards: [],
-        itemsCollected: this.itemsCollectedThisMission || {},
+        itemsCollected: itemStats.itemsCollected || this.itemsCollectedThisMission || {},
+        weaponsCollected: itemStats.weaponsCollected || [],
         completedMainObjectives: 0,
         totalMainObjectives: 0,
-        intelCollected: this.intelThisMission || 0,
+        intelCollected: itemStats.intelCollected || this.intelThisMission || 0,
+        creditsCollected: itemStats.creditsCollected || 0,
         totalCredits: 0,
         totalResearchPoints: 0,
         enemiesKilled: this.enemies ? this.enemies.filter(e => !e.alive).length : 0,

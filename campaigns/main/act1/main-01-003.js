@@ -215,7 +215,8 @@
 
         rewards: {
             credits: 3000,
-            researchPoints: 100
+            researchPoints: 100,
+            worldControl: 3
         },
 
         // NPCs

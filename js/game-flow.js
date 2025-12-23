@@ -393,6 +393,11 @@ CyberOpsGame.prototype.initMission = function() {
         };
         this.objectiveStatus = {};
 
+        // Reset ItemService stats for new mission
+        if (this.gameServices?.itemService?.resetMissionStats) {
+            this.gameServices.itemService.resetMissionStats();
+        }
+
         // Initialize event log (but NOT team commands yet - agents need positions first)
         this.initEventLog();
         this.clearEventLog();

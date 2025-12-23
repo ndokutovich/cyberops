@@ -26,6 +26,16 @@
 
             const missionSummary = game.gatherMissionSummary ? game.gatherMissionSummary(true) : {};
 
+            // Extract item collection stats
+            const itemsCollected = missionSummary.itemsCollected || {};
+            const intelCollected = missionSummary.intelCollected || itemsCollected.intel || 0;
+            const creditsCollected = missionSummary.creditsCollected || itemsCollected.credits || 0;
+            const healthCollected = itemsCollected.health || 0;
+            const ammoCollected = itemsCollected.ammo || 0;
+            const weaponsCollected = missionSummary.weaponsCollected || [];
+            const hasCollectables = intelCollected > 0 || creditsCollected > 0 ||
+                                   healthCollected > 0 || ammoCollected > 0 || weaponsCollected.length > 0;
+
             const data = {
                 enemiesKilled: missionSummary.enemiesKilled || 0,
                 totalEnemies: missionSummary.totalEnemies || 0,
@@ -34,9 +44,16 @@
                 agentsLost: missionSummary.agentsLost || 0,
                 missionTime: missionSummary.missionTime || '00:00',
                 creditsEarned: missionSummary.totalCredits || 0,
-                researchPoints: missionSummary.researchPoints || 0,
+                researchPoints: missionSummary.totalResearchPoints || 0,
                 worldControl: missionSummary.worldControl || 0,
-                bonusObjectives: missionSummary.bonusObjectives || []
+                bonusObjectives: missionSummary.bonusObjectives || [],
+                // Collectables
+                hasCollectables: hasCollectables,
+                intelCollected: intelCollected,
+                creditsCollected: creditsCollected,
+                healthCollected: healthCollected,
+                ammoCollected: ammoCollected,
+                weaponsCollectedCount: weaponsCollected.length
             };
 
             return engine.renderTemplate('victory-summary', data);
