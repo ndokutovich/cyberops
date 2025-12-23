@@ -634,11 +634,15 @@ class GameEngine {
         // Set common properties once
         ctx.lineWidth = 1;
 
-        // Screen bounds for culling (with padding for partially visible tiles)
-        const screenLeft = -this.tileWidth;
-        const screenRight = this.canvas.width + this.tileWidth;
-        const screenTop = -this.tileHeight - 20; // Extra for wall height
-        const screenBottom = this.canvas.height + this.tileHeight;
+        // Get camera offset for culling calculation
+        const cameraX = this.facade.legacyGame?.cameraX || 0;
+        const cameraY = this.facade.legacyGame?.cameraY || 0;
+
+        // Screen bounds in isometric space (subtract camera to convert screen->iso)
+        const screenLeft = -cameraX - this.tileWidth;
+        const screenRight = -cameraX + this.canvas.width + this.tileWidth;
+        const screenTop = -cameraY - this.tileHeight - 20;
+        const screenBottom = -cameraY + this.canvas.height + this.tileHeight;
 
         for (let y = 0; y < map.height; y++) {
             if (!map.tiles[y]) continue;
@@ -697,11 +701,15 @@ class GameEngine {
         const halfWidth = this.tileWidth / 2;
         const tileHeight = this.tileHeight;
 
-        // Screen bounds for culling
-        const screenLeft = -this.tileWidth;
-        const screenRight = this.canvas.width + this.tileWidth;
-        const screenTop = -tileHeight * 2;
-        const screenBottom = this.canvas.height + tileHeight;
+        // Get camera offset for culling calculation
+        const cameraX = this.facade.legacyGame?.cameraX || 0;
+        const cameraY = this.facade.legacyGame?.cameraY || 0;
+
+        // Screen bounds in isometric space
+        const screenLeft = -cameraX - this.tileWidth;
+        const screenRight = -cameraX + this.canvas.width + this.tileWidth;
+        const screenTop = -cameraY - tileHeight * 2;
+        const screenBottom = -cameraY + this.canvas.height + tileHeight;
 
         for (let y = 0; y < map.height; y++) {
             if (!fogOfWar[y]) continue;
