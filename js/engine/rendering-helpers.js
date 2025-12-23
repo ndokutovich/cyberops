@@ -450,8 +450,8 @@ class RenderingHelpers {
         ctx.save();
         ctx.translate(isoPos.x, isoPos.y);
 
-        // Pulsing effect for collectables
-        const pulse = Math.sin(Date.now() * 0.003) * 0.2 + 0.8;
+        // Pulsing effect for collectables - brighter pulse (0.85 to 1.0 range)
+        const pulse = Math.sin(Date.now() * 0.003) * 0.075 + 0.925;
 
         // Check if type is an emoji sprite FIRST (exactly like original)
         // This preserves the ORIGINAL rendering logic - emoji-first approach
@@ -594,8 +594,8 @@ class RenderingHelpers {
                 }
         }
 
-        // Glow effect
-        ctx.globalAlpha = pulse * 0.5;
+        // Glow effect - brighter glow for better visibility
+        ctx.globalAlpha = pulse * 0.7;
         ctx.shadowColor = type === 'credits' ? '#ffff00' :
                          type === 'health' || type === 'medkit' ? '#ff0000' :
                          type === 'shield' ? '#00ffff' : '#ffffff';
