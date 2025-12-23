@@ -34,22 +34,11 @@ CyberOpsGame.prototype.startCampaign = function() {
             this.initializeHub();
         }
 
-        // Hide main menu before cutscene using screen manager
-        if (window.screenManager && window.screenManager.currentScreen === 'main-menu') {
-            window.screenManager.exitScreen('main-menu');
-            window.screenManager.currentScreen = null;
-        }
-        // Also hide by element ID (screen-main-menu is the generated container)
-        const menuScreen = document.getElementById('screen-main-menu');
-        if (menuScreen) {
-            menuScreen.style.display = 'none';
-        }
-
-        // Play game intro cutscene for new campaigns
+        // Play game intro cutscene using declarative screen system
         // Cutscene flow: game-intro → act1-intro → hub (via onComplete chain)
-        if (this.playGameIntroCutscene) {
-            // Don't pass callback - let cutscene chain handle navigation
-            this.playGameIntroCutscene();
+        if (window.screenManager && window.CUTSCENE_CONFIG?.cutscenes?.['game-intro']) {
+            // Navigate to cutscene screen - this properly exits main-menu
+            window.screenManager.navigateTo('cutscene', { cutsceneId: 'game-intro' });
         } else {
             // No cutscene system, navigate directly to hub
             window.screenManager.navigateTo('hub');

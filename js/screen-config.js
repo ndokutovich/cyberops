@@ -893,6 +893,27 @@ const SCREEN_CONFIG = {
         actions: [
             { text: 'BACK TO MENU', action: 'navigate:main-menu' }
         ]
+    },
+
+    // Cutscene Screen - plays cutscenes as a proper screen transition
+    'cutscene': {
+        type: 'generated',
+        background: 'transparent',
+        hud: 'none',
+        music: false, // Cutscene handles its own music
+        content: () => `<div id="cutscene-screen-container"></div>`,
+        onEnter: function(params) {
+            // Play the specified cutscene
+            const cutsceneId = params?.cutsceneId;
+            if (cutsceneId && window.game?.playCutscene) {
+                // Cutscene engine will handle display and navigation via onComplete
+                window.game.playCutscene(cutsceneId);
+            }
+        },
+        onExit: function() {
+            // Cleanup handled by cutscene engine
+        },
+        actions: [] // No actions - cutscene handles advancement
     }
 };
 
