@@ -1557,27 +1557,22 @@ class MissionService {
 
         // Play outro cutscene if available, then navigate to victory/defeat
         setTimeout(() => {
-            if (victory && game.currentMission && game.playMissionOutroCutscene) {
+            if (victory && game.currentMission) {
                 const missionId = game.currentMission.id;
+                const cutsceneId = `mission-${missionId.replace('main-', '')}-outro`;
 
-                // Determine if this is the final mission by checking mission list
-                const isLastMission = game.missions &&
-                    game.currentMissionIndex >= 0 &&
-                    game.currentMissionIndex === game.missions.length - 1;
-
-                if (isLastMission) {
-                    // Final mission - game finale cutscene will handle credits navigation
-                    game.playMissionOutroCutscene(missionId, () => {
-                        // Cutscene handles navigation via onComplete (chains to game-finale)
-                    });
+                // Check if outro cutscene exists
+                if (window.CUTSCENE_CONFIG?.cutscenes?.[cutsceneId]) {
+                    // Navigate to cutscene screen - cutscene's onComplete handles next navigation
+                    // (navigate:victory for regular missions, cutscene:game-finale for final)
+                    if (this.logger) this.logger.info(`🎬 Playing mission outro: ${cutsceneId}`);
+                    window.screenManager.navigateTo('cutscene', { cutsceneId: cutsceneId });
                 } else {
-                    // Regular mission - play outro then victory screen
-                    game.playMissionOutroCutscene(missionId, () => {
-                        window.screenManager.navigateTo('victory');
-                    });
+                    // No outro cutscene - go to victory screen
+                    window.screenManager.navigateTo('victory');
                 }
             } else {
-                // No cutscene or defeat - navigate directly
+                // Defeat - navigate directly (no outro cutscene for defeats)
                 window.screenManager.navigateTo(victory ? 'victory' : 'defeat');
             }
         }, 1000); // Brief delay for dramatic effect
