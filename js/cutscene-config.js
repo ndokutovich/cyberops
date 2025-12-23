@@ -139,12 +139,7 @@
             'act1-intro': {
                 id: 'act1-intro',
                 type: 'cinematic',
-                music: {
-                    file: 'music/cutscenes/act1-intro.mp3',
-                    volume: 0.5,
-                    loop: true,
-                    fadeIn: 1000
-                },
+                continueMusic: true,  // Continue music from game-intro seamlessly
                 scenes: [
                     {
                         id: 'act-title',

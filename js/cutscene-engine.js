@@ -75,9 +75,14 @@ class CutsceneEngine {
         this.container.innerHTML = '';
 
         // Play cutscene-level music if specified, otherwise use default
-        const musicToPlay = cutscene.music || this.config.settings?.defaultMusic;
-        if (musicToPlay) {
-            this.playCutsceneMusic(musicToPlay);
+        // Skip if continueMusic flag is set - keeps current music playing
+        if (cutscene.continueMusic) {
+            if (this.logger) this.logger.debug(`🎵 continueMusic: true - keeping current music`);
+        } else {
+            const musicToPlay = cutscene.music || this.config.settings?.defaultMusic;
+            if (musicToPlay) {
+                this.playCutsceneMusic(musicToPlay);
+            }
         }
 
         // Add event listeners
