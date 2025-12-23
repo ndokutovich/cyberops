@@ -20,25 +20,55 @@
                 avatar: 'assets/avatars/handler.png',
                 color: '#00ffff'
             },
+            'AGENT': {
+                name: 'Agent',
+                avatar: 'assets/avatars/agent.png',
+                color: '#00ff88'
+            },
             'GHOST': {
                 name: 'Ghost',
                 avatar: 'assets/avatars/ghost.png',
                 color: '#9966ff'
-            },
-            'NEXUS AI': {
-                name: 'Nexus AI',
-                avatar: 'assets/avatars/nexus-ai.png',
-                color: '#ff0000'
             },
             'DR. CHEN': {
                 name: 'Dr. Chen',
                 avatar: 'assets/avatars/dr-chen.png',
                 color: '#00ff00'
             },
+            'ZERO COOL': {
+                name: 'Zero Cool',
+                avatar: 'assets/avatars/zero-cool.png',
+                color: '#ff00ff'
+            },
             'ORTEGA': {
                 name: 'Ortega',
                 avatar: 'assets/avatars/ortega.png',
                 color: '#ff6600'
+            },
+            'LOCAL WOMAN': {
+                name: 'Local Woman',
+                avatar: 'assets/avatars/local-woman.png',
+                color: '#ffcc00'
+            },
+            'FREED PRISONER': {
+                name: 'Freed Prisoner',
+                avatar: 'assets/avatars/freed-prisoner.png',
+                color: '#88ff88'
+            },
+            'CONVERGENCE AI': {
+                name: 'Convergence AI',
+                avatar: 'assets/avatars/convergence-ai.png',
+                color: '#ff0000'
+            },
+            'NEXUS AI': {
+                name: 'Nexus AI',
+                avatar: 'assets/avatars/nexus-ai.png',
+                color: '#ff0000'
+            },
+            '???': {
+                name: '???',
+                avatar: 'assets/avatars/mystery.png',
+                color: '#9966ff'
             }
         },
 
