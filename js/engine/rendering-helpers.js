@@ -198,8 +198,9 @@ class RenderingHelpers {
 
         // Now apply rotation ONLY for vision cone and direction indicator
         ctx.save();
-        // Add 90 degrees (PI/2) to agent facing angle, then adjust for isometric view
-        const isoAngle = (agent.facingAngle || 0) + Math.PI/2 - Math.PI/4;
+        // Adjust for isometric view: +PI/4 converts world direction to screen direction
+        // In isometric: world +X appears as southeast, world +Y appears as southwest
+        const isoAngle = (agent.facingAngle || 0) + Math.PI/4;
         ctx.rotate(isoAngle);
 
         // Draw vision cone
@@ -213,12 +214,12 @@ class RenderingHelpers {
         ctx.fill();
         ctx.stroke();
 
-        // Draw direction indicator (small triangle)
+        // Draw direction indicator (small triangle pointing RIGHT, same as vision cone)
         ctx.fillStyle = agent.color || '#00ff00';
         ctx.beginPath();
-        ctx.moveTo(0, -30);
-        ctx.lineTo(-5, -20);
-        ctx.lineTo(5, -20);
+        ctx.moveTo(30, 0);    // tip pointing right
+        ctx.lineTo(20, -5);   // top-left corner
+        ctx.lineTo(20, 5);    // bottom-left corner
         ctx.closePath();
         ctx.fill();
 
@@ -281,7 +282,8 @@ class RenderingHelpers {
 
         // Apply rotation for vision cone and direction
         ctx.save();
-        const isoAngle = (enemy.facingAngle || 0) - Math.PI/4;
+        // Adjust for isometric view: +PI/4 converts world direction to screen direction
+        const isoAngle = (enemy.facingAngle || 0) + Math.PI/4;
         ctx.rotate(isoAngle);
 
         // Draw vision cone
@@ -296,12 +298,12 @@ class RenderingHelpers {
             ctx.stroke();
         }
 
-        // Draw direction indicator
+        // Draw direction indicator (small triangle pointing RIGHT, same as vision cone)
         ctx.fillStyle = enemy.type === 'heavy' ? '#ff6600' : (enemy.type === 'guard' ? '#ffff00' : '#ff0000');
         ctx.beginPath();
-        ctx.moveTo(0, -30);
-        ctx.lineTo(-5, -20);
-        ctx.lineTo(5, -20);
+        ctx.moveTo(30, 0);    // tip pointing right
+        ctx.lineTo(20, -5);   // top-left corner
+        ctx.lineTo(20, 5);    // bottom-left corner
         ctx.closePath();
         ctx.fill();
 
