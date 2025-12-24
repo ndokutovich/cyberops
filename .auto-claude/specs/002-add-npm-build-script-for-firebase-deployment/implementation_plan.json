@@ -1,0 +1,73 @@
+{
+  "feature": "Add NPM Build Script for Firebase Deployment",
+  "spec_name": "add-npm-build-script-for-firebase-deployment",
+  "workflow_type": "simple",
+  "total_phases": 1,
+  "recommended_workers": 1,
+  "phases": [
+    {
+      "phase": 1,
+      "name": "Implementation",
+      "description": "Create build script and add npm command",
+      "depends_on": [],
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Create scripts/build.js with file copy logic for public/dist directory",
+          "service": "main",
+          "status": "completed",
+          "files_to_create": [
+            "scripts/build.js"
+          ],
+          "files_to_modify": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "manual",
+            "run": "node scripts/build.js"
+          },
+          "notes": "Created scripts/build.js with cross-platform Node.js file copy logic. Script handles: cleaning/creating public/dist directory, copying essential files (index.html, CSS, favicon, manifest, etc.), copying game directories (js, lib, assets, missions, campaigns), optional directories (music, sfx), and root audio files. Committed as 0bc6637.",
+          "updated_at": "2025-12-24T00:39:53.472507+00:00"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Add build script to package.json scripts section",
+          "service": "main",
+          "status": "completed",
+          "files_to_create": [],
+          "files_to_modify": [
+            "package.json"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "run": "npm run build"
+          },
+          "notes": "Added \"build\": \"node scripts/build.js\" to package.json scripts section. Follows existing script patterns. Committed as ccc4e6f.",
+          "updated_at": "2025-12-24T00:42:29.553321+00:00"
+        }
+      ]
+    }
+  ],
+  "qa_signoff": {
+    "status": "approved",
+    "qa_session": 0,
+    "issues_found": [
+      {
+        "description": "None - implementation meets all spec requirements"
+      }
+    ],
+    "tests_passed": {},
+    "timestamp": "2025-12-24T00:48:10.227471+00:00",
+    "ready_for_qa_revalidation": false
+  },
+  "metadata": {
+    "created_at": "2024-12-24T03:30:00Z",
+    "complexity": "simple",
+    "estimated_sessions": 1
+  },
+  "status": "human_review",
+  "planStatus": "review",
+  "updated_at": "2025-12-24T00:36:48.656Z",
+  "description": "I want to upload this game to firebase, for that i know that i need some public\\dixt directory with full project. As long as we have unbuilded setip - can you add npm run build command that create such a directory and copy all nececcary data there. dont do any firebase changes - obnnly make build command that crate build of game that ready to deploy",
+  "last_updated": "2025-12-24T00:48:10.227485+00:00"
+}

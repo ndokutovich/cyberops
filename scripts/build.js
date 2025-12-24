@@ -1,0 +1,190 @@
+#!/usr/bin/env node
+
+/**
+ * Build script for CyberOps: Syndicate
+ * Creates a production-ready build in public/dist for Firebase deployment.
+ *
+ * Usage: node scripts/build.js
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+// Configuration
+const ROOT_DIR = path.resolve(__dirname, '..');
+const OUTPUT_DIR = path.join(ROOT_DIR, 'public', 'dist');
+
+// Files and directories to copy
+const COPY_FILES = [
+    'index.html',
+    'cyberops-game.css',
+    'favicon.ico',
+    'logo.png',
+    'manifest.json',
+    'world-map.css'
+];
+
+const COPY_DIRECTORIES = [
+    'js',
+    'lib',
+    'assets',
+    'missions',
+    'campaigns',
+    'music',  // May not exist
+    'sfx'     // May not exist
+];
+
+// Root audio file patterns
+const AUDIO_EXTENSIONS = ['.mp3', '.wav'];
+
+/**
+ * Recursively delete a directory
+ */
+function cleanDirectory(dirPath) {
+    if (fs.existsSync(dirPath)) {
+        fs.rmSync(dirPath, { recursive: true, force: true });
+    }
+}
+
+/**
+ * Recursively copy a directory
+ */
+function copyDirectory(src, dest) {
+    if (!fs.existsSync(src)) {
+        return false;
+    }
+
+    fs.mkdirSync(dest, { recursive: true });
+
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+
+        if (entry.isDirectory()) {
+            copyDirectory(srcPath, destPath);
+        } else {
+            fs.copyFileSync(srcPath, destPath);
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Copy a single file
+ */
+function copyFile(src, dest) {
+    if (!fs.existsSync(src)) {
+        return false;
+    }
+
+    const destDir = path.dirname(dest);
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.copyFileSync(src, dest);
+    return true;
+}
+
+/**
+ * Get root audio files
+ */
+function getRootAudioFiles() {
+    const files = fs.readdirSync(ROOT_DIR);
+    return files.filter(file => {
+        const ext = path.extname(file).toLowerCase();
+        return AUDIO_EXTENSIONS.includes(ext);
+    });
+}
+
+/**
+ * Main build function
+ */
+function build() {
+    const startTime = Date.now();
+
+    console.log('CyberOps: Syndicate - Build Script');
+    console.log('==================================\n');
+
+    // Step 1: Clean output directory
+    console.log('Cleaning output directory...');
+    cleanDirectory(OUTPUT_DIR);
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    console.log(`  Created: ${path.relative(ROOT_DIR, OUTPUT_DIR)}\n`);
+
+    // Step 2: Copy individual files
+    console.log('Copying files...');
+    let filesCopied = 0;
+    for (const file of COPY_FILES) {
+        const src = path.join(ROOT_DIR, file);
+        const dest = path.join(OUTPUT_DIR, file);
+        if (copyFile(src, dest)) {
+            console.log(`  Copied: ${file}`);
+            filesCopied++;
+        } else {
+            console.log(`  Skipped (not found): ${file}`);
+        }
+    }
+
+    // Step 3: Copy root audio files
+    const audioFiles = getRootAudioFiles();
+    for (const file of audioFiles) {
+        const src = path.join(ROOT_DIR, file);
+        const dest = path.join(OUTPUT_DIR, file);
+        if (copyFile(src, dest)) {
+            console.log(`  Copied: ${file}`);
+            filesCopied++;
+        }
+    }
+    console.log(`  Total files: ${filesCopied}\n`);
+
+    // Step 4: Copy directories
+    console.log('Copying directories...');
+    let dirsCopied = 0;
+    for (const dir of COPY_DIRECTORIES) {
+        const src = path.join(ROOT_DIR, dir);
+        const dest = path.join(OUTPUT_DIR, dir);
+        if (copyDirectory(src, dest)) {
+            const fileCount = countFiles(dest);
+            console.log(`  Copied: ${dir}/ (${fileCount} files)`);
+            dirsCopied++;
+        } else {
+            console.log(`  Skipped (not found): ${dir}/`);
+        }
+    }
+    console.log(`  Total directories: ${dirsCopied}\n`);
+
+    // Summary
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log('Build complete!');
+    console.log(`  Output: ${path.relative(ROOT_DIR, OUTPUT_DIR)}`);
+    console.log(`  Time: ${duration}s`);
+    console.log('\nTo serve locally: python -m http.server 8000 --directory public/dist');
+}
+
+/**
+ * Count files in a directory recursively
+ */
+function countFiles(dirPath) {
+    let count = 0;
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+        if (entry.isDirectory()) {
+            count += countFiles(path.join(dirPath, entry.name));
+        } else {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+// Run build
+try {
+    build();
+    process.exit(0);
+} catch (error) {
+    console.error('\nBuild failed:', error.message);
+    process.exit(1);
+}
