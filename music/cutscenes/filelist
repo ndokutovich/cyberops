@@ -1,0 +1,18 @@
+  music/cutscenes/
+  +-- intro-theme.mp3           # game-intro (already existed)
+  +-- victory-theme.mp3         # game-finale (already existed)
+  +-- act1-intro.mp3            # ACT 1 start
+  +-- act1-outro.mp3            # ACT 1 end
+  +-- act2-intro.mp3            # ACT 2 start
+  +-- mission-01-001-intro.mp3  # Mission 1 briefing
+  +-- mission-01-001-outro.mp3  # Mission 1 debrief
+  +-- mission-01-002-intro.mp3  # Mission 2 briefing
+  +-- mission-01-002-outro.mp3  # Mission 2 debrief
+  +-- mission-01-003-intro.mp3  # Mission 3 briefing
+  +-- mission-01-003-outro.mp3  # Mission 3 debrief
+  +-- mission-01-004-intro.mp3  # Mission 4 briefing
+  +-- mission-01-004-outro.mp3  # Mission 4 debrief
+  +-- mission-02-001-intro.mp3  # Mission 5 briefing
+  +-- mission-02-001-outro.mp3  # Mission 5 debrief
+  +-- mission-02-002-intro.mp3  # Mission 6 briefing (final)
+  L-- mission-02-002-outro.mp3  # Mission 6 debrief
