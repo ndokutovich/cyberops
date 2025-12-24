@@ -54,7 +54,6 @@
             },
 
             embedded: {
-                edded: {
                 tiles: [
                     "....................................................................................................",
                     "....................................................................................................",
@@ -197,16 +196,20 @@
                 type: 'interact',
                 target: 'gate',
                 specific: [0],
+                count: 1,
                 required: true,
-                description: 'Breach outer gate'
+                description: 'Breach outer gate',
+                displayText: 'Outer gate breached: {current}/{required}'
             },
             {
                 id: 'breach_inner',
                 type: 'interact',
                 target: 'gate',
                 specific: [1, 2],
+                count: 2,
                 required: true,
                 description: 'Breach inner defenses',
+                displayText: 'Inner defenses breached: {current}/{required}',
                 triggerAfter: ['breach_outer']
             },
             {
@@ -214,20 +217,26 @@
                 type: 'interact',
                 target: 'terminal',
                 specific: ['mainframe'],
+                count: 1,
                 required: true,
                 description: 'Capture the mainframe',
+                displayText: 'Mainframe captured: {current}/{required}',
                 triggerAfter: ['breach_inner']
             },
             {
                 id: 'avoid_civilians',
                 type: 'custom',
                 required: false,
+                description: 'Avoid civilian casualties',
+                displayText: 'No civilian casualties',
                 checkFunction: 'checkNoCivilianCasualties'
             },
             {
                 id: 'keep_agents_alive',
                 type: 'custom',
                 required: false,
+                description: 'Keep all agents alive',
+                displayText: 'All agents survived',
                 checkFunction: 'checkAgentsAlive',
                 minAgents: 2
             }

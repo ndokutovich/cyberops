@@ -398,15 +398,25 @@ class MissionService {
                         ? objective.target?.id
                         : null;
 
+                    // Get specific IDs list (can be at objective.specific or objective.target.specific)
+                    const specificIds = objective.specific || objective.target?.specific || null;
+
                     // Check if interaction type matches objective target
                     if (targetType === 'explosive' && data.type === 'explosive') {
                         // Explosive planting objective
                         objective.progress++;
                         progressMade = true;
                         if (this.logger) this.logger.info(`💣 Explosive objective progress: ${objective.progress}/${objective.maxProgress}`);
-                    } else if (targetType === 'terminal' || data.type === 'terminal') {
+                    } else if (targetType === 'terminal' && data.type === 'terminal') {
                         // Terminal hacking objective
-                        if (!targetId) {
+                        if (specificIds && Array.isArray(specificIds)) {
+                            // Check if this specific terminal is in our list
+                            if (specificIds.includes(data.id) || specificIds.includes(data.terminal)) {
+                                objective.progress++;
+                                progressMade = true;
+                                if (this.logger) this.logger.info(`🖥️ Terminal objective progress: ${objective.progress}/${objective.maxProgress} (ID: ${data.id})`);
+                            }
+                        } else if (!targetId) {
                             // Any terminal counts
                             objective.progress++;
                             progressMade = true;
@@ -421,8 +431,22 @@ class MissionService {
                         progressMade = true;
                     } else if (targetType === 'gate' && data.type === 'gate') {
                         // Gate breach objective
-                        objective.progress++;
-                        progressMade = true;
+                        if (specificIds && Array.isArray(specificIds)) {
+                            // Check if this specific gate is in our list
+                            // Handle different property names: id, targetId, gateId
+                            const gateId = data.id !== undefined ? data.id : (data.targetId !== undefined ? data.targetId : data.gateId);
+                            if (specificIds.includes(gateId)) {
+                                objective.progress++;
+                                progressMade = true;
+                                if (this.logger) this.logger.info(`🚪 Gate objective progress: ${objective.progress}/${objective.maxProgress} (ID: ${gateId})`);
+                            } else {
+                                if (this.logger) this.logger.debug(`🚪 Gate ${gateId} not in specific list: [${specificIds.join(',')}]`);
+                            }
+                        } else {
+                            // Any gate counts
+                            objective.progress++;
+                            progressMade = true;
+                        }
                     } else if (!targetType) {
                         // No specific target type, any interaction counts
                         if (!targetId) {
@@ -430,15 +454,6 @@ class MissionService {
                             progressMade = true;
                         } else if (targetId === data.id || targetId === data.terminal) {
                             objective.progress++;
-                            progressMade = true;
-                        }
-                    } else if (objective.target && objective.target.specific && Array.isArray(objective.target.specific)) {
-                        // Check if all specific terminals are hacked
-                        const allHacked = objective.target.specific.every(id =>
-                            this.interactedObjects.has(id)
-                        );
-                        if (allHacked) {
-                            objective.progress = objective.maxProgress;
                             progressMade = true;
                         }
                     }
