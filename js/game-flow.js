@@ -847,34 +847,58 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
 
     if (this.logger) this.logger.debug(`📊 Spawning ${totalEnemies} enemies (base: ${baseEnemies}, bonus: ${bonusEnemies})`);
 
-    // Determine enemy composition based on mission
+    // Determine enemy composition based on mission definition
     let enemyComposition = [];
+    const missionEnemies = this.currentMission.enemies;
 
-    // Dynamic difficulty scaling based on mission index
-    const difficultyLevel = Math.min(this.currentMissionIndex, 4);
+    // Check if mission defines specific enemy types and special enemies
+    if (missionEnemies && typeof missionEnemies === 'object') {
+        const missionTypes = missionEnemies.types || ['guard', 'soldier'];
+        const specialEnemies = missionEnemies.special || [];
 
-    // Scale enemy mix based on difficulty
-    const guardRatio = Math.max(0.1, 0.6 - difficultyLevel * 0.125);
-    const soldierRatio = 0.3;
-    const eliteRatio = Math.min(0.3, difficultyLevel * 0.075);
-    const heavyRatio = Math.min(0.2, difficultyLevel * 0.05);
-    const sniperRatio = Math.min(0.2, difficultyLevel * 0.05);
-    const commanderRatio = Math.min(0.3, difficultyLevel * 0.075);
+        if (this.logger) this.logger.debug(`📊 Mission defines types=${missionTypes.join(',')}, special=${specialEnemies.join(',')}, totalEnemies=${totalEnemies}`);
 
-    // Build enemy composition dynamically
-    enemyComposition = []
-        .concat(Array(Math.floor(totalEnemies * guardRatio)).fill('guard'))
-        .concat(Array(Math.floor(totalEnemies * soldierRatio)).fill('soldier'))
-        .concat(Array(Math.floor(totalEnemies * eliteRatio)).fill('elite'))
-        .concat(Array(Math.floor(totalEnemies * heavyRatio)).fill('heavy'))
-        .concat(Array(Math.floor(totalEnemies * sniperRatio)).fill('sniper'))
-        .concat(Array(Math.floor(totalEnemies * commanderRatio)).fill('commander'));
+        // First, add special enemies (crime_boss, lieutenant, etc.) - these are always spawned
+        specialEnemies.forEach(specialType => {
+            enemyComposition.push(specialType);
+        });
 
-    // Ensure we have exactly the right number of enemies
-    while (enemyComposition.length < totalEnemies) {
-        enemyComposition.push('guard');
+        // Then, fill remaining slots with regular enemy types from mission up to totalEnemies
+        const regularEnemyCount = totalEnemies - specialEnemies.length;
+        for (let i = 0; i < regularEnemyCount; i++) {
+            // Cycle through mission-defined types
+            const typeIndex = i % missionTypes.length;
+            enemyComposition.push(missionTypes[typeIndex]);
+        }
+
+        if (this.logger) this.logger.debug(`📊 Enemy composition from mission definition:`, enemyComposition);
+    } else {
+        // Fallback: Dynamic difficulty scaling based on mission index
+        const difficultyLevel = Math.min(this.currentMissionIndex, 4);
+
+        // Scale enemy mix based on difficulty
+        const guardRatio = Math.max(0.1, 0.6 - difficultyLevel * 0.125);
+        const soldierRatio = 0.3;
+        const eliteRatio = Math.min(0.3, difficultyLevel * 0.075);
+        const heavyRatio = Math.min(0.2, difficultyLevel * 0.05);
+        const sniperRatio = Math.min(0.2, difficultyLevel * 0.05);
+        const commanderRatio = Math.min(0.3, difficultyLevel * 0.075);
+
+        // Build enemy composition dynamically
+        enemyComposition = []
+            .concat(Array(Math.floor(totalEnemies * guardRatio)).fill('guard'))
+            .concat(Array(Math.floor(totalEnemies * soldierRatio)).fill('soldier'))
+            .concat(Array(Math.floor(totalEnemies * eliteRatio)).fill('elite'))
+            .concat(Array(Math.floor(totalEnemies * heavyRatio)).fill('heavy'))
+            .concat(Array(Math.floor(totalEnemies * sniperRatio)).fill('sniper'))
+            .concat(Array(Math.floor(totalEnemies * commanderRatio)).fill('commander'));
+
+        // Ensure we have exactly the right number of enemies
+        while (enemyComposition.length < totalEnemies) {
+            enemyComposition.push('guard');
+        }
+        enemyComposition = enemyComposition.slice(0, totalEnemies);
     }
-    enemyComposition = enemyComposition.slice(0, totalEnemies);
 
     // Get strategic positions based on map
     const strategicPositions = this.getStrategicEnemyPositions(totalEnemies);
@@ -885,11 +909,16 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
     enemyComposition.forEach((enemyTypeName, i) => {
         const enemyTemplate = enemyTypes.find(t => t.type === enemyTypeName) || enemyTypes[0];
         const position = strategicPositions[i] || { x: 10 + Math.random() * 20, y: 10 + Math.random() * 20 };
+
+        // Use original type name for tracking, template for stats (important for objective tracking)
+        if (!enemyTypes.find(t => t.type === enemyTypeName)) {
+            if (this.logger) this.logger.warn(`⚠️ Enemy type '${enemyTypeName}' not found in campaign, using fallback template`);
+        }
         if (this.logger) this.logger.debug(`🎯 Spawning enemy ${i} (${enemyTypeName}) at:`, position);
 
         const enemy = {
             id: 'enemy_' + i,
-            type: enemyTemplate.type,
+            type: enemyTypeName,  // Use original type name for objective tracking!
             x: position.x,
             y: position.y,
             health: enemyTemplate.health + Math.floor(Math.random() * 20) - 10, // Some variation

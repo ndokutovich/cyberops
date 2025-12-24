@@ -1548,6 +1548,14 @@ class GameFacade {
                         if (dist < 1) {
                             item.collected = true;
                             if (this.logger) {
+                                this.logger.debug(`📦 Item collected:`, {
+                                    itemId: item.id,
+                                    itemName: item.name,
+                                    itemType: item.type,
+                                    hasQuestItem: !!item.item
+                                });
+                            }
+                            if (this.logger) {
                                 this.logger.debug(`📦 Pickup by agent:`, {
                                     name: agent.name,
                                     id: agent.id,

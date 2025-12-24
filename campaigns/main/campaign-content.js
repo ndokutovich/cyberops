@@ -157,6 +157,27 @@
                 color: '#ffcccc',
                 description: 'Enemy leadership units',
                 weapon: { type: 'plasma_rifle', damage: 22, range: 9, dropChance: 0.4 }
+            },
+            // Special enemy types for specific missions
+            {
+                type: 'crime_boss',
+                health: 200,
+                speed: 2,
+                damage: 30,
+                visionRange: 8,
+                color: '#ff0000',
+                description: 'Syndicate crime boss - primary target',
+                weapon: { type: 'golden_pistol', damage: 30, range: 7, dropChance: 1.0 }
+            },
+            {
+                type: 'lieutenant',
+                health: 100,
+                speed: 2.5,
+                damage: 18,
+                visionRange: 7,
+                color: '#cc0000',
+                description: 'Crime syndicate lieutenant',
+                weapon: { type: 'submachine_gun', damage: 18, range: 6, dropChance: 0.6 }
             }
         ],
 

@@ -135,10 +135,11 @@
             {
                 id: 'eliminate_primary',
                 type: 'eliminate',
-                target: 'primary_target',
+                target: 'crime_boss',
                 count: 1,
                 required: true,
-                description: 'Eliminate crime boss'
+                description: 'Eliminate crime boss',
+                displayText: 'Crime boss eliminated: {current}/{required}'
             },
             {
                 id: 'eliminate_lieutenants',
@@ -146,18 +147,23 @@
                 target: 'lieutenant',
                 count: 2,
                 required: true,
-                description: 'Eliminate lieutenants'
+                description: 'Eliminate lieutenants',
+                displayText: 'Lieutenants eliminated: {current}/{required}'
             },
             {
                 id: 'avoid_civilians',
                 type: 'custom',
                 required: false,
+                description: 'Avoid civilian casualties',
+                displayText: 'No civilian casualties',
                 checkFunction: 'checkNoCivilianCasualties'
             },
             {
                 id: 'keep_agents_alive',
                 type: 'custom',
                 required: false,
+                description: 'Keep all agents alive',
+                displayText: 'All agents survived',
                 checkFunction: 'checkAgentsAlive',
                 minAgents: 2
             }

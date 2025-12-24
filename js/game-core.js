@@ -2,6 +2,9 @@
 class CyberOpsGame {
     constructor() {
         this.logger = window.Logger ? new window.Logger("CyberOpsGame") : null;
+        // Unique ID for debugging game instance tracking
+        this.gameId = 'game_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        if (this.logger) this.logger.debug('🎮 Game instance created with ID:', this.gameId);
         // Constants - will be loaded from campaign
         this.MUSIC_MENU_START_TIME = 10.6; // Default, overridden by campaign
         this.DEMOSCENE_IDLE_TIMEOUT = 15000; // Default, overridden by campaign
@@ -878,6 +881,15 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
 
     const result = this.gameServices.itemService.handleCollectablePickup(agent, item, context);
 
+    // Debug: Log pickup attempt
+    if (this.logger) this.logger.debug('📦 handleCollectablePickup:', {
+        itemId: item.id,
+        itemType: item.type,
+        itemName: item.name,
+        hasQuestItem: !!item.item,
+        resultSuccess: result?.success
+    });
+
     if (result && result.notifications) {
         result.notifications.forEach(msg => this.addNotification(msg));
     }
@@ -890,6 +902,11 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
         if (item.item) {
             this.inventory = this.inventory || {};
             this.inventory[item.item] = (this.inventory[item.item] || 0) + 1;
+            console.log('🔍 [PICKUP DEBUG] Quest item added to inventory:', {
+                itemKey: item.item,
+                newCount: this.inventory[item.item],
+                fullInventory: JSON.stringify(this.inventory)
+            });
             if (this.logger) this.logger.info(`📦 Quest item added to inventory: ${item.item}`);
 
             // Check if any quests are now complete

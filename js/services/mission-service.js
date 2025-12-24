@@ -359,20 +359,25 @@ class MissionService {
 
             switch (objective.type) {
                 case 'eliminate':
+                    // Normalize target - can be string (e.g., 'crime_boss') or object (e.g., {type: 'crime_boss'})
+                    const elimTargetType = typeof objective.target === 'string'
+                        ? objective.target
+                        : (objective.target?.type || null);
+
                     // Check if target matches
-                    if (!objective.target.type || objective.target.type === 'all' || objective.target.type === 'enemy') {
+                    if (!elimTargetType || elimTargetType === 'all' || elimTargetType === 'enemy') {
                         // Any enemy counts
                         objective.progress++;
                         progressMade = true;
-                    } else if (objective.target.type === data.type) {
+                    } else if (elimTargetType === data.type) {
                         // Specific type must match (data.type is the enemy type)
                         objective.progress++;
                         progressMade = true;
                     }
 
-                    // Use TRACE to avoid spam
-                    if (progressMade && this.logger) {
-                        this.logger.trace(`🎯 Eliminate progress: ${objective.progress}/${objective.maxProgress}`);
+                    // Debug logging for eliminate tracking
+                    if (this.logger) {
+                        this.logger.debug(`🎯 Eliminate check: target='${elimTargetType}' killed='${data.type}' match=${elimTargetType === data.type} progress=${objective.progress}/${objective.maxProgress}`);
                     }
                     break;
 
