@@ -277,14 +277,15 @@ class MissionService {
 
                 // Track specific object
                 const terminalId = eventData.id;
-                if (terminalId) {
+                if (terminalId !== undefined) {
                     this.interactedObjects.add(terminalId);
                 }
 
-                if (this.logger) this.logger.info(`💻 Terminal hacked: ${terminalId || 'unknown'}`);
+                if (this.logger) this.logger.info(`💻 Terminal hacked: ${terminalId !== undefined ? terminalId : 'unknown'}`);
                 // Check both 'hack' and 'interact' type objectives for terminals
-                this.checkObjectiveProgress('hack', { terminal: terminalId, id: terminalId });
-                this.checkObjectiveProgress('interact', { terminal: terminalId, id: terminalId });
+                // IMPORTANT: Must include type: 'terminal' for checkObjectiveProgress to match correctly
+                this.checkObjectiveProgress('hack', { terminal: terminalId, id: terminalId, type: 'terminal' });
+                this.checkObjectiveProgress('interact', { terminal: terminalId, id: terminalId, type: 'terminal' });
                 break;
 
             case 'areaReached':
