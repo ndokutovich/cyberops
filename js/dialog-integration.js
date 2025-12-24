@@ -1221,6 +1221,22 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             html += '<div style="color: #888; text-align: center; padding: 20px;">Select an agent to view loadout</div>';
         }
 
+        // Optimize button at bottom of Current Loadout panel
+        html += `
+            <div style="margin-top: auto; padding-top: 15px; border-top: 1px solid rgba(0,255,255,0.3);">
+                <button class="dialog-button" style="width: 100%;" onclick="(function() {
+                    if (game.optimizeLoadouts) {
+                        game.optimizeLoadouts();
+                        setTimeout(() => game.dialogEngine.navigateTo('arsenal'), 100);
+                    } else {
+                        alert('Optimize function not available');
+                    }
+                })()">
+                    🚀 OPTIMIZE ALL LOADOUTS
+                </button>
+            </div>
+        `;
+
         html += '</div>';
 
         // Right Panel: Inventory/Shop/Sell
@@ -1552,23 +1568,6 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         html += '</div></div>';
         html += '</div>'; // Close equipment-management-content
-
-        // Action buttons at the bottom - only Optimize All now
-        html += `
-            <div style="margin-top: 20px; display: flex; justify-content: center;">
-                <button class="dialog-button" onclick="(function() {
-                    if (game.optimizeLoadouts) {
-                        game.optimizeLoadouts();
-                        // Small delay to let the optimization complete
-                        setTimeout(() => game.dialogEngine.navigateTo('arsenal'), 100);
-                    } else {
-                        alert('Optimize function not available');
-                    }
-                })()">
-                    🚀 OPTIMIZE ALL LOADOUTS
-                </button>
-            </div>
-        `;
 
         return html;
     });
