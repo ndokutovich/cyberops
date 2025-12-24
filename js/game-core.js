@@ -102,6 +102,10 @@ class CyberOpsGame {
         this.intelByMission = {}; // Track intel per mission
         this.unlockedIntelReports = [];
 
+        // Quest Item Inventory - tracks collected quest items for NPC quests
+        // Format: { 'item_name': count } e.g. { 'classified_docs': 1 }
+        this.inventory = {};
+
         // EARLY INITIALIZE: Initialize missions immediately in constructor
         this.missions = [];
         if (this.logger) this.logger.info('🏗️ Early missions array initialized');

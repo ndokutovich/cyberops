@@ -31,6 +31,10 @@ class QuestService {
         this.pendingRewards = [];
         this.claimedRewards = new Set();
 
+        // Quest item inventory - tracks collected quest items
+        // Syncs with game.inventory for legacy NPC quest system
+        this.questInventory = {};
+
         if (this.logger) this.logger.info('QuestService initialized');
     }
 
@@ -611,7 +615,8 @@ class QuestService {
             failedQuests: Array.from(this.failedQuests),
             questProgress: Array.from(this.questProgress.entries()),
             dialogHistory: Array.from(this.dialogHistory.entries()),
-            pendingRewards: this.pendingRewards
+            pendingRewards: this.pendingRewards,
+            questInventory: this.questInventory
         };
     }
 
@@ -627,8 +632,75 @@ class QuestService {
         this.questProgress = new Map(state.questProgress || []);
         this.dialogHistory = new Map(state.dialogHistory || []);
         this.pendingRewards = state.pendingRewards || [];
+        this.questInventory = state.questInventory || {};
 
         if (this.logger) this.logger.info('Quest state loaded');
+    }
+
+    /**
+     * Get quest inventory (for save system)
+     */
+    getQuestInventory() {
+        // Sync from game.inventory if available
+        if (window.game && window.game.inventory) {
+            this.questInventory = { ...window.game.inventory };
+        }
+        return this.questInventory;
+    }
+
+    /**
+     * Set quest inventory item
+     */
+    setQuestItem(itemId, count) {
+        this.questInventory[itemId] = count;
+        // Sync to game.inventory
+        if (window.game) {
+            window.game.inventory = window.game.inventory || {};
+            window.game.inventory[itemId] = count;
+        }
+    }
+
+    /**
+     * Add quest item
+     */
+    addQuestItem(itemId, count = 1) {
+        this.questInventory[itemId] = (this.questInventory[itemId] || 0) + count;
+        // Sync to game.inventory
+        if (window.game) {
+            window.game.inventory = window.game.inventory || {};
+            window.game.inventory[itemId] = (window.game.inventory[itemId] || 0) + count;
+        }
+        if (this.logger) this.logger.info(`Quest item added: ${itemId} x${count}`);
+    }
+
+    /**
+     * Load quest data from save (for save-game-service)
+     */
+    loadQuestData(data) {
+        if (!data) return;
+
+        // Load quest inventory
+        if (data.questInventory) {
+            this.questInventory = data.questInventory;
+            // Sync to game.inventory
+            if (window.game) {
+                window.game.inventory = { ...data.questInventory };
+            }
+        }
+
+        // Load active/completed quests
+        if (data.active) {
+            this.activeQuests = new Map(data.active.map(q => [q.id, q]));
+        }
+        if (data.completed) {
+            this.completedQuests = new Set(data.completed);
+            // Sync to game.completedQuests
+            if (window.game) {
+                window.game.completedQuests = new Set(data.completed);
+            }
+        }
+
+        if (this.logger) this.logger.info('Quest data loaded from save');
     }
 }
 

@@ -338,6 +338,15 @@ class SaveGameService {
                     failed: services.missionService.getFailedMissions()
                 };
             }
+
+            // Quest data (NPC quests and quest item inventory)
+            if (services.questService) {
+                saveData.quests = {
+                    active: services.questService.getActiveQuests(),
+                    completed: services.questService.getCompletedQuests(),
+                    questInventory: services.questService.getQuestInventory()
+                };
+            }
         }
 
         return saveData;
@@ -401,6 +410,11 @@ class SaveGameService {
             // Restore mission progress
             if (services.missionService && saveData.missions) {
                 services.missionService.loadMissionData(saveData.missions);
+            }
+
+            // Restore quest data (NPC quests and quest item inventory)
+            if (services.questService && saveData.quests) {
+                services.questService.loadQuestData(saveData.quests);
             }
         }
     }
