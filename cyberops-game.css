@@ -1861,10 +1861,8 @@ body {
     font-size: 1.1em;
     font-weight: bold;
     color: #00ffff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    word-break: break-word;
+    text-align: center;
 }
 
 .world-map {
