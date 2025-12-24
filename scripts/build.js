@@ -2,7 +2,7 @@
 
 /**
  * Build script for CyberOps: Syndicate
- * Creates a production-ready build in public/dist for Firebase deployment.
+ * Creates a production-ready build in dist/ for Firebase deployment.
  *
  * Usage: node scripts/build.js
  */
@@ -12,7 +12,7 @@ const path = require('path');
 
 // Configuration
 const ROOT_DIR = path.resolve(__dirname, '..');
-const OUTPUT_DIR = path.join(ROOT_DIR, 'public', 'dist');
+const OUTPUT_DIR = path.join(ROOT_DIR, 'dist');
 
 // Files and directories to copy
 const COPY_FILES = [
@@ -159,7 +159,7 @@ function build() {
     console.log('Build complete!');
     console.log(`  Output: ${path.relative(ROOT_DIR, OUTPUT_DIR)}`);
     console.log(`  Time: ${duration}s`);
-    console.log('\nTo serve locally: python -m http.server 8000 --directory public/dist');
+    console.log('\nTo serve locally: python -m http.server 8000 --directory dist');
 }
 
 /**
