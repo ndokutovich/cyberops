@@ -77,11 +77,8 @@ class ItemService {
                     }
                 }
 
-                // Handle credits
-                if (item.type === 'credits' && item.value) {
-                    this.creditsCollectedThisMission += item.value;
-                    result.notifications.push(`💰 ${agent.name} found ${item.value} credits`);
-                }
+                // Credits are handled in handleCollectableEffects to avoid double-counting
+                // Notifications for credits will be added there
 
                 // Handle intel items
                 if (item.type === 'intel') {
@@ -107,6 +104,11 @@ class ItemService {
         // Apply item effects
         const effects = this.handleCollectableEffects(agent, item, context);
         result.effects = effects;
+
+        // Add effect message to notifications (e.g., "💰 150 credits")
+        if (effects && effects.message) {
+            result.notifications.push(effects.message);
+        }
 
         // Track item collection statistics
         this.itemsCollectedThisMission[item.type] = (this.itemsCollectedThisMission[item.type] || 0) + 1;

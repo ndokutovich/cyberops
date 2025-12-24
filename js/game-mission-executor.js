@@ -301,8 +301,14 @@ CyberOpsGame.prototype.useActionAbility = function(agent) {
                 this.performInteraction(agent, obj.target, nearestTarget);
                 actionPerformed = true;
 
-                // Handle the objective tracking
-                OBJECTIVE_HANDLERS.handleInteraction(agent, obj.target, nearestTarget.id, this);
+                // Track the interaction through MissionService
+                if (this.gameServices && this.gameServices.missionService) {
+                    this.gameServices.missionService.trackEvent('interact', {
+                        type: obj.target,  // 'terminal', 'explosive', 'switch', 'gate'
+                        id: nearestTarget.id,
+                        agentId: agent.id || agent.name
+                    });
+                }
             }
         }
     });
@@ -1140,17 +1146,41 @@ CyberOpsGame.prototype.loadMapFromEmbeddedTiles = function(mapDef) {
         terminals: [],
         collectables: mapDef.embedded.collectables || [], // Load collectables from mission definition
         coverPositions: mapDef.embedded.coverCount || mapDef.coverPositions || 0,
-        enemySpawns: mapDef.enemySpawns || []
+        enemySpawns: mapDef.enemySpawns || [],
+        // Additional map objects that may be defined at mapDef level
+        explosiveTargets: mapDef.explosiveTargets || [],
+        gates: mapDef.gates || [],
+        switches: mapDef.switches || [],
+        turrets: mapDef.turrets || [],
+        targets: mapDef.targets || [],
+        civilians: mapDef.civilians || [],
+        hazards: mapDef.hazards || [],
+        boss: mapDef.boss || null
     };
 
     // Debug: Log collectables loading
     if (mapDef.embedded.collectables && mapDef.embedded.collectables.length > 0) {
         console.log('🔍 [MAP LOAD] Loading collectables from mission:', {
             count: mapDef.embedded.collectables.length,
-            collectables: mapDef.embedded.collectables.map(c => ({ id: c.id, x: c.x, y: c.y, questRequired: c.questRequired }))
+            collectables: mapDef.embedded.collectables.map(c => ({
+                id: c.id,
+                x: c.x,
+                y: c.y,
+                questRequired: c.questRequired,
+                item: c.item,  // Quest item identifier
+                hasItemProperty: !!c.item
+            }))
         });
     } else {
         console.log('🔍 [MAP LOAD] No collectables in mission embedded data');
+    }
+
+    // Debug: Log explosive targets loading
+    if (map.explosiveTargets && map.explosiveTargets.length > 0) {
+        console.log('🔍 [MAP LOAD] Loading explosive targets:', {
+            count: map.explosiveTargets.length,
+            targets: map.explosiveTargets.map(t => ({ x: t.x, y: t.y, id: t.id, planted: t.planted }))
+        });
     }
 
     // DEBUG: Log spawn and extraction to verify they're not swapped

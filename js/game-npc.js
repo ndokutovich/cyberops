@@ -145,8 +145,21 @@ NPC.prototype.getNextDialog = function(game) {
             return completedQuest;
         }
 
+        // Debug: Log quest search
+        console.log('🔍 [NPC QUEST] Searching for available quests:', {
+            npcName: this.name,
+            totalQuests: this.quests?.length || 0,
+            questsGiven: Array.from(this.questsGiven || []),
+            completedQuests: game.completedQuests ? Array.from(game.completedQuests) : []
+        });
+
         // Check for available quests
         for (let quest of this.quests) {
+            console.log('🔍 [NPC QUEST] Checking quest:', {
+                questId: quest.id,
+                inQuestsGiven: this.questsGiven?.has(quest.id),
+                inCompletedQuests: game.completedQuests?.has(quest.id)
+            });
             if (!this.questsGiven.has(quest.id) && !game.completedQuests.has(quest.id)) {
                 if (this.checkQuestRequirements(quest, game)) {
                     const npc = this;  // Capture NPC reference
@@ -438,6 +451,17 @@ Quest.prototype.checkCompletion = function(game) {
 };
 
 Quest.prototype.checkObjective = function(objective, game) {
+        // Debug: Log ALL objective checks
+        console.log('🔍 [QUEST DEBUG] Checking objective:', {
+            questId: this.id,
+            objectiveType: objective.type,
+            objectiveItem: objective.item,
+            objectiveCount: objective.count,
+            hasInventory: !!game.inventory,
+            inventoryValue: game.inventory ? game.inventory[objective.item] : 'no inventory',
+            fullInventory: game.inventory ? JSON.stringify(game.inventory) : 'none'
+        });
+
         switch(objective.type) {
             case 'kill':
                 return (game.enemiesKilledThisMission || 0) >= objective.count;
@@ -590,11 +614,18 @@ CyberOpsGame.prototype.createNPCFromDefinition = function(npcDef) {
     // Create quests from template data
     const quests = [];
     if (template.quests && npcDef.quests) {
+        console.log('🔍 [NPC CREATE] Creating quests for NPC:', {
+            npcId: npcDef.id,
+            templateQuestCount: template.quests.length,
+            missionQuestIds: npcDef.quests
+        });
         template.quests.forEach(questData => {
             if (npcDef.quests.includes(questData.id)) {
+                console.log('🔍 [NPC CREATE] Adding quest:', questData.id);
                 quests.push(new Quest(questData));
             }
         });
+        console.log('🔍 [NPC CREATE] Total quests created:', quests.length);
     }
 
     return {

@@ -2173,6 +2173,52 @@ if (dialogEl && this.generateEquipmentManagement) {
 }
 ```
 
+#### Dialog Height Issues (Updated 2025-12-24)
+
+**Problem**: Dialog content too small, only showing 1 item in lists (e.g., NPC shop)
+**Cause**: Multiple nested containers each have their own `max-height` constraints that compound
+
+**Dialog Height Hierarchy** (all can limit content):
+```
+.declarative-dialog.level-1     → max-height: 60vh (default)
+  └─ .dialog-content            → may have constraints
+       └─ .dialog-body          → max-height: 70vh
+            └─ .rpg-shop-content → max-height: 65vh
+                 └─ .shop-items-list → inline style max-height
+```
+
+**Solution**: Override ALL nested containers for specific dialog ID:
+```css
+/* 1. Expand outer dialog */
+.declarative-dialog.level-1#dialog-rpg-shop {
+    max-height: 85vh !important;
+    min-height: 600px;
+    min-width: 700px;
+}
+
+/* 2. Remove constraints from ALL nested containers */
+.declarative-dialog.level-1#dialog-rpg-shop .dialog-content {
+    max-height: none;
+    flex: 1;
+}
+
+.declarative-dialog.level-1#dialog-rpg-shop .dialog-body {
+    max-height: none;
+    flex: 1;
+}
+
+.declarative-dialog.level-1#dialog-rpg-shop .rpg-shop-content {
+    max-height: none;
+}
+
+/* 3. Set final scrollable container height */
+.declarative-dialog.level-1#dialog-rpg-shop .shop-items-list {
+    max-height: 50vh;
+}
+```
+
+**Also check**: Remove inline styles from JS that set `max-height` on elements, as inline styles override CSS.
+
 ### Declarative Dialog System Integration
 
 For complete conversion instructions, see **DIALOG_CONVERSION_GUIDE.md**.

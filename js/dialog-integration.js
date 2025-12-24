@@ -2736,8 +2736,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             </div>
         `;
 
-        // Content based on tab
-        html += '<div style="max-height: 400px; overflow-y: auto;">';
+        // Content based on tab - height controlled by CSS for #dialog-rpg-shop
+        html += '<div class="shop-items-list">';
 
         if (currentTab === 'buy') {
             // Buy tab - show shop inventory

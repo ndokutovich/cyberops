@@ -143,6 +143,33 @@ if (typeof FormulaService === 'undefined') {
                 effects.keycard = item.color || 'blue';
                 effects.message = `🗝️ Collected ${effects.keycard} keycard`;
                 break;
+
+            case 'collectable':
+                // Generic collectable - check for various properties
+                const messages = [];
+                if (item.credits) {
+                    effects.credits = item.credits;
+                    messages.push(`💰 ${item.credits} credits`);
+                }
+                if (item.health) {
+                    const healAmt = Math.min(item.health, agent.maxHealth - agent.health);
+                    effects.health = healAmt;
+                    if (healAmt > 0) messages.push(`❤️ ${healAmt} HP`);
+                }
+                if (item.armor) {
+                    effects.armor = item.armor;
+                    messages.push(`🛡️ +${item.armor} armor`);
+                }
+                if (item.researchPoints) {
+                    effects.researchPoints = item.researchPoints;
+                    messages.push(`📄 +${item.researchPoints} research`);
+                }
+                if (item.ammo) {
+                    effects.ammo = item.ammo;
+                    messages.push(`🔫 +${item.ammo} ammo`);
+                }
+                effects.message = messages.length > 0 ? messages.join(', ') : `📦 Collected ${item.name || 'item'}`;
+                break;
         }
 
         return effects;

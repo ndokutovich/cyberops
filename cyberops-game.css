@@ -2182,7 +2182,17 @@ body {
     color: #ccc;
     line-height: 1.6;
     overflow-y: auto;
-    max-height: 50vh;
+    max-height: 70vh;
+}
+
+/* RPG Shop specific - allow more items to be visible */
+.rpg-shop-content {
+    max-height: 65vh;
+    overflow-y: auto;
+}
+
+.shop-items-list {
+    overflow-y: auto;
 }
 
 .dialog-actions {
@@ -2937,6 +2947,32 @@ body {
 .declarative-dialog.level-1#dialog-mission-progress {
     max-height: 90vh !important;
     min-width: 700px;
+}
+
+/* Specific override for RPG shop - needs more height for item list */
+.declarative-dialog.level-1#dialog-rpg-shop {
+    max-height: 85vh !important;
+    min-height: 600px;
+    min-width: 700px;
+}
+
+.declarative-dialog.level-1#dialog-rpg-shop .dialog-content {
+    max-height: none;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.declarative-dialog.level-1#dialog-rpg-shop .dialog-body {
+    max-height: none;
+    flex: 1;
+}
+
+.declarative-dialog.level-1#dialog-rpg-shop .rpg-shop-content {
+    max-height: none;
+}
+
+.declarative-dialog.level-1#dialog-rpg-shop .shop-items-list {
+    max-height: 50vh;
 }
 
 .declarative-dialog.level-2 {

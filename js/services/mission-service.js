@@ -385,26 +385,45 @@ class MissionService {
 
                 case 'interact':  // Support both 'interact' and 'hack' types
                 case 'hack':
-                    // Check if this is for the right target type
-                    if (objective.target && objective.target.type === 'terminal') {
-                        // This is a terminal objective
-                        if (!objective.target.id) {
+                    // Normalize target - can be string or object
+                    const targetType = typeof objective.target === 'string'
+                        ? objective.target
+                        : (objective.target?.type || null);
+                    const targetId = typeof objective.target === 'object'
+                        ? objective.target?.id
+                        : null;
+
+                    // Check if interaction type matches objective target
+                    if (targetType === 'explosive' && data.type === 'explosive') {
+                        // Explosive planting objective
+                        objective.progress++;
+                        progressMade = true;
+                        if (this.logger) this.logger.info(`💣 Explosive objective progress: ${objective.progress}/${objective.maxProgress}`);
+                    } else if (targetType === 'terminal' || data.type === 'terminal') {
+                        // Terminal hacking objective
+                        if (!targetId) {
                             // Any terminal counts
                             objective.progress++;
                             progressMade = true;
-                        } else if (objective.target.id === data.id || objective.target.id === data.terminal) {
+                        } else if (targetId === data.id || targetId === data.terminal) {
                             // Specific terminal must match
                             objective.progress++;
                             progressMade = true;
                         }
-                    } else if (!objective.target || !objective.target.type) {
-                        // No specific target type, treat as generic hack/interact
-                        if (!objective.target || !objective.target.id) {
-                            // Any interaction counts
+                    } else if (targetType === 'switch' && data.type === 'switch') {
+                        // Switch activation objective
+                        objective.progress++;
+                        progressMade = true;
+                    } else if (targetType === 'gate' && data.type === 'gate') {
+                        // Gate breach objective
+                        objective.progress++;
+                        progressMade = true;
+                    } else if (!targetType) {
+                        // No specific target type, any interaction counts
+                        if (!targetId) {
                             objective.progress++;
                             progressMade = true;
-                        } else if (objective.target.id === data.id || objective.target.id === data.terminal) {
-                            // Specific target must match
+                        } else if (targetId === data.id || targetId === data.terminal) {
                             objective.progress++;
                             progressMade = true;
                         }
@@ -568,6 +587,12 @@ class MissionService {
             // Note: After parsing, o.target is an object like { type: 'extraction' }
             if (o.type === 'reach' && o.target && o.target.type === 'extraction') {
                 if (this.logger) this.logger.trace(`  Skipping extraction objective: ${o.id}`);
+                return false;
+            }
+            // Skip "survive" objectives - they run concurrently with extraction, not as prerequisites
+            // These are time-based challenges that continue even after extraction is enabled
+            if (o.type === 'survive') {
+                if (this.logger) this.logger.trace(`  Skipping survive objective: ${o.id}`);
                 return false;
             }
             // Skip objectives whose prerequisites aren't met yet
