@@ -2827,7 +2827,9 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
     // Save/Load UI generator - Enhanced version matching modal engine features
     engine.registerGenerator('generateSaveLoadUI', function() {
         // Get mode from state data or default to 'save'
-        const mode = this.stateData?.saveLoadMode || 'save';
+        // Note: 'this' is game, dialogEngine is accessed via game.dialogEngine or game._dialogEngineContext
+        const dialogEngine = this.dialogEngine || this._dialogEngineContext;
+        const mode = dialogEngine?.stateData?.saveLoadMode || 'save';
         const saves = this.getAllSaves ? this.getAllSaves() : [];
 
         let html = '<div class="save-load-ui" style="max-width: 800px; margin: 0 auto;">';
