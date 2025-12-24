@@ -902,11 +902,6 @@ CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
         if (item.item) {
             this.inventory = this.inventory || {};
             this.inventory[item.item] = (this.inventory[item.item] || 0) + 1;
-            console.log('🔍 [PICKUP DEBUG] Quest item added to inventory:', {
-                itemKey: item.item,
-                newCount: this.inventory[item.item],
-                fullInventory: JSON.stringify(this.inventory)
-            });
             if (this.logger) this.logger.info(`📦 Quest item added to inventory: ${item.item}`);
 
             // Check if any quests are now complete

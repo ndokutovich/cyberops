@@ -227,31 +227,11 @@ NPC.prototype.checkQuestRequirements = function(quest, game) {
     }
 
 NPC.prototype.checkQuestCompletion = function(game) {
-        console.log('🔍 [QUEST COMPLETION CHECK] Checking quests for NPC:', {
-            npcName: this.name,
-            questsGiven: Array.from(this.questsGiven),
-            gameQuestsKeys: Object.keys(game.quests || {}),
-            gameInventory: JSON.stringify(game.inventory || {}),
-            completedQuests: Array.from(game.completedQuests || [])
-        });
-
         for (let questId of this.questsGiven) {
             const quest = game.quests[questId];
 
-            console.log('🔍 [QUEST COMPLETION CHECK] Checking quest:', {
-                questId: questId,
-                questExists: !!quest,
-                questActive: quest?.active,
-                inCompletedQuests: game.completedQuests?.has(questId),
-                willCheckCompletion: !!(quest && quest.active && !game.completedQuests?.has(questId))
-            });
-
             if (quest && quest.active && !game.completedQuests.has(questId)) {
                 const isComplete = quest.checkCompletion(game);
-                console.log('🔍 [QUEST COMPLETION CHECK] Quest completion result:', {
-                    questId: questId,
-                    isComplete: isComplete
-                });
 
                 if (isComplete) {
                     const npc = this;
@@ -476,17 +456,6 @@ Quest.prototype.checkCompletion = function(game) {
 };
 
 Quest.prototype.checkObjective = function(objective, game) {
-        // Debug: Log ALL objective checks
-        console.log('🔍 [QUEST DEBUG] Checking objective:', {
-            questId: this.id,
-            objectiveType: objective.type,
-            objectiveItem: objective.item,
-            objectiveCount: objective.count,
-            hasInventory: !!game.inventory,
-            inventoryValue: game.inventory ? game.inventory[objective.item] : 'no inventory',
-            fullInventory: game.inventory ? JSON.stringify(game.inventory) : 'none'
-        });
-
         switch(objective.type) {
             case 'kill':
                 return (game.enemiesKilledThisMission || 0) >= objective.count;
