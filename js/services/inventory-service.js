@@ -303,6 +303,13 @@ class InventoryService {
             return true;
         }
 
+        // Handle quest collectables (type: 'collectable' with item property)
+        // These are tracked in game.inventory by game-core.js, we just return true
+        if (item.type === 'collectable' && item.item) {
+            if (this.logger) this.logger.info(`📁 Quest collectable picked up: ${item.name || item.item} (quest item: ${item.item})`);
+            return true;
+        }
+
         if (this.logger) this.logger.warn(`❓ Unknown item type: ${item.type}`);
         return false;
     }

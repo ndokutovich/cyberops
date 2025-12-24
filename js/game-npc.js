@@ -227,34 +227,59 @@ NPC.prototype.checkQuestRequirements = function(quest, game) {
     }
 
 NPC.prototype.checkQuestCompletion = function(game) {
+        console.log('🔍 [QUEST COMPLETION CHECK] Checking quests for NPC:', {
+            npcName: this.name,
+            questsGiven: Array.from(this.questsGiven),
+            gameQuestsKeys: Object.keys(game.quests || {}),
+            gameInventory: JSON.stringify(game.inventory || {}),
+            completedQuests: Array.from(game.completedQuests || [])
+        });
+
         for (let questId of this.questsGiven) {
             const quest = game.quests[questId];
-            if (quest && quest.active && !game.completedQuests.has(questId) && quest.checkCompletion(game)) {
-                const npc = this;
-                return {
-                    text: quest.completionDialog || "Well done! You've completed the task.",
-                    choices: [
-                        {
-                            text: "Claim reward",
-                            action: function(game) {
-                                npc.completeQuest(quest, game);
-                                // After claiming reward, show a thank you message
-                                game.showDialog({
-                                    npc: npc,
-                                    text: "Thank you for your help! Check back later for more work.",
-                                    choices: [
-                                        {
-                                            text: "You're welcome",
-                                            action: function(game) {
-                                                npc.endDialog(game);
+
+            console.log('🔍 [QUEST COMPLETION CHECK] Checking quest:', {
+                questId: questId,
+                questExists: !!quest,
+                questActive: quest?.active,
+                inCompletedQuests: game.completedQuests?.has(questId),
+                willCheckCompletion: !!(quest && quest.active && !game.completedQuests?.has(questId))
+            });
+
+            if (quest && quest.active && !game.completedQuests.has(questId)) {
+                const isComplete = quest.checkCompletion(game);
+                console.log('🔍 [QUEST COMPLETION CHECK] Quest completion result:', {
+                    questId: questId,
+                    isComplete: isComplete
+                });
+
+                if (isComplete) {
+                    const npc = this;
+                    return {
+                        text: quest.completionDialog || "Well done! You've completed the task.",
+                        choices: [
+                            {
+                                text: "Claim reward",
+                                action: function(game) {
+                                    npc.completeQuest(quest, game);
+                                    // After claiming reward, show a thank you message
+                                    game.showDialog({
+                                        npc: npc,
+                                        text: "Thank you for your help! Check back later for more work.",
+                                        choices: [
+                                            {
+                                                text: "You're welcome",
+                                                action: function(game) {
+                                                    npc.endDialog(game);
+                                                }
                                             }
-                                        }
-                                    ]
-                                });
+                                        ]
+                                    });
+                                }
                             }
-                        }
-                    ]
-                };
+                        ]
+                    };
+                }
             }
         }
         return null;
