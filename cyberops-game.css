@@ -1897,6 +1897,53 @@ body {
     font-weight: bold;
 }
 
+/* World Control Display */
+.world-control-display {
+    transition: all 0.3s ease;
+}
+
+.world-control-display:hover {
+    background: rgba(0,255,255,0.1);
+    border-color: #ff00ff;
+}
+
+.world-control-value {
+    text-align: center;
+    margin: 10px 0;
+}
+
+.control-percent {
+    font-size: 2.5em;
+    font-weight: bold;
+    background: linear-gradient(45deg, #00ffff, #ff00ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.control-bar-large {
+    width: 100%;
+    height: 12px;
+    background: rgba(0,255,255,0.2);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.control-progress-large {
+    height: 100%;
+    background: linear-gradient(90deg, #00ffff, #ff00ff);
+    border-radius: 6px;
+    transition: width 0.5s ease;
+}
+
+.world-control-hint {
+    text-align: center;
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 8px;
+}
+
 .hub-footer {
     background: rgba(0,0,0,0.5);
     border-top: 1px solid rgba(0,255,255,0.3);

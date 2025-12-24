@@ -776,22 +776,15 @@ const SCREEN_CONFIG = {
                                     </div>
                                 </div>
 
-                                <div class="world-map">
-                                    <div class="map-title">🌍 GLOBAL INFLUENCE</div>
-                                    <div class="influence-regions">
-                                        <div class="region" data-region="north-america">
-                                            <span class="region-name">North America</span>
-                                            <span class="region-control">25%</span>
-                                        </div>
-                                        <div class="region" data-region="europe">
-                                            <span class="region-name">Europe</span>
-                                            <span class="region-control">10%</span>
-                                        </div>
-                                        <div class="region" data-region="asia">
-                                            <span class="region-name">Asia</span>
-                                            <span class="region-control">5%</span>
-                                        </div>
+                                <div class="world-map world-control-display" onclick="if(game.showWorldMap) { game.showWorldMap(); }" style="cursor: pointer;">
+                                    <div class="map-title">🌍 WORLD CONTROL</div>
+                                    <div class="world-control-value">
+                                        <span id="hubWorldControl" class="control-percent">0%</span>
                                     </div>
+                                    <div class="control-bar-large">
+                                        <div class="control-progress-large" id="hubControlProgress" style="width: 0%"></div>
+                                    </div>
+                                    <div class="world-control-hint">Click to view World Map</div>
                                 </div>
                             </div>
                         </div>

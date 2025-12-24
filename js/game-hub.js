@@ -52,7 +52,14 @@ CyberOpsGame.prototype.updateHubStats = function() {
         const hubActiveAgents = document.getElementById('hubActiveAgents');
         if (hubActiveAgents) hubActiveAgents.textContent = this.activeAgents.length;
 
-        // Update world control
+        // Update world control (new hub display)
+        const hubWorldControl = document.getElementById('hubWorldControl');
+        if (hubWorldControl) hubWorldControl.textContent = `${this.worldControl}%`;
+
+        const hubControlProgress = document.getElementById('hubControlProgress');
+        if (hubControlProgress) hubControlProgress.style.width = `${this.worldControl}%`;
+
+        // Legacy world control elements (for backward compatibility)
         const worldControlPercent = document.getElementById('worldControlPercent');
         if (worldControlPercent) worldControlPercent.textContent = `${this.worldControl}%`;
 
