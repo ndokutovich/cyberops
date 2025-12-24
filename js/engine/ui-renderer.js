@@ -39,17 +39,18 @@ class UIRenderer {
 
         // Get version (from build or 'dev' for local)
         const version = window.BUILD_VERSION || 'dev';
-
-        // Position in top right corner
         const text = `${version} FPS: ${fps}`;
-        const textWidth = ctx.measureText(text).width || 120;
-        const boxWidth = Math.max(textWidth + 20, 120);
-        const x = canvasWidth - boxWidth + 10;
+
+        // Set font first for accurate text measurement
+        ctx.font = 'bold 16px monospace';
+        const textWidth = ctx.measureText(text).width;
+        const boxWidth = Math.max(textWidth + 20, 140);
+        const x = canvasWidth - boxWidth + 5;
         const y = 30;
 
         // Background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(canvasWidth - boxWidth - 10, y - 20, boxWidth + 10, 30);
+        ctx.fillRect(canvasWidth - boxWidth - 5, y - 20, boxWidth, 30);
 
         // FPS text with color based on performance
         const fpsColor = fps >= 30 ? '#00ff00' :  // Green for good
@@ -57,7 +58,6 @@ class UIRenderer {
                         '#ff0000';                 // Red for poor
 
         ctx.fillStyle = fpsColor;
-        ctx.font = 'bold 16px monospace';
         ctx.fillText(text, x, y);
 
         ctx.restore();

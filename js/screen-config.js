@@ -241,6 +241,8 @@ const SCREEN_CONFIG = {
                 <h1 class="menu-title">CYBEROPS: SYNDICATE</h1>
                 <div class="menu-subtitle">Main Menu</div>
             </div>
+
+            <div class="build-version">v${window.BUILD_VERSION || 'dev'}</div>
         `,
         actions: [
             { text: 'NEW CAMPAIGN', action: 'execute:startNewGame', primary: true },

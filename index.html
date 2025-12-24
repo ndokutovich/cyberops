@@ -51,6 +51,7 @@
             <div class="bg-grid"></div>
             <div class="bg-particles"></div>
         </div>
+        <div id="initialVersion" class="build-version"></div>
     </div>
 
     <!-- Demoscene handled by screen manager (generated type) -->
@@ -523,11 +524,12 @@
     <!-- Build Version Display -->
     <script>
         (function() {
-            const version = window.BUILD_VERSION || 'dev';
-            const versionEl = document.getElementById('buildVersion');
-            if (versionEl) {
-                versionEl.textContent = 'v' + version;
-            }
+            const version = 'v' + (window.BUILD_VERSION || 'dev');
+            // Set version on all version elements
+            ['buildVersion', 'initialVersion'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = version;
+            });
         })();
     </script>
 
