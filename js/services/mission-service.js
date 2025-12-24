@@ -161,6 +161,11 @@ class MissionService {
                 target.count = obj.count;
             }
 
+            // Add duration to target if at top level (for survive objectives)
+            if (obj.duration) {
+                target.duration = obj.duration;
+            }
+
             return {
                 id: obj.id || `obj_${index}`,
                 type: obj.type || 'custom',
@@ -170,6 +175,7 @@ class MissionService {
                 bonus: obj.bonus || false,
                 hidden: obj.hidden || false,
                 target: target,
+                specific: obj.specific || null, // Preserve specific IDs for gate/terminal objectives
                 tracker: obj.tracker, // Preserve tracker for compatibility
                 triggerAfter: obj.triggerAfter || null, // Preserve triggerAfter for sequential objectives
                 checkFunction: obj.checkFunction || null, // Preserve checkFunction for custom objectives
