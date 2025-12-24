@@ -10,7 +10,7 @@ const DIALOG_CONFIG = {
         defaultTransition: 'fade',
         animationDuration: 300,
         autoCloseDelay: 2000,
-        enableBreadcrumb: true,
+        enableBreadcrumb: false,
         enableKeyboard: true,
         enableGamepadSupport: false
     },

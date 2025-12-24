@@ -714,13 +714,6 @@ const SCREEN_CONFIG = {
                         <div class="hub-title">🏢 SYNDICATE HUB</div>
                         <div class="hub-subtitle">Central Command & Operations</div>
 
-                        <div class="world-control-indicator">
-                            <span>World Control: </span>
-                            <span id="worldControlPercent">15%</span>
-                            <div class="control-bar">
-                                <div class="control-progress" id="controlProgress" style="width: 15%"></div>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="hub-content">

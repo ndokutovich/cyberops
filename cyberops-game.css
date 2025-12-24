@@ -1732,56 +1732,32 @@ body {
 .hub-header {
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     border-bottom: 2px solid #00ffff;
-    padding: 20px;
+    padding: 10px 20px;
     text-align: center;
 }
 
 .hub-title {
-    font-size: 2.5em;
+    font-size: 2em;
     font-weight: bold;
     background: linear-gradient(45deg, #00ffff, #ff00ff);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     text-shadow: 0 0 20px rgba(0,255,255,0.5);
-    margin-bottom: 10px;
+    margin-bottom: 5px;
 }
 
 .hub-subtitle {
     color: #ccc;
-    font-size: 1.1em;
-    margin-bottom: 20px;
-}
-
-.world-control-indicator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    font-size: 1.1em;
-    color: #00ffff;
-}
-
-.control-bar {
-    width: 200px;
-    height: 8px;
-    background: rgba(0,255,255,0.2);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.control-progress {
-    height: 100%;
-    background: linear-gradient(90deg, #00ffff, #ff00ff);
-    border-radius: 4px;
-    transition: width 0.5s ease;
+    font-size: 1em;
+    margin-bottom: 0;
 }
 
 .hub-content {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
-    gap: 20px;
-    padding: 20px;
+    gap: 15px;
+    padding: 15px;
     flex: 1;
 }
 
@@ -1794,23 +1770,23 @@ body {
 
 .panel-header {
     background: rgba(0,255,255,0.1);
-    padding: 15px 20px;
-    font-size: 1.2em;
+    padding: 10px 15px;
+    font-size: 1.1em;
     font-weight: bold;
     color: #00ffff;
     border-bottom: 1px solid rgba(0,255,255,0.3);
 }
 
 .panel-content {
-    padding: 20px;
+    padding: 15px;
 }
 
 .hub-card {
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     border: 1px solid #00ffff;
     border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
+    padding: 12px;
+    margin-bottom: 10px;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
@@ -1828,21 +1804,21 @@ body {
 }
 
 .card-icon {
-    font-size: 2em;
-    margin-bottom: 10px;
+    font-size: 1.8em;
+    margin-bottom: 5px;
 }
 
 .card-title {
-    font-size: 1.1em;
+    font-size: 1em;
     font-weight: bold;
     color: #fff;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
 }
 
 .card-desc {
     color: #ccc;
-    font-size: 0.9em;
-    margin-bottom: 10px;
+    font-size: 0.85em;
+    margin-bottom: 5px;
 }
 
 .card-status {
@@ -1853,31 +1829,31 @@ body {
 
 /* Dashboard */
 .dashboard-stats {
-    margin-bottom: 30px;
+    margin-bottom: 15px;
 }
 
 .stat-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    gap: 10px;
 }
 
 .stat-item {
     background: rgba(0,255,255,0.1);
     border: 1px solid rgba(0,255,255,0.3);
     border-radius: 8px;
-    padding: 15px;
+    padding: 10px;
     text-align: center;
 }
 
 .stat-label {
     color: #ccc;
-    font-size: 0.9em;
-    margin-bottom: 5px;
+    font-size: 0.85em;
+    margin-bottom: 3px;
 }
 
 .stat-value {
-    font-size: 1.5em;
+    font-size: 1.3em;
     font-weight: bold;
     color: #00ffff;
 }
@@ -1886,27 +1862,27 @@ body {
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(0,255,255,0.3);
     border-radius: 8px;
-    padding: 20px;
+    padding: 15px;
 }
 
 .map-title {
-    font-size: 1.2em;
+    font-size: 1.1em;
     font-weight: bold;
     color: #00ffff;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     text-align: center;
 }
 
 .influence-regions {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .region {
     display: flex;
     justify-content: space-between;
-    padding: 10px 15px;
+    padding: 8px 12px;
     background: rgba(0,255,255,0.05);
     border: 1px solid rgba(0,255,255,0.2);
     border-radius: 5px;
