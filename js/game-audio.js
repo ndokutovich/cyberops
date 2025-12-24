@@ -68,20 +68,15 @@ CyberOpsGame.prototype.enableAudioImmediately = function() {
 
 CyberOpsGame.prototype.startAppropriateMusic = function() {
     // Start appropriate music based on current screen using new systems
-    // IMPORTANT: Call immediately (not with setTimeout) to stay within user interaction context
-    // This is required for browsers' autoplay policy
-    if (this.loadScreenMusic) {
-        if (this.currentScreen === 'splash') {
-            this.loadScreenMusic('splash');
-        } else if (this.currentScreen === 'menu' || this.currentScreen === 'main-menu') {
-            this.loadScreenMusic('menu');
-        } else {
-            // If we're about to go to vendor-splash (initial screen), start that music
-            // This ensures music starts during the user interaction context
-            if (this.logger) this.logger.debug('🎵 Starting vendor-splash music during user interaction');
-            this.loadScreenMusic('vendor-splash');
+    setTimeout(() => {
+        if (this.loadScreenMusic) {
+            if (this.currentScreen === 'splash') {
+                this.loadScreenMusic('splash');
+            } else if (this.currentScreen === 'menu') {
+                this.loadScreenMusic('menu');
+            }
         }
-    }
+    }, 100);
 }
 
 CyberOpsGame.prototype.setupOneTimeResume = function() {
