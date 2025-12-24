@@ -262,7 +262,8 @@ class MissionService {
                 this.trackers.enemiesEliminatedByType[enemyType]++;
 
                 if (this.logger) this.logger.info(`🎯 Enemy eliminated: ${enemyType} (${this.trackers.enemiesEliminated} total, ${this.trackers.enemiesEliminatedByType[enemyType]} ${enemyType})`);
-                this.checkObjectiveProgress('eliminate', { enemy: enemyType });
+                // Pass type (not enemy) to match checkObjectiveProgress which checks data.type
+                this.checkObjectiveProgress('eliminate', { type: enemyType });
                 break;
 
             case 'collect':
@@ -316,25 +317,35 @@ class MissionService {
 
             case 'interact':
                 // Generic interaction event for explosives, switches, gates, etc.
-                const targetId = eventData.id;
+                // Handle both 'id' and 'targetId' properties
+                const interactTargetId = eventData.id !== undefined ? eventData.id : eventData.targetId;
 
-                if (targetId) {
-                    this.interactedObjects.add(targetId);
+                if (interactTargetId !== undefined) {
+                    this.interactedObjects.add(interactTargetId);
                 }
+
+                // DEBUG: Log full event data
+                if (this.logger) this.logger.info(`🔧 INTERACT EVENT: type=${eventData.type}, id=${eventData.id}, targetId=${eventData.targetId}, resolved=${interactTargetId}`);
 
                 // Track specific interaction types
                 if (eventData.type === 'explosive') {
                     this.trackers.explosivesPlanted++;
-                    if (this.logger) this.logger.info(`💣 Explosive planted: ${targetId || 'unknown'}`);
+                    if (this.logger) this.logger.info(`💣 Explosive planted: ${interactTargetId}`);
                 } else if (eventData.type === 'switch') {
                     this.trackers.switchesActivated++;
-                    if (this.logger) this.logger.info(`🔌 Switch activated: ${targetId || 'unknown'}`);
+                    if (this.logger) this.logger.info(`🔌 Switch activated: ${interactTargetId}`);
                 } else if (eventData.type === 'gate') {
                     this.trackers.gatesBreached++;
-                    if (this.logger) this.logger.info(`🚪 Gate breached: ${targetId || 'unknown'}`);
+                    if (this.logger) this.logger.info(`🚪 Gate breached: ${interactTargetId}`);
                 }
 
-                this.checkObjectiveProgress('interact', eventData);
+                // Ensure both id formats are available for checkObjectiveProgress
+                const enrichedEventData = {
+                    ...eventData,
+                    id: interactTargetId,
+                    targetId: interactTargetId
+                };
+                this.checkObjectiveProgress('interact', enrichedEventData);
                 break;
         }
 
@@ -375,9 +386,9 @@ class MissionService {
                         progressMade = true;
                     }
 
-                    // Debug logging for eliminate tracking
+                    // Debug logging for eliminate tracking - use INFO for visibility
                     if (this.logger) {
-                        this.logger.debug(`🎯 Eliminate check: target='${elimTargetType}' killed='${data.type}' match=${elimTargetType === data.type} progress=${objective.progress}/${objective.maxProgress}`);
+                        this.logger.info(`🎯 Eliminate check: objId=${objective.id} target='${elimTargetType}' killed='${data.type}' match=${elimTargetType === data.type} progress=${objective.progress}/${objective.maxProgress}`);
                     }
                     break;
 
