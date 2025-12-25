@@ -456,12 +456,16 @@ Quest.prototype.checkCompletion = function(game) {
 };
 
 Quest.prototype.checkObjective = function(objective, game) {
+        // Use window.game.inventory as the authoritative source
+        const inventory = (window.game && window.game.inventory) || game.inventory || {};
+
         switch(objective.type) {
             case 'kill':
                 return (game.enemiesKilledThisMission || 0) >= objective.count;
 
             case 'collect':
-                return game.inventory && game.inventory[objective.item] >= objective.count;
+                const hasItem = inventory[objective.item] >= objective.count;
+                return hasItem;
 
             case 'reach':
                 // Once reached, stay completed (don't require staying at location)

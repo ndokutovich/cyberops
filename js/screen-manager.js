@@ -518,6 +518,30 @@ class ScreenManager {
                 }
             },
             'returnToHub': () => this.navigateTo('hub'),
+            'returnToHubFromVictory': () => {
+                if (logger) logger.info('🏠 returnToHubFromVictory action called');
+                if (this.game?.dialogEngine) {
+                    const action = this.game.dialogEngine.actionRegistry?.get('returnToHubFromVictory');
+                    if (action) {
+                        if (logger) logger.info('✅ Calling DialogEngine returnToHubFromVictory handler');
+                        action.call(this.game.dialogEngine);
+                    } else {
+                        if (logger) logger.error('❌ returnToHubFromVictory not found in DialogEngine actionRegistry');
+                        // Fallback: generate agents and navigate to hub
+                        if (this.game?.generateNewAgentsForHire) {
+                            this.game.generateNewAgentsForHire();
+                        }
+                        this.navigateTo('hub');
+                    }
+                } else {
+                    if (logger) logger.error('❌ DialogEngine not available');
+                    // Fallback: generate agents and navigate to hub
+                    if (this.game?.generateNewAgentsForHire) {
+                        this.game.generateNewAgentsForHire();
+                    }
+                    this.navigateTo('hub');
+                }
+            },
             'returnToHubFromDefeat': () => {
                 if (logger) logger.info('🏠 returnToHubFromDefeat action called');
                 if (this.game?.dialogEngine) {

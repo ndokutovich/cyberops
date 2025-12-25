@@ -261,7 +261,7 @@ const SCREEN_CONFIG = {
         hud: 'none',  // No HUD during briefing
         content: (params) => {
             const game = window.game;
-            const mission = params?.mission || game?.currentMission;
+            const mission = params?.selectedMission || params?.mission || game?.currentMission;
             if (!mission) return '<p>No mission selected</p>';
 
             const objectives = mission.objectives?.map(obj =>
@@ -528,7 +528,7 @@ const SCREEN_CONFIG = {
             `;
         },
         actions: [
-            { text: 'CONTINUE', action: 'navigate:hub', primary: true },
+            { text: 'CONTINUE', action: 'execute:returnToHubFromVictory', primary: true },
             { text: 'NEXT MISSION', action: 'execute:proceedToNextMission' }
         ]
     },

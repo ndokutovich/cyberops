@@ -1258,64 +1258,6 @@ class MissionService {
     }
 
     /**
-     * Generate new agents available for hire
-     * Migrated from game-loop.js lines 240-277
-     *
-     * @param {Object} agentGeneration - Agent generation config from campaign
-     * @param {number} completedMissionCount - Number of missions completed
-     * @param {number} currentAgentCount - Current number of available agents
-     * @returns {Array} Newly generated agents
-     */
-    generateNewAgentsForHire(agentGeneration, completedMissionCount = 0, currentAgentCount = 0) {
-        if (!agentGeneration) {
-            if (this.logger) this.logger.warn('⚠️ No agent generation config provided');
-            return [];
-        }
-
-        const gen = agentGeneration;
-        const agentsToGenerate = gen.agentsPerMission || 2;
-        const newAgents = [];
-
-        // Generate new agents
-        for (let i = 0; i < agentsToGenerate; i++) {
-            const firstName = gen.firstNames[Math.floor(Math.random() * gen.firstNames.length)];
-            const lastName = gen.lastNames[Math.floor(Math.random() * gen.lastNames.length)];
-            const callsign = gen.callsigns[Math.floor(Math.random() * gen.callsigns.length)];
-            const spec = gen.specializations[Math.floor(Math.random() * gen.specializations.length)];
-
-            const newAgent = {
-                id: `agent_gen_${Date.now()}_${i}`,
-                name: `${firstName} "${callsign}" ${lastName}`,
-                specialization: spec.type,
-                skills: spec.skills,
-                cost: gen.baseCost +
-                      Math.floor(Math.random() * gen.maxCostVariance) +
-                      (completedMissionCount * gen.costIncreasePerMission),
-                hired: false,
-                health: spec.health + Math.floor(Math.random() * 20) - 10,
-                maxHealth: spec.health + Math.floor(Math.random() * 20) - 10,
-                speed: spec.speed,
-                damage: spec.damage + Math.floor(Math.random() * 10) - 5,
-                protection: spec.protection || 0,
-                generated: true,
-                generatedAt: Date.now()
-            };
-
-            // Ensure health values are reasonable
-            newAgent.health = Math.max(50, Math.min(150, newAgent.health));
-            newAgent.maxHealth = newAgent.health;
-
-            newAgents.push(newAgent);
-
-            if (this.logger) {
-                this.logger.info(`🆕 New agent available for hire: ${newAgent.name} (${newAgent.specialization})`);
-            }
-        }
-
-        return newAgents;
-    }
-
-    /**
      * Get mission statistics summary
      * @returns {Object} Mission statistics
      */
@@ -1592,23 +1534,7 @@ class MissionService {
                 });
                 game.completedMissions.push(game.currentMission.id);
                 if (this.logger) this.logger.info('📊 Completed missions after:', [...game.completedMissions]);
-
-                // Generate new agents available for hire
-                const newAgents = this.generateNewAgentsForHire(
-                    game.agentGeneration || window.ContentLoader?.getContent('agents') || null,
-                    game.completedMissions.length,
-                    game.availableAgents ? game.availableAgents.length : 0
-                );
-
-                // Add generated agents to available pool
-                if (newAgents && newAgents.length > 0) {
-                    if (!game.availableAgents) game.availableAgents = [];
-                    game.availableAgents.push(...newAgents);
-
-                    if (game.logEvent && newAgents.length > 0) {
-                        game.logEvent(`🆕 ${newAgents.length} new agents are available for hire at the Hub!`, 'system');
-                    }
-                }
+                // Agent generation now handled by AgentService via returnToHubFromVictory
             }
 
             // Award mission rewards

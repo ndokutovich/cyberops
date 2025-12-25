@@ -843,25 +843,33 @@ CyberOpsGame.prototype.generateFinalWords = function(agentName) {
 };
 
 CyberOpsGame.prototype.generateNewAgentsForHire = function() {
-    const agentPool = this.agentGeneration || window.ContentLoader?.getContent('agents') || null;
-    const completedMissionCount = this.completedMissions ? this.completedMissions.length : 0;
-    const currentAgentCount = this.availableAgents ? this.availableAgents.length : 0;
+    console.log('🆕 [DEBUG] generateNewAgentsForHire called');
 
-    if (this.gameServices && this.gameServices.missionService) {
-        const newAgents = this.gameServices.missionService.generateNewAgentsForHire(
-            agentPool,
-            completedMissionCount,
-            currentAgentCount
-        );
+    // Use AgentService (single source of truth for agent operations)
+    if (!this.gameServices?.agentService?.generateNewAgentsForHire) {
+        console.log('🆕 [DEBUG] AgentService not available!', {
+            hasGameServices: !!this.gameServices,
+            hasAgentService: !!this.gameServices?.agentService
+        });
+        if (this.logger) this.logger.warn('⚠️ AgentService not available for agent generation');
+        return;
+    }
 
-        if (newAgents && newAgents.length > 0) {
-            if (!this.availableAgents) this.availableAgents = [];
-            this.availableAgents.push(...newAgents);
+    // Check if generation config exists
+    const config = this.gameServices.agentService.generationConfig;
+    console.log('🆕 [DEBUG] generationConfig:', config ? 'SET' : 'NOT SET');
 
-            if (this.logEvent && newAgents.length > 0) {
-                this.logEvent(`🆕 ${newAgents.length} new agents are available for hire at the Hub!`, 'system');
-            }
-        }
+    // Increment completed missions counter
+    this.gameServices.agentService.incrementCompletedMissions();
+
+    // Generate new agents (they're automatically added to availableAgents by AgentService)
+    const newAgents = this.gameServices.agentService.generateNewAgentsForHire();
+
+    console.log('🆕 [DEBUG] Generated agents:', newAgents.length);
+    console.log('🆕 [DEBUG] Total available now:', this.gameServices.agentService.getAvailableAgents().length);
+
+    if (newAgents && newAgents.length > 0 && this.logEvent) {
+        this.logEvent(`🆕 ${newAgents.length} new agents are available for hire at the Hub!`, 'system');
     }
 };
 

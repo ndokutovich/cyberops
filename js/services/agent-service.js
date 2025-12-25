@@ -33,6 +33,10 @@ class AgentService {
         // Agent ID counter
         this.nextAgentId = 1;
 
+        // Agent generation config (set by ContentLoader from campaign)
+        this.generationConfig = null;
+        this.completedMissionCount = 0;
+
         // Bind methods to instance for external access (fixes "is not a function" in tests)
         this.initialize = this.initialize.bind(this);
         this.getAgent = this.getAgent.bind(this);
@@ -630,7 +634,86 @@ class AgentService {
         this.agentById.clear();
         this.agentByName.clear();
         this.nextAgentId = 1;
+        this.generationConfig = null;
+        this.completedMissionCount = 0;
         if (this.logger) this.logger.info('👥 AgentService reset');
+    }
+
+    /**
+     * Set agent generation configuration from campaign
+     * @param {Object} config - Agent generation configuration
+     */
+    setGenerationConfig(config) {
+        this.generationConfig = config;
+        if (this.logger) this.logger.info('📋 Agent generation config set:', {
+            agentsPerMission: config?.agentsPerMission,
+            baseCost: config?.baseCost,
+            specializations: config?.specializations?.length
+        });
+    }
+
+    /**
+     * Increment completed mission count (called after victory)
+     */
+    incrementCompletedMissions() {
+        this.completedMissionCount++;
+        if (this.logger) this.logger.debug(`📊 Completed missions: ${this.completedMissionCount}`);
+    }
+
+    /**
+     * Generate new agents for hire after mission completion
+     * Single source of truth for agent generation
+     * @returns {Array} Newly generated agents
+     */
+    generateNewAgentsForHire() {
+        if (!this.generationConfig) {
+            if (this.logger) this.logger.warn('⚠️ No agent generation config set');
+            return [];
+        }
+
+        const gen = this.generationConfig;
+        const agentsToGenerate = gen.agentsPerMission || 2;
+        const newAgents = [];
+
+        for (let i = 0; i < agentsToGenerate; i++) {
+            const firstName = gen.firstNames[Math.floor(Math.random() * gen.firstNames.length)];
+            const lastName = gen.lastNames[Math.floor(Math.random() * gen.lastNames.length)];
+            const callsign = gen.callsigns[Math.floor(Math.random() * gen.callsigns.length)];
+            const spec = gen.specializations[Math.floor(Math.random() * gen.specializations.length)];
+
+            const newAgent = {
+                id: `agent_gen_${Date.now()}_${i}`,
+                name: `${firstName} "${callsign}" ${lastName}`,
+                specialization: spec.type,
+                class: spec.type.charAt(0).toUpperCase() + spec.type.slice(1),
+                skills: spec.skills,
+                cost: gen.baseCost +
+                      Math.floor(Math.random() * (gen.maxCostVariance || 500)) +
+                      (this.completedMissionCount * (gen.costIncreasePerMission || 100)),
+                hired: false,
+                health: spec.health + Math.floor(Math.random() * 20) - 10,
+                maxHealth: spec.health + Math.floor(Math.random() * 20) - 10,
+                speed: spec.speed,
+                damage: spec.damage + Math.floor(Math.random() * 10) - 5,
+                protection: spec.protection || 0,
+                generated: true,
+                generatedAt: Date.now()
+            };
+
+            // Ensure health values are reasonable
+            newAgent.health = Math.max(50, Math.min(150, newAgent.health));
+            newAgent.maxHealth = newAgent.health;
+
+            // Add to available agents
+            this.addAvailableAgent(newAgent);
+            newAgents.push(newAgent);
+
+            if (this.logger) {
+                this.logger.info(`🆕 New agent for hire: ${newAgent.name} (${newAgent.specialization}) - ${newAgent.cost} credits`);
+            }
+        }
+
+        return newAgents;
     }
 }
 

@@ -19,9 +19,9 @@
         location: 'Singapore',
 
         agents: {
-            max: 3,
+            max: 5,
             required: 1,
-            recommended: 2
+            recommended: 3
         },
 
         map: {

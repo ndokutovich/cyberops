@@ -539,16 +539,38 @@ class ContentLoader {
      * Load agent generation configuration
      */
     loadAgentGeneration(game) {
+        console.log('👥 [DEBUG] loadAgentGeneration called');
+
         const agentGen = this.currentCampaign.agentGeneration;
-        if (!agentGen) return;
+        if (!agentGen) {
+            console.log('👥 [DEBUG] No agentGeneration in campaign!');
+            return;
+        }
+
+        console.log('👥 [DEBUG] agentGeneration found:', {
+            agentsPerMission: agentGen.agentsPerMission,
+            baseCost: agentGen.baseCost,
+            hasFirstNames: !!agentGen.firstNames?.length
+        });
 
         if (logger) logger.debug('👥 Loading agent generation configuration...');
 
-        // Set on game object for mission completion
+        // Set on game object for backward compatibility
         game.agentGeneration = agentGen;
 
         // Store for reference
         this.contentCache.set('agentGeneration', agentGen);
+
+        // Also set on AgentService (single source of truth)
+        if (game.gameServices?.agentService?.setGenerationConfig) {
+            game.gameServices.agentService.setGenerationConfig(agentGen);
+            console.log('👥 [DEBUG] Config set on AgentService');
+        } else {
+            console.log('👥 [DEBUG] AgentService.setGenerationConfig NOT available!', {
+                hasGameServices: !!game.gameServices,
+                hasAgentService: !!game.gameServices?.agentService
+            });
+        }
     }
 
     /**

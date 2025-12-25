@@ -52,19 +52,12 @@ CyberOpsGame.prototype.updateHubStats = function() {
         const hubActiveAgents = document.getElementById('hubActiveAgents');
         if (hubActiveAgents) hubActiveAgents.textContent = this.activeAgents.length;
 
-        // Update world control (new hub display)
+        // Update world control display
         const hubWorldControl = document.getElementById('hubWorldControl');
         if (hubWorldControl) hubWorldControl.textContent = `${this.worldControl}%`;
 
         const hubControlProgress = document.getElementById('hubControlProgress');
         if (hubControlProgress) hubControlProgress.style.width = `${this.worldControl}%`;
-
-        // Legacy world control elements (for backward compatibility)
-        const worldControlPercent = document.getElementById('worldControlPercent');
-        if (worldControlPercent) worldControlPercent.textContent = `${this.worldControl}%`;
-
-        const controlProgress = document.getElementById('controlProgress');
-        if (controlProgress) controlProgress.style.width = `${this.worldControl}%`;
         
         // Update status indicators
         const availableMissions = this.missions.length - this.completedMissions.length;

@@ -209,16 +209,31 @@
         });
 
         engine.registerAction('returnToHubFromVictory', function() {
+            console.log('🏠 [DEBUG] returnToHubFromVictory action triggered');
+
+            // Get fresh game reference (the captured 'game' variable may be stale)
+            const currentGame = window.game;
+            if (!currentGame) {
+                console.error('❌ [DEBUG] window.game is undefined!');
+                return;
+            }
+
             this.closeAll();
             // Save progress
-            if (game && game.saveMissionProgress) {
-                game.saveMissionProgress();
+            if (currentGame.saveMissionProgress) {
+                currentGame.saveMissionProgress();
+            }
+
+            // Generate new agents for hire after each completed mission
+            console.log('🆕 [DEBUG] About to call generateNewAgentsForHire, exists:', !!currentGame.generateNewAgentsForHire);
+            if (currentGame.generateNewAgentsForHire) {
+                currentGame.generateNewAgentsForHire();
             }
 
             // Check if we're transitioning to a new act
-            const completedMission = game.currentMission;
-            const completedMissionIndex = game.currentMissionIndex;
-            const missions = game.missions || [];
+            const completedMission = currentGame.currentMission;
+            const completedMissionIndex = currentGame.currentMissionIndex;
+            const missions = currentGame.missions || [];
 
             // Find next mission (if any)
             const nextMissionIndex = completedMissionIndex + 1;
@@ -244,8 +259,8 @@
             }
 
             // No act transition or no cutscene - go directly to hub
-            if (game && game.showSyndicateHub) {
-                game.showSyndicateHub();
+            if (currentGame.showSyndicateHub) {
+                currentGame.showSyndicateHub();
             }
         });
 
