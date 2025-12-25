@@ -663,7 +663,14 @@ class GameFacade {
             extraction: embedded.extraction,
             terminals: embedded.terminals || [],
             doors: embedded.doors || [],
-            items: embedded.items || []
+            items: embedded.items || [],
+            explosiveTargets: embedded.explosiveTargets || [],
+            collectables: embedded.collectables || [],
+            cover: embedded.cover || [],
+            gates: embedded.gates || [],
+            targets: embedded.targets || [],
+            npcs: embedded.npcs || [],
+            enemySpawns: embedded.enemySpawns || []
         };
     }
 

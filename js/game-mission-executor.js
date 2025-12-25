@@ -1143,19 +1143,21 @@ CyberOpsGame.prototype.loadMapFromEmbeddedTiles = function(mapDef) {
         tiles: [],
         items: [],
         doors: mapDef.embedded.doors || mapDef.doors || [],
-        terminals: [],
-        collectables: mapDef.embedded.collectables || [], // Load collectables from mission definition
+        terminals: mapDef.embedded.terminals || mapDef.terminals || [],
+        collectables: mapDef.embedded.collectables || mapDef.collectables || [],
         coverPositions: mapDef.embedded.coverCount || mapDef.coverPositions || 0,
-        enemySpawns: mapDef.enemySpawns || [],
-        // Additional map objects that may be defined at mapDef level
-        explosiveTargets: mapDef.explosiveTargets || [],
-        gates: mapDef.gates || [],
-        switches: mapDef.switches || [],
-        turrets: mapDef.turrets || [],
-        targets: mapDef.targets || [],
-        civilians: mapDef.civilians || [],
-        hazards: mapDef.hazards || [],
-        boss: mapDef.boss || null
+        enemySpawns: mapDef.embedded.enemySpawns || mapDef.enemySpawns || [],
+        // Additional map objects - check embedded first, then mapDef level
+        explosiveTargets: mapDef.embedded.explosiveTargets || mapDef.explosiveTargets || [],
+        gates: mapDef.embedded.gates || mapDef.gates || [],
+        switches: mapDef.embedded.switches || mapDef.switches || [],
+        turrets: mapDef.embedded.turrets || mapDef.turrets || [],
+        targets: mapDef.embedded.targets || mapDef.targets || [],
+        civilians: mapDef.embedded.civilians || mapDef.civilians || [],
+        hazards: mapDef.embedded.hazards || mapDef.hazards || [],
+        boss: mapDef.embedded.boss || mapDef.boss || null,
+        npcs: mapDef.embedded.npcs || mapDef.npcs || [],
+        cover: mapDef.embedded.cover || mapDef.cover || []
     };
 
     // Debug: Log collectables loading

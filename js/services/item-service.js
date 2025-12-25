@@ -307,21 +307,24 @@ class ItemService {
     }
 
     /**
-     * Get color for item type
+     * Get color for item type - uses CollectableRegistry
      * @param {string} type - Item type
      * @returns {string} Color hex code
      */
     getItemColor(type) {
+        // Use CollectableRegistry for polymorphic color lookup
+        if (window.CollectableRegistry) {
+            return window.CollectableRegistry.getColor(type);
+        }
+
+        // Fallback colors
         const colors = {
             'health': '#ff0000',
-            'medkit': '#ff0000',
-            'ammo': '#ffaa00',
             'credits': '#ffff00',
             'intel': '#00ff00',
-            'shield': '#00ffff',
             'weapon': '#ff00ff',
             'keycard': '#ff00ff',
-            'explosive': '#ff6600'
+            'explosives': '#ff6600'
         };
         return colors[type] || '#ffffff';
     }

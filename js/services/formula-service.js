@@ -74,105 +74,26 @@ if (typeof FormulaService === 'undefined') {
 
     /**
      * Calculate collectible pickup value
+     * Uses CollectableRegistry for polymorphic behavior
      * @param {Object} item - Collectible item
      * @param {Object} agent - Agent picking up item
      * @param {Object} gameState - Current game state
      * @returns {Object} Pickup effects
      */
     calculateCollectibleEffect(item, agent, gameState = {}) {
-        const effects = {
+        // Use CollectableRegistry for polymorphic calculation
+        if (window.CollectableRegistry) {
+            return window.CollectableRegistry.calculateEffect(item, agent, gameState);
+        }
+
+        // Fallback for tests or when registry not available
+        return {
             credits: 0,
             health: 0,
             armor: 0,
             researchPoints: 0,
-            ammo: 0,
-            explosives: 0,
-            message: ''
+            message: `Collected ${item.name || item.type || 'item'}`
         };
-
-        switch(item.type) {
-            case 'credits':
-                // Credits with potential research bonus
-                const creditValue = item.value || (this.constants.CREDIT_BASE_VALUE +
-                    Math.floor(Math.random() * this.constants.CREDIT_RANGE));
-                effects.credits = creditValue;
-                effects.message = `💰 Collected ${creditValue} credits`;
-                break;
-
-            case 'health':
-                // Health with overheal prevention
-                const healAmount = Math.min(
-                    item.value || this.constants.HEALTH_PICKUP_VALUE,
-                    agent.maxHealth - agent.health
-                );
-                effects.health = healAmount;
-                effects.message = healAmount > 0 ?
-                    `❤️ Healed ${healAmount} HP` :
-                    '❤️ Health already full';
-                break;
-
-            case 'armor':
-                // Stackable armor
-                const armorValue = item.value || this.constants.ARMOR_PICKUP_VALUE;
-                effects.armor = armorValue;
-                effects.message = `🛡️ Armor upgraded (+${armorValue} protection)`;
-                break;
-
-            case 'intel':
-                // Intel converts to research points
-                const intelValue = item.value || 20;
-                const researchValue = Math.floor(intelValue * this.constants.INTEL_TO_RESEARCH_RATIO);
-                effects.researchPoints = researchValue;
-                effects.message = `📄 Collected intel (+${researchValue} research points)`;
-                break;
-
-            case 'ammo':
-                // Ammo refills abilities
-                effects.ammo = item.value || this.constants.AMMO_REFILL_AMOUNT;
-                effects.message = `🔫 Collected ammo (+${effects.ammo} rounds)`;
-                break;
-
-            case 'explosives':
-                // Explosive pickups
-                effects.explosives = item.value || this.constants.EXPLOSIVE_PICKUP_COUNT;
-                effects.message = `💣 Collected ${effects.explosives} explosives`;
-                break;
-
-            case 'keycard':
-                // Special keycards for doors/objectives
-                effects.keycard = item.color || 'blue';
-                effects.message = `🗝️ Collected ${effects.keycard} keycard`;
-                break;
-
-            case 'collectable':
-                // Generic collectable - check for various properties
-                const messages = [];
-                if (item.credits) {
-                    effects.credits = item.credits;
-                    messages.push(`💰 ${item.credits} credits`);
-                }
-                if (item.health) {
-                    const healAmt = Math.min(item.health, agent.maxHealth - agent.health);
-                    effects.health = healAmt;
-                    if (healAmt > 0) messages.push(`❤️ ${healAmt} HP`);
-                }
-                if (item.armor) {
-                    effects.armor = item.armor;
-                    messages.push(`🛡️ +${item.armor} armor`);
-                }
-                if (item.researchPoints) {
-                    effects.researchPoints = item.researchPoints;
-                    messages.push(`📄 +${item.researchPoints} research`);
-                }
-                if (item.ammo) {
-                    effects.ammo = item.ammo;
-                    messages.push(`🔫 +${item.ammo} ammo`);
-                }
-                effects.message = messages.length > 0 ? messages.join(', ') : `📦 Collected ${item.name || 'item'}`;
-                break;
-        }
-
-        return effects;
     }
 
     /**

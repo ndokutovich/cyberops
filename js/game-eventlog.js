@@ -168,36 +168,14 @@ CyberOpsGame.prototype.logDeath = function(unit) {
     }
 };
 
-// Log item collection
+// Log item collection - uses CollectableRegistry for polymorphic behavior
 CyberOpsGame.prototype.logItemCollected = function(agent, item) {
     const agentName = agent.name || 'Agent';
-    let itemDesc = '';
 
-    switch(item.type) {
-        case 'credits':
-            itemDesc = `💰 ${item.value} credits`;
-            break;
-        case 'intel':
-            itemDesc = `📄 Intel document`;
-            break;
-        case 'health':
-            itemDesc = `❤️ Health pack`;
-            break;
-        case 'armor':
-            itemDesc = `🛡️ Armor upgrade`;
-            break;
-        case 'ammo':
-            itemDesc = `🔫 Ammo`;
-            break;
-        case 'keycard':
-            itemDesc = `🗝️ Keycard`;
-            break;
-        case 'explosives':
-            itemDesc = `💣 Explosives`;
-            break;
-        default:
-            itemDesc = item.type;
-    }
+    // Use CollectableRegistry for polymorphic log message
+    const itemDesc = window.CollectableRegistry
+        ? window.CollectableRegistry.getLogMessage(item, { agent })
+        : (item.name || item.type || 'item');
 
     this.logEvent(`${agentName} collected ${itemDesc}`, 'item');
 };
