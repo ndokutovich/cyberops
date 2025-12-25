@@ -291,7 +291,7 @@ class QuestCollectable extends CollectableType {
     constructor() {
         super({
             id: 'collectable',
-            name: 'Quest Item',
+            name: 'Item',
             emoji: '📦',
             color: '#aa00ff',
             sound: 'pickup'
@@ -299,21 +299,42 @@ class QuestCollectable extends CollectableType {
     }
 
     getLogMessage(item) {
-        const name = item.name || item.item || 'Quest Item';
-        return `📦 ${name}`;
+        const sprite = item.sprite || '📦';
+        const name = item.name || item.item || 'Item';
+        const parts = [];
+
+        // Show what the item gives
+        if (item.credits) {
+            parts.push(`+${item.credits} credits`);
+        }
+        if (item.health) {
+            parts.push(`+${item.health} health`);
+        }
+        if (item.researchPoints) {
+            parts.push(`+${item.researchPoints} research`);
+        }
+        if (item.item && !item.credits && !item.health) {
+            // Quest item with no immediate reward
+            parts.push('quest item');
+        }
+
+        if (parts.length > 0) {
+            return `${sprite} ${name} (${parts.join(', ')})`;
+        }
+        return `${sprite} ${name}`;
     }
 
     calculateEffect(item, agent, gameState) {
-        const name = item.name || item.item || 'Quest Item';
+        const name = item.name || item.item || 'Item';
         const questItem = item.item || item.questItem;
 
         const effects = {
-            questItem: questItem,
-            message: `📦 Collected ${name}`
+            message: this.getLogMessage(item)
         };
 
-        // Some quest items may also give credits/research
+        if (questItem) effects.questItem = questItem;
         if (item.credits) effects.credits = item.credits;
+        if (item.health) effects.health = item.health;
         if (item.researchPoints) effects.researchPoints = item.researchPoints;
 
         return effects;
