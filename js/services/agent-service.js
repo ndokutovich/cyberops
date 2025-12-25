@@ -228,6 +228,10 @@ class AgentService {
         agent.maxHealth = agent.maxHealth || agent.health || 100;
 
         this.availableAgents.push(agent);
+
+        // Index agent for lookup by ID/name (required for hireAgent to find them)
+        this.indexAgent(agent);
+
         if (this.logger) this.logger.debug(`➕ Added available agent: ${agent.name}`);
         return true;
     }
