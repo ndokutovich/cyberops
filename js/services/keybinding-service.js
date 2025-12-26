@@ -5,6 +5,9 @@
 
 class KeybindingService {
     constructor() {
+        // Initialize logger
+        this.logger = window.Logger ? new window.Logger('KeybindingService') : null;
+
         this.bindings = new Map();
         this.categories = new Map();
         this.activeContext = 'game'; // game, menu, dialog, etc.
@@ -14,6 +17,8 @@ class KeybindingService {
 
         // Load user preferences if any
         this.loadUserBindings();
+
+        if (this.logger) this.logger.debug('KeybindingService initialized');
     }
 
     initializeDefaults() {
@@ -67,7 +72,7 @@ class KeybindingService {
         // Check for conflicts
         const existingAction = this.getActionByKey(defaultKey);
         if (existingAction && existingAction !== action) {
-            if (logger) logger.warn(`⚠️ Key conflict: ${defaultKey} is already bound to ${existingAction}`);
+            if (this.logger) this.logger.warn(`⚠️ Key conflict: ${defaultKey} is already bound to ${existingAction}`);
             return false;
         }
 
@@ -112,14 +117,14 @@ class KeybindingService {
     updateBinding(action, newKey) {
         // Check if action exists
         if (!this.bindings.has(action)) {
-            if (logger) logger.error(`Action ${action} not found`);
+            if (this.logger) this.logger.error(`Action ${action} not found`);
             return false;
         }
 
         // Check for conflicts
         const existingAction = this.getActionByKey(newKey);
         if (existingAction && existingAction !== action) {
-            if (logger) logger.warn(`Cannot bind ${newKey} to ${action}: already used by ${existingAction}`);
+            if (this.logger) this.logger.warn(`Cannot bind ${newKey} to ${action}: already used by ${existingAction}`);
             return false;
         }
 
@@ -186,7 +191,7 @@ class KeybindingService {
                     }
                 }
             } catch (e) {
-                if (logger) logger.error('Failed to load custom keybindings:', e);
+                if (this.logger) this.logger.error('Failed to load custom keybindings:', e);
             }
         }
     }
