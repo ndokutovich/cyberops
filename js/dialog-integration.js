@@ -2978,7 +2978,7 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
             return;
         }
 
-        const agent = game.availableAgents.find(a => a.id === selectedAgent.id);
+        const agent = game.availableAgents.find(a => String(a.id) === String(selectedAgent.id));
 
         if (this.logger) this.logger.debug('Found agent in availableAgents:', agent);
         if (this.logger) this.logger.debug('Agent details:', {

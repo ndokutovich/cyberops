@@ -1063,8 +1063,9 @@ class DeclarativeDialogEngine {
             if (target === 'hire-confirm' && context.agent) {
                 // Find the agent and store it for the confirmation dialog
                 const game = window.game;
-                const agentId = parseInt(context.agent);
-                const agent = game.availableAgents?.find(a => a.id === agentId);
+                // Don't parseInt - agent IDs can be strings like "agent_gen_1234567890_0"
+                const agentId = context.agent;
+                const agent = game.availableAgents?.find(a => String(a.id) === String(agentId) || String(a.originalId) === String(agentId));
                 if (this.logger) this.logger.debug('Navigate to hire-confirm: agentId=', agentId, 'found agent=', agent);
                 if (agent) {
                     // Store only the original agent, not the enhanced version
