@@ -30,10 +30,10 @@ class GameEngine {
         this.lastFpsUpdate = Date.now();
 
         // Input state (raw input, not game interpretation)
+        // Keyboard state is managed by KeyboardDispatcherService
         this.mouseX = 0;
         this.mouseY = 0;
         this.mouseDown = false;
-        this.keysPressed = new Set();
 
         // Audio state
         this.audioEnabled = false;
@@ -87,20 +87,18 @@ class GameEngine {
             this.mouseDown = false;
         });
 
-        // Keyboard events
-        window.addEventListener('keydown', (e) => {
-            this.keysPressed.add(e.key.toLowerCase());
-        });
-
-        window.addEventListener('keyup', (e) => {
-            this.keysPressed.delete(e.key.toLowerCase());
-        });
+        // Keyboard events are handled by KeyboardDispatcherService
+        // Key state accessed via getInputState() which queries the dispatcher
     }
 
     /**
      * Get current input state (for GameFacade to interpret)
      */
     getInputState() {
+        // Get key state from KeyboardDispatcherService if available
+        const dispatcher = window.game?.gameServices?.keyboardDispatcher;
+        const keys = dispatcher ? dispatcher.getPressedKeys() : [];
+
         return {
             mouse: {
                 x: this.mouseX,
@@ -109,7 +107,7 @@ class GameEngine {
                 worldX: this.screenToWorldX(this.mouseX),
                 worldY: this.screenToWorldY(this.mouseY)
             },
-            keys: Array.from(this.keysPressed)
+            keys: keys
         };
     }
 
