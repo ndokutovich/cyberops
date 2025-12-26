@@ -3,7 +3,6 @@
  * A fully data-driven dialog system where ALL behavior is defined in configuration
  * Zero hardcoded dialog logic - everything is declarative
  */
-console.log('📦 declarative-dialog-engine.js LOADING...');
 
 class DeclarativeDialogEngine {
     constructor() {
@@ -1338,9 +1337,7 @@ class DeclarativeDialogEngine {
 }
 
 // Create global instance
-console.log('📦 Creating declarativeDialogEngine global instance...');
 window.declarativeDialogEngine = new DeclarativeDialogEngine();
-console.log('✅ window.declarativeDialogEngine created:', !!window.declarativeDialogEngine);
 
 // Export for module usage
 if (typeof module !== 'undefined' && module.exports) {
