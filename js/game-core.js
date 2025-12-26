@@ -23,8 +23,10 @@ class CyberOpsGame {
         this.initializeCanvasAndState();
 
         // Initialize declarative dialog system
+        console.log('🔍 game-core.js: Checking for declarativeDialogEngine...', !!window.declarativeDialogEngine);
         if (typeof this.initializeDeclarativeDialogs === 'function') {
             this.initializeDeclarativeDialogs();
+            console.log('🔍 game-core.js: After init, this.dialogEngine =', !!this.dialogEngine);
         }
 
         // Initialize cutscene system

@@ -1766,9 +1766,6 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
                 html += '</div></div>';
             });
-        } else {
-            html += '<p style="color: #ff4444;">Keyboard binding service not loaded</p>';
-        }
 
         html += '</div>';
         return html;
