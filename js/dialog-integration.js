@@ -2162,7 +2162,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         const agentId = window.declarativeDialogEngine.stateData['agent-equipment']?.dynamicId;
         if (!agentId) return '<p style="color: #888;">No agent selected</p>';
 
-        const agent = this.activeAgents.find(a => a.id === parseInt(agentId));
+        const agent = this.gameServices?.agentService?.getAgent(agentId);
         if (!agent) return '<p style="color: #888;">Agent not found</p>';
 
         let html = '<div class="weapon-selection">';
@@ -2210,7 +2210,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         const agentId = window.declarativeDialogEngine.stateData['agent-equipment']?.dynamicId;
         if (!agentId) return '<p style="color: #888;">No agent selected</p>';
 
-        const agent = this.activeAgents.find(a => a.id === parseInt(agentId));
+        const agent = this.gameServices?.agentService?.getAgent(agentId);
         if (!agent) return '<p style="color: #888;">Agent not found</p>';
 
         let html = '<div class="armor-selection">';
@@ -2263,7 +2263,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             return '<p style="color: #888;">No agent selected</p>';
         }
 
-        const agent = this.activeAgents.find(a => a.id === parseInt(agentId));
+        const agent = this.gameServices?.agentService?.getAgent(agentId);
 
         if (!agent) {
             return '<p style="color: #888;">Agent not found</p>';
@@ -3103,7 +3103,7 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
 
     // Select RPG agent for character sheet
     engine.registerAction('selectRPGAgent', function(agentId) {
-        const agent = game.activeAgents.find(a => a.id === parseInt(agentId));
+        const agent = game.gameServices?.agentService?.getAgent(agentId);
         if (agent) {
             game.selectedRPGAgent = agent;
             // Refresh the current dialog
@@ -3159,13 +3159,15 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
 
     // Dismiss agent
     engine.registerAction('dismissAgent', function(agentId) {
-        const index = game.activeAgents.findIndex(a => a.id === parseInt(agentId));
-        if (index !== -1) {
-            const agent = game.activeAgents[index];
-            game.activeAgents.splice(index, 1);
-            agent.hired = false;
-            game.updateHubStats();
-            this.actionRegistry.get('refresh')();
+        const agent = game.gameServices?.agentService?.getAgent(agentId);
+        if (agent) {
+            const index = game.activeAgents.indexOf(agent);
+            if (index !== -1) {
+                game.activeAgents.splice(index, 1);
+                agent.hired = false;
+                game.updateHubStats();
+                this.actionRegistry.get('refresh')();
+            }
         }
     });
 
@@ -3182,8 +3184,8 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
             game.initializeEquipmentSystem();
         }
 
-        // Set selected agent
-        game.selectedEquipmentAgent = parseInt(actualAgentId);
+        // Set selected agent (keep as string - IDs can be strings like "agent_gen_123")
+        game.selectedEquipmentAgent = actualAgentId;
 
         // Close declarative dialogs and open arsenal
         this.closeAll();
@@ -3205,8 +3207,8 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         game.agentLoadouts[agentId].weapon = parseInt(weaponId);
 
         // Update agent stats if needed
-        const agent = game.activeAgents.find(a => a.id === parseInt(agentId));
-        const weapon = game.weapons.find(w => w.id === parseInt(weaponId));
+        const agent = game.gameServices?.agentService?.getAgent(agentId);
+        const weapon = game.weapons.find(w => String(w.id) === String(weaponId));
         if (agent && weapon) {
             agent.weaponEquipped = weapon;
         }
@@ -3250,8 +3252,8 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         game.agentLoadouts[agentId].armor = parseInt(armorId);
 
         // Update agent stats if needed
-        const agent = game.activeAgents.find(a => a.id === parseInt(agentId));
-        const armor = game.equipment.find(e => e.id === parseInt(armorId) && e.type === 'armor');
+        const agent = game.gameServices?.agentService?.getAgent(agentId);
+        const armor = game.equipment.find(e => String(e.id) === String(armorId) && e.type === 'armor');
         if (agent && armor) {
             agent.armorEquipped = armor;
         }

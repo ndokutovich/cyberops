@@ -111,6 +111,54 @@ If you're about to filter for `owned > 0`, STOP. Use `getPlayerStartingInventory
 
 ---
 
+## 🆔 CORE ARCHITECTURE PRINCIPLE #3: USE AgentService.getAgent() FOR ID LOOKUPS
+
+### This is THE THIRD MOST IMPORTANT RULE
+
+**ALWAYS use `agentService.getAgent(id)` for agent lookups.** This method already handles all ID formats. This is non-negotiable.
+
+#### Why This Matters
+- **Generated Agents Bug**: Generated agents have string IDs like `"agent_gen_1234567890_0"`
+- **parseInt() Fails**: `parseInt("agent_gen_123")` returns `NaN`, breaking all lookups
+- **Type Mismatch**: Campaign agents may have numeric IDs (`0`, `1`) while generated agents have strings
+- **getAgent() Already Exists**: Don't duplicate functionality that already handles this!
+
+#### The Golden Rule
+```javascript
+// ✅ CORRECT - Use existing AgentService.getAgent()
+const agent = game.gameServices.agentService.getAgent(agentId);
+
+// ✅ CORRECT - For non-agent IDs, use String() comparison
+const weapon = weapons.find(w => String(w.id) === String(weaponId));
+
+// ❌ WRONG - Using parseInt() on IDs
+const agent = agents.find(a => a.id === parseInt(agentId));  // NaN for string IDs!
+
+// ❌ WRONG - Manual array.find instead of using the service
+const agent = game.activeAgents.find(a => a.id === agentId);  // Use getAgent()!
+
+// ❌ WRONG - Creating duplicate ID handling code
+AgentService.findById(agents, id);  // NO! Use getAgent() which already exists!
+```
+
+#### AgentService.getAgent() Already Handles:
+- Raw identifier lookup in Map
+- String(identifier) lookup in Map
+- Name-based lookup
+- Fallback to loose equality (==) array search
+
+#### Enforcement
+- **NEVER** use `parseInt()` on agent IDs
+- **NEVER** use `array.find()` when `agentService.getAgent()` is available
+- **NEVER** create duplicate ID handling utilities
+- **ALWAYS** use `game.gameServices.agentService.getAgent(id)` for agent lookups
+- **ALWAYS** use `String(id) === String(otherId)` for non-agent ID comparisons
+
+If you're about to write `parseInt(agentId)`, STOP. Use `agentService.getAgent()` instead.
+If you're about to write `agents.find(a => a.id === x)`, STOP. Use `agentService.getAgent()` instead.
+
+---
+
 #### Critical Update (2025-01): Proxy Setters Removed
 
 **Properties are now READ-ONLY.** Direct assignment no longer works:

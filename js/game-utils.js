@@ -5,7 +5,7 @@ CyberOpsGame.prototype.selectRPGAgent = function(agentId) {
     if (!this.logger && window.Logger) {
         this.logger = new window.Logger('GameUtils');
     }
-    const agent = this.activeAgents.find(a => a.id === parseInt(agentId));
+    const agent = this.gameServices?.agentService?.getAgent(agentId);
     if (agent) {
         this.selectedRPGAgent = agent;
         // Refresh dialog if open
