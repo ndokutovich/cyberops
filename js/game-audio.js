@@ -22,16 +22,34 @@ CyberOpsGame.prototype.setupAudioInteraction = function() {
         if (!this.audioEnabled) {
             this.enableAudio();
         }
-        // Remove listeners after first interaction
+        // Remove listeners after first interaction (for click/touch only)
         document.removeEventListener('click', enableAudioOnClick);
         document.removeEventListener('touchstart', enableAudioOnClick);
-        document.removeEventListener('keydown', enableAudioOnClick);
     };
 
-    // Add listeners for first user interaction
+    // Add listeners for first user interaction (click and touch)
     document.addEventListener('click', enableAudioOnClick);
     document.addEventListener('touchstart', enableAudioOnClick);
-    document.addEventListener('keydown', enableAudioOnClick);
+
+    // Use keyboard dispatcher for keydown if available, otherwise fallback
+    const dispatcher = this.gameServices?.keyboardDispatcher;
+    if (dispatcher) {
+        // Register one-time handler via dispatcher
+        dispatcher.registerOneTimeHandler(() => {
+            if (!this.audioEnabled) {
+                this.enableAudio();
+            }
+        });
+    } else {
+        // Fallback for when dispatcher not available
+        const keyHandler = () => {
+            if (!this.audioEnabled) {
+                this.enableAudio();
+            }
+            document.removeEventListener('keydown', keyHandler);
+        };
+        document.addEventListener('keydown', keyHandler);
+    }
 
     // Check if audio was previously enabled
     if (sessionStorage.getItem('audioEnabled') === 'true') {

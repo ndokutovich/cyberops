@@ -49,8 +49,80 @@ class ModalEngine {
             document.head.appendChild(styles);
         }
 
-        // Add keyboard listener
-        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+        // Setup keyboard handling via dispatcher or fallback
+        this.setupKeyboardHandling();
+    }
+
+    /**
+     * Setup keyboard handling via KeyboardDispatcherService
+     */
+    setupKeyboardHandling() {
+        // Try to get dispatcher - may not be available yet during init
+        // We'll check again when modals are shown
+        const dispatcher = window.game?.gameServices?.keyboardDispatcher;
+
+        if (dispatcher) {
+            this.keyboardDispatcher = dispatcher;
+
+            // Register MODAL context handler
+            dispatcher.registerHandler('MODAL', '*', (e) => {
+                return this.handleKeyboardDispatcher(e);
+            });
+        } else {
+            // Fallback to direct listener (for when modal engine loads before game)
+            document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+        }
+    }
+
+    /**
+     * Handle keyboard via dispatcher - returns true if consumed
+     */
+    handleKeyboardDispatcher(e) {
+        if (this.modalStack.length === 0) return false;
+
+        const topModalId = this.modalStack[this.modalStack.length - 1];
+        const modal = this.activeModals.find(m => m.id === topModalId);
+        if (!modal) return false;
+
+        // ESC to close
+        if (e.key === 'Escape' && modal.config.closeButton) {
+            modal.close();
+            return true;
+        }
+
+        // Number keys for NPC choices
+        if (modal.config.type === 'npc' && /^[1-9]$/.test(e.key)) {
+            const choiceIndex = parseInt(e.key) - 1;
+            const choiceBtn = modal.element.querySelector(`[data-choice-index="${choiceIndex}"]`);
+            if (choiceBtn) {
+                choiceBtn.click();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Activate MODAL keyboard context
+     */
+    activateKeyboardContext() {
+        // Try to get dispatcher if not already set
+        if (!this.keyboardDispatcher) {
+            this.keyboardDispatcher = window.game?.gameServices?.keyboardDispatcher;
+        }
+        if (this.keyboardDispatcher) {
+            this.keyboardDispatcher.activateContext('MODAL');
+        }
+    }
+
+    /**
+     * Deactivate MODAL keyboard context
+     */
+    deactivateKeyboardContext() {
+        if (this.keyboardDispatcher) {
+            this.keyboardDispatcher.deactivateContext('MODAL');
+        }
     }
 
     /**
@@ -61,6 +133,9 @@ class ModalEngine {
     show(config) {
         const modalConfig = { ...this.defaultConfig, ...config };
         const modalId = `modal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Track if this is the first modal (stack empty before push)
+        const wasEmpty = this.modalStack.length === 0;
 
         const modal = {
             id: modalId,
@@ -86,6 +161,11 @@ class ModalEngine {
         // Add to active modals
         this.activeModals.push(modal);
         this.modalStack.push(modalId);
+
+        // Activate keyboard context if this is the first modal
+        if (wasEmpty) {
+            this.activateKeyboardContext();
+        }
 
         // Dim previous modals when stacking
         if (this.modalStack.length > 1) {
@@ -475,6 +555,11 @@ class ModalEngine {
         // Remove from active modals immediately to prevent further interaction
         this.activeModals.splice(modalIndex, 1);
         this.modalStack = this.modalStack.filter(id => id !== modalId);
+
+        // Deactivate keyboard context if this was the last modal
+        if (this.modalStack.length === 0) {
+            this.deactivateKeyboardContext();
+        }
 
         // Immediately disable interaction to prevent clicks during animation
         modal.element.style.pointerEvents = 'none';

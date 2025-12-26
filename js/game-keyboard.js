@@ -284,12 +284,13 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
     // Movement keys for 3D mode (handled separately)
     this.movementKeys = ['W', 'A', 'S', 'D'];
 
-    // Track key states
-    this.keysPressed = {};
-    this.keys3D = { W: false, A: false, S: false, D: false };
+    // Get keyboard dispatcher from GameServices
+    const dispatcher = this.gameServices?.keyboardDispatcher;
+    if (!dispatcher) {
+        throw new Error('KeyboardDispatcherService not available - required for keyboard handling');
+    }
 
-    // Setup event listeners inline (setupKeyboardListeners might not be available yet)
-    if (this.logger) this.logger.debug('🎮 Setting up keyboard listeners...');
+    if (this.logger) this.logger.debug('🎮 Registering keyboard handlers with dispatcher...');
 
     // Note: Keyboard layout language can affect key detection
     // If keys aren't working, check your keyboard layout is set to English
@@ -297,59 +298,46 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
     // Store reference to game instance
     const game = this;
 
-    // Main keyboard handler
-    document.addEventListener('keydown', (e) => {
-        // Don't process if typing in an input field
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-            return;
-        }
-
-        // Track key state
-        game.keysPressed[e.key] = true;
-
-        // Handle 3D movement keys
-        if (game.is3DMode && game.currentScreen === 'game') {
-            switch(e.code) {
-                case 'KeyW': game.keys3D.W = true; break;
-                case 'KeyA': game.keys3D.A = true; break;
-                case 'KeyS': game.keys3D.S = true; break;
-                case 'KeyD': game.keys3D.D = true; break;
+    // Create a wrapper that checks game screen before calling handler
+    const wrapHandler = (handler, requireGameScreen = true) => {
+        return (e) => {
+            // Only process game keys when in game screen (except Escape)
+            if (requireGameScreen && game.currentScreen !== 'game') {
+                return; // Let other contexts handle it
             }
-        }
-
-        // Only process game keys when in game screen
-        if (game.currentScreen !== 'game' && e.key !== 'Escape') return;
-
-        // Get the handler for this key
-        const handler = game.keyBindings && (
-            game.keyBindings[e.key] ||
-            game.keyBindings[e.key.toUpperCase()] ||
-            game.keyBindings[e.key.toLowerCase()]
-        );
-
-        if (handler) {
-            e.preventDefault();
             handler(e);
-        }
+        };
+    };
+
+    // Register all game key bindings with the dispatcher
+    Object.entries(this.keyBindings).forEach(([key, handler]) => {
+        // Escape is special - it should work from game screen but be handled by dialogs first
+        const requireGameScreen = (key !== 'Escape');
+        dispatcher.registerHandler('GAME', key, wrapHandler(handler, requireGameScreen));
     });
 
-    // Key up handler for movement
-    document.addEventListener('keyup', (e) => {
-        // Clear key state
-        game.keysPressed[e.key] = false;
-
-        // Handle 3D movement key release
-        if (game.is3DMode && game.currentScreen === 'game') {
-            switch(e.code) {
-                case 'KeyW': game.keys3D.W = false; break;
-                case 'KeyA': game.keys3D.A = false; break;
-                case 'KeyS': game.keys3D.S = false; break;
-                case 'KeyD': game.keys3D.D = false; break;
+    // Use dispatcher's key state tracking
+    Object.defineProperty(this, 'keysPressed', {
+        get: function() {
+            const dispatcher = this.gameServices?.keyboardDispatcher;
+            if (dispatcher) {
+                // Convert Set to object format for backward compatibility
+                const pressed = {};
+                dispatcher.getPressedKeys().forEach(k => pressed[k] = true);
+                return pressed;
             }
+            return {};
         }
     });
 
-    if (this.logger) this.logger.info('✅ Keyboard handler initialized with', Object.keys(this.keyBindings).length, 'key bindings');
+    Object.defineProperty(this, 'keys3D', {
+        get: function() {
+            const dispatcher = this.gameServices?.keyboardDispatcher;
+            return dispatcher ? dispatcher.get3DKeyState() : { W: false, A: false, S: false, D: false };
+        }
+    });
+
+    if (this.logger) this.logger.info('✅ Keyboard handler initialized with', Object.keys(this.keyBindings).length, 'key bindings via dispatcher');
 
     } catch (error) {
         if (this.logger) this.logger.error('❌ CRITICAL ERROR in initKeyboardHandler:', error);

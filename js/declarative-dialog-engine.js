@@ -715,6 +715,9 @@ class DeclarativeDialogEngine {
      * Update state stack
      */
     updateStateStack(stateId, state) {
+        // Track if this is the first dialog (stack empty before push)
+        const wasEmpty = this.stateStack.length === 0;
+
         // Determine stack behavior based on level
         const currentLevel = this.stateStack.length;
         const targetLevel = state.level;
@@ -731,6 +734,11 @@ class DeclarativeDialogEngine {
 
         // Push new state
         this.stateStack.push({ id: stateId, state: state });
+
+        // Activate keyboard context if this is the first dialog
+        if (wasEmpty && this.stateStack.length > 0) {
+            this.activateKeyboardContext();
+        }
     }
 
     /**
@@ -801,6 +809,8 @@ class DeclarativeDialogEngine {
                 this.navigateTo(prevState.id, prevState.params);
             } else {
                 this.currentState = null;
+                // Deactivate keyboard context when all dialogs closed
+                this.deactivateKeyboardContext();
                 this.returnToBase();
             }
 
@@ -819,6 +829,8 @@ class DeclarativeDialogEngine {
 
         this.currentState = null;
         this.activeTab = null;  // Reset active tab for next dialog
+        // Deactivate keyboard context when all dialogs closed
+        this.deactivateKeyboardContext();
         this.updateBreadcrumb();
         this.returnToBase();
     }
@@ -1251,33 +1263,84 @@ class DeclarativeDialogEngine {
     }
 
     /**
-     * Setup keyboard handling
+     * Setup keyboard handling via KeyboardDispatcherService
      */
     setupKeyboardHandling() {
-        document.addEventListener('keydown', (e) => {
-            // Check if dialog is active
-            if (this.stateStack.length === 0) return;
+        // Get dispatcher from GameServices
+        const dispatcher = window.game?.gameServices?.keyboardDispatcher;
 
-            const currentState = this.config.states[this.currentState];
-            if (!currentState) return;
+        if (dispatcher) {
+            if (this.logger) this.logger.debug('🎮 Registering dialog keyboard handlers with dispatcher');
 
-            // Check state-specific keyboard config
-            const stateKeyboard = currentState.keyboard?.[e.key];
-            if (stateKeyboard) {
-                e.preventDefault();
-                e.stopImmediatePropagation(); // Prevent game handler from seeing this event
-                this.handleAction(stateKeyboard, { key: e.key });
-                return;
-            }
+            // Register a wildcard handler for DIALOG context that routes to our config
+            dispatcher.registerHandler('DIALOG', '*', (e) => {
+                // Check if dialog is active
+                if (this.stateStack.length === 0) return false;
 
-            // Check global keyboard config
-            const globalKeyboard = this.config.keyboard?.global?.[e.key];
-            if (globalKeyboard) {
-                e.preventDefault();
-                e.stopImmediatePropagation(); // Prevent game handler from seeing this event
-                this.handleAction(globalKeyboard, { key: e.key });
-            }
-        });
+                const currentState = this.config.states[this.currentState];
+                if (!currentState) return false;
+
+                // Check state-specific keyboard config
+                const stateKeyboard = currentState.keyboard?.[e.key];
+                if (stateKeyboard) {
+                    this.handleAction(stateKeyboard, { key: e.key });
+                    return true; // Consumed
+                }
+
+                // Check global keyboard config
+                const globalKeyboard = this.config.keyboard?.global?.[e.key];
+                if (globalKeyboard) {
+                    this.handleAction(globalKeyboard, { key: e.key });
+                    return true; // Consumed
+                }
+
+                return false; // Not consumed
+            });
+
+            this.keyboardDispatcher = dispatcher;
+        } else {
+            // Fallback for when dispatcher not available (shouldn't happen in normal flow)
+            if (this.logger) this.logger.warn('KeyboardDispatcher not available, using legacy keyboard handling');
+            document.addEventListener('keydown', (e) => {
+                if (this.stateStack.length === 0) return;
+
+                const currentState = this.config.states[this.currentState];
+                if (!currentState) return;
+
+                const stateKeyboard = currentState.keyboard?.[e.key];
+                if (stateKeyboard) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    this.handleAction(stateKeyboard, { key: e.key });
+                    return;
+                }
+
+                const globalKeyboard = this.config.keyboard?.global?.[e.key];
+                if (globalKeyboard) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    this.handleAction(globalKeyboard, { key: e.key });
+                }
+            });
+        }
+    }
+
+    /**
+     * Activate DIALOG context when opening dialogs
+     */
+    activateKeyboardContext() {
+        if (this.keyboardDispatcher) {
+            this.keyboardDispatcher.activateContext('DIALOG');
+        }
+    }
+
+    /**
+     * Deactivate DIALOG context when closing dialogs
+     */
+    deactivateKeyboardContext() {
+        if (this.keyboardDispatcher) {
+            this.keyboardDispatcher.deactivateContext('DIALOG');
+        }
     }
 
     /**

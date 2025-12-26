@@ -99,6 +99,15 @@ if (typeof GameServices === 'undefined') {
             throw new Error('PathfindingService is required but not loaded');
         }
 
+        // Keyboard dispatcher service for unified keyboard handling
+        if (window.KeyboardDispatcherService) {
+            this.keyboardDispatcher = new KeyboardDispatcherService();
+            this.keyboardDispatcher.initialize();
+            if (this.logger) this.logger.debug('KeyboardDispatcherService initialized');
+        } else {
+            throw new Error('KeyboardDispatcherService is required but not loaded');
+        }
+
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
         this.applyAllModifiers = this.applyAllModifiers.bind(this);

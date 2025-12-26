@@ -101,12 +101,61 @@ class CutsceneEngine {
 
         // Add event listeners
         this.container.addEventListener('click', this.handleClick);
-        document.addEventListener('keydown', this.handleKeyPress);
+        this.setupKeyboardHandling();
 
         // Start first scene
         this.playScene(0);
 
         return true;
+    }
+
+    /**
+     * Setup keyboard handling via dispatcher or fallback
+     */
+    setupKeyboardHandling() {
+        // Get dispatcher from GameServices
+        const dispatcher = window.game?.gameServices?.keyboardDispatcher;
+
+        if (dispatcher) {
+            this.keyboardDispatcher = dispatcher;
+
+            // Register CUTSCENE context handlers
+            dispatcher.registerHandler('CUTSCENE', 'Space', (e) => {
+                e.preventDefault();
+                this.advance();
+            });
+            dispatcher.registerHandler('CUTSCENE', 'Enter', (e) => {
+                e.preventDefault();
+                this.advance();
+            });
+            dispatcher.registerHandler('CUTSCENE', 'Escape', (e) => {
+                e.preventDefault();
+                this.skip();
+            });
+
+            // Activate CUTSCENE context (highest priority)
+            dispatcher.activateContext('CUTSCENE');
+        } else {
+            // Fallback to direct listener
+            document.addEventListener('keydown', this.handleKeyPress);
+            this.usedFallbackKeyboard = true;
+        }
+    }
+
+    /**
+     * Remove keyboard handling
+     */
+    removeKeyboardHandling() {
+        if (this.keyboardDispatcher) {
+            // Deactivate CUTSCENE context
+            this.keyboardDispatcher.deactivateContext('CUTSCENE');
+            // Clear handlers
+            this.keyboardDispatcher.unregisterHandler('CUTSCENE', 'Space');
+            this.keyboardDispatcher.unregisterHandler('CUTSCENE', 'Enter');
+            this.keyboardDispatcher.unregisterHandler('CUTSCENE', 'Escape');
+        } else if (this.usedFallbackKeyboard) {
+            document.removeEventListener('keydown', this.handleKeyPress);
+        }
     }
 
     /**
@@ -742,7 +791,7 @@ class CutsceneEngine {
 
         // Remove event listeners
         this.container.removeEventListener('click', this.handleClick);
-        document.removeEventListener('keydown', this.handleKeyPress);
+        this.removeKeyboardHandling();
 
         // Hide container with fade
         this.container.classList.add('cutscene-fade-out');

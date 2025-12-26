@@ -22,10 +22,11 @@ CyberOpsGame.prototype.startKeyRebind = function(action) {
     input.style.borderColor = '#ffff00';
     input.value = 'Press any key...';
 
-    // Listen for next key press
-    const handler = (e) => {
-        e.preventDefault();
+    const dispatcher = this.gameServices?.keyboardDispatcher;
+    const game = this;
 
+    // Handler function for key capture
+    const handleKeyCapture = (e) => {
         let key = e.key;
 
         // Special handling for certain keys
@@ -55,10 +56,31 @@ CyberOpsGame.prototype.startKeyRebind = function(action) {
             }, 1000);
         }
 
-        document.removeEventListener('keydown', handler);
+        // Cleanup
+        if (dispatcher) {
+            dispatcher.deactivateContext('KEY_REBIND');
+            dispatcher.unregisterHandler('KEY_REBIND', '*');
+        } else {
+            document.removeEventListener('keydown', fallbackHandler);
+        }
+
+        return true; // Consumed
     };
 
-    document.addEventListener('keydown', handler);
+    // Use dispatcher if available
+    if (dispatcher) {
+        // Register wildcard handler for KEY_REBIND context
+        dispatcher.registerHandler('KEY_REBIND', '*', handleKeyCapture);
+        // Activate KEY_REBIND context (blocks all others)
+        dispatcher.activateContext('KEY_REBIND');
+    } else {
+        // Fallback to direct listener
+        var fallbackHandler = (e) => {
+            e.preventDefault();
+            handleKeyCapture(e);
+        };
+        document.addEventListener('keydown', fallbackHandler);
+    }
 };
 
 // Reset key binding
