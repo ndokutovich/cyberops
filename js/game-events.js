@@ -105,9 +105,6 @@ CyberOpsGame.prototype.setupEventListeners = function() {
         this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
 
-        // Keyboard Events - REMOVED to prevent conflicts with game-keyboard.js
-        // window.addEventListener('keydown', (e) => this.handleKeyPress(e));
-
         // Prevent context menu
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
