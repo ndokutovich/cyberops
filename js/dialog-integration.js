@@ -1706,10 +1706,13 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Keyboard Settings Tab - Full key rebinding system
     engine.registerGenerator('generateKeyboardSettings', function() {
-        let html = '<div style="color: #fff; overflow-y: auto; max-height: 500px;">';
+        const keybindingService = game.gameServices?.keybindingService;
+        if (!keybindingService) {
+            throw new Error('KeybindingService not available - required for keyboard settings');
+        }
 
-        if (window.KeybindingService) {
-            const categories = window.KeybindingService.exportForUI();
+        let html = '<div style="color: #fff; overflow-y: auto; max-height: 500px;">';
+        const categories = keybindingService.exportForUI();
 
             categories.forEach(cat => {
                 html += `

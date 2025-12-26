@@ -261,10 +261,7 @@ class KeybindingService {
     }
 }
 
-// Create singleton instance
-const keybindingService = new KeybindingService();
-
-// Export for use in game
+// Export class for GameServices to instantiate
 if (typeof window !== 'undefined') {
-    window.KeybindingService = keybindingService;
+    window.KeybindingService = KeybindingService;
 }

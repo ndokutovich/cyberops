@@ -83,6 +83,22 @@ if (typeof GameServices === 'undefined') {
             if (this.logger) this.logger.debug('SaveGameService initialized');
         }
 
+        // Keybinding service for keyboard shortcut management
+        if (window.KeybindingService) {
+            this.keybindingService = new KeybindingService();
+            if (this.logger) this.logger.debug('KeybindingService initialized');
+        } else {
+            throw new Error('KeybindingService is required but not loaded');
+        }
+
+        // Pathfinding service for A* pathfinding
+        if (window.PathfindingService) {
+            this.pathfindingService = new PathfindingService();
+            if (this.logger) this.logger.debug('PathfindingService initialized');
+        } else {
+            throw new Error('PathfindingService is required but not loaded');
+        }
+
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
         this.applyAllModifiers = this.applyAllModifiers.bind(this);

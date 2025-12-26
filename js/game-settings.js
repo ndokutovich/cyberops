@@ -10,6 +10,11 @@
 
 // Start key rebinding
 CyberOpsGame.prototype.startKeyRebind = function(action) {
+    const keybindingService = this.gameServices?.keybindingService;
+    if (!keybindingService) {
+        throw new Error('KeybindingService not available - required for key rebinding');
+    }
+
     const input = document.getElementById(`key-${action}`);
     if (!input) return;
 
@@ -29,7 +34,7 @@ CyberOpsGame.prototype.startKeyRebind = function(action) {
         else if (e.code.startsWith('Digit')) key = e.code.substring(5);
 
         // Try to update binding
-        if (window.KeybindingService.updateBinding(action, key)) {
+        if (keybindingService.updateBinding(action, key)) {
             input.value = key;
             input.style.background = 'rgba(0, 255, 0, 0.2)';
             input.style.borderColor = '#00ff00';
@@ -40,7 +45,7 @@ CyberOpsGame.prototype.startKeyRebind = function(action) {
             }, 1000);
         } else {
             // Conflict detected
-            input.value = window.KeybindingService.getKey(action);
+            input.value = keybindingService.getKey(action);
             input.style.background = 'rgba(255, 0, 0, 0.2)';
             input.style.borderColor = '#ff4444';
 
@@ -58,7 +63,11 @@ CyberOpsGame.prototype.startKeyRebind = function(action) {
 
 // Reset key binding
 CyberOpsGame.prototype.resetKeyBinding = function(action) {
-    window.KeybindingService.resetBinding(action);
+    const keybindingService = this.gameServices?.keybindingService;
+    if (!keybindingService) {
+        throw new Error('KeybindingService not available - required for key reset');
+    }
+    keybindingService.resetBinding(action);
 
     // Refresh the settings dialog if it's open (declarative system)
     const dialogEngine = this.dialogEngine || window.declarativeDialogEngine;
@@ -253,10 +262,12 @@ CyberOpsGame.prototype.applySettings = function() {
 
 // Reset settings to defaults (stub - actual work done by registered action in dialog-integration.js)
 CyberOpsGame.prototype.resetSettings = function() {
-    // Reset keyboard bindings (if service exists)
-    if (window.KeybindingService && window.KeybindingService.resetAll) {
-        window.KeybindingService.resetAll();
+    // Reset keyboard bindings
+    const keybindingService = this.gameServices?.keybindingService;
+    if (!keybindingService) {
+        throw new Error('KeybindingService not available - required for settings reset');
     }
+    keybindingService.resetAllBindings();
 
     // Reset to default values
     this.setMasterVolume(50);
