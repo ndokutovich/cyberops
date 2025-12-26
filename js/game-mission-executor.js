@@ -770,6 +770,14 @@ CyberOpsGame.prototype.giveRewards = function(rewards) {
 CyberOpsGame.prototype.completeMission = function(victory) {
     if (this.logger) this.logger.info('🎯 Mission complete!', victory ? 'Victory!' : 'Failed');
 
+    // DEBUG: Log credits before mission completion
+    const creditsBefore = this.gameServices?.resourceService?.get('credits') || this.credits;
+    const itemServiceStats = this.gameServices?.itemService?.getMissionStats?.() || {};
+    if (this.logger) {
+        this.logger.info(`💰 [DEBUG] Credits BEFORE completeMission: ${creditsBefore}`);
+        this.logger.info(`💰 [DEBUG] ItemService creditsCollected: ${itemServiceStats.creditsCollected || 0}`);
+    }
+
     // Use MissionService to complete the mission
     if (this.gameServices && this.gameServices.missionService) {
         if (victory) {
@@ -784,6 +792,12 @@ CyberOpsGame.prototype.completeMission = function(victory) {
             if (this.gameServices.missionStateService) {
                 if (this.logger) this.logger.info('✅ Merging mission results to game state');
                 this.gameServices.missionStateService.mergeResults(this);
+            }
+
+            // DEBUG: Log credits after mission rewards and merge
+            const creditsAfter = this.gameServices?.resourceService?.get('credits') || this.credits;
+            if (this.logger) {
+                this.logger.info(`💰 [DEBUG] Credits AFTER completeMission: ${creditsAfter}`);
             }
         } else {
             this.gameServices.missionService.failMission('Mission failed');

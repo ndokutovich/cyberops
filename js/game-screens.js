@@ -36,6 +36,16 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
     const itemService = this.gameServices?.itemService;
     const itemStats = itemService?.getMissionStats?.() || {};
 
+    // DEBUG: Log ItemService stats
+    if (this.logger) {
+        this.logger.info(`💰 [DEBUG] gatherMissionSummary - itemStats:`, {
+            hasItemService: !!itemService,
+            creditsCollected: itemStats.creditsCollected,
+            intelCollected: itemStats.intelCollected,
+            itemsCollected: itemStats.itemsCollected
+        });
+    }
+
     const summary = {
         mainObjectives: [],
         sideQuests: [],

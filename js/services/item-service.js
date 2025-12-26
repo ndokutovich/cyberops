@@ -136,10 +136,29 @@ class ItemService {
 
             const effects = this.formulaService.calculateCollectibleEffect(item, agent, gameContext);
 
+            // DEBUG: Log effects calculation
+            if (this.logger) {
+                this.logger.info(`💰 [DEBUG] Collectable effects calculated:`, {
+                    itemName: item.name,
+                    itemType: item.type,
+                    itemCredits: item.credits,
+                    effectsCredits: effects.credits,
+                    hasResourceService: !!this.resourceService
+                });
+            }
+
             // Apply credits
             if (effects.credits > 0 && this.resourceService) {
+                const creditsBefore = this.resourceService.get('credits');
                 this.resourceService.add('credits', effects.credits, `${item.type} pickup by ${agent.name}`);
+                const creditsAfter = this.resourceService.get('credits');
                 this.creditsCollectedThisMission += effects.credits;
+
+                if (this.logger) {
+                    this.logger.info(`💰 [DEBUG] Credits added: ${creditsBefore} → ${creditsAfter} (+${effects.credits}), total collected: ${this.creditsCollectedThisMission}`);
+                }
+            } else if (this.logger) {
+                this.logger.warn(`⚠️ [DEBUG] Credits NOT added: effects.credits=${effects.credits}, hasResourceService=${!!this.resourceService}`);
             }
 
             // Apply health
