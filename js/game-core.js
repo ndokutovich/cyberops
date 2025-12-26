@@ -43,6 +43,7 @@ class CyberOpsGame {
         // Game State
         this.currentScreen = 'splash';
         this.isPaused = false;
+        this.dialogActive = false; // Blocks H key when NPC dialog is open
         this.currentMission = null;
 
         // Demoscene idle timer

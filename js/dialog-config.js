@@ -600,7 +600,9 @@ const DIALOG_CONFIG = {
             buttons: {
                 type: 'dynamic',
                 generator: 'generateNPCChoices'
-            }
+            },
+            // Cleanup handler when dialog closes (ESC, Back, X, etc.)
+            onExit: 'closeNPCDialog'
         }
     },
 

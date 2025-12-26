@@ -749,6 +749,17 @@ class DeclarativeDialogEngine {
                 element.remove();
             }
         }
+
+        // Call onExit callback if defined for this state
+        const state = this.config.states[stateId];
+        if (state?.onExit) {
+            const game = window.game;
+            if (typeof state.onExit === 'function') {
+                state.onExit(game);
+            } else if (typeof state.onExit === 'string' && game && typeof game[state.onExit] === 'function') {
+                game[state.onExit]();
+            }
+        }
     }
 
     /**
