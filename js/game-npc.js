@@ -955,7 +955,19 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
             name: dialogData.npc.name || 'Unknown'
         };
 
-        this.dialogEngine.navigateTo('npc-interaction', context);
+        try {
+            this.dialogEngine.navigateTo('npc-interaction', context);
+            if (this.logger) this.logger.debug('✅ NPC dialog navigation successful');
+        } catch (e) {
+            if (this.logger) this.logger.error('❌ NPC dialog navigation failed:', e);
+            // Reset dialog state if navigation fails
+            this.closeNPCDialog();
+        }
+    } else {
+        // No dialog engine - reset state
+        if (this.logger) this.logger.error('❌ No dialogEngine available for NPC dialog');
+        this.dialogActive = false;
+        this.resumeGame();
     }
 };
 
