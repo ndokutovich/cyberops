@@ -75,9 +75,10 @@ class AudioService {
         // Load configuration
         if (config) {
             this.config = config;
+            if (this.logger) this.logger.info('Using provided config');
         } else if (typeof GAME_MUSIC_CONFIG !== 'undefined') {
             this.config = GAME_MUSIC_CONFIG;
-            if (this.logger) this.logger.info('Loaded GAME_MUSIC_CONFIG');
+            if (this.logger) this.logger.info(`Loaded GAME_MUSIC_CONFIG with ${Object.keys(this.config.screens || {}).length} screens`);
         } else {
             this.config = { screens: {}, global: {}, soundEffects: {} };
             if (this.logger) this.logger.warn('No music configuration found, using defaults');
