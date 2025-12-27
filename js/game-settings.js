@@ -89,40 +89,58 @@ CyberOpsGame.prototype.setMusicVolume = function(value) {
 
 // Helper to update all currently playing music volumes
 CyberOpsGame.prototype.updateAllMusicVolumes = function() {
-    const userVolume = (this.masterVolume || 0.5) * (this.musicVolume || 0.3);
+    let masterVol = this.masterVolume ?? 0.5;
+    let musicVol = this.musicVolume ?? 0.3;
+    // Normalize if stored as percentages (0-100) instead of decimals (0-1)
+    if (masterVol > 1) masterVol = masterVol / 100;
+    if (musicVol > 1) musicVol = musicVol / 100;
+    const userVolume = masterVol * musicVol;
+
+    const audioService = this.gameServices?.audioService;
+    if (!audioService) return;
 
     // Update screen music (menu, hub, etc.)
-    if (this.screenMusic && this.screenMusic.currentTrack) {
-        const configVolume = this.screenMusic.currentTrack.getAttribute('data-config-volume');
+    const screenMusic = audioService.screenMusic;
+    if (screenMusic?.currentTrack) {
+        const configVolume = screenMusic.currentTrack.getAttribute('data-config-volume');
         const baseVolume = configVolume ? parseFloat(configVolume) : 1.0;
-        this.screenMusic.currentTrack.volume = baseVolume * userVolume;
+        try {
+            screenMusic.currentTrack.volume = Math.max(0, Math.min(1, baseVolume * userVolume));
+        } catch (e) { /* ignore */ }
     }
 
     // Also update any other screen music audio elements
-    if (this.screenMusic && this.screenMusic.audioElements) {
-        Object.values(this.screenMusic.audioElements).forEach(audio => {
+    if (screenMusic?.audioElements) {
+        Object.values(screenMusic.audioElements).forEach(audio => {
             if (audio && !audio.paused) {
                 const configVolume = audio.getAttribute('data-config-volume');
                 const baseVolume = configVolume ? parseFloat(configVolume) : 1.0;
-                audio.volume = baseVolume * userVolume;
+                try {
+                    audio.volume = Math.max(0, Math.min(1, baseVolume * userVolume));
+                } catch (e) { /* ignore */ }
             }
         });
     }
 
     // Update mission music (in-game)
-    if (this.musicSystem && this.musicSystem.currentTrack) {
-        const configVolume = this.musicSystem.currentTrack.getAttribute('data-config-volume');
+    const missionMusic = audioService.missionMusic;
+    if (missionMusic?.currentTrack) {
+        const configVolume = missionMusic.currentTrack.getAttribute('data-config-volume');
         const baseVolume = configVolume ? parseFloat(configVolume) : 1.0;
-        this.musicSystem.currentTrack.volume = baseVolume * userVolume;
+        try {
+            missionMusic.currentTrack.volume = Math.max(0, Math.min(1, baseVolume * userVolume));
+        } catch (e) { /* ignore */ }
     }
 
     // Also update mission music audio elements
-    if (this.musicSystem && this.musicSystem.audioElements) {
-        Object.values(this.musicSystem.audioElements).forEach(audio => {
+    if (missionMusic?.audioElements) {
+        Object.values(missionMusic.audioElements).forEach(audio => {
             if (audio && !audio.paused) {
                 const configVolume = audio.getAttribute('data-config-volume');
                 const baseVolume = configVolume ? parseFloat(configVolume) : 1.0;
-                audio.volume = baseVolume * userVolume;
+                try {
+                    audio.volume = Math.max(0, Math.min(1, baseVolume * userVolume));
+                } catch (e) { /* ignore */ }
             }
         });
     }
@@ -132,20 +150,25 @@ CyberOpsGame.prototype.toggleAudioEnable = function(enabled) {
     const settings = this.gameServices.settingsService;
     settings.audioEnabled = enabled;
 
+    const audioService = this.gameServices?.audioService;
     if (enabled) {
-        if (!this.audioEnabled) {
-            this.enableAudio();
+        if (!this.audioEnabled && audioService) {
+            audioService.enableAudio();
+            this.audioContext = audioService.audioContext;
+            this.audioEnabled = audioService.audioEnabled;
         }
         if (this.audioContext && this.audioContext.state === 'suspended') {
             this.audioContext.resume();
         }
-        if (this.screenMusic && this.screenMusic.currentTrack && this.screenMusic.currentTrack.paused) {
-            this.screenMusic.currentTrack.play().catch(err => {
+        const screenMusic = audioService?.screenMusic;
+        const missionMusic = audioService?.missionMusic;
+        if (screenMusic?.currentTrack?.paused) {
+            screenMusic.currentTrack.play().catch(err => {
                 if (this.logger) this.logger.warn('Could not resume screen music:', err);
             });
         }
-        if (this.musicSystem && this.musicSystem.currentTrack && this.musicSystem.currentTrack.paused) {
-            this.musicSystem.currentTrack.play().catch(err => {
+        if (missionMusic?.currentTrack?.paused) {
+            missionMusic.currentTrack.play().catch(err => {
                 if (this.logger) this.logger.warn('Could not resume mission music:', err);
             });
         }
@@ -153,11 +176,13 @@ CyberOpsGame.prototype.toggleAudioEnable = function(enabled) {
         if (this.audioContext && this.audioContext.state === 'running') {
             this.audioContext.suspend();
         }
-        if (this.screenMusic && this.screenMusic.currentTrack && !this.screenMusic.currentTrack.paused) {
-            this.screenMusic.currentTrack.pause();
+        const screenMusic = audioService?.screenMusic;
+        const missionMusic = audioService?.missionMusic;
+        if (screenMusic?.currentTrack && !screenMusic.currentTrack.paused) {
+            screenMusic.currentTrack.pause();
         }
-        if (this.musicSystem && this.musicSystem.currentTrack && !this.musicSystem.currentTrack.paused) {
-            this.musicSystem.currentTrack.pause();
+        if (missionMusic?.currentTrack && !missionMusic.currentTrack.paused) {
+            missionMusic.currentTrack.pause();
         }
     }
 };

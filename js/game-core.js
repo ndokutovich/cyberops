@@ -64,8 +64,7 @@ class CyberOpsGame {
             throw new Error('GameController, GameEngine, or GameFacade not loaded');
         }
 
-        this.currentMissionIndex = 0; // TODO: Move to MissionService
-        this.missionTimer = 0; // TODO: Move to MissionService
+        // NOTE: currentMissionIndex and missionTimer are now computed properties delegating to MissionService
         // NOTE: this.selectedAgents is now a computed property (see line 650)
         this.totalCampaignTime = 0;
         this.totalEnemiesDefeated = 0;
@@ -127,8 +126,8 @@ class CyberOpsGame {
         this.mouseDown = false;
 
         // Game Objects
-        // NOTE: this.agents is now a computed property (see line 650)
-        this.enemies = [];
+        // NOTE: this.agents is now a computed property (see below)
+        // NOTE: this.enemies is now a computed property (see below)
         this.projectiles = [];
         this.effects = [];
         this.animatingTiles = [];
@@ -209,11 +208,7 @@ class CyberOpsGame {
             this.initMissions();
         }
 
-        // Initialize screen music system
-        if (this.logger) this.logger.debug('🎵 Initializing screen music system...');
-        if (this.initScreenMusicSystem) {
-            this.initScreenMusicSystem();
-        }
+        // AudioService is initialized in GameServices - no separate init needed
 
         // Initialize visual effects system
         if (this.logger) this.logger.debug('🎨 Initializing visual effects system...');
@@ -283,8 +278,8 @@ class CyberOpsGame {
         this.mouseDown = false;
 
         // Game Objects
-        // NOTE: this.agents is now a computed property (see line 650)
-        this.enemies = [];
+        // NOTE: this.agents is now a computed property (see below)
+        // NOTE: this.enemies is now a computed property (see below)
         this.projectiles = [];
         this.effects = [];
         this.animatingTiles = [];
@@ -306,11 +301,6 @@ class CyberOpsGame {
         });
 
         if (this.logger) this.logger.info('✅ Canvas and game state initialized');
-    }
-
-    initializeAudio() {
-        // Audio initialization now handled by game-audio.js and music systems
-        if (this.logger) this.logger.debug('🎵 Audio initialization delegated to modular systems');
     }
 } // Close the CyberOpsGame class
 
@@ -366,7 +356,12 @@ CyberOpsGame.prototype.initializeHub = function() {
 
 CyberOpsGame.prototype.init = function() {
         this.setupEventListeners();
-        this.initializeAudio();
+        // AudioService is initialized in GameServices - sync state for backward compatibility
+        const audioService = this.gameServices?.audioService;
+        if (audioService) {
+            this.audioContext = audioService.audioContext;
+            this.audioEnabled = audioService.audioEnabled;
+        }
 
         // Initialize RPG system
         if (this.initRPGSystem) {
@@ -409,7 +404,12 @@ CyberOpsGame.prototype.init = function() {
                 if (this.logger) this.logger.debug('🚀 START EXPERIENCE clicked - enabling audio and starting game');
 
                 // Enable audio context on user interaction
-                this.enableAudio();
+                const audioService = this.gameServices?.audioService;
+                if (audioService) {
+                    audioService.enableAudio();
+                    this.audioContext = audioService.audioContext;
+                    this.audioEnabled = audioService.audioEnabled;
+                }
 
                 // Hide the initial screen
                 initialScreen.style.display = 'none';
@@ -541,6 +541,25 @@ Object.defineProperty(CyberOpsGame.prototype, 'worldControl', {
     get: function() {
         if (!this.gameServices || !this.gameServices.resourceService) return 0;
         return this.gameServices.resourceService.get('worldControl');
+    },
+    enumerable: true,
+    configurable: true
+});
+
+// Mission-related properties that delegate to MissionService
+Object.defineProperty(CyberOpsGame.prototype, 'currentMissionIndex', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.missionService) return 0;
+        return this.gameServices.missionService.currentMissionIndex;
+    },
+    enumerable: true,
+    configurable: true
+});
+
+Object.defineProperty(CyberOpsGame.prototype, 'missionTimer', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.missionService) return 0;
+        return this.gameServices.missionService.missionTimer;
     },
     enumerable: true,
     configurable: true
@@ -727,6 +746,26 @@ Object.defineProperty(CyberOpsGame.prototype, 'agents', {
     configurable: true
 });
 
+// Computed property for enemies - single source of truth via EnemyService
+Object.defineProperty(CyberOpsGame.prototype, 'enemies', {
+    get: function() {
+        if (!this.gameServices || !this.gameServices.enemyService) return [];
+        return this.gameServices.enemyService.getAllEnemies();
+    },
+    set: function(value) {
+        // Setting game.enemies directly - handle reset case
+        if (!this.gameServices || !this.gameServices.enemyService) return;
+        if (Array.isArray(value) && value.length === 0) {
+            // Clear enemies when setting to empty array
+            this.gameServices.enemyService.clearAll();
+        } else if (this.logger) {
+            this.logger.warn('⚠️ game.enemies is now a computed property - use EnemyService for enemy management');
+        }
+    },
+    enumerable: true,
+    configurable: true
+});
+
 // Mission-related compatibility properties
 Object.defineProperty(CyberOpsGame.prototype, 'completedMissions', {
     get: function() {
@@ -845,30 +884,17 @@ CyberOpsGame.prototype.generateFinalWords = function(agentName) {
 };
 
 CyberOpsGame.prototype.generateNewAgentsForHire = function() {
-    console.log('🆕 [DEBUG] generateNewAgentsForHire called');
-
     // Use AgentService (single source of truth for agent operations)
     if (!this.gameServices?.agentService?.generateNewAgentsForHire) {
-        console.log('🆕 [DEBUG] AgentService not available!', {
-            hasGameServices: !!this.gameServices,
-            hasAgentService: !!this.gameServices?.agentService
-        });
         if (this.logger) this.logger.warn('⚠️ AgentService not available for agent generation');
         return;
     }
-
-    // Check if generation config exists
-    const config = this.gameServices.agentService.generationConfig;
-    console.log('🆕 [DEBUG] generationConfig:', config ? 'SET' : 'NOT SET');
 
     // Increment completed missions counter
     this.gameServices.agentService.incrementCompletedMissions();
 
     // Generate new agents (they're automatically added to availableAgents by AgentService)
     const newAgents = this.gameServices.agentService.generateNewAgentsForHire();
-
-    console.log('🆕 [DEBUG] Generated agents:', newAgents.length);
-    console.log('🆕 [DEBUG] Total available now:', this.gameServices.agentService.getAvailableAgents().length);
 
     if (newAgents && newAgents.length > 0 && this.logEvent) {
         this.logEvent(`🆕 ${newAgents.length} new agents are available for hire at the Hub!`, 'system');
@@ -878,11 +904,7 @@ CyberOpsGame.prototype.generateNewAgentsForHire = function() {
 // Item-related stubs that delegate to ItemService
 CyberOpsGame.prototype.handleCollectablePickup = function(agent, item) {
     // Always play pickup sound when item is collected
-    if (this.playSound) {
-        this.playSound('pickup', 0.4);
-    } else if (window.game && window.game.playSound) {
-        window.game.playSound('pickup', 0.4);
-    }
+    this.gameServices?.audioService?.playSound('pickup', 0.4);
 
     if (!this.gameServices || !this.gameServices.itemService) return;
 

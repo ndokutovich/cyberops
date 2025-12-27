@@ -73,9 +73,7 @@ CyberOpsGame.prototype.toggleTurnBasedMode = function() {
     }
 
     // Play mode switch sound
-    if (this.audioSystem) {
-        this.playSound('modeSwitch');
-    }
+    this.gameServices?.audioService?.playSound('modeSwitch');
 };
 
 // Toggle grid snap movement
@@ -710,11 +708,45 @@ CyberOpsGame.prototype.executeAITurn = function(turnData) {
             Math.pow(nearestAgent.y - enemy.y, 2)
         );
 
-        // If in range, attack
+        // If in range, attack using CombatService (single source of truth)
         if (distance < 200 && turnData.ap >= this.actionCosts.shoot) {
-            // TODO: Implement enemy shooting in turn-based mode
-            // For now, just consume AP without shooting
-            if (this.logger) this.logger.debug(`🎯 Enemy would shoot at ${nearestAgent.name} (not implemented)`);
+            const combatService = window.GameServices?.combatService;
+            if (combatService) {
+                // Get target ID for CombatService
+                const targetId = nearestAgent.id || nearestAgent.name || `agent_${this.agents.indexOf(nearestAgent)}`;
+                const weaponType = enemy.weapon?.type || 'rifle';
+
+                // Perform attack through CombatService
+                const result = combatService.performAttack(enemy.id, targetId, weaponType);
+
+                if (result && result.hit) {
+                    if (this.logger) this.logger.info(`🎯 ${enemy.type || 'Enemy'} hit ${nearestAgent.name} for ${result.damage} damage${result.critical ? ' (CRITICAL!)' : ''}`);
+                    if (this.logEvent) this.logEvent(`Enemy ${enemy.type || 'soldier'} shot ${nearestAgent.name} for ${result.damage} damage`, 'combat');
+
+                    // Create visual projectile (damage already applied by CombatService)
+                    this.projectiles = this.projectiles || [];
+                    this.projectiles.push({
+                        x: enemy.x, y: enemy.y,
+                        targetX: nearestAgent.x, targetY: nearestAgent.y,
+                        speed: 15, color: '#ff4444', size: 3
+                    });
+
+                    // Check for kill
+                    if (result.killed) {
+                        if (this.logEvent) this.logEvent(`${nearestAgent.name} was eliminated!`, 'combat', true);
+                    }
+                } else {
+                    if (this.logger) this.logger.debug(`💨 ${enemy.type || 'Enemy'} missed ${nearestAgent.name}`);
+                    if (this.logEvent) this.logEvent(`Enemy ${enemy.type || 'soldier'} missed ${nearestAgent.name}`, 'combat');
+                }
+
+                // Play sound
+                this.gameServices?.audioService?.playSound('shoot', 0.4);
+            } else {
+                if (this.logger) this.logger.error('CombatService not available for enemy shooting');
+            }
+
+            // Consume AP
             apUsed += this.actionCosts.shoot;
             turnData.ap -= this.actionCosts.shoot;
             this.updateTurnBasedAPDisplay();

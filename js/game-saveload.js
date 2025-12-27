@@ -7,8 +7,6 @@ CyberOpsGame.prototype.showSaveList = function(mode = 'save') {
     this.dialogEngine.navigateTo('save-load');
 }
 
-// REMOVED: showSaveListModalEngine - was fallback, never reached since dialogEngine always available
-
 CyberOpsGame.prototype.closeSaveList = function() {
     // Close modal engine dialog if exists
     if (this.activeSaveModal) {
@@ -330,9 +328,7 @@ CyberOpsGame.prototype.returnToInitialScreen = function() {
         if (this.logger) this.logger.debug('Returning to initial screen');
 
         // Stop all music
-        if (this.stopScreenMusic) {
-            this.stopScreenMusic();
-        }
+        this.gameServices?.audioService?.stopScreenMusic();
 
         // Clear demoscene timer and hide demoscene
         this.clearDemosceneTimer();

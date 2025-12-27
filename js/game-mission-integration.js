@@ -231,9 +231,7 @@ CyberOpsGame.prototype.updateMissionObjectives = function() {
                 if (this.audioInitialized && this.musicContext) {
                     this.fadeOutMusic(1000);
                 }
-                if (this.playSound) {
-                    this.playSound('defeat', 0.7);
-                }
+                this.gameServices?.audioService?.playSound('defeat', 0.7);
             }
             return; // Don't check objectives if mission failed
         }
@@ -390,9 +388,7 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
         });
 
         // Sound effect
-        if (this.playSound) {
-            this.playSound('hack', 0.5);
-        }
+        this.gameServices?.audioService?.playSound('hack', 0.5);
 
         // Handle interaction for objectives
         OBJECTIVE_HANDLERS.handleInteraction(agent, INTERACTION_TARGETS.TERMINAL, nearestTerminal.id || 'terminal', this);

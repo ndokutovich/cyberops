@@ -234,12 +234,9 @@ CyberOpsGame.prototype.generateMapWithObjects = function(mapDef) {
 
 // Spawn mission NPCs with their quests
 CyberOpsGame.prototype.spawnMissionNPCs = function(npcDefs) {
-    // Mission NPCs are handled by the existing spawnNPCs function
-    // This is just a placeholder for future NPC system integration
+    // Mission NPCs are handled by the existing game-npc.js system
+    // based on mission index - no additional action needed here
     if (this.logger) this.logger.debug('📍 Mission NPCs will be spawned by existing NPC system');
-
-    // The existing game-npc.js handles NPC spawning based on mission index
-    // So we don't need to do anything here - NPCs are already spawned
 };
 
 // Setup mission enemies configuration
@@ -483,7 +480,7 @@ CyberOpsGame.prototype.performInteraction = function(agent, targetType, target) 
                 duration: 60,
                 frame: 0
             });
-            if (this.playSound) this.playSound('hack', 0.5);
+            this.gameServices?.audioService?.playSound('hack', 0.5);
             if (this.logEvent) {
                 this.logEvent(`${agent.name} hacked terminal at [${target.x}, ${target.y}]`, 'hack', true);
             }
@@ -499,7 +496,7 @@ CyberOpsGame.prototype.performInteraction = function(agent, targetType, target) 
                 duration: 60,
                 frame: 0
             });
-            if (this.playSound) this.playSound('plant', 0.5);
+            this.gameServices?.audioService?.playSound('plant', 0.5);
             if (this.logEvent) {
                 this.logEvent(`${agent.name} planted explosives at [${target.x}, ${target.y}]`, 'player', true);
             }
@@ -804,10 +801,7 @@ CyberOpsGame.prototype.completeMission = function(victory) {
             // Don't merge results on defeat - either retry (restore) or return to hub (manual sync)
         }
     } else {
-        // Fallback if MissionService not available
-        if (victory && this.currentMissionDef) {
-            this.giveRewards(this.currentMissionDef.rewards);
-        }
+        throw new Error('MissionService not available - required for mission completion');
     }
 
     // Navigate to victory/defeat screen using screen manager
@@ -1020,8 +1014,8 @@ CyberOpsGame.prototype.loadCustomMapFromEditor = function(customData) {
     customData.entities.forEach(entity => {
         switch (entity.type) {
             case 'enemy':
-                if (!this.enemies) this.enemies = [];
-                this.enemies.push({
+                // Spawn via EnemyService (single source of truth)
+                const enemyData = {
                     x: entity.x,
                     y: entity.y,
                     type: entity.enemyType || 'guard',
@@ -1036,7 +1030,10 @@ CyberOpsGame.prototype.loadCustomMapFromEditor = function(customData) {
                     },
                     speed: 0.02,
                     state: 'patrol'
-                });
+                };
+                if (this.gameServices && this.gameServices.enemyService) {
+                    this.gameServices.enemyService.spawnEnemy(enemyData);
+                }
                 break;
 
             case 'npc':
@@ -1174,32 +1171,7 @@ CyberOpsGame.prototype.loadMapFromEmbeddedTiles = function(mapDef) {
         cover: mapDef.embedded.cover || mapDef.cover || []
     };
 
-    // Debug: Log collectables loading
-    if (mapDef.embedded.collectables && mapDef.embedded.collectables.length > 0) {
-        console.log('🔍 [MAP LOAD] Loading collectables from mission:', {
-            count: mapDef.embedded.collectables.length,
-            collectables: mapDef.embedded.collectables.map(c => ({
-                id: c.id,
-                x: c.x,
-                y: c.y,
-                questRequired: c.questRequired,
-                item: c.item,  // Quest item identifier
-                hasItemProperty: !!c.item
-            }))
-        });
-    } else {
-        console.log('🔍 [MAP LOAD] No collectables in mission embedded data');
-    }
-
-    // Debug: Log explosive targets loading
-    if (map.explosiveTargets && map.explosiveTargets.length > 0) {
-        console.log('🔍 [MAP LOAD] Loading explosive targets:', {
-            count: map.explosiveTargets.length,
-            targets: map.explosiveTargets.map(t => ({ x: t.x, y: t.y, id: t.id, planted: t.planted }))
-        });
-    }
-
-    // DEBUG: Log spawn and extraction to verify they're not swapped
+    // Log spawn and extraction for debugging
     if (this.logger) {
         this.logger.info(`🎯 MAP LOADING - Spawn: (${map.spawn?.x}, ${map.spawn?.y}), Extraction: (${map.extraction?.x}, ${map.extraction?.y})`);
     }

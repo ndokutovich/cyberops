@@ -16,13 +16,16 @@ CyberOpsGame.prototype.startCampaign = function() {
         if (this.logger) this.logger.debug('- this.missions length:', this.missions ? this.missions.length : 'UNDEFINED');
 
         this.clearDemosceneTimer(); // Clear timer when user takes action
-        this.currentMissionIndex = 0;
-        // Mission tracking now handled by MissionService
+        // Reset mission progress via MissionService (single source of truth)
+        if (this.gameServices?.missionService) {
+            this.gameServices.missionService.resetMissionProgress();
+        }
 
-        // Initialize game state for new campaign
-        this.gameServices.resourceService.set('credits', this.startingCredits || 10000, 'new campaign');
-        this.gameServices.resourceService.set('researchPoints', this.startingResearchPoints || 100, 'new campaign');
-        this.gameServices.resourceService.set('worldControl', 0, 'new campaign');
+        // Initialize game state for new campaign - read from campaign economy config
+        const economy = window.ContentLoader?.getContent('economy') || {};
+        this.gameServices.resourceService.set('credits', economy.startingCredits || 5000, 'new campaign');
+        this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints || 500, 'new campaign');
+        this.gameServices.resourceService.set('worldControl', economy.startingWorldControl || 0, 'new campaign');
 
         // Agents are already properly initialized by AgentService from campaign content
         // Agents with hired: true in campaign-content.js are already in activeAgents
@@ -293,24 +296,16 @@ CyberOpsGame.prototype.startMission = function() {
         this.currentScreen = 'game';
         this.initMission();
 
-        // Initialize music system if needed
-        if (!this.musicSystem) {
-            this.initMusicSystem();
-        }
-
         // Stop ALL existing music before starting mission
         if (this.logger) this.logger.debug('🎵 Stopping all music for mission start');
 
-        // Stop screen music system (handles all non-mission music)
-        if (this.stopScreenMusic) {
-            this.stopScreenMusic();
-        }
+        const audioService = this.gameServices?.audioService;
+        if (audioService) {
+            // Stop screen music system (handles all non-mission music)
+            audioService.stopScreenMusic();
 
-        // Also cleanup any existing music system tracks
-        if (this.musicSystem && this.cleanupMusicSystem) {
-            this.cleanupMusicSystem();
-            // Reinitialize after cleanup
-            this.initMusicSystem();
+            // Also cleanup any existing music system tracks
+            audioService.cleanupMissionMusic();
         }
 
         // Load mission-specific music configuration
@@ -340,7 +335,7 @@ CyberOpsGame.prototype.startMission = function() {
             }
 
             if (this.logger) this.logger.debug('🎵 Loading mission music configuration');
-            this.loadMissionMusic(this.currentMissionDef);
+            audioService?.loadMissionMusic(this.currentMissionDef);
         }
 }
 
@@ -364,10 +359,11 @@ CyberOpsGame.prototype.initMission = function() {
 
         // Reset state
         // NOTE: this.agents is now a computed property - don't reset it
+        // NOTE: this.enemies is now a computed property - setting to [] calls enemyService.clearAll()
         this.enemies = [];
         this.projectiles = [];
         this.effects = [];
-        this.missionTimer = 0;
+        // NOTE: missionTimer is now a computed property - MissionService.startMission() resets it
         this.isPaused = false;
 
         // Initialize NPC system (NPCs will be spawned after mission definition is loaded)
@@ -607,13 +603,15 @@ CyberOpsGame.prototype.initMission = function() {
         // Apply research modifiers
         let modifiedAgents;
         if (window.GameServices && window.GameServices.researchService) {
+            // Get completed research from ResearchService (single source of truth)
+            const completedResearch = window.GameServices.researchService.getCompletedResearch();
             // Apply research bonuses (weapons already handled by loadouts)
             // CRITICAL: Pass agent reference directly, NOT a copy
             // If we copy the agent, changes (like death) won't sync with AgentService
             modifiedAgents = agentsWithLoadouts.map(agent => {
                 return window.GameServices.researchService.applyResearchToAgent(
                     agent,  // Pass reference, not copy
-                    this.completedResearch || []
+                    completedResearch
                 );
             });
         } else {
@@ -700,22 +698,12 @@ CyberOpsGame.prototype.initMission = function() {
                 }
             } else if (!agent.rpgEntity) {
                 const rpgManager = this.rpgManager || window.GameServices?.rpgService?.rpgManager;
-                if (rpgManager) {
-                    const rpgAgent = rpgManager.createRPGAgent(agent, agent.class || 'soldier');
-                    agent.rpgEntity = rpgAgent;
-                    if (this.logger) this.logger.debug(`📊 Created new RPG entity for agent: ${agent.name}`);
-                } else {
-                    // Create a basic RPG entity fallback
-                    agent.rpgEntity = {
-                        level: 1,
-                        experience: 0,
-                        stats: { strength: 10, agility: 10 },
-                        availableStatPoints: 0,
-                        availableSkillPoints: 0,
-                        availablePerkPoints: 0
-                    };
-                    if (this.logger) this.logger.warn(`⚠️ Created fallback RPG entity for agent: ${agent.name}`);
+                if (!rpgManager) {
+                    throw new Error('RPGManager not available - required for creating agent RPG entity');
                 }
+                const rpgAgent = rpgManager.createRPGAgent(agent, agent.class || 'soldier');
+                agent.rpgEntity = rpgAgent;
+                if (this.logger) this.logger.debug(`📊 Created new RPG entity for agent: ${agent.name}`);
             }
 
             // Apply equipment from InventoryService
@@ -726,7 +714,11 @@ CyberOpsGame.prototype.initMission = function() {
             // Ensure required properties exist
             // IMPORTANT: Set maxHealth first, then restore health to full for mission start
             agent.maxHealth = agent.maxHealth || agent.health || 100;
-            agent.health = agent.maxHealth;  // Start mission with full health
+            // Full heal via AgentService (single source of truth)
+            if (!this.gameServices?.agentService) {
+                throw new Error('AgentService not available - required for full heal');
+            }
+            this.gameServices.agentService.fullHealAgent(agent.id);
             agent.protection = agent.protection || 0;
             // Initialize bonuses through service if not set
             if (!agent.hackBonus) agent.hackBonus = 0;
@@ -940,26 +932,19 @@ CyberOpsGame.prototype.spawnMissionEnemies = function() {
         // Try to get rpgManager from various sources
         const rpgManager = this.rpgManager || window.GameServices?.rpgService?.rpgManager;
 
-        if (rpgManager && window.RPGEnemy) {
-            const rpgEnemy = rpgManager.createRPGEnemy(enemy, enemyTypeName);
-            enemy.rpgEntity = rpgEnemy;
-            enemy.level = rpgEnemy.level || 1;
-            if (this.logger) this.logger.debug(`   📊 Added RPG entity to enemy - Level ${enemy.level}`);
-        } else {
-            if (this.logger) this.logger.warn(`   ⚠️ Could not add RPG entity to enemy:`, {
-                hasRPGManager: !!this.rpgManager,
-                hasGameServicesRPG: !!window.GameServices?.rpgService?.rpgManager,
-                hasRPGEnemyClass: !!window.RPGEnemy
-            });
-            // Create a basic RPG entity fallback
-            enemy.rpgEntity = {
-                level: 1,
-                experience: 0,
-                stats: { strength: 10, agility: 10 }
-            };
+        if (!rpgManager || !window.RPGEnemy) {
+            throw new Error('RPGManager or RPGEnemy not available - required for enemy RPG entity');
         }
+        const rpgEnemy = rpgManager.createRPGEnemy(enemy, enemyTypeName);
+        enemy.rpgEntity = rpgEnemy;
+        enemy.level = rpgEnemy.level || 1;
+        if (this.logger) this.logger.debug(`   📊 Added RPG entity to enemy - Level ${enemy.level}`);
 
-        this.enemies.push(enemy);
+        // Spawn via EnemyService (single source of truth)
+        if (!this.gameServices?.enemyService) {
+            throw new Error('EnemyService not available - required for spawning enemies');
+        }
+        this.gameServices.enemyService.spawnEnemy(enemy);
         if (this.logger) this.logger.info(`✅ Enemy ${i} created: ${enemyTypeName} at exact position (${enemy.x}, ${enemy.y}) with health ${enemy.health}`);
     });
 
@@ -1353,7 +1338,7 @@ CyberOpsGame.prototype.shootNearestEnemy = function(agent) {
             }
 
             // Play shooting sound
-            this.playSound('shoot', 0.4);
+            this.gameServices?.audioService?.playSound('shoot', 0.4);
 
             // Vibration feedback
             if ('vibrate' in navigator) {
@@ -1422,9 +1407,7 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
             }
 
             // Play explosion sound
-            if (self.playSound) {
-                self.playSound('explosion', 0.6);
-            }
+            self.gameServices?.audioService?.playSound('explosion', 0.6);
 
             // Strong vibration for explosion
             if ('vibrate' in navigator) {
@@ -1451,7 +1434,12 @@ CyberOpsGame.prototype.throwGrenade = function(agent) {
                     enemiesHit++;
 
                     if (enemy.health <= 0) {
-                        enemy.alive = false;
+                        // Kill via EnemyService (single source of truth)
+                        if (self.gameServices && self.gameServices.enemyService) {
+                            self.gameServices.enemyService.killEnemy(enemy.id, 'grenade');
+                        } else {
+                            enemy.alive = false;
+                        }
                         self.totalEnemiesDefeated++;
 
                         // Track enemy elimination for mission objectives
@@ -1755,172 +1743,6 @@ CyberOpsGame.prototype.hasLineOfSight = function(x1, y1, x2, y2) {
         return true;
 }
 
-// Sound effect helper with MP3 fallback
-CyberOpsGame.prototype.playSound = function(soundName, volume = 0.5) {
-        // First try to play HTML audio element if it exists
-        const audioElement = document.getElementById(soundName + 'Sound');
-        if (audioElement) {
-            // Check if the audio element can actually play
-            if (audioElement.readyState >= 2) { // HAVE_CURRENT_DATA or better
-                try {
-                    // Clone and play
-                    const audio = audioElement.cloneNode(true);
-                    audio.volume = volume * (this.sfxVolume || 1) * (this.masterVolume || 1);
-                    const playPromise = audio.play();
-
-                    if (playPromise !== undefined) {
-                        playPromise.catch(err => {
-                            if (this.logger) this.logger.error(`Audio playback failed for ${soundName}: ${err.message}`);
-                            this.playSynthSound(soundName, volume);
-                        });
-                    }
-                    return;
-                } catch (err) {
-                    if (this.logger) this.logger.error(`Error cloning/playing ${soundName}: ${err.message}`);
-                }
-            } else {
-                // Audio not ready, check if it has a source that failed to load
-                if (this.logger) this.logger.debug(`Audio element ${soundName} not ready (readyState: ${audioElement.readyState})`);
-
-                // Try to reload it
-                audioElement.load();
-
-                // For now, use synthesized sound
-                this.playSynthSound(soundName, volume);
-                return;
-            }
-        } else {
-            if (this.logger) this.logger.debug(`No audio element found for ${soundName}`);
-        }
-
-        // Fall back to synthesized sounds
-        this.playSynthSound(soundName, volume);
-}
-
-// Synthesized sound effects using Web Audio API
-CyberOpsGame.prototype.playSynthSound = function(soundName, volume = 0.5) {
-        // Create audio context if not exists
-        if (!this.audioContext) {
-            try {
-                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            } catch (e) {
-                return; // No audio support
-            }
-        }
-
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-
-        try {
-            if (soundName === 'shoot') {
-                // Laser/gun sound
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
-
-                gain.gain.setValueAtTime(volume * 0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.start(now);
-                osc.stop(now + 0.1);
-
-            } else if (soundName === 'explosion') {
-                // Explosion sound
-                const noise = ctx.createBufferSource();
-                const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-
-                for (let i = 0; i < data.length; i++) {
-                    data[i] = (Math.random() - 0.5) * 2;
-                }
-
-                noise.buffer = buffer;
-
-                const gain = ctx.createGain();
-                const filter = ctx.createBiquadFilter();
-
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(3000, now);
-                filter.frequency.exponentialRampToValueAtTime(400, now + 0.2);
-
-                gain.gain.setValueAtTime(volume * 0.5, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-
-                noise.connect(filter);
-                filter.connect(gain);
-                gain.connect(ctx.destination);
-
-                noise.start(now);
-
-            } else if (soundName === 'hit') {
-                // Impact sound
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.exponentialRampToValueAtTime(40, now + 0.05);
-
-                gain.gain.setValueAtTime(volume * 0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.start(now);
-                osc.stop(now + 0.05);
-
-            } else if (soundName === 'hack') {
-                // Digital/hack sound
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(400, now);
-
-                // Create beeping pattern
-                for (let i = 0; i < 3; i++) {
-                    const t = now + i * 0.1;
-                    gain.gain.setValueAtTime(volume * 0.2, t);
-                    gain.gain.setValueAtTime(0, t + 0.05);
-                }
-
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.start(now);
-                osc.stop(now + 0.3);
-
-            } else if (soundName === 'shield') {
-                // Shield activation sound
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(200, now);
-                osc.frequency.exponentialRampToValueAtTime(800, now + 0.2);
-
-                gain.gain.setValueAtTime(0, now);
-                gain.gain.linearRampToValueAtTime(volume * 0.3, now + 0.1);
-                gain.gain.linearRampToValueAtTime(0, now + 0.2);
-
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.start(now);
-                osc.stop(now + 0.2);
-            }
-        } catch (e) {
-            if (this.logger) this.logger.error('Synth sound failed:', soundName, e);
-        }
-}
-
 CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
         if (!this.map.terminals) return;
 
@@ -1963,7 +1785,7 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
                 });
 
                 // Play hack sound
-                this.playSound('hack', 0.5);
+                this.gameServices?.audioService?.playSound('hack', 0.5);
 
                 // Unlock doors linked to this terminal
                 if (this.map.doors) {
@@ -2017,7 +1839,7 @@ CyberOpsGame.prototype.activateShield = function(agent) {
         });
 
         // Play shield sound
-        this.playSound('shield', 0.4);
+        this.gameServices?.audioService?.playSound('shield', 0.4);
 }
 
 CyberOpsGame.prototype.plantNearestExplosive = function(agent) {

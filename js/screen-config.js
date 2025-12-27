@@ -64,8 +64,10 @@ const SCREEN_CONFIG = {
                     if (window.game) {
                         window.game.splashSkipped = true;
                         // Trigger the skip transition for music (pass actual screen ID)
-                        if (window.game.transitionScreenMusic) {
-                            window.game.transitionScreenMusic('vendor-splash', 'main-menu');
+                        const audioService = window.game.gameServices?.audioService;
+                        if (audioService) {
+                            audioService.splashSkipped = true;
+                            audioService.transitionScreenMusic('vendor-splash', 'main-menu');
                         }
                     }
                     // Navigate to main-menu screen
@@ -893,9 +895,11 @@ const SCREEN_CONFIG = {
         onEnter: function(params) {
             // Stop any playing music (mission music, menu music, etc.)
             if (window.game) {
-                if (window.game.stopMusic) window.game.stopMusic();
-                if (window.game.pauseLevelMusic) window.game.pauseLevelMusic();
-                if (window.game.stopScreenMusic) window.game.stopScreenMusic();
+                const audioService = window.game.gameServices?.audioService;
+                if (audioService) {
+                    audioService.stopScreenMusic();
+                    audioService.cleanupMissionMusic();
+                }
             }
 
             // Play the specified cutscene
@@ -920,10 +924,6 @@ if (window.screenManager) {
     });
     const logger = window.Logger ? new window.Logger('ScreenConfig') : null;
     if (logger) logger.debug('📺 Registered', Object.keys(SCREEN_CONFIG).length, 'screens');
-    console.log('📺 SCREEN CONFIG LOADED - Version 2.0 with vendor/studio splashes');
-    console.log('📺 Registered screens:', Object.keys(SCREEN_CONFIG));
-    console.log('📺 Vendor splash registered:', SCREEN_CONFIG['vendor-splash'] ? 'YES' : 'NO');
-    console.log('📺 Studio splash registered:', SCREEN_CONFIG['studio-splash'] ? 'YES' : 'NO');
 }
 
 // Also expose to window for debugging

@@ -1040,10 +1040,10 @@ class DeclarativeDialogEngine {
         const sound = this.config.sounds?.[soundId];
         if (!sound) return;
 
-        // Use game's audio system if available
-        const game = window.game;
-        if (game?.playSound) {
-            game.playSound(sound.file, sound.volume);
+        // Use AudioService directly
+        const audioService = window.game?.gameServices?.audioService || window.GameServices?.audioService;
+        if (audioService) {
+            audioService.playSound(sound.file, sound.volume);
         } else {
             // Fallback to audio element
             const audio = new Audio(`sounds/${sound.file}`);

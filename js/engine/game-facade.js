@@ -15,43 +15,39 @@ class GameFacade {
         this.services = gameServices || window.GameServices;
         if (!this.services) {
             if (this.logger) this.logger.error('GameFacade: No GameServices available, creating minimal stub');
-            // Create a minimal stub to prevent crashes
+            // Create a minimal stub to prevent crashes - logs warnings instead of silent failure
+            const warnStub = (method) => (...args) => {
+                console.warn(`⚠️ ResourceService.${method}() called but service not initialized`, args);
+                return false;
+            };
             this.services = {
                 agentService: { getAvailableAgents: () => [] },
                 combatService: null,
                 questService: null,
-                resourceService: { addCredits: () => {}, addResearchPoints: () => {} }
+                resourceService: {
+                    addCredits: warnStub('addCredits'),
+                    addResearchPoints: warnStub('addResearchPoints'),
+                    spendCredits: warnStub('spendCredits'),
+                    spendResearchPoints: warnStub('spendResearchPoints'),
+                    get: () => 0,
+                    set: warnStub('set'),
+                    add: warnStub('add'),
+                    spend: warnStub('spend')
+                }
             };
         }
 
-        // Game state
+        // Game state (computed properties: gameSpeed, targetGameSpeed, autoSlowdownRange, speedIndicatorFadeTime)
         this.currentScreen = 'splash';
         this.isPaused = false;
-        // REMOVED: this.gameSpeed - will be computed property!
-        // REMOVED: this.targetGameSpeed - will be computed property!
-        // REMOVED: this.autoSlowdownRange - will be computed property!
-        // REMOVED: this.speedIndicatorFadeTime - will be computed property!
 
-        // Mission state
-        // REMOVED: this.currentMission - will be computed property!
-        // REMOVED: this.currentMap - already a computed property!
-        // REMOVED: this.missionObjectives - already a computed property!
-        // REMOVED: this.extractionEnabled - already a computed property!
-
-        // Entity state
-        // REMOVED: this.agents - will be computed property!
-        // REMOVED: this.enemies - will be computed property!
-        // REMOVED: this.npcs - will be computed property!
-        // REMOVED: this.projectiles - will be computed property!
-        // REMOVED: this.effects - will be computed property!
+        // Entity state (computed properties: agents, enemies, npcs, projectiles, effects)
         this.items = [];
 
-        // Selection state
-        // REMOVED: this.selectedAgent - will be computed property!
+        // Selection state (computed property: selectedAgent)
         this.selectedTarget = null;
 
-        // Combat state
-        // REMOVED: this.turnBasedMode - will be computed property!
+        // Combat state (computed property: turnBasedMode)
         this.currentTurn = null;
         this.turnOrder = [];
         this.actionPoints = new Map();
@@ -70,12 +66,6 @@ class GameFacade {
         // Dialog state
         this.activeDialogs = [];
         this.npcConversations = new Map();
-
-        // Rendering-related state (needed by GameEngine)
-        // REMOVED: All of these are now computed properties!
-        // this.fogEnabled, this.fogOfWar, this.showPaths, this.debugMode,
-        // this.usePathfinding, this.agentWaypoints, this.destinationIndicators,
-        // this.squadSelectEffect, this.activeQuests, this.npcActiveQuests, this.is3DMode
 
         // Initialize subsystems
         this.initializeDefaultState();
@@ -184,17 +174,19 @@ class GameFacade {
     }
 
     /**
-     * Enemies - reads from legacy game
+     * Enemies - reads from EnemyService (single source of truth)
      */
     get enemies() {
-        if (this.legacyGame && this.legacyGame.enemies) {
-            return this.legacyGame.enemies;
+        if (!this.services.enemyService) {
+            throw new Error('EnemyService not available - required for enemies');
         }
-        return [];
+        return this.services.enemyService.getAllEnemies();
     }
 
     set enemies(value) {
-        if (this.legacyGame) {
+        if (this.services.enemyService && Array.isArray(value) && value.length === 0) {
+            this.services.enemyService.clearAll();
+        } else if (this.legacyGame) {
             this.legacyGame.enemies = value;
         }
     }
@@ -481,23 +473,17 @@ class GameFacade {
      * Always reads from MissionService, never stores locally
      */
     get extractionEnabled() {
-        // ALWAYS read from MissionService (single source of truth)
-        if (this.gameServices && this.gameServices.missionService) {
-            return this.gameServices.missionService.extractionEnabled;
-        }
-        // Fallback to legacy game if service not available
-        if (this.legacyGame && this.legacyGame.extractionEnabled !== undefined) {
-            return this.legacyGame.extractionEnabled;
-        }
-        return false;
+        // Read from MissionService (single source of truth)
+        // Return false if not in mission context (safe default)
+        return this.services?.missionService?.extractionEnabled ?? false;
     }
 
     /**
      * Setter redirects to MissionService to maintain single source of truth
      */
     set extractionEnabled(value) {
-        if (this.gameServices && this.gameServices.missionService) {
-            this.gameServices.missionService.extractionEnabled = value;
+        if (this.services && this.services.missionService) {
+            this.services.missionService.extractionEnabled = value;
         } else if (this.legacyGame) {
             this.legacyGame.extractionEnabled = value;
         }
@@ -711,14 +697,10 @@ class GameFacade {
      */
     get missionObjectives() {
         // ALWAYS read from MissionService (single source of truth)
-        if (this.gameServices && this.gameServices.missionService) {
-            return this.gameServices.missionService.objectives;
+        if (!this.services?.missionService) {
+            return []; // Safe default for render loop access
         }
-        // Fallback to legacy game if service not available
-        if (this.legacyGame && this.legacyGame.currentMissionDef && this.legacyGame.currentMissionDef.objectives) {
-            return this.legacyGame.currentMissionDef.objectives;
-        }
-        return [];
+        return this.services.missionService.objectives;
     }
 
     /**
@@ -735,25 +717,41 @@ class GameFacade {
     spawnAgents(spawnPoint) {
         if (!spawnPoint) return;
 
+        // AgentService is required
+        if (!this.services.agentService) {
+            throw new Error('AgentService not available - required for spawning agents');
+        }
+
         this.agents.forEach((agent, index) => {
             agent.x = spawnPoint.x + index;
             agent.y = spawnPoint.y;
             agent.alive = true;
-            agent.health = agent.maxHealth || 100;
+            // Full heal via AgentService (single source of truth)
+            this.services.agentService.fullHealAgent(agent.id);
         });
     }
 
     /**
-     * Spawn enemies
+     * Spawn enemies via EnemyService
      */
     spawnEnemies(enemyData) {
-        this.enemies = enemyData.map((enemy, index) => ({
-            ...enemy,
-            id: `enemy_${index}`,
-            alive: true,
-            health: enemy.health || 50,
-            maxHealth: enemy.health || 50
-        }));
+        // EnemyService is required
+        if (!this.services.enemyService) {
+            throw new Error('EnemyService not available - required for spawning enemies');
+        }
+
+        // Clear existing enemies first
+        this.services.enemyService.clearAll();
+
+        // Spawn each enemy via service
+        enemyData.forEach((enemy, index) => {
+            this.services.enemyService.spawnEnemy({
+                ...enemy,
+                id: `enemy_${index}`,
+                health: enemy.health || 50,
+                maxHealth: enemy.health || 50
+            });
+        });
     }
 
     /**
@@ -1011,8 +1009,8 @@ class GameFacade {
     onEntityDeath(entity) {
         if (entity.id.startsWith('enemy_')) {
             // Track through MissionService (single source of truth)
-            if (this.gameServices && this.gameServices.missionService) {
-                this.gameServices.missionService.trackEvent('eliminate', {
+            if (this.services && this.services.missionService) {
+                this.services.missionService.trackEvent('eliminate', {
                     type: entity.type || 'unknown'
                 });
             }
@@ -1138,31 +1136,8 @@ class GameFacade {
         }
     }
 
-    /**
-     * Complete mission
-     */
-    completeMission() {
-        if (!this.currentMission) return;
-
-        // Add to completed missions
-        this.completedMissions.push(this.currentMission.id);
-
-        // Apply rewards
-        if (this.currentMission.rewards) {
-            const rewards = this.currentMission.rewards;
-            if (rewards.credits) {
-                this.services.resourceService.addCredits(rewards.credits);
-            }
-            if (rewards.researchPoints) {
-                this.services.resourceService.addResearchPoints(rewards.researchPoints);
-            }
-        }
-
-        // Switch to victory screen
-        this.currentScreen = 'victory';
-
-        if (this.logger) this.logger.info(`Mission completed: ${this.currentMission.id}`);
-    }
+    // NOTE: completeMission() removed - was dead code that duplicated MissionService.completeMission()
+    // All mission completion now goes through MissionService as single source of truth
 
     /**
      * Handle input action (interpreted from GameEngine input)
@@ -1358,8 +1333,11 @@ class GameFacade {
             return; // Skip game update while frozen
         }
 
-        // Original - simple increment (speed comes from multiple update calls)
-        game.missionTimer++;
+        // Update mission timer via MissionService (single source of truth)
+        // Simple increment per frame - speed comes from multiple update calls
+        if (game.gameServices?.missionService) {
+            game.gameServices.missionService.missionTimer++;
+        }
         const seconds = Math.floor(game.missionTimer / 60);
 
         // Update team AI for unselected agents
@@ -1488,10 +1466,8 @@ class GameFacade {
 
                         game.addNotification("🖥️ Terminal hacked!");
 
-                        // Play hack sound if available
-                        if (game.playSound) {
-                            game.playSound('hack');
-                        }
+                        // Play hack sound
+                        game.gameServices?.audioService?.playSound('hack');
                     }
                     agent.autoHackTarget = null; // Clear auto-hack flag
                 }
@@ -1511,10 +1487,8 @@ class GameFacade {
                         game.destroyedTargets = (game.destroyedTargets || 0) + 1;
                         game.addNotification("💣 Explosive planted!");
 
-                        // Play bomb sound if available
-                        if (game.playSound) {
-                            game.playSound('explosion');
-                        }
+                        // Play bomb sound
+                        game.gameServices?.audioService?.playSound('explosion');
 
                         // Create explosion effect
                         if (game.createExplosion) {
@@ -1774,7 +1748,7 @@ class GameFacade {
                                 }
                             }
                             // Play hit sound
-                            game.playSound('hit', 0.3);
+                            game.gameServices?.audioService?.playSound('hit', 0.3);
                         }
                     } else {
                         // Fallback: find closest agent to impact point
@@ -1825,7 +1799,7 @@ class GameFacade {
                                 }
                             }
                             // Play hit sound
-                            game.playSound('hit', 0.3);
+                            game.gameServices?.audioService?.playSound('hit', 0.3);
                         }
                     }
                 } else {
@@ -1895,7 +1869,7 @@ class GameFacade {
                                 // if (game.logDeath) game.logDeath(enemy);
                             }
                             // Play hit sound
-                            game.playSound('hit', 0.3);
+                            game.gameServices?.audioService?.playSound('hit', 0.3);
                         }
                     } else {
                         // Fallback: find closest enemy to impact point
@@ -1957,7 +1931,7 @@ class GameFacade {
                                 }
                             }
                             // Play hit sound
-                            game.playSound('hit', 0.3);
+                            game.gameServices?.audioService?.playSound('hit', 0.3);
                         }
                     }
                 }
@@ -1983,14 +1957,10 @@ class GameFacade {
         }
 
         // Call the comprehensive mission update that handles objectives AND extraction
-        if (game.updateMissionObjectives) {
-            game.updateMissionObjectives();
-        } else {
-            // Fallback to simple status check if new system not available
-            if (game.checkMissionStatus) {
-                game.checkMissionStatus();
-            }
+        if (!game.updateMissionObjectives) {
+            throw new Error('updateMissionObjectives not available - required for mission tracking');
         }
+        game.updateMissionObjectives();
     }
 
     // ============================================
@@ -2097,6 +2067,7 @@ class GameFacade {
     dispose() {
         // Clean up any resources
         // NOTE: agents is now a computed property - don't reset it
+        // NOTE: enemies setter calls enemyService.clearAll() when set to []
         this.enemies = [];
         this.npcs = [];
         this.projectiles = [];

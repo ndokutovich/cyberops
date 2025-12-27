@@ -13,9 +13,9 @@ CyberOpsGame.prototype.showSyndicateHub = function() {
     }
 
     // Stop mission music and cleanup music system
-    if (this.musicSystem && this.cleanupMusicSystem) {
+    if (this.gameServices?.audioService) {
         if (this.logger) this.logger.debug('🛑 Stopping mission music when returning to hub');
-        this.cleanupMusicSystem();
+        this.gameServices.audioService.cleanupMissionMusic();
     }
 
     // Use screen manager to navigate to hub (fully declarative - no fallback)
@@ -160,8 +160,10 @@ CyberOpsGame.prototype.startNextMission = function() {
         // Hide hub using screen manager
         // Hub hiding is handled by screen navigation
 
-        // Set current mission index and start briefing
-        this.currentMissionIndex = nextMissionIndex;
+        // Set current mission index via MissionService (single source of truth)
+        if (this.gameServices?.missionService) {
+            this.gameServices.missionService.setCurrentMissionIndex(nextMissionIndex);
+        }
         this.currentMission = nextMission;
         window.screenManager.navigateTo('mission-briefing', { selectedMission: nextMission });
     } else {
@@ -191,7 +193,10 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
         // No need to manually hide screens
 
         const mission = this.missions[missionIndex];
-        this.currentMissionIndex = missionIndex;
+        // Set current mission index via MissionService (single source of truth)
+        if (this.gameServices?.missionService) {
+            this.gameServices.missionService.setCurrentMissionIndex(missionIndex);
+        }
         this.currentMission = mission;
         window.screenManager.navigateTo('mission-briefing', { selectedMission: mission });
 }
@@ -234,91 +239,65 @@ CyberOpsGame.prototype.returnToHub = function() {
 // showResearchLabOld removed - now using declarative dialog system
 // All calls replaced with: this.dialogEngine.navigateTo('research-lab');
     
+// Start research using ResearchService as single source of truth
 CyberOpsGame.prototype.startResearch = function(projectId) {
-        const researchProjects = [
-            { id: 1, name: 'Weapon Upgrades', cost: 150, description: '+5 damage to all weapons', category: 'combat' },
-            { id: 2, name: 'Stealth Technology', cost: 200, description: '+20% stealth success rate', category: 'stealth' },
-            { id: 3, name: 'Combat Systems', cost: 175, description: '+15 health to all agents', category: 'combat' },
-            { id: 4, name: 'Hacking Protocols', cost: 225, description: '+25% hacking speed', category: 'tech' },
-            { id: 5, name: 'Medical Systems', cost: 300, description: 'Auto-heal 20% health between missions', category: 'support' },
-            { id: 6, name: 'Advanced Tactics', cost: 250, description: '+1 movement speed to all agents', category: 'tactical' }
-        ];
-        
-        const project = researchProjects.find(p => p.id === projectId);
-        if (!project || this.researchPoints < project.cost) return;
-        
-        // Initialize completed research array if not exists
-        if (!this.completedResearch) this.completedResearch = [];
-        
-        // Check if already researched
-        if (this.completedResearch.includes(projectId)) {
-            this.showHudDialog(
-                '⚠️ RESEARCH COMPLETE',
-                `${project.name} has already been researched!`,
-                [{ text: 'OK', action: () => { if (this.dialogEngine) { this.dialogEngine.navigateTo('research-lab'); } } }]
-            );
-            return;
-        }
-        
-        // UNIDIRECTIONAL: Only use ResourceService - no fallback
-        if (!this.gameServices || !this.gameServices.resourceService) {
-            if (this.logger) this.logger.error('❌ ResourceService not available for research!');
-            this.showHudDialog(
-                '⚠️ ERROR',
-                'Service initialization error. Please refresh the game.',
-                [{ text: 'OK' }]
-            );
-            return;
-        }
-        this.gameServices.resourceService.spend('researchPoints', project.cost, `research: ${project.name}`);
-        this.completedResearch.push(projectId);
-        
-        // Apply research benefits
-        this.applyResearchBenefits(project);
+    const researchService = this.gameServices?.researchService;
+    if (!researchService) {
+        if (this.logger) this.logger.error('❌ ResearchService not available for research!');
+        this.addNotification('⚠️ Service error - please refresh');
+        return;
+    }
 
-        // Close the declarative dialog first to prevent z-index issues
-        if (this.dialogEngine && this.dialogEngine.close) {
-            this.dialogEngine.close();
-        }
+    // Get project from ResearchService
+    const project = researchService.getProject(projectId);
+    if (!project) {
+        if (this.logger) this.logger.error(`❌ Research project ${projectId} not found`);
+        return;
+    }
 
-        // Show completion dialog
-        setTimeout(() => {
-            this.showHudDialog(
-                '🎯 RESEARCH COMPLETED',
-                `${project.name} research has been completed!<br><br>
-                <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                    <strong>${project.name}</strong><br>
-                    Category: ${project.category}<br>
-                    Benefit: ${project.description}
-                </div>
-                Research Points Remaining: ${this.researchPoints.toLocaleString()}`,
-                [
-                    { text: 'CONTINUE RESEARCH', action: () => {
-                        this.closeDialog();
-                        // Re-open the declarative research dialog
-                        if (this.dialogEngine && this.dialogEngine.navigateTo) {
-                            this.dialogEngine.navigateTo('research-lab');
-                        }
-                    }},
-                    { text: 'BACK TO HUB', action: () => { this.closeDialog(); window.screenManager.navigateTo('hub'); } }
-                ]
-            );
-        }, 100);
-        
-        this.updateHubStats();
+    // Check if already researched
+    const completedResearch = researchService.getCompletedResearch();
+    if (completedResearch.includes(projectId)) {
+        this.addNotification(`⚠️ ${project.name} already researched!`);
+        return;
+    }
+
+    // Use ResearchService.completeResearch() which handles cost deduction
+    const success = researchService.completeResearch(projectId, this);
+    if (!success) {
+        this.addNotification(`⚠️ Cannot research ${project.name} - check RP or prerequisites`);
+        return;
+    }
+
+    // Apply research benefits
+    this.applyResearchBenefits(project);
+
+    // Show success notification
+    this.addNotification(`🎯 Research Complete: ${project.name}`);
+    this.addNotification(`📊 Benefit: ${project.description}`);
+
+    // Refresh the research lab dialog to show updated state
+    if (this.dialogEngine && this.dialogEngine.currentState === 'research-lab') {
+        this.dialogEngine.navigateTo('research-lab');
+    }
+
+    this.updateHubStats();
 }
     
 CyberOpsGame.prototype.applyResearchBenefits = function(project) {
+    const researchService = this.gameServices?.researchService;
+    if (!researchService) return;
+
+    // Get completed research from ResearchService (single source of truth)
+    const completedResearch = researchService.getCompletedResearch();
+
     // Apply research to all active agents via ResearchService
     this.activeAgents = this.activeAgents.map(agent =>
-        this.gameServices.researchService.applyResearchToAgent(
-            agent,
-            this.completedResearch || []
-        )
+        researchService.applyResearchToAgent(agent, completedResearch)
     );
 
-    // Special handling for Medical Systems
-    if (project.id === 5) {
+    // Special handling for Medical Systems (check by stringId or legacy id)
+    if (project.stringId === 'medical_systems' || project.id === 5) {
         this.applyMedicalHealing();
     }
 }
@@ -335,19 +314,17 @@ CyberOpsGame.prototype.applyEquipmentBonuses = function(agent) {
     
     // Apply research bonuses during missions
 CyberOpsGame.prototype.applyMissionResearchBonuses = function(agent) {
+    const researchService = this.gameServices?.researchService;
+    if (!researchService) return agent;
+
+    // Get completed research from ResearchService (single source of truth)
+    const completedResearch = researchService.getCompletedResearch();
+
     // Apply mission-specific research bonuses via ResearchService
-    return this.gameServices.researchService.applyResearchToAgent(
-        agent,
-        this.completedResearch || []
-    );
+    return researchService.applyResearchToAgent(agent, completedResearch);
 }
-    
-    // Apply medical healing between missions
-// REMOVED: applyMedicalHealing - Dead code, overwritten by game-screens.js version
-// This version was never called because game-screens.js loads later and replaces it
-// See DUPLICATE_ANALYSIS.md for details
-    
-    // Apply stealth bonus for detection  
+
+// Apply stealth bonus for detection  
 CyberOpsGame.prototype.getStealthDetectionRange = function(agent) {
         let baseRange = 5; // Default enemy vision range
         
@@ -358,22 +335,9 @@ CyberOpsGame.prototype.getStealthDetectionRange = function(agent) {
         
         return baseRange;
 }
-    
-    // Fix missing medical healing call after mission completion
-CyberOpsGame.prototype.completeMissionRewards = function(victory) {
-        if (victory && this.currentMission.rewards) {
-            // UNIDIRECTIONAL: Apply mission rewards via ResourceService only
-            if (this.gameServices && this.gameServices.resourceService) {
-                this.gameServices.resourceService.applyMissionRewards(this.currentMission.rewards);
-            }
-            
-            // Apply medical healing if researched
-            this.applyMedicalHealing();
-            
-            // Update hub stats
-            this.updateHubStats();
-        }
-}
+// NOTE: completeMissionRewards() removed - was dead code never called
+// Mission rewards applied by MissionService.completeMission() as single source of truth
+// Medical healing applied by ResearchService.applyMedicalHealing()
     
 // showIntelligence removed - was only used by deprecated DialogManager
 // Intelligence functionality is part of the intel-missions declarative dialog
@@ -457,27 +421,12 @@ CyberOpsGame.prototype.showSquadManagement = function() {
 CyberOpsGame.prototype.manageAgentEquipment = function(agentId) {
         const agent = this.activeAgents.find(a => a.id === agentId);
         if (!agent) return;
-        
-        this.showHudDialog(
-            `🔧 ${agent.name.toUpperCase()} - EQUIPMENT`,
-            `<div style="text-align: center;">
-                <div style="background: rgba(0,255,255,0.1); padding: 20px; border-radius: 8px;">
-                    <h3 style="color: #fff; margin-bottom: 15px;">${agent.name}</h3>
-                    <div style="color: #ccc; margin-bottom: 20px;">
-                        Current Equipment: Basic Loadout<br>
-                        Weapons: Standard Issue<br>
-                        Armor: Light Protection
-                    </div>
-                    <p style="color: #ccc; font-style: italic;">
-                        Advanced equipment system coming in future updates!<br>
-                        For now, all agents use standard loadouts.
-                    </p>
-                </div>
-            </div>`,
-            [
-                { text: 'BACK', action: () => { this.closeDialog(); this.showSquadManagement(); } }
-            ]
-        );
+
+        // Set selected agent for equipment dialog and navigate to arsenal
+        this.selectedAgentForEquipment = agentId;
+        if (this.dialogEngine) {
+            this.dialogEngine.navigateTo('arsenal');
+        }
 }
     
 CyberOpsGame.prototype.viewAgentDetails = function(agentId) {
@@ -513,6 +462,15 @@ CyberOpsGame.prototype.showSettingsFromHub = function() {
     // Just call the original settings dialog
     this.showSettings();
 }
+
+// Show world map dialog - wrapper for hub card onclick
+CyberOpsGame.prototype.showWorldMap = function() {
+    if (this.dialogEngine) {
+        this.dialogEngine.navigateTo('world-map');
+    } else if (this.logger) {
+        this.logger.error('DialogEngine not available for world map');
+    }
+};
 
 // Generate world map content for dialog system
 CyberOpsGame.prototype.generateWorldMapContent = function() {

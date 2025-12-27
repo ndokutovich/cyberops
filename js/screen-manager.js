@@ -93,17 +93,18 @@ class ScreenManager {
         }
 
         // Handle music transitions
-        if (previousScreen && previousScreen !== screenId && this.game?.transitionScreenMusic) {
+        const audioService = this.game?.gameServices?.audioService;
+        if (previousScreen && previousScreen !== screenId && audioService) {
             // Use music transition system for screen-to-screen navigation
             // This allows for continue, crossfade, skip, etc.
             if (logger) logger.debug(`🎵 Transitioning music from ${previousScreen} to ${screenId}`);
-            this.game.transitionScreenMusic(previousScreen, screenId);
-        } else if (!previousScreen && screenConfig.music && this.game?.loadScreenMusic) {
+            audioService.transitionScreenMusic(previousScreen, screenId);
+        } else if (!previousScreen && screenConfig.music && audioService) {
             // First screen load - start music if configured
             if (logger) logger.debug(`🎵 Loading music for first screen: ${screenId}`);
-            this.game.loadScreenMusic(screenId);
+            audioService.loadScreenMusic(screenId);
         } else {
-            if (logger) logger.debug(`🎵 No music action: prev=${previousScreen}, music=${screenConfig.music}, hasTransition=${!!this.game?.transitionScreenMusic}`);
+            if (logger) logger.debug(`🎵 No music action: prev=${previousScreen}, music=${screenConfig.music}, hasAudioService=${!!audioService}`);
         }
     }
 
@@ -520,55 +521,39 @@ class ScreenManager {
             'returnToHub': () => this.navigateTo('hub'),
             'returnToHubFromVictory': () => {
                 if (logger) logger.info('🏠 returnToHubFromVictory action called');
-                if (this.game?.dialogEngine) {
-                    const action = this.game.dialogEngine.actionRegistry?.get('returnToHubFromVictory');
-                    if (action) {
-                        if (logger) logger.info('✅ Calling DialogEngine returnToHubFromVictory handler');
-                        action.call(this.game.dialogEngine);
-                    } else {
-                        if (logger) logger.error('❌ returnToHubFromVictory not found in DialogEngine actionRegistry');
-                        // Fallback: generate agents and navigate to hub
-                        if (this.game?.generateNewAgentsForHire) {
-                            this.game.generateNewAgentsForHire();
-                        }
-                        this.navigateTo('hub');
-                    }
-                } else {
-                    if (logger) logger.error('❌ DialogEngine not available');
-                    // Fallback: generate agents and navigate to hub
-                    if (this.game?.generateNewAgentsForHire) {
-                        this.game.generateNewAgentsForHire();
-                    }
-                    this.navigateTo('hub');
+                if (!this.game?.dialogEngine) {
+                    throw new Error('DialogEngine not available - required for returnToHubFromVictory');
                 }
+                const action = this.game.dialogEngine.actionRegistry?.get('returnToHubFromVictory');
+                if (!action) {
+                    throw new Error('returnToHubFromVictory action not registered in DialogEngine');
+                }
+                if (logger) logger.info('✅ Calling DialogEngine returnToHubFromVictory handler');
+                action.call(this.game.dialogEngine);
             },
             'returnToHubFromDefeat': () => {
                 if (logger) logger.info('🏠 returnToHubFromDefeat action called');
-                if (this.game?.dialogEngine) {
-                    const action = this.game.dialogEngine.actionRegistry?.get('returnToHubFromDefeat');
-                    if (action) {
-                        if (logger) logger.info('✅ Calling DialogEngine returnToHubFromDefeat handler');
-                        action.call(this.game.dialogEngine);
-                    } else {
-                        if (logger) logger.error('❌ returnToHubFromDefeat not found in DialogEngine actionRegistry');
-                    }
-                } else {
-                    if (logger) logger.error('❌ DialogEngine not available');
+                if (!this.game?.dialogEngine) {
+                    throw new Error('DialogEngine not available - required for returnToHubFromDefeat');
                 }
+                const action = this.game.dialogEngine.actionRegistry?.get('returnToHubFromDefeat');
+                if (!action) {
+                    throw new Error('returnToHubFromDefeat action not registered in DialogEngine');
+                }
+                if (logger) logger.info('✅ Calling DialogEngine returnToHubFromDefeat handler');
+                action.call(this.game.dialogEngine);
             },
             'retryMission': () => {
                 if (logger) logger.info('🔄 retryMission action called');
-                if (this.game?.dialogEngine) {
-                    const action = this.game.dialogEngine.actionRegistry?.get('retryMission');
-                    if (action) {
-                        if (logger) logger.info('✅ Calling DialogEngine retryMission handler');
-                        action.call(this.game.dialogEngine);
-                    } else {
-                        if (logger) logger.error('❌ retryMission not found in DialogEngine actionRegistry');
-                    }
-                } else {
-                    if (logger) logger.error('❌ DialogEngine not available');
+                if (!this.game?.dialogEngine) {
+                    throw new Error('DialogEngine not available - required for retryMission');
                 }
+                const action = this.game.dialogEngine.actionRegistry?.get('retryMission');
+                if (!action) {
+                    throw new Error('retryMission action not registered in DialogEngine');
+                }
+                if (logger) logger.info('✅ Calling DialogEngine retryMission handler');
+                action.call(this.game.dialogEngine);
             },
             'returnToMenu': () => this.navigateTo('main-menu')
         };

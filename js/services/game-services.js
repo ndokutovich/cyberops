@@ -64,11 +64,17 @@ if (typeof GameServices === 'undefined') {
         // HUD service (initialized later when game is ready)
         this.hudService = null;
 
-        // NEW SERVICES: Combat, Quest, and SaveGame
+        // NEW SERVICES: Combat, Quest, Enemy, and SaveGame
         // Combat service for centralized combat state management
         if (window.CombatService) {
             this.combatService = new CombatService(this.formulaService, this.agentService);
             if (this.logger) this.logger.debug('CombatService initialized');
+        }
+
+        // Enemy service for centralized enemy lifecycle management
+        if (window.EnemyService) {
+            this.enemyService = new EnemyService();
+            if (this.logger) this.logger.debug('EnemyService initialized');
         }
 
         // Quest service for quest and objective tracking
@@ -114,6 +120,16 @@ if (typeof GameServices === 'undefined') {
             if (this.logger) this.logger.debug('SettingsService initialized');
         } else {
             throw new Error('SettingsService is required but not loaded');
+        }
+
+        // Audio service for centralized audio management
+        if (window.AudioService) {
+            this.audioService = new AudioService();
+            this.audioService.setKeyboardDispatcher(this.keyboardDispatcher);
+            this.audioService.initialize();
+            if (this.logger) this.logger.debug('AudioService initialized');
+        } else {
+            if (this.logger) this.logger.warn('AudioService not loaded - audio functionality unavailable');
         }
 
         // Bind context for methods that might be called externally
