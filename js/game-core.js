@@ -32,13 +32,11 @@ class CyberOpsGame {
             this.initializeCutsceneSystem();
         }
 
-        // Enable audio on first user interaction
-        this.setupAudioInteraction();
-
         // Initialize audio volumes (0-1 range)
         this.masterVolume = 0.5;
         this.sfxVolume = 0.5;
         // Music volume now managed by declarative config
+        // Note: setupAudioInteraction() is called later after gameServices is initialized
 
         // Game State
         this.currentScreen = 'splash';
@@ -88,6 +86,9 @@ class CyberOpsGame {
                 // Initialize auto-save system
                 this.gameServices.gameStateService.initialize();
             }
+
+            // Enable audio on first user interaction (requires keyboardDispatcher)
+            this.setupAudioInteraction();
         }
 
         // Hub Resources - ALL managed by services
