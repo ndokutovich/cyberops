@@ -377,7 +377,8 @@ class AudioService {
      * Play a sound effect
      */
     playSound(soundType, volume = 0.5) {
-        if (!this.audioEnabled || !this.audioContext) return;
+        // Only check audioEnabled - audioContext is only needed for procedural audio
+        if (!this.audioEnabled) return;
 
         // Get sound config
         const category = this.getSoundCategory(soundType);
@@ -482,7 +483,8 @@ class AudioService {
      * Load music for a specific screen
      */
     loadScreenMusic(screenName) {
-        if (this.logger) this.logger.debug(`Loading music for screen: ${screenName}`);
+        if (this.logger) this.logger.info(`🎵 loadScreenMusic called for: ${screenName}`);
+        if (this.logger) this.logger.debug(`🎵 audioEnabled: ${this.audioEnabled}, hasConfig: ${!!this.config}`);
 
         // Stop current screen music
         if (this.screenMusic.currentTrack) {
@@ -490,6 +492,7 @@ class AudioService {
         }
 
         const screenConfig = this.getMusicConfigForScreen(screenName);
+        if (this.logger) this.logger.debug(`🎵 screenConfig found: ${!!screenConfig}, hasTracks: ${!!screenConfig?.tracks}`);
         if (!screenConfig?.tracks) {
             if (this.logger) this.logger.debug(`No music config for: ${screenName}`);
             return;
@@ -512,7 +515,7 @@ class AudioService {
     playScreenTrack(trackConfig, trackId) {
         if (!trackConfig) return;
 
-        if (this.logger) this.logger.debug(`Playing track: ${trackId}`);
+        if (this.logger) this.logger.info(`🎵 playScreenTrack: ${trackId}, file: ${trackConfig.file || trackConfig.fallback}`);
 
         let audio = this.screenMusic.audioElements[trackId];
         if (!audio) {
@@ -547,13 +550,15 @@ class AudioService {
         }
 
         audio.play().then(() => {
-            if (this.logger) this.logger.info(`Started playing: ${trackId}`);
+            if (this.logger) this.logger.info(`🎵 ✅ Started playing: ${trackId}`);
 
             const targetVolume = this.calculateVolume(configVolume);
             this.fadeInAudio(audio, targetVolume, trackConfig.fadeIn || this.config?.global?.fadeInTime || 2000);
             this.screenMusic.currentTrack = audio;
         }).catch(error => {
-            if (this.logger) this.logger.error(`Failed to play: ${error}`);
+            if (this.logger) this.logger.error(`🎵 ❌ Failed to play ${trackId}: ${error.message || error}`);
+            // Log additional details for debugging
+            if (this.logger) this.logger.error(`🎵 Audio state: src=${audio.src}, readyState=${audio.readyState}, error=${audio.error?.message || 'none'}`);
         });
     }
 

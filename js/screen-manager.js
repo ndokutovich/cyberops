@@ -94,17 +94,18 @@ class ScreenManager {
 
         // Handle music transitions
         const audioService = this.game?.gameServices?.audioService;
+        if (logger) logger.info(`🎵 Music check: prev=${previousScreen}, screenId=${screenId}, music=${screenConfig?.music}, hasAudioService=${!!audioService}`);
         if (previousScreen && previousScreen !== screenId && audioService) {
             // Use music transition system for screen-to-screen navigation
             // This allows for continue, crossfade, skip, etc.
-            if (logger) logger.debug(`🎵 Transitioning music from ${previousScreen} to ${screenId}`);
+            if (logger) logger.info(`🎵 Transitioning music from ${previousScreen} to ${screenId}`);
             audioService.transitionScreenMusic(previousScreen, screenId);
         } else if (!previousScreen && screenConfig.music && audioService) {
             // First screen load - start music if configured
-            if (logger) logger.debug(`🎵 Loading music for first screen: ${screenId}`);
+            if (logger) logger.info(`🎵 Loading music for first screen: ${screenId}`);
             audioService.loadScreenMusic(screenId);
         } else {
-            if (logger) logger.debug(`🎵 No music action: prev=${previousScreen}, music=${screenConfig.music}, hasAudioService=${!!audioService}`);
+            if (logger) logger.warn(`🎵 No music action: prev=${previousScreen}, music=${screenConfig?.music}, hasAudioService=${!!audioService}`);
         }
     }
 
