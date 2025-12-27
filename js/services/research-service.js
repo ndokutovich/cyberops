@@ -1,6 +1,7 @@
 /**
  * ResearchService - Manages all research-related calculations and applications
- * Follows single responsibility principle
+ * Single source of truth for research data (loaded from campaign)
+ * Integrates with FormulaService for calculations
  */
 class ResearchService {
     constructor(formulaService) {
@@ -9,69 +10,79 @@ class ResearchService {
         }
         this.formulaService = formulaService;
 
-        // Research project definitions
-        this.projects = {
-            1: {
-                id: 1,
-                name: 'Weapon Upgrades',
-                cost: 150,
-                description: '+5 damage to all weapons',
-                category: 'combat',
-                effects: {
-                    damageBonus: 5
-                }
-            },
-            2: {
-                id: 2,
-                name: 'Stealth Technology',
-                cost: 200,
-                description: '+20% stealth success rate',
-                category: 'stealth',
-                effects: {
-                    stealthBonus: 20
-                }
-            },
-            3: {
-                id: 3,
-                name: 'Combat Systems',
-                cost: 175,
-                description: '+15 health to all agents',
-                category: 'combat',
-                effects: {
-                    healthBonus: 15
-                }
-            },
-            4: {
-                id: 4,
-                name: 'Hacking Protocols',
-                cost: 225,
-                description: '+25% hacking speed',
-                category: 'tech',
-                effects: {
-                    hackingBonus: 25
-                }
-            },
-            5: {
-                id: 5,
-                name: 'Medical Systems',
-                cost: 300,
-                description: 'Auto-heal 20% health between missions',
-                category: 'support',
-                effects: {
-                    medicalHealing: true
-                }
-            },
-            6: {
-                id: 6,
-                name: 'Advanced Tactics',
-                cost: 250,
-                description: '+1 movement speed to all agents',
-                category: 'tactical',
-                effects: {
-                    speedBonus: 1
-                }
+        // Research tree from campaign (REQUIRED - no fallback)
+        this.researchTree = null;
+
+        // Projects indexed by numeric ID for fast lookup
+        this.projects = {};
+
+        // Completed research tracking (array of project IDs)
+        this.completedResearch = [];
+
+        // Logger
+        this.logger = window.Logger ? new window.Logger('ResearchService') : null;
+
+        if (this.logger) this.logger.debug('ResearchService initialized');
+    }
+
+    /**
+     * Initialize research tree from campaign config
+     * REQUIRED - fails fast if no research tree provided
+     * @param {Object} campaignConfig - Campaign configuration object
+     */
+    initialize(campaignConfig) {
+        if (!campaignConfig?.progression?.researchTree) {
+            throw new Error('ResearchService requires campaign research tree - no fallback available');
+        }
+
+        this.loadFromCampaign(campaignConfig.progression.researchTree);
+    }
+
+    /**
+     * Load research tree from campaign data
+     * @param {Object} researchTreeData - Research tree from campaign
+     */
+    loadFromCampaign(researchTreeData) {
+        this.researchTree = researchTreeData;
+        this.projects = {};
+        let projectId = 1;
+
+        Object.entries(researchTreeData).forEach(([categoryId, category]) => {
+            if (category.projects) {
+                category.projects.forEach(project => {
+                    this.projects[projectId] = {
+                        id: projectId,
+                        stringId: project.id,
+                        name: project.name,
+                        cost: project.cost,
+                        description: project.description,
+                        category: categoryId,
+                        effects: project.effects || {},
+                        prereqs: project.prereqs || []
+                    };
+                    projectId++;
+                });
             }
-        };
+        });
+
+        if (this.logger) this.logger.info(`📚 Loaded ${projectId - 1} research projects from campaign`);
+    }
+
+    /**
+     * Get the research tree structure for UI
+     * @returns {Object|null} Research tree with categories and projects
+     */
+    getResearchTree() {
+        return this.researchTree;
+    }
+
+    /**
+     * Get projects by category
+     * @param {string} categoryId - Category ID
+     * @returns {Array} Array of projects in that category
+     */
+    getProjectsByCategory(categoryId) {
+        return this.getAllProjects().filter(p => p.category === categoryId);
     }
 
     /**
@@ -83,12 +94,96 @@ class ResearchService {
     }
 
     /**
-     * Get research project by ID
+     * Get research project by numeric ID
      * @param {number} projectId - Project ID
      * @returns {Object} Research project
      */
     getProject(projectId) {
         return this.projects[projectId];
+    }
+
+    /**
+     * Get research project by string ID
+     * @param {string} stringId - Project string ID from campaign
+     * @returns {Object} Research project
+     */
+    getProjectByStringId(stringId) {
+        return this.getAllProjects().find(p => p.stringId === stringId);
+    }
+
+    /**
+     * Complete a research project
+     * @param {number} projectId - Project ID to complete
+     * @param {Object} game - Game instance for resource deduction
+     * @returns {boolean} Success status
+     */
+    completeResearch(projectId, game) {
+        const project = this.getProject(projectId);
+        if (!project) {
+            if (this.logger) this.logger.error(`Project ${projectId} not found`);
+            return false;
+        }
+
+        if (this.completedResearch.includes(projectId)) {
+            if (this.logger) this.logger.warn(`Project ${project.name} already completed`);
+            return false;
+        }
+
+        // Check prerequisites
+        if (project.prereqs && project.prereqs.length > 0) {
+            const prereqsMet = project.prereqs.every(prereqId => {
+                const prereqProject = this.getProjectByStringId(prereqId);
+                return prereqProject && this.completedResearch.includes(prereqProject.id);
+            });
+            if (!prereqsMet) {
+                if (this.logger) this.logger.warn(`Prerequisites not met for ${project.name}`);
+                return false;
+            }
+        }
+
+        // Spend research points via ResourceService
+        const resourceService = game?.gameServices?.resourceService || window.GameServices?.resourceService;
+        if (!resourceService) {
+            throw new Error('ResourceService required for research completion');
+        }
+
+        if (!resourceService.canAfford('researchPoints', project.cost)) {
+            if (this.logger) this.logger.warn(`Cannot afford ${project.name} (cost: ${project.cost})`);
+            return false;
+        }
+        resourceService.spend('researchPoints', project.cost, `research: ${project.name}`);
+
+        this.completedResearch.push(projectId);
+        if (this.logger) this.logger.info(`🔬 Research completed: ${project.name}`);
+
+        return true;
+    }
+
+    /**
+     * Get completed research IDs
+     * @returns {Array} Array of completed project IDs
+     */
+    getCompletedResearch() {
+        return [...this.completedResearch];
+    }
+
+    /**
+     * Check if a specific research is completed by string ID
+     * @param {string} stringId - Research string ID from campaign
+     * @returns {boolean} True if completed
+     */
+    hasResearch(stringId) {
+        const project = this.getProjectByStringId(stringId);
+        return project && this.completedResearch.includes(project.id);
+    }
+
+    /**
+     * Check if research is completed by numeric ID
+     * @param {number} projectId - Project ID
+     * @returns {boolean} Is research completed
+     */
+    isResearchCompleted(projectId) {
+        return this.completedResearch.includes(projectId);
     }
 
     /**
@@ -102,38 +197,38 @@ class ResearchService {
         return project && availablePoints >= project.cost;
     }
 
-    /**
-     * Check if research is already completed
-     * @param {number} projectId - Project ID
-     * @param {Array} completedResearch - Array of completed research IDs
-     * @returns {boolean} Is research completed
-     */
-    isResearchCompleted(projectId, completedResearch = []) {
-        return completedResearch.includes(projectId);
-    }
+    // ==================== BONUS CALCULATIONS (integrated with FormulaService) ====================
 
     /**
      * Calculate total research bonuses from completed research
-     * @param {Array} completedResearch - Array of completed research IDs
      * @returns {Object} Combined effects object
      */
-    calculateResearchBonuses(completedResearch = []) {
+    calculateResearchBonuses() {
         const bonuses = {
+            // Numeric bonuses (additive)
             damageBonus: 0,
             healthBonus: 0,
             speedBonus: 0,
             stealthBonus: 0,
             hackingBonus: 0,
-            medicalHealing: false
+            hackTimeReduction: 0,
+            detectionReduction: 0,
+            critBonus: 0,
+            passiveHealing: 0,
+            healPercent: 0,
+            hackRangeBonus: 0,
+            // Boolean flags (any true = true)
+            medicalHealing: false,
+            fieldRepair: false
         };
 
-        completedResearch.forEach(projectId => {
+        this.completedResearch.forEach(projectId => {
             const project = this.getProject(projectId);
             if (project && project.effects) {
                 Object.keys(project.effects).forEach(effect => {
                     if (typeof bonuses[effect] === 'boolean') {
                         bonuses[effect] = bonuses[effect] || project.effects[effect];
-                    } else {
+                    } else if (bonuses[effect] !== undefined) {
                         bonuses[effect] += project.effects[effect];
                     }
                 });
@@ -144,16 +239,102 @@ class ResearchService {
     }
 
     /**
-     * Apply research bonuses to an agent
-     * @param {Object} agent - Agent object to modify
-     * @param {Array} completedResearch - Array of completed research IDs
-     * @returns {Object} Modified agent
+     * Get damage bonus for FormulaService integration
+     * @returns {number} Damage bonus from research
      */
-    applyResearchToAgent(agent, completedResearch = []) {
-        const bonuses = this.calculateResearchBonuses(completedResearch);
+    getDamageBonus() {
+        return this.calculateResearchBonuses().damageBonus;
+    }
 
-        // CRITICAL: Modify agent IN-PLACE, don't create a copy
-        // If we copy the agent, changes (like death) won't sync with AgentService
+    /**
+     * Get speed bonus for FormulaService integration
+     * @returns {number} Speed bonus from research
+     */
+    getSpeedBonus() {
+        return this.calculateResearchBonuses().speedBonus;
+    }
+
+    /**
+     * Get stealth bonus for FormulaService integration
+     * @returns {number} Stealth bonus percentage from research
+     */
+    getStealthBonus() {
+        return this.calculateResearchBonuses().stealthBonus;
+    }
+
+    /**
+     * Get hacking bonus for FormulaService integration
+     * @returns {number} Hacking bonus percentage from research
+     */
+    getHackingBonus() {
+        return this.calculateResearchBonuses().hackingBonus;
+    }
+
+    /**
+     * Get critical hit bonus for FormulaService integration
+     * @returns {number} Critical hit bonus percentage from research
+     */
+    getCritBonus() {
+        return this.calculateResearchBonuses().critBonus;
+    }
+
+    /**
+     * Get passive healing per turn
+     * @returns {number} HP healed per turn when stationary
+     */
+    getPassiveHealing() {
+        return this.calculateResearchBonuses().passiveHealing;
+    }
+
+    /**
+     * Get heal percentage for between-mission healing
+     * @returns {number} Percentage of health restored between missions
+     */
+    getHealPercent() {
+        return this.calculateResearchBonuses().healPercent || 20; // Default 20% if medicalHealing but no percent
+    }
+
+    /**
+     * Get hacking range bonus
+     * @returns {number} Additional hack range tiles
+     */
+    getHackRangeBonus() {
+        return this.calculateResearchBonuses().hackRangeBonus;
+    }
+
+    /**
+     * Get detection reduction bonus
+     * @returns {number} Detection range reduction percentage
+     */
+    getDetectionReduction() {
+        return this.calculateResearchBonuses().detectionReduction;
+    }
+
+    /**
+     * Check if medical healing research is completed
+     * @returns {boolean} Has medical healing
+     */
+    hasMedicalHealing() {
+        return this.hasResearch('medical_systems');
+    }
+
+    /**
+     * Check if hacking research is completed
+     * @returns {boolean} Has hacking protocols
+     */
+    hasHackingResearch() {
+        return this.hasResearch('hacking_protocols') || this.hasResearch('neural_interface');
+    }
+
+    // ==================== AGENT APPLICATION ====================
+
+    /**
+     * Apply research bonuses to an agent (modifies in-place)
+     * @param {Object} agent - Agent object to modify
+     * @returns {Object} Modified agent (same reference)
+     */
+    applyResearchToAgent(agent) {
+        const bonuses = this.calculateResearchBonuses();
 
         // Apply permanent stat bonuses
         if (bonuses.damageBonus > 0) {
@@ -161,15 +342,19 @@ class ResearchService {
         }
 
         if (bonuses.healthBonus > 0) {
-            agent.health = (agent.health || 0) + bonuses.healthBonus;
-            agent.maxHealth = (agent.maxHealth || agent.health) + bonuses.healthBonus;
+            agent.maxHealth = (agent.maxHealth || agent.health || 100) + bonuses.healthBonus;
+            if (window.GameServices?.agentService) {
+                window.GameServices.agentService.healAgent(agent.id, bonuses.healthBonus);
+            } else {
+                agent.health = (agent.health || 0) + bonuses.healthBonus;
+            }
         }
 
         if (bonuses.speedBonus > 0) {
             agent.speed = (agent.speed || 0) + bonuses.speedBonus;
         }
 
-        // Apply percentage bonuses (these are applied during gameplay)
+        // Store percentage bonuses for runtime use
         if (bonuses.stealthBonus > 0) {
             agent.stealthBonus = (agent.stealthBonus || 0) + bonuses.stealthBonus;
         }
@@ -178,98 +363,55 @@ class ResearchService {
             agent.hackBonus = (agent.hackBonus || 0) + bonuses.hackingBonus;
         }
 
-        return agent;  // Return same reference
+        if (bonuses.critBonus > 0) {
+            agent.critBonus = (agent.critBonus || 0) + bonuses.critBonus;
+        }
+
+        if (bonuses.hackRangeBonus > 0) {
+            agent.hackRangeBonus = (agent.hackRangeBonus || 0) + bonuses.hackRangeBonus;
+        }
+
+        if (bonuses.detectionReduction > 0) {
+            agent.detectionReduction = (agent.detectionReduction || 0) + bonuses.detectionReduction;
+        }
+
+        if (bonuses.passiveHealing > 0) {
+            agent.passiveHealing = (agent.passiveHealing || 0) + bonuses.passiveHealing;
+        }
+
+        return agent;
     }
 
     /**
      * Apply research effects to all agents in a roster
      * @param {Array} agents - Array of agents
-     * @param {Array} completedResearch - Array of completed research IDs
      * @returns {Array} Modified agents array
      */
-    applyResearchToRoster(agents, completedResearch = []) {
-        return agents.map(agent => this.applyResearchToAgent(agent, completedResearch));
+    applyResearchToRoster(agents) {
+        return agents.map(agent => this.applyResearchToAgent(agent));
     }
 
     /**
-     * Calculate research completion percentage
-     * @param {Array} completedResearch - Array of completed research IDs
-     * @returns {number} Completion percentage (0-100)
-     */
-    calculateCompletionPercentage(completedResearch = []) {
-        const totalProjects = Object.keys(this.projects).length;
-        const completedCount = completedResearch.length;
-        return Math.floor((completedCount / totalProjects) * 100);
-    }
-
-    /**
-     * Get next recommended research based on playstyle
-     * @param {Array} completedResearch - Array of completed research IDs
-     * @param {string} playstyle - Playstyle preference ('combat', 'stealth', 'tech', 'balanced')
-     * @returns {Object|null} Recommended research project
-     */
-    getRecommendedResearch(completedResearch = [], playstyle = 'balanced') {
-        const availableProjects = this.getAllProjects().filter(
-            project => !this.isResearchCompleted(project.id, completedResearch)
-        );
-
-        if (availableProjects.length === 0) {
-            return null;
-        }
-
-        // Sort by playstyle preference
-        const priorityMap = {
-            combat: ['combat', 'tactical', 'support', 'tech', 'stealth'],
-            stealth: ['stealth', 'tech', 'tactical', 'support', 'combat'],
-            tech: ['tech', 'stealth', 'support', 'tactical', 'combat'],
-            balanced: ['combat', 'support', 'tactical', 'tech', 'stealth']
-        };
-
-        const priorities = priorityMap[playstyle] || priorityMap.balanced;
-
-        // Find first available project matching priority
-        for (const category of priorities) {
-            const project = availableProjects.find(p => p.category === category);
-            if (project) {
-                return project;
-            }
-        }
-
-        // Return first available if no category match
-        return availableProjects[0];
-    }
-
-    /**
-     * Calculate total research points spent
-     * @param {Array} completedResearch - Array of completed research IDs
-     * @returns {number} Total points spent
-     */
-    calculateTotalSpent(completedResearch = []) {
-        return completedResearch.reduce((total, projectId) => {
-            const project = this.getProject(projectId);
-            return total + (project ? project.cost : 0);
-        }, 0);
-    }
-
-    /**
-     * Apply medical healing between missions
+     * Apply medical healing between missions (uses FormulaService)
+     * Uses configurable healPercent from research effects
      * @param {Array} agents - Array of agents
-     * @param {Array} completedResearch - Array of completed research IDs
      * @returns {Array} Healed agents
      */
-    applyMedicalHealing(agents, completedResearch = []) {
-        const hasMedicalResearch = this.isResearchCompleted(5, completedResearch);
-
-        if (!hasMedicalResearch) {
+    applyMedicalHealing(agents) {
+        if (!this.hasMedicalHealing()) {
             return agents;
         }
 
+        const healPercent = this.getHealPercent();
+
         return agents.map(agent => {
-            const healedHealth = this.formulaService.calculateMedicalHealing(
-                agent.health,
-                agent.maxHealth || agent.health,
-                true
-            );
+            const maxHealth = agent.maxHealth || agent.health || 100;
+            const healAmount = Math.floor(maxHealth * (healPercent / 100));
+            const healedHealth = Math.min(agent.health + healAmount, maxHealth);
+
+            if (this.logger && healedHealth > agent.health) {
+                this.logger.debug(`💊 ${agent.name} healed ${healedHealth - agent.health} HP (${healPercent}%)`);
+            }
 
             return {
                 ...agent,
@@ -278,28 +420,111 @@ class ResearchService {
         });
     }
 
+    // ==================== STATISTICS ====================
+
+    /**
+     * Calculate research completion percentage
+     * @returns {number} Completion percentage (0-100)
+     */
+    calculateCompletionPercentage() {
+        const totalProjects = Object.keys(this.projects).length;
+        if (totalProjects === 0) return 0;
+        return Math.floor((this.completedResearch.length / totalProjects) * 100);
+    }
+
+    /**
+     * Calculate total research points spent
+     * @returns {number} Total points spent
+     */
+    calculateTotalSpent() {
+        return this.completedResearch.reduce((total, projectId) => {
+            const project = this.getProject(projectId);
+            return total + (project ? project.cost : 0);
+        }, 0);
+    }
+
+    /**
+     * Get next recommended research based on playstyle
+     * @param {string} playstyle - Playstyle preference
+     * @returns {Object|null} Recommended research project
+     */
+    getRecommendedResearch(playstyle = 'balanced') {
+        const availableProjects = this.getAllProjects().filter(
+            project => !this.isResearchCompleted(project.id)
+        );
+
+        if (availableProjects.length === 0) return null;
+
+        const priorityMap = {
+            combat: ['combat', 'support', 'tech', 'stealth'],
+            stealth: ['stealth', 'tech', 'support', 'combat'],
+            tech: ['tech', 'stealth', 'support', 'combat'],
+            balanced: ['combat', 'support', 'tech', 'stealth']
+        };
+
+        const priorities = priorityMap[playstyle] || priorityMap.balanced;
+
+        for (const category of priorities) {
+            const project = availableProjects.find(p => p.category === category);
+            if (project) return project;
+        }
+
+        return availableProjects[0];
+    }
+
     /**
      * Get research project status for UI
      * @param {number} projectId - Project ID
-     * @param {Array} completedResearch - Completed research IDs
      * @param {number} availablePoints - Available research points
-     * @returns {Object} Status object {completed, affordable, locked}
+     * @returns {Object} Status object
      */
-    getProjectStatus(projectId, completedResearch = [], availablePoints = 0) {
+    getProjectStatus(projectId, availablePoints = 0) {
         const project = this.getProject(projectId);
         if (!project) {
             return { completed: false, affordable: false, locked: true };
         }
 
+        // Check prerequisites
+        let locked = false;
+        if (project.prereqs && project.prereqs.length > 0) {
+            locked = !project.prereqs.every(prereqId => {
+                const prereqProject = this.getProjectByStringId(prereqId);
+                return prereqProject && this.completedResearch.includes(prereqProject.id);
+            });
+        }
+
         return {
-            completed: this.isResearchCompleted(projectId, completedResearch),
+            completed: this.isResearchCompleted(projectId),
             affordable: this.canAffordResearch(projectId, availablePoints),
-            locked: false
+            locked
         };
+    }
+
+    // ==================== PERSISTENCE ====================
+
+    /**
+     * Export research state for save system
+     * @returns {Object} Serializable state
+     */
+    exportState() {
+        return {
+            completedResearch: [...this.completedResearch]
+        };
+    }
+
+    /**
+     * Import research state from save system
+     * @param {Object} state - Saved state
+     */
+    importState(state) {
+        if (state?.completedResearch) {
+            this.completedResearch = [...state.completedResearch];
+            if (this.logger) this.logger.info(`📚 Restored ${this.completedResearch.length} completed research projects`);
+        }
     }
 }
 
-// Export as singleton
+// Export
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ResearchService;
 }

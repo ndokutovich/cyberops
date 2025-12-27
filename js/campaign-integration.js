@@ -63,10 +63,13 @@ CyberOpsGame.prototype.loadCampaignContent = async function(campaignId) {
     if (!this.campaignStarted) {
         const economy = window.ContentLoader.getContent('economy');
         if (economy && this.gameServices?.resourceService) {
-            // Use ResourceService ONLY
-            this.gameServices.resourceService.set('credits', economy.startingCredits || 5000, 'campaign start');
-            this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints || 100, 'campaign start');
-            this.gameServices.resourceService.set('worldControl', economy.startingWorldControl || 0, 'campaign start');
+            // Use ResourceService ONLY - campaign config is required
+            if (economy.startingCredits === undefined) {
+                throw new Error('Campaign config missing economy.startingCredits');
+            }
+            this.gameServices.resourceService.set('credits', economy.startingCredits, 'campaign start');
+            this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints ?? 0, 'campaign start');
+            this.gameServices.resourceService.set('worldControl', economy.startingWorldControl ?? 0, 'campaign start');
         }
         this.campaignStarted = true;
     }

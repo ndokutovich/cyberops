@@ -137,14 +137,11 @@
 
         // Replace returnToHubFromMission
         if (game.returnToHubFromMission && !game._returnToHubFromMissionWrapped) {
-            const originalFunction = game.returnToHubFromMission;
             game.returnToHubFromMission = function() {
-                if (engine && engine.navigateTo) {
-                    engine.navigateTo('confirm-exit');
-                } else {
-                    // Fallback to original
-                    originalFunction.call(this);
+                if (!engine?.navigateTo) {
+                    throw new Error('DialogEngine not available - required for confirm-exit');
                 }
+                engine.navigateTo('confirm-exit');
             };
             game._returnToHubFromMissionWrapped = true;
             if (logger) logger.info('✅ Wrapped returnToHubFromMission');
@@ -153,17 +150,10 @@
         // Replace insufficient funds dialog in equipment
         if (game.showInsufficientFundsDialog && !game._showInsufficientFundsWrapped) {
             game.showInsufficientFundsDialog = function(itemName, itemCost) {
-                if (engine && engine.showInsufficientFunds) {
-                    engine.showInsufficientFunds(itemName, itemCost);
-                } else {
-                    // Fallback to showHudDialog
-                    this.showHudDialog(
-                        '❌ INSUFFICIENT FUNDS',
-                        `You need ${itemCost} credits to buy ${itemName}.<br>
-                        You currently have ${this.credits} credits.`,
-                        [{ text: 'OK', action: 'close' }]
-                    );
+                if (!engine?.showInsufficientFunds) {
+                    throw new Error('DialogEngine.showInsufficientFunds not available - required for insufficient funds dialog');
                 }
+                engine.showInsufficientFunds(itemName, itemCost);
             };
             game._showInsufficientFundsWrapped = true;
             if (logger) logger.info('✅ Wrapped showInsufficientFundsDialog');

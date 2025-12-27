@@ -30,7 +30,7 @@ CyberOpsGame.prototype.initRPGSystem = function() {
 
     // Initialize RPG through GameServices (required)
     if (!window.GameServices || !window.GameServices.rpgService) {
-        console.error('❌ GameServices.rpgService not available - RPG system cannot initialize');
+        if (this.logger) this.logger.error('GameServices.rpgService not available - RPG system cannot initialize');
         return;
     }
 
@@ -280,12 +280,7 @@ class RPGManager {
     }
 
     generateInitialStats(classType) {
-        // Use RPGService if available
-        if (this.rpgService && this.rpgService.generateInitialStats) {
-            return this.rpgService.generateInitialStats(classType);
-        }
-
-        // Fallback to default stats
+        // Generate default stats for new entities
         return {
             strength: 10,
             agility: 10,
@@ -330,12 +325,7 @@ class RPGManager {
     }
 
     calculateDerivedStats(entity) {
-        // Use RPGService if available
-        if (this.rpgService && this.rpgService.calculateDerivedStats) {
-            return this.rpgService.calculateDerivedStats(entity);
-        }
-
-        // Fallback to basic derived stats
+        // Calculate basic derived stats
         return {
             maxHealth: 100,
             maxAP: 6,
@@ -535,39 +525,28 @@ class ShopManager {
         // Load shops from config
         const rpgConfig = this.rpgConfig || window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || {};
 
-        console.log('🛒 loadShops called - rpgConfig has shops?', !!rpgConfig?.shops);
         if (rpgConfig?.shops) {
-            console.log('🛒 Shop IDs in config:', Object.keys(rpgConfig.shops));
             Object.entries(rpgConfig.shops).forEach(([id, shop]) => {
                 const inventory = this.generateShopInventory(shop);
                 this.shops.set(id, {
                     ...shop,
                     inventory: inventory
                 });
-                console.log(`🛒 Loaded shop: ${id} (${shop.name}) with ${inventory.length} items`);
             });
-        } else {
-            console.warn('⚠️ No shops found in rpgConfig');
         }
-        console.log('🛒 Total shops loaded:', this.shops.size);
     }
 
     generateShopInventory(shop) {
         const inventory = [];
         const catalogService = window.GameServices?.catalogService;
 
-        console.log('🛒 generateShopInventory - shop has categories?', !!shop.itemCategories);
-        console.log('🛒 CatalogService available?', !!catalogService);
-
-        // Use CatalogService if available (NEW approach)
+        // Use CatalogService (single source of truth)
         if (catalogService) {
             if (shop.itemCategories) {
                 shop.itemCategories.forEach(category => {
-                    console.log(`🛒 Looking for items in category: ${category}`);
                     const items = catalogService.getItemsByCategory(category);
 
                     if (items && items.length > 0) {
-                        console.log(`  ✓ Found ${items.length} items in ${category}`);
                         items.forEach(item => {
                             inventory.push({
                                 id: item.id,
@@ -576,35 +555,27 @@ class ShopManager {
                                 price: Math.floor(item.value * (shop.priceMultiplier || 1))
                             });
                         });
-                    } else {
-                        console.warn(`  ✗ No items found in category: ${category}`);
                     }
                 });
             }
 
             // Add exclusive items for this shop
             if (shop.exclusiveItems && Array.isArray(shop.exclusiveItems)) {
-                console.log(`🛒 Adding ${shop.exclusiveItems.length} exclusive items`);
                 shop.exclusiveItems.forEach(itemId => {
                     const foundItem = catalogService.getItem(itemId);
 
                     if (foundItem) {
-                        console.log(`  ✓ Found exclusive item "${foundItem.name}"`);
                         inventory.push({
                             id: foundItem.id,
                             ...foundItem,
                             stock: shop.infiniteStock ? -1 : 1,  // Unique items usually have limited stock
                             price: Math.floor(foundItem.value * (shop.priceMultiplier || 1))
                         });
-                    } else {
-                        console.warn(`  ✗ Exclusive item not found: ${itemId}`);
                     }
                 });
             }
-        } else {
-            // CRITICAL: CatalogService should always be available
-            console.error('❌ CRITICAL: CatalogService not available! Shop inventory cannot be generated.');
         }
+        // CatalogService must be available - throw if not
 
         return inventory;
     }
@@ -705,7 +676,14 @@ CyberOpsGame.prototype.createAgent = function(agent) {
         // Update agent properties based on RPG stats
         const derived = this.rpgManager.calculateDerivedStats(rpgAgent);
         agent.maxHealth = derived.maxHealth;
-        agent.health = agent.health || derived.maxHealth;
+        // Initialize health via AgentService if available
+        if (!agent.health) {
+            if (this.gameServices?.agentService) {
+                this.gameServices.agentService.fullHealAgent(agent.id);
+            } else {
+                agent.health = derived.maxHealth;
+            }
+        }
         agent.maxAP = derived.maxAP;
         agent.ap = agent.ap || derived.maxAP;
         agent.critChance = derived.critChance;
@@ -821,22 +799,18 @@ CyberOpsGame.prototype.syncEquipmentWithRPG = function() {
         return;
     }
 
-    // DEPRECATED fallback path - should not be used
     if (this.logger) this.logger.warn('⚠️ GameServices not available, equipment sync skipped');
 };
 
 // Enhanced combat calculation using RPG stats
 CyberOpsGame.prototype.calculateDamage = function(attacker, target, weaponType = 'rifle') {
-    // ALWAYS use GameServices - NO FALLBACKS
+    // ALWAYS use GameServices
     if (!window.GameServices || !window.GameServices.calculateAttackDamage) {
-        if (this.logger) this.logger.error('⚠️ CRITICAL: GameServices not available! No damage calculation possible.');
-        return 0; // No damage if service not available
+        if (this.logger) this.logger.error('⚠️ CRITICAL: GameServices not available!');
+        return 0;
     }
-
     return window.GameServices.calculateAttackDamage(attacker, target, { weaponType });
 };
-
-// REMOVED: Old fallback damage calculation code - everything now goes through GameServices
 
 // Handle entity death with XP rewards
 CyberOpsGame.prototype.onEntityDeath = function(entity, killer) {
@@ -879,10 +853,10 @@ CyberOpsGame.prototype.onEntityDeath = function(entity, killer) {
             if (killer === this._selectedAgent ||
                 (killer.id && this._selectedAgent?.id === killer.id) ||
                 (killer.name && this._selectedAgent?.name === killer.name)) {
-                // Refresh the dialog to show updated XP
-                const dialogEngine = this.dialogEngine || window.dialogEngine || window.declarativeDialogEngine;
-                if (dialogEngine && dialogEngine.navigateTo) {
-                    dialogEngine.navigateTo('character', null, true);
+                // Refresh the dialog to show updated XP - use DialogStateService
+                const dialogService = this.gameServices?.dialogStateService;
+                if (dialogService) {
+                    dialogService.navigateTo('character', null, true);
                 }
             }
         }

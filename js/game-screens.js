@@ -68,27 +68,19 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
         bonusObjectives: []
     };
 
-    // Gather main objectives from MissionService first, fallback to currentMissionDef
-    let objectives = null;
-    if (this.gameServices && this.gameServices.missionService && this.gameServices.missionService.objectives) {
-        objectives = this.gameServices.missionService.objectives;
-    } else if (this.currentMissionDef && this.currentMissionDef.objectives) {
-        objectives = this.currentMissionDef.objectives;
+    // Get objectives from MissionService (single source of truth)
+    if (!this.gameServices?.missionService?.objectives) {
+        throw new Error('MissionService.objectives not available - required for mission summary');
     }
+    const objectives = this.gameServices.missionService.objectives;
 
     if (objectives) {
         summary.totalMainObjectives = objectives.filter(o => o.required !== false).length;
         summary.totalObjectives = objectives.length;
 
         objectives.forEach(obj => {
-            // Check completion from MissionService or fallback to game method
-            let completed = false;
-            if (this.gameServices && this.gameServices.missionService) {
-                // Check if objective is in completed set
-                completed = obj.status === 'completed' || this.gameServices.missionService.completedObjectives.has(obj.id);
-            } else if (this.checkObjectiveComplete) {
-                completed = this.checkObjectiveComplete(obj);
-            }
+            // Check completion from MissionService (single source of truth)
+            const completed = obj.status === 'completed' || this.gameServices.missionService.completedObjectives.has(obj.id);
 
             // Build progress string for objectives with counters
             let progress = '';
@@ -193,12 +185,16 @@ CyberOpsGame.prototype.finishCampaign = function() {
 CyberOpsGame.prototype.applyMedicalHealing = function() {
     if (!this.agents) return;
 
-    // Heal all surviving agents to full health
-    this.agents.forEach(agent => {
-        if (agent.alive) {
-            agent.health = agent.maxHealth || 100;
-        }
-    });
+    // Heal all surviving agents to full health via AgentService
+    if (this.gameServices?.agentService) {
+        this.gameServices.agentService.fullHealAllAgents();
+    } else {
+        this.agents.forEach(agent => {
+            if (agent.alive) {
+                agent.health = agent.maxHealth || 100;
+            }
+        });
+    }
 
     if (this.logger) this.logger.debug('⚕️ All surviving agents healed to full health');
 }

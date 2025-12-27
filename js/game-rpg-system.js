@@ -641,10 +641,13 @@ class RPGInventory {
         this.maxSize = maxSize;
         this.owner = null; // Will be set later
 
-        // Delegate to InventoryService if available
+        // Delegate to InventoryService (required)
         this.inventoryService = window.GameServices?.inventoryService;
+        if (!this.inventoryService) {
+            throw new Error('InventoryService not available - required for RPGInventory');
+        }
 
-        // Fallback storage if service not available
+        // Local tracking for quick access
         this.items = [];
         this.credits = 0;
         this.equipped = {};
@@ -662,8 +665,6 @@ class RPGInventory {
     removeItem(item, quantity = 1) {
         // Always use InventoryService
         return this.inventoryService.consumeItem(item.id, quantity);
-
-        return true;
     }
 
     hasItem(itemId, quantity = 1) {

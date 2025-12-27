@@ -2310,9 +2310,7 @@ CyberOpsGame.prototype.update3DHUD = function() {
         // Update minimap for 3D mode
         this.renderMinimap3D();
 }
-    
-    // REMOVED: checkAgentSelection - all logic moved to simplified handleTap
-    
+
 CyberOpsGame.prototype.renderMinimap3D = function() {
         const minimap = document.getElementById('minimapContent3D');
         if (!minimap) return;

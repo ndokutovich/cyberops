@@ -86,20 +86,14 @@ class ContentLoader {
      */
     loadRPGConfig(game) {
         if (!this.currentCampaign.rpgConfig) {
-            console.error('❌ [ContentLoader] Campaign has NO rpgConfig!');
+            if (logger) logger.error('Campaign has NO rpgConfig!');
             return;
         }
 
-        console.log('🎮 [ContentLoader] Loading RPG configuration...');
-        console.log('🎮 [ContentLoader] rpgConfig has perks:', !!this.currentCampaign.rpgConfig.perks);
-        console.log('🎮 [ContentLoader] Number of perks:', Object.keys(this.currentCampaign.rpgConfig.perks || {}).length);
-        console.log('🔍 [ContentLoader] rpgConfig has shops:', !!this.currentCampaign.rpgConfig.shops);
-        console.log('🔍 [ContentLoader] rpgConfig keys:', Object.keys(this.currentCampaign.rpgConfig));
+        if (logger) logger.debug('Loading RPG configuration...');
 
         // Set RPG_CONFIG globally for backward compatibility with game-rpg-system.js
         window.RPG_CONFIG = this.currentCampaign.rpgConfig;
-        console.log('✅ [ContentLoader] window.RPG_CONFIG set globally');
-        console.log('✅ [ContentLoader] window.RPG_CONFIG.perks has keys:', Object.keys(window.RPG_CONFIG.perks || {}).length);
 
         // Also inject into services for proper architecture
         if (window.GameServices?.rpgService) {
@@ -113,11 +107,6 @@ class ContentLoader {
 
         // Store for reference
         this.contentCache.set('rpgConfig', this.currentCampaign.rpgConfig);
-        console.log('✅ [ContentLoader] rpgConfig stored in contentCache');
-
-        // TEST: Verify we can read it back
-        const testRead = this.contentCache.get('rpgConfig');
-        console.log('✅ [ContentLoader] Test read from cache - perks count:', Object.keys(testRead?.perks || {}).length);
     }
 
     /**
@@ -312,11 +301,15 @@ class ContentLoader {
         if (!economy) return;
 
         if (logger) logger.debug('💰 Loading economy configuration...');
+        if (logger) logger.debug(`💰 Economy startingResearchPoints: ${economy.startingResearchPoints}`);
 
         const resourceService = window.GameServices?.resourceService;
         if (resourceService) {
-            resourceService.setCredits(economy.startingCredits || 5000);
-            resourceService.setResearchPoints(economy.startingResearchPoints || 100);
+            if (economy.startingCredits === undefined) {
+                throw new Error('Campaign config missing economy.startingCredits');
+            }
+            resourceService.setCredits(economy.startingCredits);
+            resourceService.setResearchPoints(economy.startingResearchPoints ?? 0);
         }
 
         // These can stay as game properties since they're config, not state
@@ -515,11 +508,9 @@ class ContentLoader {
 
         if (logger) logger.debug('📈 Loading progression system...');
 
-        // Load research tree
-        if (progression.researchTree && window.GameServices?.researchService) {
-            // Note: ResearchService doesn't have loadTree method
-            // Research tree loaded via legacy path instead
-            // window.GameServices.researchService.loadTree(progression.researchTree);
+        // Load research tree via ResearchService (single source of truth)
+        if (window.GameServices?.researchService) {
+            window.GameServices.researchService.initialize(this.currentCampaign);
         }
 
         // Load unlock schedule
@@ -539,19 +530,8 @@ class ContentLoader {
      * Load agent generation configuration
      */
     loadAgentGeneration(game) {
-        console.log('👥 [DEBUG] loadAgentGeneration called');
-
         const agentGen = this.currentCampaign.agentGeneration;
-        if (!agentGen) {
-            console.log('👥 [DEBUG] No agentGeneration in campaign!');
-            return;
-        }
-
-        console.log('👥 [DEBUG] agentGeneration found:', {
-            agentsPerMission: agentGen.agentsPerMission,
-            baseCost: agentGen.baseCost,
-            hasFirstNames: !!agentGen.firstNames?.length
-        });
+        if (!agentGen) return;
 
         if (logger) logger.debug('👥 Loading agent generation configuration...');
 
@@ -564,12 +544,8 @@ class ContentLoader {
         // Also set on AgentService (single source of truth)
         if (game.gameServices?.agentService?.setGenerationConfig) {
             game.gameServices.agentService.setGenerationConfig(agentGen);
-            console.log('👥 [DEBUG] Config set on AgentService');
-        } else {
-            console.log('👥 [DEBUG] AgentService.setGenerationConfig NOT available!', {
-                hasGameServices: !!game.gameServices,
-                hasAgentService: !!game.gameServices?.agentService
-            });
+        } else if (logger) {
+            logger.warn('AgentService.setGenerationConfig not available');
         }
     }
 

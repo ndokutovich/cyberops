@@ -192,7 +192,10 @@ class MissionStateService {
 
             // Restore selected agents (this will automatically update game.agents via computed property)
             game.selectedAgents = [...this.snapshot.selectedAgents];
-            game.currentMissionIndex = this.snapshot.currentMissionIndex;
+            // Restore mission index via MissionService (single source of truth)
+            if (game.gameServices?.missionService && this.snapshot.currentMissionIndex !== undefined) {
+                game.gameServices.missionService.setCurrentMissionIndex(this.snapshot.currentMissionIndex);
+            }
 
             if (this.logger) {
                 this.logger.info('✅ Snapshot restored successfully');

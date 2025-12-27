@@ -379,7 +379,6 @@ class CollectableRegistry {
         this.register(new QuestCollectable());
 
         this.initialized = true;
-        console.log('📦 CollectableRegistry initialized with', this.types.size, 'types');
     }
 
     /**
@@ -446,17 +445,8 @@ class CollectableRegistry {
     static calculateEffect(item, agent, gameState = {}) {
         const type = this.get(item.type);
         if (type) {
-            const effects = type.calculateEffect(item, agent, gameState);
-            // DEBUG: Log effects calculation
-            console.log(`💰 [DEBUG] CollectableRegistry.calculateEffect:`, {
-                itemType: item.type,
-                itemCredits: item.credits,
-                foundType: type.id,
-                effectsCredits: effects.credits
-            });
-            return effects;
+            return type.calculateEffect(item, agent, gameState);
         }
-        console.warn(`⚠️ [DEBUG] CollectableRegistry - no type found for: ${item.type}`);
         return { message: `Collected ${item.name || item.type}` };
     }
 

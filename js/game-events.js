@@ -602,51 +602,35 @@ CyberOpsGame.prototype.showBlockedIndicator = function(x, y) {
         setTimeout(() => indicator.remove(), 500);
 }
 
-    // Coordinate Conversion - Delegates to CoordinateService
+    // Coordinate Conversion - Delegates to CoordinateService (single source of truth)
 CyberOpsGame.prototype.screenToWorld = function(screenX, screenY) {
-        const coordService = this.gameServices?.coordinateService;
-        if (coordService) {
-            return coordService.screenToWorld(screenX, screenY, this.cameraX, this.cameraY, this.zoom);
-        }
-        // Fallback for initialization
-        const x = (screenX - this.cameraX) / this.zoom;
-        const y = (screenY - this.cameraY) / this.zoom;
-        return this.screenToIsometric(x, y);
-}
+    const coordService = this.gameServices?.coordinateService;
+    if (!coordService) {
+        throw new Error('CoordinateService not initialized - cannot convert coordinates');
+    }
+    return coordService.screenToWorld(screenX, screenY, this.cameraX, this.cameraY, this.zoom);
+};
 
 CyberOpsGame.prototype.worldToScreen = function(worldX, worldY) {
-        const coordService = this.gameServices?.coordinateService;
-        if (coordService) {
-            return coordService.worldToScreen(worldX, worldY, this.cameraX, this.cameraY, this.zoom);
-        }
-        // Fallback for initialization
-        const iso = this.worldToIsometric(worldX, worldY);
-        return {
-            x: iso.x * this.zoom + this.cameraX,
-            y: iso.y * this.zoom + this.cameraY
-        };
-}
+    const coordService = this.gameServices?.coordinateService;
+    if (!coordService) {
+        throw new Error('CoordinateService not initialized - cannot convert coordinates');
+    }
+    return coordService.worldToScreen(worldX, worldY, this.cameraX, this.cameraY, this.zoom);
+};
 
 CyberOpsGame.prototype.worldToIsometric = function(x, y) {
-        const coordService = this.gameServices?.coordinateService;
-        if (coordService) {
-            return coordService.worldToIsometric(x, y);
-        }
-        // Fallback for initialization
-        return {
-            x: (x - y) * this.tileWidth / 2,
-            y: (x + y) * this.tileHeight / 2
-        };
-}
+    const coordService = this.gameServices?.coordinateService;
+    if (!coordService) {
+        throw new Error('CoordinateService not initialized - cannot convert coordinates');
+    }
+    return coordService.worldToIsometric(x, y);
+};
 
 CyberOpsGame.prototype.screenToIsometric = function(x, y) {
-        const coordService = this.gameServices?.coordinateService;
-        if (coordService) {
-            return coordService.isometricToWorld(x, y);
-        }
-        // Fallback for initialization
-        return {
-            x: (x / (this.tileWidth / 2) + y / (this.tileHeight / 2)) / 2,
-            y: (y / (this.tileHeight / 2) - x / (this.tileWidth / 2)) / 2
-        };
-}
+    const coordService = this.gameServices?.coordinateService;
+    if (!coordService) {
+        throw new Error('CoordinateService not initialized - cannot convert coordinates');
+    }
+    return coordService.isometricToWorld(x, y);
+};

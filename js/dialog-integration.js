@@ -370,50 +370,90 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
-    // Research Lab - full research view
+    // Research Lab - full research view (uses ResearchService as single source of truth)
     engine.registerGenerator('generateResearchLab', function() {
         let html = '<div class="research-lab">';
 
-        html += `<h3 style="color: #00ffff; margin-bottom: 15px;">RESEARCH POINTS: ${this.researchPoints || 0}</h3>`;
+        const researchService = window.GameServices?.researchService;
+        const resourceService = window.GameServices?.resourceService;
+        const researchPoints = resourceService?.get('researchPoints') || this.researchPoints || 0;
+        const completedResearch = researchService?.getCompletedResearch() || [];
+        const allProjects = researchService?.getAllProjects() || [];
 
-        const researchProjects = [
-            { id: 1, name: 'Weapon Upgrades', cost: 150, description: '+5 damage to all weapons' },
-            { id: 2, name: 'Stealth Technology', cost: 200, description: '+20% stealth success rate' },
-            { id: 3, name: 'Combat Systems', cost: 175, description: '+15 health to all agents' },
-            { id: 4, name: 'Hacking Protocols', cost: 225, description: '+25% hacking speed' },
-            { id: 5, name: 'Medical Systems', cost: 300, description: 'Auto-heal 20% health between missions' },
-            { id: 6, name: 'Advanced Tactics', cost: 250, description: '+1 movement speed to all agents' }
-        ];
+        html += `<h3 style="color: #00ffff; margin-bottom: 15px;">RESEARCH POINTS: ${researchPoints}</h3>`;
+
+        // Group projects by category if research tree is available
+        const researchTree = researchService?.getResearchTree();
 
         html += '<div style="max-height: 400px; overflow-y: auto;">';
 
-        researchProjects.forEach(project => {
-            const canAfford = this.researchPoints >= project.cost;
-            const completed = this.completedResearch && this.completedResearch.includes(project.id);
+        if (researchTree) {
+            // Display by category from research tree
+            Object.entries(researchTree).forEach(([categoryId, category]) => {
+                html += `<h4 style="color: ${category.color || '#00ffff'}; margin: 15px 0 10px 0;">${category.name}</h4>`;
 
-            html += `
-                <div style="background: ${completed ? 'rgba(0,255,0,0.1)' : 'rgba(255,0,255,0.1)'};
-                           padding: 15px; margin: 10px 0; border-radius: 8px;
-                           border: 1px solid ${completed ? '#00ff00' : '#ff00ff'};">
-                    <div style="display: flex; justify-content: space-between;">
-                        <div>
-                            <div style="font-weight: bold; color: ${completed ? '#00ff00' : '#fff'};">
-                                ${project.name} ${completed ? '✅' : ''}
+                if (category.projects) {
+                    category.projects.forEach(project => {
+                        const projectData = allProjects.find(p => p.stringId === project.id);
+                        const projectId = projectData?.id || 0;
+                        const canAfford = researchPoints >= project.cost;
+                        const completed = projectData && completedResearch.includes(projectData.id);
+
+                        html += `
+                            <div style="background: ${completed ? 'rgba(0,255,0,0.1)' : 'rgba(255,0,255,0.1)'};
+                                       padding: 15px; margin: 10px 0; border-radius: 8px;
+                                       border: 1px solid ${completed ? '#00ff00' : category.color || '#ff00ff'};">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: bold; color: ${completed ? '#00ff00' : '#fff'};">
+                                            ${project.name} ${completed ? '✅' : ''}
+                                        </div>
+                                        <div style="color: #ccc; font-size: 0.9em;">${project.description}</div>
+                                        <div style="color: ${category.color || '#ff00ff'}; font-size: 0.9em;">Cost: ${project.cost} RP</div>
+                                    </div>
+                                    <div>
+                                        ${completed ?
+                                            '<span style="color: #00ff00;">COMPLETED</span>' :
+                                            canAfford ?
+                                            `<button class="dialog-button" onclick="game.startResearch(${projectId})">RESEARCH</button>` :
+                                            '<span style="color: #666;">INSUFFICIENT</span>'}
+                                    </div>
+                                </div>
                             </div>
-                            <div style="color: #ccc;">${project.description}</div>
-                            <div style="color: #ff00ff;">Cost: ${project.cost} RP</div>
-                        </div>
-                        <div>
-                            ${completed ?
-                                '<span style="color: #00ff00;">COMPLETED</span>' :
-                                canAfford ?
-                                `<button class="dialog-button" onclick="game.startResearch(${project.id})">RESEARCH</button>` :
-                                '<span style="color: #666;">INSUFFICIENT</span>'}
+                        `;
+                    });
+                }
+            });
+        } else {
+            // Fallback: display all projects without grouping
+            allProjects.forEach(project => {
+                const canAfford = researchPoints >= project.cost;
+                const completed = completedResearch.includes(project.id);
+
+                html += `
+                    <div style="background: ${completed ? 'rgba(0,255,0,0.1)' : 'rgba(255,0,255,0.1)'};
+                               padding: 15px; margin: 10px 0; border-radius: 8px;
+                               border: 1px solid ${completed ? '#00ff00' : '#ff00ff'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: bold; color: ${completed ? '#00ff00' : '#fff'};">
+                                    ${project.name} ${completed ? '✅' : ''}
+                                </div>
+                                <div style="color: #ccc; font-size: 0.9em;">${project.description}</div>
+                                <div style="color: #ff00ff; font-size: 0.9em;">Cost: ${project.cost} RP</div>
+                            </div>
+                            <div>
+                                ${completed ?
+                                    '<span style="color: #00ff00;">COMPLETED</span>' :
+                                    canAfford ?
+                                    `<button class="dialog-button" onclick="game.startResearch(${project.id})">RESEARCH</button>` :
+                                    '<span style="color: #666;">INSUFFICIENT</span>'}
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
-        });
+                `;
+            });
+        }
 
         html += '</div>';
         html += '</div>';
@@ -440,9 +480,9 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         // Left Panel - Agent Roster
         const rosterClickAction = `(function() {
             game.selectedAgent = game.activeAgents[{{index}}];  // Use setter, not direct assignment
-            const dialogEngine = game.dialogEngine || window.dialogEngine || window.declarativeDialogEngine;
-            if (dialogEngine && dialogEngine.navigateTo) {
-                dialogEngine.navigateTo('character', null, true);
+            const dialogService = game.gameServices?.dialogStateService;
+            if (dialogService) {
+                dialogService.navigateTo('character', null, true);
             }
         })()`;
 
@@ -527,19 +567,15 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                     <button class="dialog-button" onclick="(function() {
                         const logger = window.Logger ? new window.Logger('AllocateButton') : null;
                         if (logger) logger.debug('Allocate button clicked for:', '${agentIdForAllocation}');
-                        if (game.dialogEngine) {
-                            // Store agent ID and reset pending changes in state data
-                            game.dialogEngine.stateData = {
-                                agentId: '${agentIdForAllocation}',
-                                pendingChanges: {}
-                            };
-                            game.dialogEngine.navigateTo('stat-allocation');
-                        } else {
-                            // Fallback to old method
-                            if (window.game && window.game.showStatAllocation) {
-                                window.game.showStatAllocation('${agentIdForAllocation}');
-                            }
+                        if (!game.dialogEngine) {
+                            throw new Error('DialogEngine not available - required for stat allocation');
                         }
+                        // Store agent ID and reset pending changes in state data
+                        game.dialogEngine.stateData = {
+                            agentId: '${agentIdForAllocation}',
+                            pendingChanges: {}
+                        };
+                        game.dialogEngine.navigateTo('stat-allocation');
                     })()">
                         Allocate Points
                     </button>
@@ -988,14 +1024,10 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
     engine.registerGenerator('generateEquipmentManagement', function() {
         // Initialize equipment system if needed
         if (!this.agentLoadouts) {
-            if (this.initializeEquipmentSystem) {
-                this.initializeEquipmentSystem();
-            } else {
-                // Fallback initialization
-                this.agentLoadouts = {};
-                this.selectedEquipmentAgent = null;
-                this.currentInventoryTab = 'weapons';
+            if (!this.initializeEquipmentSystem) {
+                throw new Error('initializeEquipmentSystem not available - required for equipment management');
             }
+            this.initializeEquipmentSystem();
         }
 
         // Properties are handled by getters/setters that route to services
@@ -1572,23 +1604,20 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
-    // Research Projects list
+    // Research Projects list - uses ResearchService as single source of truth
     engine.registerGenerator('researchProjects', function() {
-        const researchProjects = [
-            { id: 1, name: 'Weapon Upgrades', cost: 150, description: '+5 damage to all weapons', category: 'combat' },
-            { id: 2, name: 'Stealth Technology', cost: 200, description: '+20% stealth success rate', category: 'stealth' },
-            { id: 3, name: 'Combat Systems', cost: 175, description: '+15 health to all agents', category: 'combat' },
-            { id: 4, name: 'Hacking Protocols', cost: 225, description: '+25% hacking speed', category: 'tech' },
-            { id: 5, name: 'Medical Systems', cost: 300, description: 'Auto-heal 20% health between missions', category: 'support' },
-            { id: 6, name: 'Advanced Tactics', cost: 250, description: '+1 movement speed to all agents', category: 'tactical' }
-        ];
+        const researchService = window.GameServices?.researchService;
+        const resourceService = window.GameServices?.resourceService;
+        const researchProjects = researchService?.getAllProjects() || [];
+        const researchPoints = resourceService?.get('researchPoints') || this.researchPoints || 0;
+        const completedResearch = researchService?.getCompletedResearch() || [];
 
         let html = '<div style="max-height: 400px; overflow-y: auto;">';
-        html += `<div style="color: #00ffff; margin-bottom: 20px;">Available Research Points: <span style="font-size: 1.5em; font-weight: bold;">${this.researchPoints || 0}</span></div>`;
+        html += `<div style="color: #00ffff; margin-bottom: 20px;">Available Research Points: <span style="font-size: 1.5em; font-weight: bold;">${researchPoints}</span></div>`;
 
         researchProjects.forEach(project => {
-            const canAfford = this.researchPoints >= project.cost;
-            const completed = this.completedResearch && this.completedResearch.includes(project.id);
+            const canAfford = researchPoints >= project.cost;
+            const completed = completedResearch.includes(project.id);
 
             html += `
                 <div style="background: ${completed ? 'rgba(0,255,0,0.1)' : canAfford ? 'rgba(255,0,255,0.1)' : 'rgba(128,128,128,0.1)'};
@@ -1636,14 +1665,19 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
-    // Research overview
+    // Research overview - uses ResearchService as single source of truth
     engine.registerGenerator('generateResearchOverview', function() {
+        const researchService = window.GameServices?.researchService;
+        const resourceService = window.GameServices?.resourceService;
+        const researchPoints = resourceService?.get('researchPoints') || this.researchPoints || 0;
+        const completedResearch = researchService?.getCompletedResearch() || [];
+        const allProjects = researchService?.getAllProjects() || [];
+        const completedCount = completedResearch.length;
+        const totalProjects = allProjects.length || 6;
+
         let html = '<div class="research-overview">';
 
-        html += `<h3 style="color: #00ffff;">Research Points: ${this.researchPoints || 0}</h3>`;
-
-        const completedCount = this.completedResearch ? this.completedResearch.length : 0;
-        const totalProjects = 6; // From research projects list
+        html += `<h3 style="color: #00ffff;">Research Points: ${researchPoints}</h3>`;
 
         html += `
             <div style="margin: 20px 0;">
@@ -1663,7 +1697,12 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         if (completedCount > 0) {
             html += '<h4 style="color: #00ff00;">Completed Research:</h4>';
             html += '<ul style="color: #ccc;">';
-            // List completed research
+            completedResearch.forEach(projectId => {
+                const project = researchService?.getProject(projectId);
+                if (project) {
+                    html += `<li>${project.name}</li>`;
+                }
+            });
             html += '</ul>';
         }
 
@@ -2413,53 +2452,100 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         return html;
     });
 
-    // Tech tree generator
+    // Tech tree generator - uses ResearchService as single source of truth
     engine.registerGenerator('generateTechTree', function() {
         let html = '<div class="tech-tree">';
 
         html += '<h4 style="color: #00ffff; margin-bottom: 15px;">RESEARCH TREE</h4>';
 
-        // Placeholder tech tree - would be loaded from campaign
-        const techCategories = [
-            { name: 'Weapons', color: '#ff0000', techs: ['Laser Rifle', 'Plasma Cannon', 'EMP Grenade'] },
-            { name: 'Armor', color: '#00ffff', techs: ['Kevlar Vest', 'Nanofiber Suit', 'Power Armor'] },
-            { name: 'Cybernetics', color: '#ff00ff', techs: ['Neural Link', 'Augmented Eyes', 'Reflex Booster'] },
-            { name: 'Hacking', color: '#00ff00', techs: ['Firewall Breaker', 'Virus Upload', 'System Override'] }
-        ];
+        // Get research tree from ResearchService (campaign-driven)
+        const researchService = window.GameServices?.researchService;
+        const researchTree = researchService?.getResearchTree();
+        const completedResearch = researchService?.getCompletedResearch() || [];
 
-        techCategories.forEach(category => {
-            html += `
-                <div style="margin-bottom: 20px;">
-                    <h5 style="color: ${category.color}; margin-bottom: 10px;">${category.name}</h5>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            `;
-
-            category.techs.forEach(tech => {
-                const isUnlocked = this.completedResearch?.includes(tech);
+        if (researchTree) {
+            // Use campaign research tree
+            Object.entries(researchTree).forEach(([categoryId, category]) => {
                 html += `
-                    <div style="background: rgba(255,255,255,0.05);
-                                padding: 10px;
-                                border-radius: 5px;
-                                border: 1px solid ${isUnlocked ? category.color : '#333'};
-                                opacity: ${isUnlocked ? '1' : '0.5'};">
-                        ${isUnlocked ? '✓ ' : ''}${tech}
-                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="color: ${category.color || '#00ffff'}; margin-bottom: 10px;">${category.name}</h5>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 `;
-            });
 
-            html += '</div></div>';
-        });
+                if (category.projects) {
+                    category.projects.forEach(project => {
+                        // Find project ID by stringId
+                        const projectData = researchService.getAllProjects().find(p => p.stringId === project.id);
+                        const isUnlocked = projectData && completedResearch.includes(projectData.id);
+                        html += `
+                            <div style="background: rgba(255,255,255,0.05);
+                                        padding: 10px;
+                                        border-radius: 5px;
+                                        border: 1px solid ${isUnlocked ? category.color : '#333'};
+                                        opacity: ${isUnlocked ? '1' : '0.6'};">
+                                <div>${isUnlocked ? '✓ ' : ''}${project.name}</div>
+                                <div style="font-size: 0.8em; color: #888;">${project.description}</div>
+                                <div style="font-size: 0.8em; color: #00ffff;">Cost: ${project.cost} RP</div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += '</div></div>';
+            });
+        } else {
+            // Fallback to legacy projects
+            const projects = researchService?.getAllProjects() || [];
+            const categories = [...new Set(projects.map(p => p.category))];
+
+            categories.forEach(categoryId => {
+                const categoryProjects = projects.filter(p => p.category === categoryId);
+                const color = categoryId === 'combat' ? '#ff0000' :
+                              categoryId === 'stealth' ? '#9900ff' :
+                              categoryId === 'tech' ? '#00ff00' : '#00ffff';
+
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="color: ${color}; margin-bottom: 10px;">${categoryId.toUpperCase()}</h5>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                `;
+
+                categoryProjects.forEach(project => {
+                    const isUnlocked = completedResearch.includes(project.id);
+                    html += `
+                        <div style="background: rgba(255,255,255,0.05);
+                                    padding: 10px;
+                                    border-radius: 5px;
+                                    border: 1px solid ${isUnlocked ? color : '#333'};
+                                    opacity: ${isUnlocked ? '1' : '0.6'};">
+                            <div>${isUnlocked ? '✓ ' : ''}${project.name}</div>
+                            <div style="font-size: 0.8em; color: #888;">${project.description}</div>
+                            <div style="font-size: 0.8em; color: #00ffff;">Cost: ${project.cost} RP</div>
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+            });
+        }
 
         html += '</div>';
         return html;
     });
 
-    // Research progress generator
+    // Research progress generator - uses ResearchService as single source of truth
     engine.registerGenerator('generateResearchProgress', function() {
         let html = '<div class="research-progress">';
 
-        const currentPoints = this.researchPoints || 0;
-        const completedCount = this.completedResearch?.length || 0;
+        const researchService = window.GameServices?.researchService;
+        const resourceService = window.GameServices?.resourceService;
+
+        const currentPoints = resourceService?.get('researchPoints') || this.researchPoints || 0;
+        const completedResearch = researchService?.getCompletedResearch() || [];
+        const completedCount = completedResearch.length;
+        const totalSpent = researchService?.calculateTotalSpent(completedResearch) || 0;
+        const totalProjects = researchService?.getAllProjects().length || 0;
+        const completionPercent = researchService?.calculateCompletionPercentage(completedResearch) || 0;
 
         html += `
             <h4 style="color: #00ffff; margin-bottom: 20px;">RESEARCH STATUS</h4>
@@ -2473,27 +2559,16 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div style="background: rgba(0,255,255,0.1); padding: 15px; border-radius: 5px;">
                         <div style="color: #888; font-size: 0.9em;">Projects Completed</div>
-                        <div style="color: #00ff00; font-size: 2em;">${completedCount}</div>
+                        <div style="color: #00ff00; font-size: 2em;">${completedCount}/${totalProjects}</div>
+                        <div style="color: #666; font-size: 0.8em;">${completionPercent}%</div>
                     </div>
                     <div style="background: rgba(255,0,255,0.1); padding: 15px; border-radius: 5px;">
                         <div style="color: #888; font-size: 0.9em;">Total Points Spent</div>
-                        <div style="color: #ff00ff; font-size: 2em;">${completedCount * 100}</div>
+                        <div style="color: #ff00ff; font-size: 2em;">${totalSpent}</div>
                     </div>
                 </div>
             </div>
         `;
-
-        if (this.activeResearch) {
-            html += `
-                <div style="margin-top: 20px;">
-                    <h5 style="color: #ffff00;">Active Research</h5>
-                    <div style="background: rgba(255,255,0,0.1); padding: 15px; border-radius: 5px;">
-                        <div style="font-weight: bold;">${this.activeResearch.name}</div>
-                        <div style="color: #888; font-size: 0.9em;">Progress: ${this.activeResearch.progress}%</div>
-                    </div>
-                </div>
-            `;
-        }
 
         html += '</div>';
         return html;
@@ -2677,15 +2752,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         if (shopManager.shops.size === 0) {
             if (this.logger) this.logger.warn('⚠️ No shops loaded, attempting to reload...');
 
-            // Debug: Check what's available
-            console.log('🔍 Debug - window.MAIN_CAMPAIGN_CONFIG exists?', !!window.MAIN_CAMPAIGN_CONFIG);
-            console.log('🔍 Debug - window.MAIN_CAMPAIGN_CONFIG.rpgConfig exists?', !!window.MAIN_CAMPAIGN_CONFIG?.rpgConfig);
-            console.log('🔍 Debug - rpgConfig.shops exists?', !!window.MAIN_CAMPAIGN_CONFIG?.rpgConfig?.shops);
-            if (window.MAIN_CAMPAIGN_CONFIG?.rpgConfig?.shops) {
-                console.log('🔍 Debug - Shop keys:', Object.keys(window.MAIN_CAMPAIGN_CONFIG.rpgConfig.shops));
-            }
-
-            // Set config first
+            // Set config and reload shops
             const rpgConfig = window.MAIN_CAMPAIGN_CONFIG?.rpgConfig || this.getRPGConfig?.() || {};
             if (rpgConfig && rpgConfig.shops) {
                 shopManager.setConfig(rpgConfig);
@@ -2693,8 +2760,6 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 if (this.logger) this.logger.info(`✅ Reloaded ${shopManager.shops.size} shops`);
             } else {
                 if (this.logger) this.logger.error('❌ Cannot reload shops - no rpgConfig.shops found');
-                console.log('🔍 Debug - rpgConfig object:', rpgConfig);
-                console.log('🔍 Debug - rpgConfig keys:', rpgConfig ? Object.keys(rpgConfig) : 'null/undefined');
             }
         }
 
@@ -2828,9 +2893,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
     // Save/Load UI generator - Enhanced version matching modal engine features
     engine.registerGenerator('generateSaveLoadUI', function() {
         // Get mode from state data or default to 'save'
-        // Note: 'this' is game, dialogEngine is accessed via game.dialogEngine or game._dialogEngineContext
-        const dialogEngine = this.dialogEngine || this._dialogEngineContext;
-        const mode = dialogEngine?.stateData?.saveLoadMode || 'save';
+        const dialogService = this.gameServices?.dialogStateService;
+        const mode = dialogService?.stateData?.saveLoadMode || 'save';
         const saves = this.getAllSaves ? this.getAllSaves() : [];
 
         let html = '<div class="save-load-ui" style="max-width: 800px; margin: 0 auto;">';

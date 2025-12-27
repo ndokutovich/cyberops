@@ -416,17 +416,14 @@ class GameEngine {
 
     /**
      * World to isometric conversion (needed for rendering)
-     * Delegates to CoordinateService when available
+     * Delegates to CoordinateService (single source of truth)
      */
     worldToIsometric(x, y) {
         const coordService = window.GameServices?.coordinateService;
-        if (coordService) {
-            return coordService.worldToIsometric(x, y);
+        if (!coordService) {
+            throw new Error('CoordinateService not initialized - cannot convert coordinates');
         }
-        // Fallback
-        const isoX = (x - y) * this.tileWidth / 2;
-        const isoY = (x + y) * this.tileHeight / 2;
-        return { x: isoX, y: isoY };
+        return coordService.worldToIsometric(x, y);
     }
 
     /**

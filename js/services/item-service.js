@@ -161,10 +161,14 @@ class ItemService {
                 this.logger.warn(`⚠️ [DEBUG] Credits NOT added: effects.credits=${effects.credits}, hasResourceService=${!!this.resourceService}`);
             }
 
-            // Apply health
+            // Apply health via AgentService (single source of truth)
             if (effects.health > 0) {
                 const oldHealth = agent.health;
-                agent.health = Math.min(agent.maxHealth || 100, agent.health + effects.health);
+                if (window.GameServices?.agentService) {
+                    window.GameServices.agentService.healAgent(agent.id, effects.health);
+                } else {
+                    agent.health = Math.min(agent.maxHealth || 100, agent.health + effects.health);
+                }
                 const actualHealing = agent.health - oldHealth;
 
                 if (actualHealing > 0 && this.logger) {
@@ -228,9 +232,8 @@ class ItemService {
             return effects;
         }
 
-        // Fallback if no formula service
-        if (this.logger) this.logger.warn('⚠️ FormulaService not available for item effects calculation');
-        return {};
+        // FormulaService is required
+        throw new Error('FormulaService not available - required for item effects calculation');
     }
 
     /**

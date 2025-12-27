@@ -134,7 +134,6 @@ class GameController {
             // Handle turn-based mode differently (like original)
             if (this.facade.turnBasedMode) {
                 // In turn-based mode, update animations and effects only
-                // TODO: Implement specialized turn-based update
                 this.facade.updateTurnBasedAnimations(deltaTime);
 
                 // Update fog of war based on agent positions

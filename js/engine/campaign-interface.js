@@ -67,10 +67,6 @@ class CampaignContentInterface {
             });
         }
 
-        console.log('[VALIDATE] Campaign:', campaign);
-        console.log('[VALIDATE] Errors:', errors);
-        console.log('[VALIDATE] Valid?', errors.length === 0);
-
         return {
             valid: errors.length === 0,
             errors,
@@ -188,7 +184,7 @@ class CampaignContentInterface {
             // Economy configuration
             economy: {
                 startingCredits: 5000,
-                startingResearchPoints: 100,
+                startingResearchPoints: 500,  // Updated default
                 sellValueMultiplier: 0.5,
                 repairCostMultiplier: 0.3
             },
@@ -322,14 +318,7 @@ class CampaignContentInterface {
      * @returns {Object} Complete campaign with defaults
      */
     mergeCampaignWithDefaults(campaign) {
-        // Version marker to ensure new code is loaded
-        console.error('🔥🔥🔥 [MERGE] Version: 2024-12-23-v5-FINAL-WITH-8-PROPERTIES 🔥🔥🔥');
-
-        console.error('🔍 [MERGE] BEFORE - Campaign rpgConfig keys:', campaign?.rpgConfig ? Object.keys(campaign.rpgConfig) : 'NO rpgConfig');
-        console.error('🔍 [MERGE] BEFORE - Campaign has perks?', !!campaign?.rpgConfig?.perks);
-
         const defaults = this.getDefaultCampaign();
-        console.error('🔍 [MERGE] DEFAULTS - rpgConfig keys:', defaults.rpgConfig ? Object.keys(defaults.rpgConfig) : 'NO rpgConfig');
 
         // Deep copy defaults first
         const result = JSON.parse(JSON.stringify(defaults));
@@ -366,13 +355,6 @@ class CampaignContentInterface {
                 }
             }
         }
-
-        console.error('🔥 [MERGE] Result keys:', Object.keys(result));
-        console.error('🔥 [MERGE] Has agents?', 'agents' in result, Array.isArray(result.agents));
-        console.error('🔥 [MERGE] rpgConfig keys after merge:', result.rpgConfig ? Object.keys(result.rpgConfig) : 'no rpgConfig');
-        console.error('🔥 [MERGE] Has perks?', result.rpgConfig?.perks ? Object.keys(result.rpgConfig.perks).length : 0);
-        console.error('🔥 [MERGE] Perks object:', result.rpgConfig?.perks);
-        console.error('🔥 [MERGE] Campaign had perks?', campaign?.rpgConfig?.perks ? Object.keys(campaign.rpgConfig.perks).length : 'NO');
 
         return result;
     }

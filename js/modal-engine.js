@@ -49,7 +49,7 @@ class ModalEngine {
             document.head.appendChild(styles);
         }
 
-        // Setup keyboard handling via dispatcher or fallback
+        // Setup keyboard handling via dispatcher
         this.setupKeyboardHandling();
     }
 
@@ -1015,7 +1015,8 @@ class ModalEngine {
     }
 }
 
-// Initialize modal engine and attach to window
+// Export class and initialize instance
+window.ModalEngine = ModalEngine;
 window.modalEngine = new ModalEngine();
 
 // Compatibility layer for existing game functions

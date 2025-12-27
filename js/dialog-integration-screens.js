@@ -194,7 +194,10 @@
         engine.registerAction('proceedToNextMission', function() {
             this.closeAll();
             if (game) {
-                game.currentMissionIndex++;
+                // Use MissionService to increment index (single source of truth)
+                if (game.gameServices?.missionService) {
+                    game.gameServices.missionService.incrementMissionIndex();
+                }
                 const nextMission = game.missions[game.currentMissionIndex];
                 game.currentMission = nextMission;
                 this.navigateTo('mission-briefing', { selectedMission: nextMission });
@@ -209,14 +212,9 @@
         });
 
         engine.registerAction('returnToHubFromVictory', function() {
-            console.log('🏠 [DEBUG] returnToHubFromVictory action triggered');
-
             // Get fresh game reference (the captured 'game' variable may be stale)
             const currentGame = window.game;
-            if (!currentGame) {
-                console.error('❌ [DEBUG] window.game is undefined!');
-                return;
-            }
+            if (!currentGame) return;
 
             this.closeAll();
             // Save progress
@@ -225,7 +223,6 @@
             }
 
             // Generate new agents for hire after each completed mission
-            console.log('🆕 [DEBUG] About to call generateNewAgentsForHire, exists:', !!currentGame.generateNewAgentsForHire);
             if (currentGame.generateNewAgentsForHire) {
                 currentGame.generateNewAgentsForHire();
             }

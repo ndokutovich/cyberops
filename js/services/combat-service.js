@@ -208,22 +208,15 @@ class CombatService {
                     });
                 }
                 // Use GameServices which properly handles equipment loadouts
+                if (!window.GameServices) {
+                    throw new Error('GameServices not available - required for damage calculation');
+                }
                 baseDamage = window.GameServices.calculateAttackDamage(
                     attacker.entity,
                     target.entity,
                     { isRanged: true }
                 );
                 if (this.logger) this.logger.debug(`Using GameServices damage calculation: ${baseDamage}`);
-            } else {
-                // Fallback to basic calculation
-                const weaponDamage = attacker.entity.weaponDamage || 0;
-                baseDamage = this.formulaService.calculateDamage(
-                    attacker.entity.damage || 10,
-                    weaponDamage,
-                    attacker.entity.damageBonus || 0,
-                    target.entity.protection || 0
-                );
-                if (this.logger) this.logger.warn(`Using fallback damage calculation (no equipment bonus): ${baseDamage}`);
             }
 
             // Check for critical hit

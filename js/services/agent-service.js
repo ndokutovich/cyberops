@@ -476,6 +476,35 @@ class AgentService {
     }
 
     /**
+     * Fully heal agent to max health
+     */
+    fullHealAgent(agentId) {
+        const agent = this.getAgent(agentId);
+        if (!agent || !agent.alive) return false;
+
+        const oldHealth = agent.health;
+        agent.health = agent.maxHealth || 100;
+
+        if (this.logger) this.logger.debug(`💚 Full heal ${agent.name}: ${oldHealth} → ${agent.health}`);
+        return true;
+    }
+
+    /**
+     * Fully heal all active agents
+     */
+    fullHealAllAgents() {
+        let count = 0;
+        for (const agent of this.activeAgents) {
+            if (agent.alive) {
+                agent.health = agent.maxHealth || 100;
+                count++;
+            }
+        }
+        if (this.logger) this.logger.debug(`💚 Full healed ${count} agents`);
+        return count;
+    }
+
+    /**
      * Damage agent
      */
     damageAgent(agentId, amount, source = null) {

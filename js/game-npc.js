@@ -145,21 +145,8 @@ NPC.prototype.getNextDialog = function(game) {
             return completedQuest;
         }
 
-        // Debug: Log quest search
-        console.log('🔍 [NPC QUEST] Searching for available quests:', {
-            npcName: this.name,
-            totalQuests: this.quests?.length || 0,
-            questsGiven: Array.from(this.questsGiven || []),
-            completedQuests: game.completedQuests ? Array.from(game.completedQuests) : []
-        });
-
         // Check for available quests
         for (let quest of this.quests) {
-            console.log('🔍 [NPC QUEST] Checking quest:', {
-                questId: quest.id,
-                inQuestsGiven: this.questsGiven?.has(quest.id),
-                inCompletedQuests: game.completedQuests?.has(quest.id)
-            });
             if (!this.questsGiven.has(quest.id) && !game.completedQuests.has(quest.id)) {
                 if (this.checkQuestRequirements(quest, game)) {
                     const npc = this;  // Capture NPC reference
@@ -301,19 +288,11 @@ NPC.prototype.giveQuest = function(quest, game) {
         // Initialize npcActiveQuests array if needed
         if (!game.npcActiveQuests) {
             game.npcActiveQuests = [];
-            console.log('🔍 [NPC QUEST] Initialized npcActiveQuests array');
         }
 
         // Add quest to active NPC quests (for collectible visibility)
         if (!game.npcActiveQuests.some(q => q.id === quest.id)) {
             game.npcActiveQuests.push(quest);
-            console.log('🔍 [NPC QUEST] Quest added to npcActiveQuests:', {
-                questId: quest.id,
-                questName: quest.name,
-                npcActiveQuestsCount: game.npcActiveQuests.length
-            });
-        } else {
-            console.log('🔍 [NPC QUEST] Quest already in array:', quest.id);
         }
 
         // Use introDialog if available, otherwise use description
@@ -381,13 +360,10 @@ NPC.prototype.completeQuest = function(quest, game) {
                     game.agents.forEach(agent => {
                         if (agent.rpgEntity && agent.health > 0) {
                             // Add experience directly to the rpgEntity
-                            if (typeof agent.rpgEntity.addExperience === 'function') {
-                                agent.rpgEntity.addExperience(xpPerAgent);
-                            } else {
-                                // Fallback: directly add to experience property
-                                agent.rpgEntity.experience = (agent.rpgEntity.experience || 0) + xpPerAgent;
-                                agent.rpgEntity.totalExperience = (agent.rpgEntity.totalExperience || 0) + xpPerAgent;
+                            if (typeof agent.rpgEntity.addExperience !== 'function') {
+                                throw new Error('rpgEntity.addExperience not available - required for XP rewards');
                             }
+                            agent.rpgEntity.addExperience(xpPerAgent);
                             game.addNotification(`⭐ ${agent.name} gained ${xpPerAgent} XP`);
 
                             // Check for level up
@@ -401,9 +377,7 @@ NPC.prototype.completeQuest = function(quest, game) {
                         }
                     });
                 } else {
-                    // Fallback: add to global experience
-                    game.experience = (game.experience || 0) + xpReward;
-                    game.addNotification(`⭐ +${xpReward} XP`);
+                    throw new Error('No agents available - required for XP rewards');
                 }
             }
 
@@ -612,18 +586,11 @@ CyberOpsGame.prototype.createNPCFromDefinition = function(npcDef) {
     // Create quests from template data
     const quests = [];
     if (template.quests && npcDef.quests) {
-        console.log('🔍 [NPC CREATE] Creating quests for NPC:', {
-            npcId: npcDef.id,
-            templateQuestCount: template.quests.length,
-            missionQuestIds: npcDef.quests
-        });
         template.quests.forEach(questData => {
             if (npcDef.quests.includes(questData.id)) {
-                console.log('🔍 [NPC CREATE] Adding quest:', questData.id);
                 quests.push(new Quest(questData));
             }
         });
-        console.log('🔍 [NPC CREATE] Total quests created:', quests.length);
     }
 
     return {
@@ -1064,11 +1031,7 @@ CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
     }
 };
 
-// REMOVED: showMissionList - was pure wrapper to dialogEngine.navigateTo('mission-progress')
-// All callers now use dialogEngine.navigateTo('mission-progress') directly
-
-// Close dialog
-// Close NPC dialog specifically - Now works with Modal Engine
+// Close NPC dialog - works with Modal Engine
 CyberOpsGame.prototype.closeNPCDialog = function() {
     // Close declarative dialog engine if active
     if (this.dialogEngine && this.dialogEngine.currentState === 'npc-interaction') {

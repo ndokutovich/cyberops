@@ -1266,6 +1266,11 @@ class DeclarativeDialogEngine {
      * Setup keyboard handling
      */
     setupKeyboardHandling() {
+        // Guard: window.game may not be initialized yet during early loading
+        if (!window.game?.gameServices?.keyboardDispatcher) {
+            if (this.logger) this.logger.debug('Keyboard dispatcher not yet available, will setup later');
+            return;
+        }
         const dispatcher = window.game.gameServices.keyboardDispatcher;
         dispatcher.registerHandler('DIALOG', '*', (e) => this.handleKeyboard(e));
     }

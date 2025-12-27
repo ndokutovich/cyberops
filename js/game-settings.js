@@ -55,10 +55,10 @@ CyberOpsGame.prototype.resetKeyBinding = function(action) {
     const keybindingService = this.gameServices.keybindingService;
     keybindingService.resetBinding(action);
 
-    // Refresh the settings dialog if it's open
-    const dialogEngine = this.dialogEngine || window.declarativeDialogEngine;
-    if (dialogEngine && (dialogEngine.currentState === 'hub-settings' || dialogEngine.currentState === 'settings')) {
-        dialogEngine.navigateTo(dialogEngine.currentState, null, true);
+    // Refresh the settings dialog if it's open - use DialogStateService
+    const dialogService = this.gameServices?.dialogStateService;
+    if (dialogService && (dialogService.currentState === 'hub-settings' || dialogService.currentState === 'settings')) {
+        dialogService.refresh();
     }
 };
 

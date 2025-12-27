@@ -692,7 +692,7 @@
         // Economy configuration
         economy: {
             startingCredits: 5000,
-            startingResearchPoints: 100,
+            startingResearchPoints: 500,
 
             // Mission rewards multipliers
             missionRewards: {
@@ -715,8 +715,44 @@
 
         // Progression and unlocks
         progression: {
-            // Research tree will be loaded from existing data
-            researchTree: {},
+            // Research tree - defines all available research projects by category
+            // Total: 2000 RP across 10 projects (~14 missions to unlock all)
+            researchTree: {
+                combat: {
+                    name: 'Combat',
+                    color: '#ff0000',
+                    projects: [
+                        { id: 'weapon_upgrades', name: 'Weapon Upgrades', cost: 150, description: '+5 damage to all weapons', effects: { damageBonus: 5 } },
+                        { id: 'combat_systems', name: 'Combat Systems', cost: 175, description: '+15 health to all agents', effects: { healthBonus: 15 }, prereqs: [] },
+                        { id: 'advanced_tactics', name: 'Advanced Tactics', cost: 250, description: '+1 movement speed, +10% critical hit chance', effects: { speedBonus: 1, critBonus: 10 }, prereqs: ['weapon_upgrades'] }
+                    ]
+                },
+                stealth: {
+                    name: 'Stealth',
+                    color: '#9900ff',
+                    projects: [
+                        { id: 'stealth_tech', name: 'Stealth Technology', cost: 175, description: '+20% stealth success rate', effects: { stealthBonus: 20 } },
+                        { id: 'shadow_ops', name: 'Shadow Operations', cost: 250, description: '+15% stealth, -20% detection range', effects: { stealthBonus: 15, detectionReduction: 20 }, prereqs: ['stealth_tech'] }
+                    ]
+                },
+                tech: {
+                    name: 'Technology',
+                    color: '#00ff00',
+                    projects: [
+                        { id: 'hacking_protocols', name: 'Hacking Protocols', cost: 200, description: '+30% hacking speed', effects: { hackingBonus: 30 } },
+                        { id: 'neural_interface', name: 'Neural Interface', cost: 275, description: '+20% hack speed, +1 hack range', effects: { hackingBonus: 20, hackRangeBonus: 1 }, prereqs: ['hacking_protocols'] }
+                    ]
+                },
+                support: {
+                    name: 'Support',
+                    color: '#00ffff',
+                    projects: [
+                        { id: 'field_medic', name: 'Field Medic', cost: 175, description: 'Heal 10 HP per turn when stationary', effects: { passiveHealing: 10 } },
+                        { id: 'medical_systems', name: 'Medical Systems', cost: 250, description: 'Auto-heal 25% health between missions', effects: { medicalHealing: true, healPercent: 25 }, prereqs: ['field_medic'] },
+                        { id: 'field_repair', name: 'Field Repair', cost: 150, description: 'Repair damaged equipment between missions', effects: { fieldRepair: true } }
+                    ]
+                }
+            },
 
             // Unlock schedule (mission number -> unlocks)
             unlockSchedule: [

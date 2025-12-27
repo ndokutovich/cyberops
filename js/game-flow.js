@@ -22,10 +22,13 @@ CyberOpsGame.prototype.startCampaign = function() {
         }
 
         // Initialize game state for new campaign - read from campaign economy config
-        const economy = window.ContentLoader?.getContent('economy') || {};
-        this.gameServices.resourceService.set('credits', economy.startingCredits || 5000, 'new campaign');
-        this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints || 500, 'new campaign');
-        this.gameServices.resourceService.set('worldControl', economy.startingWorldControl || 0, 'new campaign');
+        const economy = window.ContentLoader?.getContent('economy');
+        if (!economy || economy.startingCredits === undefined) {
+            throw new Error('Campaign config missing economy.startingCredits');
+        }
+        this.gameServices.resourceService.set('credits', economy.startingCredits, 'new campaign');
+        this.gameServices.resourceService.set('researchPoints', economy.startingResearchPoints ?? 0, 'new campaign');
+        this.gameServices.resourceService.set('worldControl', economy.startingWorldControl ?? 0, 'new campaign');
 
         // Agents are already properly initialized by AgentService from campaign content
         // Agents with hired: true in campaign-content.js are already in activeAgents

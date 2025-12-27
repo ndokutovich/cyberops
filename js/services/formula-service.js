@@ -28,6 +28,7 @@ if (typeof FormulaService === 'undefined') {
 
             // Combat constants
             BASE_HIT_CHANCE: 0.85,
+            BASE_CRITICAL_CHANCE: 0.05,  // 5% base crit chance
             RANGE_PENALTY_PER_TILE: 0.02,
             COVER_DAMAGE_REDUCTION: 0.5,
 
@@ -163,6 +164,28 @@ if (typeof FormulaService === 'undefined') {
             this.logger.trace(`Damage calculated: base=${baseDamage}, weapon=${weaponBonus}, final=${finalDamage}`);
         }
         return finalDamage;
+    }
+
+    /**
+     * Calculate critical hit chance and roll for critical
+     * @param {number} critBonus - Critical hit bonus from research/equipment (percentage)
+     * @param {number} weaponCritBonus - Weapon-specific crit bonus (percentage)
+     * @returns {Object} {isCritical: boolean, chance: number}
+     */
+    calculateCriticalHit(critBonus = 0, weaponCritBonus = 0) {
+        const baseChance = this.constants.BASE_CRITICAL_CHANCE;
+        const totalChance = Math.min(0.75, baseChance + (critBonus / 100) + (weaponCritBonus / 100)); // Cap at 75%
+        const roll = Math.random();
+        const isCritical = roll < totalChance;
+
+        if (this.logger && isCritical) {
+            this.logger.debug(`💥 Critical hit! Chance: ${(totalChance * 100).toFixed(1)}%`);
+        }
+
+        return {
+            isCritical,
+            chance: totalChance
+        };
     }
 
     /**
@@ -311,14 +334,19 @@ if (typeof FormulaService === 'undefined') {
      * @param {number} baseRange - Base detection range
      * @param {number} stealthBonus - Agent stealth bonus (percentage)
      * @param {number} alertLevel - Enemy alert level (0-100)
+     * @param {number} detectionReduction - Research detection reduction (percentage)
      * @returns {number} Final detection range
      */
-    calculateDetectionRange(baseRange = null, stealthBonus = 0, alertLevel = 0) {
+    calculateDetectionRange(baseRange = null, stealthBonus = 0, alertLevel = 0, detectionReduction = 0) {
         let range = baseRange || this.constants.ENEMY_BASE_VISION;
 
         // Stealth reduces detection range
         const stealthReduction = range * (stealthBonus / 100);
         range -= stealthReduction;
+
+        // Research detection reduction
+        const researchReduction = range * (detectionReduction / 100);
+        range -= researchReduction;
 
         // Alert level increases detection
         const alertBonus = (alertLevel / 100) * 2;
@@ -464,20 +492,18 @@ if (typeof FormulaService === 'undefined') {
     /**
      * Calculate hacking range
      * @param {number} baseRange - Base hacking range
-     * @param {number} hackBonus - Hacking bonus percentage
-     * @param {boolean} hasHackingResearch - Has hacking research
+     * @param {number} hackBonus - Hacking bonus percentage from equipment
+     * @param {number} hackRangeBonus - Additional range tiles from research
      * @returns {number} Final hacking range
      */
-    calculateHackingRange(baseRange = 3, hackBonus = 0, hasHackingResearch = false) {
+    calculateHackingRange(baseRange = 3, hackBonus = 0, hackRangeBonus = 0) {
         let range = baseRange;
 
-        // Apply equipment bonus
+        // Apply equipment bonus (percentage)
         range += range * (hackBonus / 100);
 
-        // Apply research bonus
-        if (hasHackingResearch) {
-            range += range * 0.25; // 25% increase from research
-        }
+        // Apply research range bonus (flat tiles)
+        range += hackRangeBonus;
 
         return Math.floor(range);
     }

@@ -159,17 +159,8 @@ class MissionService {
             }
         }
 
-        // Try window function fallback for mission-specific validators
-        if (window[objective.checkFunction]) {
-            try {
-                return window[objective.checkFunction](gameState, objective, this);
-            } catch (error) {
-                if (this.logger) this.logger.error(`Window validator ${objective.checkFunction} failed:`, error);
-                return false;
-            }
-        }
-
-        if (this.logger) this.logger.warn(`No validator found for: ${objective.checkFunction}`);
+        // No fallback - all validators must be registered via registerValidator()
+        if (this.logger) this.logger.error(`Validator not registered: ${objective.checkFunction}. Use registerValidator() to add custom validators.`);
         return false;
     }
 

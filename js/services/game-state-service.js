@@ -87,9 +87,10 @@ class GameStateService {
                 ? this.inventoryService.exportState()
                 : { weapons: [], equipment: [], agentLoadouts: {} },
 
-            // Research and unlocks
-            researchTree: game.researchTree ?? {},
-            completedResearch: game.completedResearch ?? [],
+            // Research state (from ResearchService - single source of truth)
+            researchState: window.GameServices?.researchService
+                ? window.GameServices.researchService.exportState()
+                : { completedResearch: [] },
             unlockedAbilities: game.unlockedAbilities ?? [],
 
             // Campaign progress
@@ -169,9 +170,15 @@ class GameStateService {
                 this.inventoryService.importState(state.inventory);
             }
 
-            // Apply research and unlocks
-            game.researchTree = state.researchTree ?? {};
-            game.completedResearch = state.completedResearch ?? [];
+            // Apply research state via ResearchService (single source of truth)
+            if (window.GameServices?.researchService && state.researchState) {
+                window.GameServices.researchService.importState(state.researchState);
+            } else if (state.completedResearch) {
+                // Backward compatibility: load from old format
+                if (window.GameServices?.researchService) {
+                    window.GameServices.researchService.importState({ completedResearch: state.completedResearch });
+                }
+            }
             game.unlockedAbilities = state.unlockedAbilities ?? [];
 
             // Apply campaign progress

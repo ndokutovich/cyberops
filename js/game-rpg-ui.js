@@ -4,9 +4,9 @@
  * Includes character sheet, inventory, leveling, and shops
  */
 
-// Character Sheet UI - Now uses declarative dialog system when available
+// Character Sheet UI - Uses DialogStateService (single source of truth)
 // showCharacterSheet removed - now using declarative dialog system
-// All calls replaced with: this._selectedAgent = agent; this.dialogEngine.navigateTo('character');
+// All calls use: this._selectedAgent = agent; dialogService.navigateTo('character');
 
 // Render stat list
 CyberOpsGame.prototype.renderStatList = function(stats) {
@@ -127,10 +127,11 @@ CyberOpsGame.prototype.showInventory = function(agentIdOrName) {
         }
     }
 
-    // Use declarative Arsenal dialog
-    if (this.dialogEngine) {
+    // Use declarative Arsenal dialog via DialogStateService
+    const dialogService = this.gameServices?.dialogStateService;
+    if (dialogService) {
         if (this.logger) this.logger.debug('📦 Opening Arsenal dialog');
-        this.dialogEngine.navigateTo('arsenal');
+        dialogService.navigateTo('arsenal');
         return;
     }
 
@@ -513,17 +514,16 @@ CyberOpsGame.prototype.unequipFromRPG = function(itemId, slotType) {
 CyberOpsGame.prototype.showShop = function(shopId) {
     if (this.logger) this.logger.debug(`🛒 showShop - routing to declarative rpg-shop state (shopId: ${shopId})`);
 
-    // Use the declarative dialog system
-    if (this.dialogEngine && this.dialogEngine.navigateTo) {
-        // Store shop ID in state data
-        this.dialogEngine.stateData = this.dialogEngine.stateData || {};
-        this.dialogEngine.stateData.shopId = shopId || 'black_market';
-        this.dialogEngine.stateData.shopTab = 'buy'; // Default to buy tab
-
-        this.dialogEngine.navigateTo('rpg-shop');
-    } else {
-        if (this.logger) this.logger.error('Dialog engine not available for RPG shop');
+    // Use DialogStateService (single source of truth)
+    const dialogService = this.gameServices?.dialogStateService;
+    if (!dialogService) {
+        throw new Error('DialogStateService not initialized - cannot show shop');
     }
+
+    // Store shop ID in state data and navigate
+    dialogService.stateData.shopId = shopId || 'black_market';
+    dialogService.stateData.shopTab = 'buy'; // Default to buy tab
+    dialogService.navigateTo('rpg-shop');
 };
 
 // Level up notification
@@ -565,7 +565,7 @@ CyberOpsGame.prototype.findAgentForRPG = function(agentId) {
     }
 
     // NO FALLBACKS - Services must be available
-    console.error('AgentService not available - cannot find agent');
+    if (this.logger) this.logger.error('AgentService not available - cannot find agent');
     return null;
 };
 
@@ -573,22 +573,26 @@ CyberOpsGame.prototype.findAgentForRPG = function(agentId) {
 CyberOpsGame.prototype.showStatAllocation = function(agentId) {
     if (this.logger) this.logger.debug('📈 showStatAllocation - routing to declarative stat-allocation state');
 
-    // Store agentId in state data for the declarative generator
-    if (this.dialogEngine) {
-        this.dialogEngine.stateData = this.dialogEngine.stateData || {};
-        this.dialogEngine.stateData.agentId = agentId;
-        this.dialogEngine.stateData.pendingChanges = {}; // Reset pending changes
-        this.dialogEngine.navigateTo('stat-allocation');
-    } else {
-        if (this.logger) this.logger.error('Dialog engine not available for stat allocation');
+    // Use DialogStateService (single source of truth)
+    const dialogService = this.gameServices?.dialogStateService;
+    if (!dialogService) {
+        throw new Error('DialogStateService not initialized - cannot show stat allocation');
     }
+
+    // Store agentId in state data and navigate
+    dialogService.stateData.agentId = agentId;
+    dialogService.stateData.pendingChanges = {}; // Reset pending changes
+    dialogService.navigateTo('stat-allocation');
 };
 
 // Handle stat allocation (declarative version)
 CyberOpsGame.prototype.allocateStatDeclarative = function(agentId, stat, change) {
-    if (!this.dialogEngine || !this.dialogEngine.stateData) return;
+    const dialogService = this.gameServices?.dialogStateService;
+    if (!dialogService) {
+        throw new Error('DialogStateService not initialized - cannot allocate stats');
+    }
 
-    const pending = this.dialogEngine.stateData.pendingChanges || {};
+    const pending = dialogService.stateData.pendingChanges || {};
     const current = pending[stat] || 0;
     const newValue = current + change;
 
@@ -605,33 +609,33 @@ CyberOpsGame.prototype.allocateStatDeclarative = function(agentId, stat, change)
 
     // Update pending changes
     pending[stat] = Math.max(0, newValue);
-    this.dialogEngine.stateData.pendingChanges = pending;
+    dialogService.stateData.pendingChanges = pending;
 
     // Refresh the dialog to update UI
-    this.dialogEngine.navigateTo('stat-allocation', null, true);
+    dialogService.navigateTo('stat-allocation', null, true);
 };
 
 // Confirm stat allocation (declarative version)
 CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
-    // If called from declarative system, get agentId from state data
-    if (!agentId && this.dialogEngine?.stateData?.agentId) {
-        agentId = this.dialogEngine.stateData.agentId;
+    const dialogService = this.gameServices?.dialogStateService;
+    if (!dialogService) {
+        throw new Error('DialogStateService not initialized - cannot confirm stat allocation');
     }
 
-    // For declarative system, get pending changes from state data
-    let pending;
-    if (this.dialogEngine?.stateData?.pendingChanges) {
-        pending = this.dialogEngine.stateData.pendingChanges;
-    } else {
-        // Fallback for old standalone dialog
-        const dialog = document.querySelector('.stat-allocation');
-        if (!dialog) return;
-        pending = JSON.parse(dialog.dataset.pendingChanges || '{}');
+    // Get agentId from state data if not provided
+    if (!agentId && dialogService.stateData?.agentId) {
+        agentId = dialogService.stateData.agentId;
     }
+
+    // Get pending changes from state data
+    if (!dialogService.stateData?.pendingChanges) {
+        throw new Error('DialogStateService stateData.pendingChanges not available - required for stat allocation');
+    }
+    const pending = dialogService.stateData.pendingChanges;
 
     const agent = this.findAgentForRPG(agentId);
     if (!agent || !agent.rpgEntity) {
-        console.error('Cannot find agent for stat confirmation:', agentId);
+        if (this.logger) this.logger.error('Cannot find agent for stat confirmation:', agentId);
         return;
     }
 
@@ -660,24 +664,21 @@ CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
     agent.maxAP = derived.maxAP;
 
     // Close dialog and refresh character sheet
-    if (this.dialogEngine?.currentState === 'stat-allocation') {
-        // Declarative system - go back to character sheet
-        this.dialogEngine.back();
+    if (dialogService.currentState === 'stat-allocation') {
+        dialogService.back();
         // Refresh character sheet
         setTimeout(() => {
-            this.dialogEngine.navigateTo('character', null, true);
+            dialogService.navigateTo('character', null, true);
         }, 100);
     } else {
-        // Old standalone dialog
+        // Fallback for old standalone dialog (should never happen)
         const dialog = document.querySelector('.stat-allocation');
         if (dialog) dialog.remove();
 
         // Set selected agent and open character sheet
         this.selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
                              (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
-        if (this.dialogEngine && this.dialogEngine.navigateTo) {
-            this.dialogEngine.navigateTo('character');
-        }
+        dialogService.navigateTo('character');
     }
 
     if (this.logEvent) {
@@ -726,10 +727,10 @@ CyberOpsGame.prototype.selectPerkDeclarative = function(agentId, perkId) {
         }
 
         // Refresh the dialog to show updated perk points and unlocked perks
-        if (this.dialogEngine) {
+        const dialogService = this.gameServices?.dialogStateService;
+        if (dialogService) {
             // Always refresh the perk selection to show the updated perks
-            // User can manually navigate back when done
-            this.dialogEngine.navigateTo('perk-selection', null, true);
+            dialogService.navigateTo('perk-selection', null, true);
         }
     } else {
         if (logger) logger.warn(`❌ Failed to unlock perk: ${perkId}`);
@@ -777,15 +778,15 @@ CyberOpsGame.prototype.buyItem = function(itemId, quantity) {
 CyberOpsGame.prototype.switchRPGShopTab = function(shopId, tab) {
     if (this.logger) this.logger.debug(`🛒 Switching RPG shop tab to: ${tab}`);
 
-    // Update state data
-    if (this.dialogEngine) {
-        this.dialogEngine.stateData = this.dialogEngine.stateData || {};
-        this.dialogEngine.stateData.shopId = shopId;
-        this.dialogEngine.stateData.shopTab = tab;
-
-        // Refresh the dialog to show new tab
-        this.dialogEngine.navigateTo('rpg-shop', null, true);
+    // Use DialogStateService (single source of truth)
+    const dialogService = this.gameServices?.dialogStateService;
+    if (!dialogService) {
+        throw new Error('DialogStateService not initialized - cannot switch shop tab');
     }
+
+    dialogService.stateData.shopId = shopId;
+    dialogService.stateData.shopTab = tab;
+    dialogService.navigateTo('rpg-shop', null, true);
 };
 
 // Buy item from RPG shop (declarative version)
@@ -853,8 +854,9 @@ CyberOpsGame.prototype.buyRPGItem = function(shopId, itemId) {
         }
 
         // Refresh the dialog
-        if (this.dialogEngine) {
-            this.dialogEngine.navigateTo('rpg-shop', null, true);
+        const dialogService = this.gameServices?.dialogStateService;
+        if (dialogService) {
+            dialogService.navigateTo('rpg-shop', null, true);
         }
     } else {
         if (this.logEvent) {
@@ -902,9 +904,10 @@ CyberOpsGame.prototype.sellRPGItem = function(shopId, itemId) {
         if (this.logger) this.logger.info(`✅ ${this._selectedAgent.name} sold ${item.name} for ${sellPrice} credits`);
 
         // Refresh the dialog
-        if (this.dialogEngine) {
-            this.dialogEngine.stateData.shopTab = 'sell'; // Stay on sell tab
-            this.dialogEngine.navigateTo('rpg-shop', null, true);
+        const dialogService = this.gameServices?.dialogStateService;
+        if (dialogService) {
+            dialogService.stateData.shopTab = 'sell'; // Stay on sell tab
+            dialogService.navigateTo('rpg-shop', null, true);
         }
     } else {
         if (this.logger) this.logger.warn(`❌ Failed to remove item from inventory: ${itemId}`);
@@ -953,15 +956,15 @@ CyberOpsGame.prototype.initRPGSystem = function() {
 CyberOpsGame.prototype.showSkillTree = function(agentId) {
     if (this.logger) this.logger.debug(`🎯 showSkillTree called with agentId: ${agentId} (type: ${typeof agentId})`);
 
-    // Store agentId in state data for the dialog
-    if (this.dialogEngine) {
-        this.dialogEngine.stateData = this.dialogEngine.stateData || {};
-        this.dialogEngine.stateData.agentId = agentId;
-        if (this.logger) this.logger.debug(`🎯 Set dialogEngine.stateData.agentId to: ${agentId}`);
-        this.dialogEngine.navigateTo('skill-tree');
-    } else {
-        if (this.logger) this.logger.error('Dialog engine not available');
+    // Use DialogStateService (single source of truth)
+    const dialogService = this.gameServices?.dialogStateService;
+    if (!dialogService) {
+        throw new Error('DialogStateService not initialized - cannot show skill tree');
     }
+
+    dialogService.stateData.agentId = agentId;
+    if (this.logger) this.logger.debug(`🎯 Set dialogService.stateData.agentId to: ${agentId}`);
+    dialogService.navigateTo('skill-tree');
 };
 
 // Learn a skill for an agent (uses unidirectional flow through RPGManager)
@@ -1042,7 +1045,12 @@ CyberOpsGame.prototype.applyPassiveSkillEffects = function(agent, skillId, skill
             break;
         case 'health':
             agent.maxHealth = (agent.maxHealth || agent.health) + perLevel;
-            agent.health = Math.min(agent.health + perLevel, agent.maxHealth);
+            // Heal via AgentService (single source of truth)
+            if (this.gameServices?.agentService) {
+                this.gameServices.agentService.healAgent(agent.id, perLevel);
+            } else {
+                agent.health = Math.min(agent.health + perLevel, agent.maxHealth);
+            }
             break;
         case 'speed':
             agent.speed = (agent.speed || 0.2) + (perLevel * 0.01);
@@ -1061,15 +1069,14 @@ CyberOpsGame.prototype.applyPassiveSkillEffects = function(agent, skillId, skill
 CyberOpsGame.prototype.showPerkSelection = function(agentId) {
     if (this.logger) this.logger.debug('⭐ showPerkSelection - routing to declarative perk-selection state');
 
-    // Use the declarative dialog system
-    if (this.dialogEngine && this.dialogEngine.navigateTo) {
-        // Store agentId in state data for the declarative generator
-        this.dialogEngine.stateData = this.dialogEngine.stateData || {};
-        this.dialogEngine.stateData.agentId = agentId;
-        this.dialogEngine.navigateTo('perk-selection');
-    } else {
-        if (this.logger) this.logger.error('Dialog engine not available for perk selection');
+    // Use DialogStateService (single source of truth)
+    const dialogService = this.gameServices?.dialogStateService;
+    if (!dialogService) {
+        throw new Error('DialogStateService not initialized - cannot show perk selection');
     }
+
+    dialogService.stateData.agentId = agentId;
+    dialogService.navigateTo('perk-selection');
 };
 
 // Use health pack
@@ -1088,7 +1095,12 @@ CyberOpsGame.prototype.useHealthPack = function(agentId) {
 
     // Use the health pack
     const healAmount = healthPack.healAmount || 50;
-    agent.health = Math.min(agent.health + healAmount, agent.maxHealth);
+    // Heal via AgentService (single source of truth)
+    if (this.gameServices?.agentService) {
+        this.gameServices.agentService.healAgent(agent.id, healAmount);
+    } else {
+        agent.health = Math.min(agent.health + healAmount, agent.maxHealth);
+    }
 
     // Remove from inventory
     const index = agent.inventory.indexOf(healthPack);
@@ -1106,8 +1118,9 @@ CyberOpsGame.prototype.useHealthPack = function(agentId) {
         // Set selected agent and open character sheet
         this.selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
                              (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
-        if (this.dialogEngine && this.dialogEngine.navigateTo) {
-            this.dialogEngine.navigateTo('character');
+        const dialogService = this.gameServices?.dialogStateService;
+        if (dialogService) {
+            dialogService.navigateTo('character');
         }
     }
 };
@@ -1168,8 +1181,9 @@ CyberOpsGame.prototype.useItem = function(agentId, itemId) {
         // Set selected agent and open character sheet
         this.selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
                              (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
-        if (this.dialogEngine && this.dialogEngine.navigateTo) {
-            this.dialogEngine.navigateTo('character');
+        const dialogService = this.gameServices?.dialogStateService;
+        if (dialogService) {
+            dialogService.navigateTo('character');
         }
     }
 };

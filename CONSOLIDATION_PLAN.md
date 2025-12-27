@@ -91,7 +91,26 @@ Estimated lines to consolidate: ~2,500+
 - Registered in GameServices
 - Added navigateTo(), back(), close(), closeAll()
 - Added convenience methods (showSettings, showCharacter, showInventory, etc.)
-- Note: Full migration of all callers to use service is a larger follow-up task
+
+**Caller Migration Status**:
+- [x] game-equipment.js - refreshEquipmentUI (3 locations)
+- [x] game-settings.js - resetKeyBinding (1 location)
+- [x] game-rpg-integration.js - XP gain character refresh (1 location)
+- [x] game-rpg-ui.js - ALL usages (15+ locations) - COMPLETE
+- [x] dialog-integration.js - rosterClickAction, saveLoadUI (2 locations)
+- [ ] game-hub.js - 12 usages remaining
+- [ ] game-flow.js - 8 usages remaining
+- [ ] game-keyboard.js - 4 usages remaining
+- [ ] game-saveload.js - 4 usages remaining
+- [ ] game-dialogs.js - 2 usages remaining
+- [ ] game-screens.js - 4 usages remaining
+- [ ] game-npc.js - 4 usages remaining
+- [ ] game-mission-executor.js - 1 usage remaining
+
+**Fallbacks Eliminated**:
+- [x] CoordinateService fallbacks removed (game-events.js, game-engine.js)
+- [x] MissionService window function fallback removed
+- [x] DialogEngine fallback patterns replaced with DialogStateService
 
 ---
 

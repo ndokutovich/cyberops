@@ -150,10 +150,6 @@ if (typeof EquipmentService === 'undefined') {
         return bestWeapon;
     }
 
-    // REMOVED: distributeWeapons method
-    // Weapon distribution is now handled by the agentLoadouts system
-    // Each agent's equipment is manually configured in the Arsenal/Equipment screen
-
     /**
      * Calculate total equipment bonuses from inventory
      * @param {Array} equipmentInventory - Array of {id, owned} objects

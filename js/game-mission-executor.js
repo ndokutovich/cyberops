@@ -74,8 +74,8 @@ CyberOpsGame.prototype.initMissionFromDefinition = function() {
                         count: testMission.entities ? testMission.entities.filter(e => e.type === 'enemy').length : 0
                     },
                     rewards: {
-                        credits: testMission.credits || 5000,
-                        researchPoints: testMission.researchPoints || 2
+                        credits: testMission.credits ?? 0,
+                        researchPoints: testMission.researchPoints ?? 0
                     }
                 };
             } catch (e) {
@@ -608,14 +608,11 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
             if (checkResult && !obj.completed) {
                 if (this.gameServices?.missionService) {
                     this.gameServices.missionService.completeObjective(obj.id);
-                    } else {
-                        obj.completed = true;
-                        obj.status = 'completed';
-                    }
-                    if (this.logger) this.logger.info(`✅ Custom objective completed via ${obj.checkFunction}: ${obj.description}`);
+                } else {
+                    obj.completed = true;
+                    obj.status = 'completed';
                 }
-            } catch (error) {
-                if (this.logger) this.logger.error(`❌ Error in custom check function ${obj.checkFunction}:`, error);
+                if (this.logger) this.logger.info(`✅ Custom objective completed via ${obj.checkFunction}: ${obj.description}`);
             }
         }
 

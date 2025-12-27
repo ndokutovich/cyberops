@@ -500,9 +500,15 @@ class CutsceneEngine {
 
         // Apply master and music volume multipliers (same as rest of game)
         const game = this.game || window.game;
-        const masterVolume = game?.masterVolume ?? 1.0;
-        const musicVolume = game?.musicVolume ?? 0.7;
-        const targetVolume = configVolume * masterVolume * musicVolume;
+        let masterVolume = game?.masterVolume ?? 1.0;
+        let musicVolume = game?.musicVolume ?? 0.7;
+
+        // Normalize volumes if stored as percentages (0-100) instead of decimals (0-1)
+        if (masterVolume > 1) masterVolume = masterVolume / 100;
+        if (musicVolume > 1) musicVolume = musicVolume / 100;
+
+        // Calculate and clamp to valid 0-1 range
+        const targetVolume = Math.max(0, Math.min(1, configVolume * masterVolume * musicVolume));
 
         // Clear any pending fade interval from previous music
         if (this.musicFadeInterval) {
@@ -514,14 +520,18 @@ class CutsceneEngine {
         if (this.cutsceneAudio && !this.cutsceneAudio.paused &&
             this.cutsceneAudio.src && this.cutsceneAudio.src.endsWith(musicPath)) {
             if (this.logger) this.logger.debug(`🎵 Same track already playing, adjusting volume`);
-            this.cutsceneAudio.volume = targetVolume;
+            try {
+                this.cutsceneAudio.volume = targetVolume;
+            } catch (e) { /* ignore */ }
             return;
         }
 
         // Stop any currently playing audio cleanly (no fade, immediate)
         if (this.cutsceneAudio && !this.cutsceneAudio.paused) {
-            this.cutsceneAudio.pause();
-            this.cutsceneAudio.currentTime = 0;
+            try {
+                this.cutsceneAudio.pause();
+                this.cutsceneAudio.currentTime = 0;
+            } catch (e) { /* ignore */ }
         }
 
         if (this.logger) this.logger.info(`🎵 Playing cutscene music: ${musicPath} (vol: ${targetVolume.toFixed(2)})`);
@@ -535,7 +545,11 @@ class CutsceneEngine {
         this.cutsceneAudio.loop = loop;
 
         // Start at 0 volume if fade in, otherwise target volume
-        this.cutsceneAudio.volume = fadeIn > 0 ? 0 : targetVolume;
+        try {
+            this.cutsceneAudio.volume = fadeIn > 0 ? 0 : targetVolume;
+        } catch (e) {
+            if (this.logger) this.logger.warn(`Could not set initial volume: ${e.message}`);
+        }
 
         this.cutsceneAudio.play().catch(err => {
             if (this.logger) this.logger.warn(`Could not play cutscene music: ${err.message}`);
@@ -550,7 +564,13 @@ class CutsceneEngine {
 
             this.musicFadeInterval = setInterval(() => {
                 currentStep++;
-                this.cutsceneAudio.volume = Math.min(targetVolume, volumeStep * currentStep);
+                try {
+                    this.cutsceneAudio.volume = Math.max(0, Math.min(1, volumeStep * currentStep));
+                } catch (e) {
+                    clearInterval(this.musicFadeInterval);
+                    this.musicFadeInterval = null;
+                    return;
+                }
                 if (currentStep >= steps) {
                     clearInterval(this.musicFadeInterval);
                     this.musicFadeInterval = null;
@@ -575,7 +595,21 @@ class CutsceneEngine {
         if (this.logger) this.logger.debug('🎵 Stopping cutscene music');
 
         const audio = this.cutsceneAudio;
-        const startVolume = audio.volume;
+        let startVolume;
+        try {
+            startVolume = audio.volume || 0;
+        } catch (e) {
+            return; // Audio in invalid state
+        }
+
+        if (startVolume === 0) {
+            try {
+                audio.pause();
+                audio.currentTime = 0;
+            } catch (e) { /* ignore */ }
+            return;
+        }
+
         const steps = 20;
         const volumeStep = startVolume / steps;
         const stepTime = fadeTime / steps;
@@ -583,13 +617,21 @@ class CutsceneEngine {
         let step = 0;
         this.musicFadeInterval = setInterval(() => {
             step++;
-            audio.volume = Math.max(0, startVolume - (volumeStep * step));
+            try {
+                audio.volume = Math.max(0, Math.min(1, startVolume - (volumeStep * step)));
+            } catch (e) {
+                clearInterval(this.musicFadeInterval);
+                this.musicFadeInterval = null;
+                return;
+            }
 
             if (step >= steps) {
                 clearInterval(this.musicFadeInterval);
                 this.musicFadeInterval = null;
-                audio.pause();
-                audio.currentTime = 0;
+                try {
+                    audio.pause();
+                    audio.currentTime = 0;
+                } catch (e) { /* ignore */ }
             }
         }, stepTime);
     }

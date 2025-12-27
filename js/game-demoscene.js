@@ -43,13 +43,10 @@ CyberOpsGame.prototype.showDemoscene = function() {
         this.demosceneActive = true;
 
         // Use screen manager to navigate to demoscene
-        if (window.screenManager) {
-            window.screenManager.navigateTo('demoscene');
-        } else {
-            // Fallback - shouldn't happen since screen manager should exist
-            this.currentScreen = 'demoscene';
-            if (this.logger) this.logger.warn('Screen manager not available for demoscene');
+        if (!window.screenManager) {
+            throw new Error('ScreenManager not available - required for demoscene');
         }
+        window.screenManager.navigateTo('demoscene');
         
         // Add click handler to interrupt demoscene
         this.setupDemosceneInterrupt();
@@ -90,19 +87,10 @@ CyberOpsGame.prototype.interruptDemoscene = function() {
         this.demosceneActive = false;
 
         // Use screen manager to go back to main menu
-        if (window.screenManager) {
-            window.screenManager.navigateTo('main-menu');
-        } else {
-            // Fallback - shouldn't happen
-            this.currentScreen = 'main-menu';
-            if (this.logger) this.logger.warn('Screen manager not available for demoscene interrupt');
-
-            // Restart idle timer
-            this.startDemosceneIdleTimer();
-
-            // Clean up interrupt handlers
-            this.removeDemosceneInterruptHandlers();
+        if (!window.screenManager) {
+            throw new Error('ScreenManager not available - required for demoscene interrupt');
         }
+        window.screenManager.navigateTo('main-menu');
 }
     
 CyberOpsGame.prototype.removeDemosceneInterruptHandlers = function() {

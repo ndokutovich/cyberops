@@ -44,12 +44,13 @@ class ResourceService {
 
     /**
      * Initialize resources from saved state or defaults
+     * Note: Credits are set to 0 initially, then set by campaign config when loaded
      */
     initialize(initialState = {}) {
-        this.resources.credits = this.clamp('credits', initialState.credits || 10000);
-        this.resources.researchPoints = this.clamp('researchPoints', initialState.researchPoints || 0);
-        this.resources.worldControl = this.clamp('worldControl', initialState.worldControl || 0);
-        this.resources.intel = this.clamp('intel', initialState.intel || 0);
+        this.resources.credits = this.clamp('credits', initialState.credits ?? 0);
+        this.resources.researchPoints = this.clamp('researchPoints', initialState.researchPoints ?? 0);
+        this.resources.worldControl = this.clamp('worldControl', initialState.worldControl ?? 0);
+        this.resources.intel = this.clamp('intel', initialState.intel ?? 0);
 
         if (this.logger) this.logger.info('💰 ResourceService initialized:', this.resources);
     }
@@ -101,6 +102,34 @@ class ResourceService {
      */
     setResearchPoints(value) {
         return this.set('researchPoints', value, 'initialization');
+    }
+
+    /**
+     * Convenience method to add credits
+     */
+    addCredits(amount, reason = 'reward') {
+        return this.add('credits', amount, reason);
+    }
+
+    /**
+     * Convenience method to add research points
+     */
+    addResearchPoints(amount, reason = 'reward') {
+        return this.add('researchPoints', amount, reason);
+    }
+
+    /**
+     * Convenience method to spend credits
+     */
+    spendCredits(amount, reason = 'purchase') {
+        return this.spend('credits', amount, reason);
+    }
+
+    /**
+     * Convenience method to spend research points
+     */
+    spendResearchPoints(amount, reason = 'research') {
+        return this.spend('researchPoints', amount, reason);
     }
 
     /**

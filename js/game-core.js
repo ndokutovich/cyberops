@@ -87,7 +87,9 @@ class CyberOpsGame {
             }
 
             // Enable audio on first user interaction (requires keyboardDispatcher)
-            this.setupAudioInteraction();
+            if (this.gameServices.audioService?.setupAudioInteraction) {
+                this.gameServices.audioService.setupAudioInteraction();
+            }
         }
 
         // Hub Resources - ALL managed by services
