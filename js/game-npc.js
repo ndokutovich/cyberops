@@ -359,25 +359,25 @@ NPC.prototype.completeQuest = function(quest, game) {
 
                     game.agents.forEach(agent => {
                         if (agent.rpgEntity && agent.health > 0) {
-                            // Add experience directly to the rpgEntity
-                            if (typeof agent.rpgEntity.addExperience !== 'function') {
-                                throw new Error('rpgEntity.addExperience not available - required for XP rewards');
-                            }
-                            agent.rpgEntity.addExperience(xpPerAgent);
-                            game.addNotification(`⭐ ${agent.name} gained ${xpPerAgent} XP`);
+                            // Add experience directly to the rpgEntity (if available)
+                            if (typeof agent.rpgEntity.addExperience === 'function') {
+                                agent.rpgEntity.addExperience(xpPerAgent);
+                                game.addNotification(`⭐ ${agent.name} gained ${xpPerAgent} XP`);
 
-                            // Check for level up
-                            const levelBefore = agent.rpgEntity.level || 1;
-                            if (agent.rpgEntity.checkLevelUp) {
-                                agent.rpgEntity.checkLevelUp();
-                                if (agent.rpgEntity.level > levelBefore) {
-                                    game.addNotification(`🎉 ${agent.name} reached level ${agent.rpgEntity.level}!`);
+                                // Check for level up
+                                const levelBefore = agent.rpgEntity.level || 1;
+                                if (agent.rpgEntity.checkLevelUp) {
+                                    agent.rpgEntity.checkLevelUp();
+                                    if (agent.rpgEntity.level > levelBefore) {
+                                        game.addNotification(`🎉 ${agent.name} reached level ${agent.rpgEntity.level}!`);
+                                    }
                                 }
                             }
                         }
                     });
                 } else {
-                    throw new Error('No agents available - required for XP rewards');
+                    // No agents available to receive XP - log and continue
+                    if (this.logger) this.logger.warn('No agents available to receive XP rewards');
                 }
             }
 
