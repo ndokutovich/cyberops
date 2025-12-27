@@ -56,28 +56,36 @@ class KeybindingService {
         // Debug & UI
         this.registerBinding('togglePaths', 'P', 'Toggle Path Visualization', 'debug');
         this.registerBinding('togglePathfinding', 'O', 'Toggle Pathfinding', 'debug');
+        this.registerBinding('toggleFogOfWar', 'U', 'Toggle Fog of War', 'debug');
         this.registerBinding('toggleHotkeyHelp', '?', 'Toggle Hotkey Help', 'ui');
         this.registerBinding('toggleSquadFollow', 'L', 'Toggle Squad Following', 'movement');
+        this.registerBinding('toggleEventLog', 'M', 'Toggle Mission Log', 'ui');
+
+        // RPG/Character
+        this.registerBinding('characterSheet', 'C', 'Character Sheet', 'ui');
+        this.registerBinding('inventory', 'I', 'Inventory', 'ui');
+        this.registerBinding('missionProgress', 'J', 'Mission Progress', 'ui');
 
         // Game Control
-        this.registerBinding('pause', ' ', 'Pause Game', 'game');
+        this.registerBinding('pause', ' ', 'Pause/Turn-Based Mode', 'game');
+        this.registerBinding('endTurn', 'Y', 'End Turn', 'game');
+        this.registerBinding('gridSnap', 'B', 'Grid Snap Toggle', 'game');
+        this.registerBinding('cycleSpeed', 'Z', 'Cycle Game Speed', 'game');
         this.registerBinding('quickSave', 'F5', 'Quick Save', 'game');
         this.registerBinding('quickLoad', 'F9', 'Quick Load', 'game');
-
-        // Event Log
-        this.registerBinding('toggleEventLog', 'M', 'Toggle Mission Log', 'ui');
     }
 
     registerBinding(action, defaultKey, description, category = 'general') {
-        // Check for conflicts
+        // Check for conflicts (case-insensitive)
         const existingAction = this.getActionByKey(defaultKey);
         if (existingAction && existingAction !== action) {
             if (this.logger) this.logger.warn(`⚠️ Key conflict: ${defaultKey} is already bound to ${existingAction}`);
             return false;
         }
 
+        // Store key in uppercase for consistency
         this.bindings.set(action, {
-            key: defaultKey,
+            key: defaultKey.length === 1 ? defaultKey.toUpperCase() : defaultKey,
             description: description,
             category: category,
             customizable: true
@@ -102,8 +110,9 @@ class KeybindingService {
     }
 
     getActionByKey(key) {
+        const keyLower = key.toLowerCase();
         for (const [action, binding] of this.bindings) {
-            if (binding.key === key || binding.key === key.toUpperCase()) {
+            if (binding.key.toLowerCase() === keyLower) {
                 return action;
             }
         }
@@ -121,16 +130,16 @@ class KeybindingService {
             return false;
         }
 
-        // Check for conflicts
+        // Check for conflicts (case-insensitive)
         const existingAction = this.getActionByKey(newKey);
         if (existingAction && existingAction !== action) {
             if (this.logger) this.logger.warn(`Cannot bind ${newKey} to ${action}: already used by ${existingAction}`);
             return false;
         }
 
-        // Update the binding
+        // Update the binding (store single chars in uppercase for consistency)
         const binding = this.bindings.get(action);
-        binding.key = newKey;
+        binding.key = newKey.length === 1 ? newKey.toUpperCase() : newKey;
 
         // Save to localStorage
         this.saveUserBindings();

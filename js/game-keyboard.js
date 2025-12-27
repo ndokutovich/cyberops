@@ -58,291 +58,170 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
     }
     if (this.logger) this.logger.debug('🎮 initKeyboardHandler STARTING...');
 
-    try {
-        // Actual keyboard mappings - declarative config
-        this.keyBindings = {
-        // Agent Selection (1-6 keys for up to 6 agents)
-        '1': () => this.selectAgentByNumber(0),
-        '2': () => this.selectAgentByNumber(1),
-        '3': () => this.selectAgentByNumber(2),
-        '4': () => this.selectAgentByNumber(3),
-        '5': () => this.selectAgentByNumber(4),
-        '6': () => this.selectAgentByNumber(5),
+    const game = this;
+    const dispatcher = this.gameServices.keyboardDispatcher;
+    const keybindingService = this.gameServices.keybindingService;
 
-        // Agent Control
-        'Tab': () => this.cycleAgents(),
-        'T': () => {
-            if (this.logger) this.logger.debug('T key handler called - selectAllSquad');
-            if (this.selectAllSquad) {
-                this.selectAllSquad();
-            } else if (game && game.selectAllSquad) {
-                // Fallback to game reference if this doesn't work
-                game.selectAllSquad();
-            } else {
-                if (this.logger) this.logger.warn('selectAllSquad function not found!');
-            }
-        },
-        't': () => {
-            if (this.logger) this.logger.debug('t key handler called - selectAllSquad');
-            if (this.selectAllSquad) {
-                this.selectAllSquad();
-            } else if (game && game.selectAllSquad) {
-                // Fallback to game reference if this doesn't work
-                game.selectAllSquad();
-            } else {
-                if (this.logger) this.logger.warn('selectAllSquad function not found!');
-            }
-        },
+    // Define ACTION HANDLERS - action name → function
+    // All actions from KeybindingService are executed here
+    this.actionHandlers = {
+        // Agent Selection
+        selectAgent1: () => this.selectAgentByNumber(0),
+        selectAgent2: () => this.selectAgentByNumber(1),
+        selectAgent3: () => this.selectAgentByNumber(2),
+        selectAgent4: () => this.selectAgentByNumber(3),
+        selectAgent5: () => this.selectAgentByNumber(4),
+        selectAgent6: () => this.selectAgentByNumber(5),
+        cycleAgents: () => this.cycleAgents(),
+        selectAllAgents: () => this.selectAllSquad(),
 
-        // Combat Actions - apply to all selected agents for keyboard shortcuts
-        'F': () => this.useAbilityForAllSelected(1),  // Shoot
-        'f': () => this.useAbilityForAllSelected(1),  // Shoot
-        'G': () => this.useAbilityForAllSelected(2),  // Grenade
-        'g': () => this.useAbilityForAllSelected(2),  // Grenade
-        'H': () => this.handleInteractionKey(),  // Hack/Interact with NPCs or use ability
-        'h': () => this.handleInteractionKey(),  // Handle both cases
-        'Q': () => this.useAbilityForAllSelected(4),  // Shield
-        'q': () => this.useAbilityForAllSelected(4),  // Shield
+        // Combat Actions
+        fire: () => this.useAbilityForAllSelected(1),
+        grenade: () => this.useAbilityForAllSelected(2),
+        hack: () => this.handleInteractionKey(),
+        shield: () => this.useAbilityForAllSelected(4),
+        reload: () => { /* reload not implemented yet */ },
+        stealth: () => this.toggle3DMode(), // E key - 3D mode toggle
 
-        // RPG System - Use existing character sheet
-        'C': () => {
-            if (this.logger) this.logger.debug('📊 Opening character sheet...');
+        // Team Commands
+        teamHold: () => this.setTeamMode('hold'),
+        teamPatrol: () => this.setTeamMode('patrol'),
+        teamFollow: () => this.setTeamMode('follow'),
 
-            // Determine which agent to show
-            let agentToShow = null;
-
-            if (this.currentScreen === 'game') {
-                // In-game: use selected agent
-                agentToShow = this._selectedAgent;
-            } else if (this.currentScreen === 'hub' || this.currentScreen === 'menu') {
-                // In hub/menu: use first active agent
-                agentToShow = this.activeAgents && this.activeAgents.length > 0 ? this.activeAgents[0] : null;
-            }
-
-            if (agentToShow) {
-                // Set selected agent for character sheet display
-                const agentId = agentToShow.id || agentToShow.name || agentToShow;
-                if (typeof agentId === 'string') {
-                    this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
-                                         (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
-                } else if (agentId && typeof agentId === 'object') {
-                    this._selectedAgent = agentId;
-                }
-
-                // Open character sheet using declarative dialog
-                if (this.dialogEngine && this.dialogEngine.navigateTo) {
-                    this.dialogEngine.navigateTo('character');
-                }
-            } else {
-                if (this.logger) this.logger.warn('No agent available for character sheet');
-            }
-        },
-        'c': () => {
-            if (this.logger) this.logger.debug('📊 Opening character sheet...');
-
-            // Determine which agent to show
-            let agentToShow = null;
-
-            if (this.currentScreen === 'game') {
-                // In-game: use selected agent
-                agentToShow = this._selectedAgent;
-            } else if (this.currentScreen === 'hub' || this.currentScreen === 'menu') {
-                // In hub/menu: use first active agent
-                agentToShow = this.activeAgents && this.activeAgents.length > 0 ? this.activeAgents[0] : null;
-            }
-
-            if (agentToShow) {
-                // Set selected agent for character sheet display
-                const agentId = agentToShow.id || agentToShow.name || agentToShow;
-                if (typeof agentId === 'string') {
-                    this._selectedAgent = (this.agents && this.agents.find(a => a.id === agentId || a.name === agentId)) ||
-                                         (this.activeAgents && this.activeAgents.find(a => a.id === agentId || a.name === agentId));
-                } else if (agentId && typeof agentId === 'object') {
-                    this._selectedAgent = agentId;
-                }
-
-                // Open character sheet using declarative dialog
-                if (this.dialogEngine && this.dialogEngine.navigateTo) {
-                    this.dialogEngine.navigateTo('character');
-                }
-            } else {
-                if (this.logger) this.logger.warn('No agent available for character sheet');
-            }
-        },
-        'I': () => {
-            if (this.currentScreen === 'game' && this._selectedAgent) {
-                if (this.logger) this.logger.debug('🎒 Opening inventory for:', this._selectedAgent.name);
-                if (this.showInventory) {
-                    this.showInventory(this._selectedAgent.id || this._selectedAgent.name);
-                } else {
-                    if (this.logger) this.logger.warn('showInventory function not found');
-                }
-            }
-        },
-        'i': () => {
-            if (this.currentScreen === 'game' && this._selectedAgent) {
-                if (this.logger) this.logger.debug('🎒 Opening inventory for:', this._selectedAgent.name);
-                if (this.showInventory) {
-                    this.showInventory(this._selectedAgent.id || this._selectedAgent.name);
-                } else {
-                    if (this.logger) this.logger.warn('showInventory function not found');
-                }
-            }
-        },
-
-        // Team Commands (moved to avoid conflicts)
-        'X': () => this.setTeamMode('hold'),
-        'x': () => this.setTeamMode('hold'),
-        'V': () => this.setTeamMode('follow'),
-        'v': () => this.setTeamMode('follow'),
-
-        // Camera/View
-        'E': () => this.toggle3DMode(),
-        'e': () => this.toggle3DMode(), // Handle both cases
-        'L': () => this.toggleSquadFollowing(),
-        'l': () => this.toggleSquadFollowing(),
+        // View/Camera
+        zoomIn: () => { if (this.adjustZoom) this.adjustZoom(0.1); },
+        zoomOut: () => { if (this.adjustZoom) this.adjustZoom(-0.1); },
+        centerCamera: () => { if (this.centerCameraFunc) this.centerCameraFunc(); },
+        toggleSquadFollow: () => this.toggleSquadFollowing(),
 
         // UI Controls
-        'M': () => this.toggleEventLog(),
-        'm': () => this.toggleEventLog(),
-        'J': () => this.dialogEngine?.navigateTo('mission-progress'),
-        'j': () => this.dialogEngine?.navigateTo('mission-progress'),
-        '?': () => this.toggleHotkeyHelp(),
-        '/': (e) => { if (e.shiftKey) this.toggleHotkeyHelp(); },
+        toggleEventLog: () => this.toggleEventLog(),
+        toggleHotkeyHelp: () => this.toggleHotkeyHelp(),
+        characterSheet: () => this.openCharacterSheet(),
+        inventory: () => this.openInventory(),
+        missionProgress: () => this.dialogEngine?.navigateTo('mission-progress'),
 
         // Debug
-        'P': () => this.togglePathVisualization(),
-        'p': () => this.togglePathVisualization(),
-        'O': () => this.togglePathfinding(),
-        'o': () => this.togglePathfinding(),
-        'U': () => this.toggleFogOfWar(),
-        'u': () => this.toggleFogOfWar(),
+        togglePaths: () => this.togglePathVisualization(),
+        togglePathfinding: () => this.togglePathfinding(),
+        toggleFogOfWar: () => this.toggleFogOfWar(),
 
         // Game Control
-        ' ': () => {
-            // Toggle turn-based mode in game, pause elsewhere
+        pause: () => {
             if (this.currentScreen === 'game') {
                 this.toggleTurnBasedMode();
             } else {
                 this.togglePause();
             }
         },
+        endTurn: () => { if (this.turnBasedMode && this.endTurn) this.endTurn(); },
+        gridSnap: () => { if (this.toggleGridSnap) this.toggleGridSnap(); },
+        cycleSpeed: () => this.cycleGameSpeed(),
+        quickSave: () => { if (this.quickSave) this.quickSave(); },
+        quickLoad: () => { if (this.quickLoad) this.quickLoad(); }
+    };
+
+    // Special keys not rebindable (only Escape and debug keys)
+    this.specialKeyHandlers = {
         'Escape': () => {
-            // If a dialog is open, don't open pause menu (dialog will handle closing itself)
             if (this.dialogEngine && this.dialogEngine.stateStack && this.dialogEngine.stateStack.length > 0) {
                 return; // Let dialog system handle it
             }
-            // Only open pause menu if in game screen
             if (this.currentScreen === 'game') {
                 this.dialogEngine.navigateTo('pause-menu');
             }
         },
-
-        // Turn-based controls
-        'Y': () => {
-            // Y for "Yield turn" - end current turn
-            if (this.turnBasedMode && this.currentScreen === 'game' && this.endTurn) {
-                this.endTurn();
-            }
-        },
-        'y': () => {
-            if (this.turnBasedMode && this.currentScreen === 'game' && this.endTurn) {
-                this.endTurn();
-            }
-        },
-        'B': () => {
-            // B for "Board snap" - grid snap toggle
-            if (this.toggleGridSnap) {
-                this.toggleGridSnap();
-            }
-        },
-        'b': () => {
-            if (this.toggleGridSnap) {
-                this.toggleGridSnap();
-            }
-        },
-
-        // Speed Control
-        'Z': () => this.cycleGameSpeed(),
-        'z': () => this.cycleGameSpeed(),
-
-        // DEBUG: Force enable extraction for testing
         '0': () => {
-            if (this.currentScreen === 'game') {
-                if (this.logger) this.logger.info('🔧 DEBUG: Force-enabling extraction point for testing');
-                // UNIDIRECTIONAL: Only set through MissionService
-                if (this.gameServices && this.gameServices.missionService) {
-                    this.gameServices.missionService.enableExtraction();
-                } else {
-                    if (this.logger) this.logger.error('❌ MissionService not available for extraction!');
-                }
+            if (this.currentScreen === 'game' && this.gameServices.missionService) {
+                this.gameServices.missionService.enableExtraction();
                 this.addNotification('DEBUG: Extraction enabled!');
             }
         }
     };
 
-    // Movement keys for 3D mode (handled separately)
+    // Movement keys for 3D mode (handled separately by dispatcher)
     this.movementKeys = ['W', 'A', 'S', 'D'];
-
-    // Get keyboard dispatcher from GameServices
-    const dispatcher = this.gameServices?.keyboardDispatcher;
-    if (!dispatcher) {
-        throw new Error('KeyboardDispatcherService not available - required for keyboard handling');
-    }
 
     if (this.logger) this.logger.debug('🎮 Registering keyboard handlers with dispatcher...');
 
-    // Note: Keyboard layout language can affect key detection
-    // If keys aren't working, check your keyboard layout is set to English
-
-    // Store reference to game instance
-    const game = this;
-
-    // Create a wrapper that checks game screen before calling handler
-    const wrapHandler = (handler, requireGameScreen = true) => {
-        return (e) => {
-            // Only process game keys when in game screen (except Escape)
-            if (requireGameScreen && game.currentScreen !== 'game') {
-                return; // Let other contexts handle it
+    // Register wildcard handler that looks up actions from KeybindingService
+    dispatcher.registerHandler('GAME', '*', (e) => {
+        // Skip if not in game screen (except for special keys)
+        if (game.currentScreen !== 'game') {
+            // Allow Escape and special keys even outside game screen
+            if (e.key !== 'Escape' && !this.specialKeyHandlers[e.key]) {
+                return false;
             }
-            handler(e);
-        };
-    };
+        }
 
-    // Register all game key bindings with the dispatcher
-    Object.entries(this.keyBindings).forEach(([key, handler]) => {
-        // Escape is special - it should work from game screen but be handled by dialogs first
-        const requireGameScreen = (key !== 'Escape');
-        dispatcher.registerHandler('GAME', key, wrapHandler(handler, requireGameScreen));
+        // First check special key handlers (not in KeybindingService)
+        const specialHandler = this.specialKeyHandlers[e.key];
+        if (specialHandler) {
+            specialHandler();
+            return true;
+        }
+
+        // Look up action from KeybindingService
+        const action = keybindingService.getActionByKey(e.key);
+        if (action && this.actionHandlers[action]) {
+            if (this.logger) this.logger.trace(`Key '${e.key}' → action '${action}'`);
+            this.actionHandlers[action]();
+            return true;
+        }
+
+        return false; // Let other handlers process
     });
 
     // Use dispatcher's key state tracking
     Object.defineProperty(this, 'keysPressed', {
         get: function() {
-            const dispatcher = this.gameServices?.keyboardDispatcher;
-            if (dispatcher) {
-                // Convert Set to object format for backward compatibility
-                const pressed = {};
-                dispatcher.getPressedKeys().forEach(k => pressed[k] = true);
-                return pressed;
-            }
-            return {};
+            const pressed = {};
+            dispatcher.getPressedKeys().forEach(k => pressed[k] = true);
+            return pressed;
         }
     });
 
     Object.defineProperty(this, 'keys3D', {
         get: function() {
-            const dispatcher = this.gameServices?.keyboardDispatcher;
-            return dispatcher ? dispatcher.get3DKeyState() : { W: false, A: false, S: false, D: false };
+            return dispatcher.get3DKeyState();
         }
     });
 
-    if (this.logger) this.logger.info('✅ Keyboard handler initialized with', Object.keys(this.keyBindings).length, 'key bindings via dispatcher');
+    if (this.logger) this.logger.info('✅ Keyboard handler initialized with KeybindingService integration');
+};
 
-    } catch (error) {
-        if (this.logger) this.logger.error('❌ CRITICAL ERROR in initKeyboardHandler:', error);
-        if (this.logger) this.logger.error('Stack trace:', error.stack);
-        if (this.logger) this.logger.error('Error details:', error.message);
+// Helper: Open character sheet
+CyberOpsGame.prototype.openCharacterSheet = function() {
+    if (this.logger) this.logger.debug('📊 Opening character sheet...');
+
+    let agentToShow = null;
+    if (this.currentScreen === 'game') {
+        agentToShow = this._selectedAgent;
+    } else if (this.currentScreen === 'hub' || this.currentScreen === 'menu') {
+        agentToShow = this.activeAgents?.[0] || null;
+    }
+
+    if (agentToShow) {
+        const agentId = agentToShow.id || agentToShow.name || agentToShow;
+        if (typeof agentId === 'string') {
+            this._selectedAgent = this.agents?.find(a => a.id === agentId || a.name === agentId) ||
+                                 this.activeAgents?.find(a => a.id === agentId || a.name === agentId);
+        } else if (agentId && typeof agentId === 'object') {
+            this._selectedAgent = agentId;
+        }
+        this.dialogEngine?.navigateTo('character');
+    } else {
+        if (this.logger) this.logger.warn('No agent available for character sheet');
+    }
+};
+
+// Helper: Open inventory
+CyberOpsGame.prototype.openInventory = function() {
+    if (this.currentScreen === 'game' && this._selectedAgent) {
+        if (this.logger) this.logger.debug('🎒 Opening inventory for:', this._selectedAgent.name);
+        if (this.showInventory) {
+            this.showInventory(this._selectedAgent.id || this._selectedAgent.name);
+        }
     }
 };
 
@@ -445,47 +324,56 @@ CyberOpsGame.prototype.toggleHotkeyHelp = function() {
     if (this.logger) this.logger.debug('❓ Hotkey help:', this.showHotkeyHelp ? 'SHOWN' : 'HIDDEN');
 };
 
-// Get current key bindings for display
+// Get current key bindings for display (from KeybindingService)
 CyberOpsGame.prototype.getKeyBindingsDisplay = function() {
+    const keybindingService = this.gameServices?.keybindingService;
+
+    if (keybindingService) {
+        // Get bindings from service - respects user customizations
+        const categories = keybindingService.getAllBindings();
+        const result = {};
+
+        const categoryLabels = {
+            agents: 'Agent Control',
+            combat: 'Combat',
+            abilities: 'Abilities',
+            team: 'Team Commands',
+            movement: 'Movement',
+            view: 'Camera & View',
+            ui: 'User Interface',
+            game: 'Game Control',
+            debug: 'Debug'
+        };
+
+        for (const [category, bindings] of Object.entries(categories)) {
+            const label = categoryLabels[category] || category;
+            result[label] = bindings.map(b => ({
+                key: b.key,
+                action: b.description
+            }));
+        }
+
+        // Add non-rebindable keys
+        result['System'] = [
+            { key: 'Esc', action: 'Pause Menu / Close Dialog' },
+            { key: 'WASD', action: '3D Camera Movement' }
+        ];
+
+        return result;
+    }
+
+    // Fallback if service not available (should not happen)
     return {
         'Agent Control': [
-            { key: '1-6', action: 'Select Agent 1-6' },
+            { key: '1-6', action: 'Select Agent' },
             { key: 'Tab', action: 'Cycle Agents' },
-            { key: 'T', action: 'Select All Squad' }
+            { key: 'T', action: 'Select All' }
         ],
         'Combat': [
-            { key: 'F', action: 'Fire/Shoot' },
-            { key: 'G', action: 'Throw Grenade' },
-            { key: 'H', action: 'Hack/Interact with NPCs' },
-            { key: 'Q', action: 'Activate Shield' }
-        ],
-        'Team Commands': [
-            { key: 'X', action: 'Hold Position' },
-            { key: 'C', action: 'Patrol Area' },
-            { key: 'V', action: 'Follow Leader' }
-        ],
-        'Movement (3D)': [
-            { key: 'WASD', action: 'Move Camera' },
-            { key: 'R', action: 'Cycle Action Mode' }
-        ],
-        'View': [
-            { key: 'E', action: 'Toggle 2D/3D Mode' },
-            { key: 'L', action: 'Toggle Squad Following' },
-            { key: 'M', action: 'Toggle Mission Log' },
-            { key: 'J', action: 'Show Mission List' }
-        ],
-        'Debug': [
-            { key: 'P', action: 'Show Path Visualization' },
-            { key: 'O', action: 'Toggle Pathfinding' },
-            { key: 'U', action: 'Toggle Fog of War' },
-            { key: '?', action: 'Show This Help' }
-        ],
-        'Game': [
-            { key: 'Space', action: 'Toggle Turn-Based Mode' },
-            { key: 'Y', action: 'Yield/End Turn (Turn-Based)' },
-            { key: 'B', action: 'Board/Grid Snap (Turn-Based)' },
-            { key: 'Esc', action: 'Pause Menu' },
-            { key: 'Z', action: 'Cycle Speed (1x/2x/4x)' }
+            { key: 'F', action: 'Fire' },
+            { key: 'G', action: 'Grenade' },
+            { key: 'H', action: 'Hack/Interact' },
+            { key: 'Q', action: 'Shield' }
         ]
     };
 };
