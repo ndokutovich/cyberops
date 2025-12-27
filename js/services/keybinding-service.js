@@ -100,10 +100,6 @@ class KeybindingService {
         return true;
     }
 
-    getBinding(action) {
-        return this.bindings.get(action);
-    }
-
     getKey(action) {
         const binding = this.bindings.get(action);
         return binding ? binding.key : null;
@@ -140,10 +136,6 @@ class KeybindingService {
             }
         }
         return null;
-    }
-
-    isKeyBound(key) {
-        return this.getActionByKey(key) !== null;
     }
 
     updateBinding(action, newKey) {
@@ -226,57 +218,6 @@ class KeybindingService {
                 if (this.logger) this.logger.error('Failed to load custom keybindings:', e);
             }
         }
-    }
-
-    // Check if a key event matches a binding (layout-independent via e.code)
-    matchesBinding(action, event) {
-        const binding = this.bindings.get(action);
-        if (!binding) return false;
-
-        const key = binding.key;
-        const code = event.code;
-
-        // Normalize code to key name for matching
-        let normalizedCode = code;
-        if (code.startsWith('Key')) {
-            normalizedCode = code.substring(3); // 'KeyF' -> 'F'
-        } else if (code.startsWith('Digit')) {
-            normalizedCode = code.substring(5); // 'Digit1' -> '1'
-        }
-
-        // Match by physical key (layout-independent)
-        if (normalizedCode.toLowerCase() === key.toLowerCase()) return true;
-
-        // Special keys that code already matches
-        if (key === 'Space' && code === 'Space') return true;
-        if (key === 'Tab' && code === 'Tab') return true;
-
-        // Function keys
-        if (key.startsWith('F') && code === key) return true;
-
-        // Fallback: special characters like '?' that need key matching
-        if (key === '?' && (event.key === '?' || (event.key === '/' && event.shiftKey))) return true;
-
-        return false;
-    }
-
-    // Generate help text
-    getHelpText() {
-        const categories = this.getAllBindings();
-        let helpText = [];
-
-        const categoryOrder = ['agents', 'combat', 'abilities', 'team', 'movement', 'view', 'ui', 'game', 'debug'];
-
-        for (const category of categoryOrder) {
-            if (categories[category]) {
-                helpText.push(`\n${category.toUpperCase()}:`);
-                for (const binding of categories[category]) {
-                    helpText.push(`  ${binding.key.padEnd(8)} - ${binding.description}`);
-                }
-            }
-        }
-
-        return helpText.join('\n');
     }
 
     // Export bindings for display in settings
