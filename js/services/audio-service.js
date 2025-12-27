@@ -557,9 +557,12 @@ class AudioService {
             this.fadeInAudio(audio, targetVolume, trackConfig.fadeIn || this.config?.global?.fadeInTime || 2000);
             this.screenMusic.currentTrack = audio;
         }).catch(error => {
+            // AbortError is expected during rapid screen transitions - not a real error
+            if (error.name === 'AbortError') {
+                if (this.logger) this.logger.debug(`🎵 Audio load interrupted for ${trackId} (screen transition)`);
+                return;
+            }
             if (this.logger) this.logger.error(`🎵 ❌ Failed to play ${trackId}: ${error.message || error}`);
-            // Log additional details for debugging
-            if (this.logger) this.logger.error(`🎵 Audio state: src=${audio.src}, readyState=${audio.readyState}, error=${audio.error?.message || 'none'}`);
         });
     }
 
