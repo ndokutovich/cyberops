@@ -586,27 +586,28 @@ CyberOpsGame.prototype.checkMissionObjectives = function() {
             obj.active = true;
         }
 
-        // Check custom objectives with checkFunction
+        // Check custom objectives with checkFunction - delegate to MissionService
         if (obj.type === 'custom' && obj.checkFunction && !obj.completed) {
             let checkResult = false;
 
-            // Try to find and call the check function
-            try {
-                // First check if it's a window function (from exported mission)
-                if (window[obj.checkFunction]) {
-                    checkResult = window[obj.checkFunction](this, obj, this.gameServices?.missionService);
-                    if (this.logger) this.logger.trace(`  Custom check ${obj.checkFunction}: ${checkResult}`);
-                }
-                // Also check if it's a game method
-                else if (this[obj.checkFunction]) {
-                    checkResult = this[obj.checkFunction](obj);
-                    if (this.logger) this.logger.trace(`  Game method ${obj.checkFunction}: ${checkResult}`);
-                }
+            // Build game state for validators
+            const gameState = {
+                agents: this.agents,
+                enemies: this.enemies,
+                alarmsTriggered: this.alarmsTriggered,
+                civilianCasualties: this.civilianCasualties || 0
+            };
 
-                // If custom check returns true, complete the objective
-                if (checkResult && !obj.completed) {
-                    if (this.gameServices?.missionService) {
-                        this.gameServices.missionService.completeObjective(obj.id);
+            // Use MissionService validator registry (single source of truth)
+            if (this.gameServices?.missionService) {
+                checkResult = this.gameServices.missionService.evaluateCustomObjective(obj, gameState);
+                if (this.logger) this.logger.trace(`  Custom check ${obj.checkFunction}: ${checkResult}`);
+            }
+
+            // If custom check returns true, complete the objective
+            if (checkResult && !obj.completed) {
+                if (this.gameServices?.missionService) {
+                    this.gameServices.missionService.completeObjective(obj.id);
                     } else {
                         obj.completed = true;
                         obj.status = 'completed';
@@ -808,29 +809,10 @@ CyberOpsGame.prototype.completeMission = function(victory) {
     window.screenManager.navigateTo(victory ? 'victory' : 'defeat');
 };
 
-// Custom objective check functions
-CyberOpsGame.prototype.checkStealthObjective = function(objective) {
-    // Check if alarms have been triggered
-    return !this.alarmsTriggered;
-};
-
-CyberOpsGame.prototype.checkMainframeCaptured = function(objective) {
-    // Check if all prerequisites are met (handled by triggerAfter)
-    // If this function is called, prerequisites are already met
-    return true;
-};
-
-CyberOpsGame.prototype.checkNoCivilianCasualties = function(objective) {
-    // Check if any civilians have been killed
-    return (this.civilianCasualties || 0) === 0;
-};
-
-CyberOpsGame.prototype.checkAgentsAlive = function(objective) {
-    // Check if minimum number of agents are still alive
-    const minAgents = objective.minAgents || 2;
-    const aliveAgents = this.agents ? this.agents.filter(a => a.alive).length : 0;
-    return aliveAgents >= minAgents;
-};
+// Custom objective check functions - MOVED TO MissionService.validators
+// Use gameServices.missionService.registerValidator() for custom validators
+// Built-in validators: checkStealthObjective, checkMainframeCaptured,
+// checkNoCivilianCasualties, checkAgentsAlive, checkTimeLimit, checkAllEnemiesEliminated
 
 // Handle enemy elimination
 CyberOpsGame.prototype.onEnemyEliminated = function(enemy) {

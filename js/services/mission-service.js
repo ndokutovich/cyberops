@@ -13,6 +13,7 @@ class MissionService {
 
         // Current mission state
         this.currentMission = null;
+        this.currentMissionIndex = 0; // Index in campaign mission list
         this.missionStatus = 'idle'; // idle, briefing, active, completed, failed
         this.missionStartTime = 0;
         this.missionTimer = 0;
@@ -77,6 +78,123 @@ class MissionService {
             update: [],
             any: []
         };
+
+        // Custom objective validators registry
+        this.validators = new Map();
+        this.registerBuiltInValidators();
+    }
+
+    /**
+     * Register built-in objective validators
+     * These are common validators used across missions
+     */
+    registerBuiltInValidators() {
+        // Stealth objective - check if alarms were triggered
+        this.registerValidator('checkStealthObjective', (objective, gameState) => {
+            return !gameState.alarmsTriggered && this.trackers.alertsTriggered === 0;
+        });
+
+        // Mainframe captured - prerequisites handled by triggerAfter
+        this.registerValidator('checkMainframeCaptured', (objective, gameState) => {
+            return true; // If called, prerequisites are met
+        });
+
+        // No civilian casualties
+        this.registerValidator('checkNoCivilianCasualties', (objective, gameState) => {
+            return this.trackers.civiliansCasualties === 0 && (gameState.civilianCasualties || 0) === 0;
+        });
+
+        // Minimum agents alive
+        this.registerValidator('checkAgentsAlive', (objective, gameState) => {
+            const minAgents = objective.minAgents || 2;
+            const aliveAgents = gameState.agents ? gameState.agents.filter(a => a.alive).length : 0;
+            return aliveAgents >= minAgents;
+        });
+
+        // Time limit objective
+        this.registerValidator('checkTimeLimit', (objective, gameState) => {
+            const timeLimit = objective.timeLimit || 0;
+            return timeLimit === 0 || this.missionTimer <= timeLimit;
+        });
+
+        // All enemies eliminated
+        this.registerValidator('checkAllEnemiesEliminated', (objective, gameState) => {
+            const enemies = gameState.enemies || [];
+            return enemies.filter(e => e.alive).length === 0;
+        });
+
+        if (this.logger) this.logger.debug('Built-in validators registered');
+    }
+
+    /**
+     * Register a custom objective validator
+     * @param {string} name - Validator name (matches checkFunction in objective)
+     * @param {Function} validator - Function(objective, gameState) => boolean
+     */
+    registerValidator(name, validator) {
+        if (typeof validator !== 'function') {
+            if (this.logger) this.logger.error(`Invalid validator for ${name}: must be a function`);
+            return;
+        }
+        this.validators.set(name, validator);
+        if (this.logger) this.logger.trace(`Validator registered: ${name}`);
+    }
+
+    /**
+     * Evaluate a custom objective using registered validator
+     * @param {Object} objective - The objective to evaluate
+     * @param {Object} gameState - Current game state (agents, enemies, etc.)
+     * @returns {boolean} Whether the objective condition is met
+     */
+    evaluateCustomObjective(objective, gameState) {
+        if (!objective.checkFunction) return false;
+
+        const validator = this.validators.get(objective.checkFunction);
+        if (validator) {
+            try {
+                return validator(objective, gameState);
+            } catch (error) {
+                if (this.logger) this.logger.error(`Validator ${objective.checkFunction} failed:`, error);
+                return false;
+            }
+        }
+
+        // Try window function fallback for mission-specific validators
+        if (window[objective.checkFunction]) {
+            try {
+                return window[objective.checkFunction](gameState, objective, this);
+            } catch (error) {
+                if (this.logger) this.logger.error(`Window validator ${objective.checkFunction} failed:`, error);
+                return false;
+            }
+        }
+
+        if (this.logger) this.logger.warn(`No validator found for: ${objective.checkFunction}`);
+        return false;
+    }
+
+    /**
+     * Evaluate all custom objectives
+     * @param {Object} gameState - Current game state
+     * @returns {Array} Newly completed objective IDs
+     */
+    evaluateAllCustomObjectives(gameState) {
+        const newlyCompleted = [];
+
+        for (const objective of this.objectives) {
+            if (objective.type !== 'custom') continue;
+            if (objective.status === 'completed') continue;
+            if (!objective.checkFunction) continue;
+
+            const result = this.evaluateCustomObjective(objective, gameState);
+            if (result) {
+                this.completeObjective(objective.id);
+                newlyCompleted.push(objective.id);
+                if (this.logger) this.logger.info(`✅ Custom objective completed: ${objective.description}`);
+            }
+        }
+
+        return newlyCompleted;
     }
 
     /**
@@ -759,7 +877,10 @@ class MissionService {
 
         // Apply rewards
         if (this.resourceService) {
+            if (this.logger) this.logger.info(`💰 Applying mission rewards: ${JSON.stringify(rewards)}`);
             this.resourceService.applyMissionRewards(rewards);
+        } else {
+            if (this.logger) this.logger.error('❌ ResourceService not available - rewards not applied!');
         }
 
         // Save to history
@@ -946,12 +1067,43 @@ class MissionService {
     }
 
     /**
+     * Set current mission index
+     * @param {number} index - Mission index in campaign list
+     */
+    setCurrentMissionIndex(index) {
+        this.currentMissionIndex = index;
+        if (this.logger) this.logger.debug(`📍 Mission index set to: ${index}`);
+    }
+
+    /**
+     * Increment mission index (after completing a mission)
+     */
+    incrementMissionIndex() {
+        this.currentMissionIndex++;
+        if (this.logger) this.logger.debug(`📍 Mission index incremented to: ${this.currentMissionIndex}`);
+    }
+
+    /**
+     * Reset mission progress (for new campaign)
+     */
+    resetMissionProgress() {
+        this.currentMissionIndex = 0;
+        this.missionTimer = 0;
+        this.completedMissions = [];
+        this.failedMissions = [];
+        this.missionStats.clear();
+        if (this.logger) this.logger.info('🔄 Mission progress reset for new campaign');
+    }
+
+    /**
      * Export state
      */
     exportState() {
         return {
             currentMission: this.currentMission,
+            currentMissionIndex: this.currentMissionIndex,
             missionStatus: this.missionStatus,
+            missionTimer: this.missionTimer,
             completedMissions: [...this.completedMissions],
             failedMissions: [...this.failedMissions],
             missionStats: Array.from(this.missionStats.entries())
@@ -963,7 +1115,9 @@ class MissionService {
      */
     importState(state) {
         if (state.currentMission) this.currentMission = state.currentMission;
+        if (state.currentMissionIndex !== undefined) this.currentMissionIndex = state.currentMissionIndex;
         if (state.missionStatus) this.missionStatus = state.missionStatus;
+        if (state.missionTimer !== undefined) this.missionTimer = state.missionTimer;
         if (state.completedMissions) this.completedMissions = [...state.completedMissions];
         if (state.failedMissions) this.failedMissions = [...state.failedMissions];
         if (state.missionStats) {
@@ -1453,9 +1607,10 @@ class MissionService {
                 this.logger.info('✅ EXTRACTION TRIGGERED! Agent reached extraction point!');
                 this.logger.info(`📊 Final status - MissionStatus: ${this.missionStatus}, Closest: ${closestAgent?.name} at ${closestDist.toFixed(2)} units`);
             }
-            // Set status immediately to prevent re-entry
-            this.missionStatus = 'extracting';
+            // Complete mission FIRST (applies rewards while status is still 'active')
+            // Then set status to prevent re-entry
             this.completeMission(true);
+            this.missionStatus = 'extracted';
             this.endMission(game, true);
         }
     }
@@ -1537,11 +1692,8 @@ class MissionService {
                 // Agent generation now handled by AgentService via returnToHubFromVictory
             }
 
-            // Award mission rewards
-            if (game.currentMission.rewards && game.gameServices?.resourceService) {
-                // Use ResourceService for mission rewards
-                game.gameServices.resourceService.applyMissionRewards(game.currentMission.rewards);
-            }
+            // NOTE: Mission rewards are already applied by completeMission()
+            // Do NOT apply again here - was causing duplicate rewards!
         }
 
         // Play outro cutscene if available, then navigate to victory/defeat

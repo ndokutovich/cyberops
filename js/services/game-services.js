@@ -132,6 +132,22 @@ if (typeof GameServices === 'undefined') {
             if (this.logger) this.logger.warn('AudioService not loaded - audio functionality unavailable');
         }
 
+        // Coordinate service for all coordinate transformations
+        if (window.CoordinateService) {
+            this.coordinateService = new CoordinateService();
+            if (this.logger) this.logger.debug('CoordinateService initialized');
+        } else {
+            if (this.logger) this.logger.warn('CoordinateService not loaded - using legacy coordinate methods');
+        }
+
+        // Dialog state service for centralized dialog navigation
+        if (window.DialogStateService) {
+            this.dialogStateService = new DialogStateService();
+            if (this.logger) this.logger.debug('DialogStateService initialized');
+        } else {
+            if (this.logger) this.logger.warn('DialogStateService not loaded - using legacy dialog access');
+        }
+
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
         this.applyAllModifiers = this.applyAllModifiers.bind(this);

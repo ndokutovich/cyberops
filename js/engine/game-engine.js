@@ -113,6 +113,7 @@ class GameEngine {
 
     /**
      * Convert screen coordinates to world coordinates
+     * Note: These are intermediate helpers, full conversion uses CoordinateService
      */
     screenToWorldX(screenX) {
         return (screenX - this.cameraX) / this.zoom;
@@ -415,8 +416,14 @@ class GameEngine {
 
     /**
      * World to isometric conversion (needed for rendering)
+     * Delegates to CoordinateService when available
      */
     worldToIsometric(x, y) {
+        const coordService = window.GameServices?.coordinateService;
+        if (coordService) {
+            return coordService.worldToIsometric(x, y);
+        }
+        // Fallback
         const isoX = (x - y) * this.tileWidth / 2;
         const isoY = (x + y) * this.tileHeight / 2;
         return { x: isoX, y: isoY };
@@ -798,22 +805,6 @@ class GameEngine {
 
         // Render collectables
         if (map.collectables) {
-            // Debug: Log once per mission
-            if (!this._collectablesLogged) {
-                console.log('🔍 [RENDER] Map.collectables array exists:', {
-                    count: map.collectables.length,
-                    items: map.collectables.map(c => ({
-                        id: c.id,
-                        collected: c.collected,
-                        questRequired: c.questRequired,
-                        hidden: c.hidden,
-                        x: c.x,
-                        y: c.y
-                    }))
-                });
-                this._collectablesLogged = true;
-            }
-
             map.collectables.forEach(item => {
                 if (!item.collected) {
                     // Check if quest is required and active
@@ -821,19 +812,6 @@ class GameEngine {
                         const missionQuestActive = this.facade.activeQuests && this.facade.activeQuests[item.questRequired];
                         const npcQuestActive = this.facade.npcActiveQuests && this.facade.npcActiveQuests.some(q => q.id === item.questRequired);
                         const questActive = missionQuestActive || npcQuestActive;
-
-                        // Debug: Log quest check for first item
-                        if (!this._questCheckLogged && item.id === 'tunnel_intel') {
-                            console.log('🔍 [RENDER] Quest check for tunnel_intel:', {
-                                questRequired: item.questRequired,
-                                hidden: item.hidden,
-                                npcActiveQuests: this.facade.npcActiveQuests,
-                                npcQuestActive: npcQuestActive,
-                                missionQuestActive: missionQuestActive,
-                                questActive: questActive
-                            });
-                            this._questCheckLogged = true;
-                        }
 
                         if (!questActive) return;
                     }
@@ -844,11 +822,6 @@ class GameEngine {
                     }
                 }
             });
-        } else {
-            if (!this._noCollectablesLogged) {
-                console.log('🔍 [RENDER] Map has NO collectables array!');
-                this._noCollectablesLogged = true;
-            }
         }
 
         // Render extraction point
