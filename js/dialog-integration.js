@@ -1773,9 +1773,9 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Audio Settings Tab
     engine.registerGenerator('generateAudioSettings', function() {
-        // Get current state from localStorage or audioEnabled flag
-        const audioEnabledSetting = localStorage.getItem('cyberops_audio_enabled');
-        const audioEnabled = audioEnabledSetting !== null ? audioEnabledSetting === 'true' : this.audioEnabled;
+        // Get current state from SettingsService
+        const settings = this.gameServices.settingsService;
+        const audioEnabled = settings.audioEnabled;
 
         return `
             <div style="color: #fff;">
@@ -1834,9 +1834,10 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Graphics Settings Tab
     engine.registerGenerator('generateGraphicsSettings', function() {
-        const enableScreenShake = localStorage.getItem('cyberops_screenshake') !== 'false';
-        const enable3DShadows = localStorage.getItem('cyberops_shadows') !== 'false';
-        const showFPS = this.showFPS || false;
+        const settings = this.gameServices.settingsService;
+        const enableScreenShake = settings.screenShakeEnabled;
+        const enable3DShadows = settings.shadowsEnabled;
+        const showFPS = settings.showFPS;
 
         return `
             <div style="color: #fff;">
@@ -1878,8 +1879,9 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Game Settings Tab
     engine.registerGenerator('generateGameSettings', function() {
-        const usePathfinding = this.usePathfinding !== false;
-        const autoSave = localStorage.getItem('cyberops_autosave') !== 'false';
+        const settings = this.gameServices.settingsService;
+        const usePathfinding = settings.pathfindingEnabled;
+        const autoSave = settings.autosaveEnabled;
 
         return `
             <div style="color: #fff;">

@@ -108,6 +108,14 @@ if (typeof GameServices === 'undefined') {
             throw new Error('KeyboardDispatcherService is required but not loaded');
         }
 
+        // Settings service for centralized settings management
+        if (window.SettingsService) {
+            this.settingsService = new SettingsService();
+            if (this.logger) this.logger.debug('SettingsService initialized');
+        } else {
+            throw new Error('SettingsService is required but not loaded');
+        }
+
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
         this.applyAllModifiers = this.applyAllModifiers.bind(this);

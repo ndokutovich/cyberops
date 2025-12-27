@@ -36,10 +36,11 @@ CyberOpsGame.prototype.initVisualEffects = function() {
         particles: []
     };
 
-    // Load settings from localStorage
-    this.screenShakeEnabled = localStorage.getItem('cyberops_screenshake') !== 'false';
-    this.freezeEffectsEnabled = localStorage.getItem('cyberops_freeze') !== 'false';
-    this.particlesEnabled = localStorage.getItem('cyberops_particles') !== 'false';
+    // Load settings from SettingsService
+    const settings = this.gameServices.settingsService;
+    this.screenShakeEnabled = settings.screenShakeEnabled;
+    this.freezeEffectsEnabled = settings.freezeEffectsEnabled;
+    this.particlesEnabled = settings.particlesEnabled;
 
     if (this.logger) this.logger.info('✅ Visual effects system initialized');
 };
