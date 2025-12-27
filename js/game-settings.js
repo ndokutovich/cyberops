@@ -22,7 +22,7 @@ CyberOpsGame.prototype.startKeyRebind = function(action) {
 
     const handleKeyCapture = (e) => {
         let key = e.key;
-        if (e.code === 'Space') key = ' ';
+        if (e.code === 'Space') key = 'Space';
         else if (e.code.startsWith('Key')) key = e.code.substring(3);
         else if (e.code.startsWith('Digit')) key = e.code.substring(5);
 

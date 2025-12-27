@@ -67,7 +67,7 @@ class KeybindingService {
         this.registerBinding('missionProgress', 'J', 'Mission Progress', 'ui');
 
         // Game Control
-        this.registerBinding('toggleTurnBasedMode', ' ', 'Toggle Turn-Based Mode', 'game');
+        this.registerBinding('toggleTurnBasedMode', 'Space', 'Toggle Turn-Based Mode', 'game');
         this.registerBinding('endTurn', 'Y', 'End Turn', 'game');
         this.registerBinding('gridSnap', 'B', 'Grid Snap Toggle', 'game');
         this.registerBinding('cycleSpeed', 'Z', 'Cycle Game Speed', 'game');
@@ -110,7 +110,11 @@ class KeybindingService {
     }
 
     getActionByKey(key) {
-        const keyLower = key.toLowerCase();
+        // Normalize special keys for matching
+        let normalizedKey = key;
+        if (key === ' ') normalizedKey = 'Space';
+
+        const keyLower = normalizedKey.toLowerCase();
         for (const [action, binding] of this.bindings) {
             if (binding.key.toLowerCase() === keyLower) {
                 return action;
@@ -213,7 +217,7 @@ class KeybindingService {
         const key = binding.key;
 
         // Handle special keys
-        if (key === ' ' && event.key === ' ') return true;
+        if (key === 'Space' && event.key === ' ') return true;
         if (key === 'Tab' && event.key === 'Tab') return true;
         if (key === '?' && event.key === '?' || (event.key === '/' && event.shiftKey)) return true;
 
