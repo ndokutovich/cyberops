@@ -323,54 +323,35 @@ CyberOpsGame.prototype.toggleHotkeyHelp = function() {
 
 // Get current key bindings for display (from KeybindingService)
 CyberOpsGame.prototype.getKeyBindingsDisplay = function() {
-    const keybindingService = this.gameServices?.keybindingService;
+    const keybindingService = this.gameServices.keybindingService;
+    const categories = keybindingService.getAllBindings();
+    const result = {};
 
-    if (keybindingService) {
-        // Get bindings from service - respects user customizations
-        const categories = keybindingService.getAllBindings();
-        const result = {};
+    const categoryLabels = {
+        agents: 'Agent Control',
+        combat: 'Combat',
+        abilities: 'Abilities',
+        team: 'Team Commands',
+        movement: 'Movement',
+        view: 'Camera & View',
+        ui: 'User Interface',
+        game: 'Game Control',
+        debug: 'Debug'
+    };
 
-        const categoryLabels = {
-            agents: 'Agent Control',
-            combat: 'Combat',
-            abilities: 'Abilities',
-            team: 'Team Commands',
-            movement: 'Movement',
-            view: 'Camera & View',
-            ui: 'User Interface',
-            game: 'Game Control',
-            debug: 'Debug'
-        };
-
-        for (const [category, bindings] of Object.entries(categories)) {
-            const label = categoryLabels[category] || category;
-            result[label] = bindings.map(b => ({
-                key: b.key,
-                action: b.description
-            }));
-        }
-
-        // Add non-rebindable keys
-        result['System'] = [
-            { key: 'Esc', action: 'Pause Menu / Close Dialog' },
-            { key: 'WASD', action: '3D Camera Movement' }
-        ];
-
-        return result;
+    for (const [category, bindings] of Object.entries(categories)) {
+        const label = categoryLabels[category] || category;
+        result[label] = bindings.map(b => ({
+            key: b.key,
+            action: b.description
+        }));
     }
 
-    // Fallback if service not available (should not happen)
-    return {
-        'Agent Control': [
-            { key: '1-6', action: 'Select Agent' },
-            { key: 'Tab', action: 'Cycle Agents' },
-            { key: 'T', action: 'Select All' }
-        ],
-        'Combat': [
-            { key: 'F', action: 'Fire' },
-            { key: 'G', action: 'Grenade' },
-            { key: 'H', action: 'Hack/Interact' },
-            { key: 'Q', action: 'Shield' }
-        ]
-    };
+    // Add non-rebindable keys
+    result['System'] = [
+        { key: 'Esc', action: 'Pause Menu / Close Dialog' },
+        { key: 'WASD', action: '3D Camera Movement' }
+    ];
+
+    return result;
 };
