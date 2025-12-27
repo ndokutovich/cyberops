@@ -20,6 +20,12 @@ This document lists all keyboard bindings in CyberOps: Syndicate.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Language Layout Independence
+
+All keyboard bindings work on **any keyboard language layout** (English, Russian, etc.).
+The system uses physical key positions (`e.code`) instead of typed characters (`e.key`),
+so pressing the physical 'F' key works even when the layout produces 'а' (Cyrillic).
+
 ## Rebindable Keys (via Settings)
 
 All keys below can be rebound in Settings > Keyboard.

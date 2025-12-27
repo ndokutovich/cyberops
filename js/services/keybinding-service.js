@@ -109,8 +109,27 @@ class KeybindingService {
         return binding ? binding.key : null;
     }
 
-    getActionByKey(key) {
-        // Normalize special keys for matching
+    getActionByKey(key, code = null) {
+        // Normalize code to key name for matching (layout-independent)
+        // e.code gives physical key: 'KeyF', 'Digit1', 'Space', etc.
+        if (code) {
+            let normalizedCode = code;
+            if (code.startsWith('Key')) {
+                normalizedCode = code.substring(3); // 'KeyF' -> 'F'
+            } else if (code.startsWith('Digit')) {
+                normalizedCode = code.substring(5); // 'Digit1' -> '1'
+            }
+            // code already matches: 'Space', 'Tab', 'F5', etc.
+
+            const codeLower = normalizedCode.toLowerCase();
+            for (const [action, binding] of this.bindings) {
+                if (binding.key.toLowerCase() === codeLower) {
+                    return action;
+                }
+            }
+        }
+
+        // Fallback to key character matching (for special characters like '?')
         let normalizedKey = key;
         if (key === ' ') normalizedKey = 'Space';
 
@@ -209,26 +228,34 @@ class KeybindingService {
         }
     }
 
-    // Check if a key event matches a binding
+    // Check if a key event matches a binding (layout-independent via e.code)
     matchesBinding(action, event) {
         const binding = this.bindings.get(action);
         if (!binding) return false;
 
         const key = binding.key;
+        const code = event.code;
 
-        // Handle special keys
-        if (key === 'Space' && event.key === ' ') return true;
-        if (key === 'Tab' && event.key === 'Tab') return true;
-        if (key === '?' && event.key === '?' || (event.key === '/' && event.shiftKey)) return true;
+        // Normalize code to key name for matching
+        let normalizedCode = code;
+        if (code.startsWith('Key')) {
+            normalizedCode = code.substring(3); // 'KeyF' -> 'F'
+        } else if (code.startsWith('Digit')) {
+            normalizedCode = code.substring(5); // 'Digit1' -> '1'
+        }
 
-        // Handle function keys
-        if (key.startsWith('F') && event.key === key) return true;
+        // Match by physical key (layout-independent)
+        if (normalizedCode.toLowerCase() === key.toLowerCase()) return true;
 
-        // Handle regular keys (case insensitive)
-        if (event.key.toUpperCase() === key.toUpperCase()) return true;
+        // Special keys that code already matches
+        if (key === 'Space' && code === 'Space') return true;
+        if (key === 'Tab' && code === 'Tab') return true;
 
-        // Handle KeyCode format (e.g., 'KeyP')
-        if (event.code === `Key${key.toUpperCase()}`) return true;
+        // Function keys
+        if (key.startsWith('F') && code === key) return true;
+
+        // Fallback: special characters like '?' that need key matching
+        if (key === '?' && (event.key === '?' || (event.key === '/' && event.shiftKey))) return true;
 
         return false;
     }

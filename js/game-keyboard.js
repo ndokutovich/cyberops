@@ -122,6 +122,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
     };
 
     // Special keys not rebindable (only Escape and debug keys)
+    // Use e.code values for layout-independent matching
     this.specialKeyHandlers = {
         'Escape': () => {
             if (this.dialogEngine && this.dialogEngine.stateStack && this.dialogEngine.stateStack.length > 0) {
@@ -131,7 +132,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
                 this.dialogEngine.navigateTo('pause-menu');
             }
         },
-        '0': () => {
+        'Digit0': () => {
             if (this.currentScreen === 'game' && this.gameServices.missionService) {
                 this.gameServices.missionService.enableExtraction();
                 this.addNotification('DEBUG: Extraction enabled!');
@@ -146,22 +147,22 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         // Skip if not in game screen (except for special keys)
         if (game.currentScreen !== 'game') {
             // Allow Escape and special keys even outside game screen
-            if (e.key !== 'Escape' && !this.specialKeyHandlers[e.key]) {
+            if (e.code !== 'Escape' && !this.specialKeyHandlers[e.key] && !this.specialKeyHandlers[e.code]) {
                 return false;
             }
         }
 
-        // First check special key handlers (not in KeybindingService)
-        const specialHandler = this.specialKeyHandlers[e.key];
+        // First check special key handlers by code then key (layout-independent)
+        const specialHandler = this.specialKeyHandlers[e.code] || this.specialKeyHandlers[e.key];
         if (specialHandler) {
             specialHandler();
             return true;
         }
 
-        // Look up action from KeybindingService
-        const action = keybindingService.getActionByKey(e.key);
+        // Look up action from KeybindingService (uses e.code for layout-independent matching)
+        const action = keybindingService.getActionByKey(e.key, e.code);
         if (action && this.actionHandlers[action]) {
-            if (this.logger) this.logger.trace(`Key '${e.key}' → action '${action}'`);
+            if (this.logger) this.logger.trace(`Key '${e.key}' (${e.code}) → action '${action}'`);
             this.actionHandlers[action]();
             return true;
         }
