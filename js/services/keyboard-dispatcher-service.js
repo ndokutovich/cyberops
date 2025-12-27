@@ -81,7 +81,18 @@ class KeyboardDispatcherService {
      * Main keydown handler - dispatches to appropriate context
      */
     handleKeyDown(e) {
-        // Skip if typing in input fields
+        // KEY_REBIND context has highest priority - always process even in input fields
+        if (this.activeContexts.get('KEY_REBIND')) {
+            const rebindHandlers = this.handlers.get('KEY_REBIND');
+            const wildcardHandler = rebindHandlers?.get('*');
+            if (wildcardHandler) {
+                e.preventDefault();
+                wildcardHandler(e);
+                return;
+            }
+        }
+
+        // Skip if typing in input fields (except KEY_REBIND handled above)
         if (this.inputTags.includes(e.target.tagName)) {
             return;
         }

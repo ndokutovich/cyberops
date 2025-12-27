@@ -91,7 +91,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         // View/Camera
         zoomIn: () => { if (this.adjustZoom) this.adjustZoom(0.1); },
         zoomOut: () => { if (this.adjustZoom) this.adjustZoom(-0.1); },
-        centerCamera: () => { if (this.centerCameraFunc) this.centerCameraFunc(); },
+        centerCamera: () => { if (this.centerCameraOnAgents) this.centerCameraOnAgents(); },
         toggleSquadFollow: () => this.toggleSquadFollowing(),
 
         // UI Controls
