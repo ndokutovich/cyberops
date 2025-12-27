@@ -582,12 +582,6 @@ CyberOpsGame.prototype.selectAgent = function(agent) {
         }
 }
 
-// Replaced by centralized keyboard handler in game-keyboard.js
-CyberOpsGame.prototype.handleKeyPress = function(e) {
-    // This function is kept for backwards compatibility but is now empty
-    // All keyboard handling is done in game-keyboard.js
-}
-
 CyberOpsGame.prototype.showTouchIndicator = function(x, y) {
         const indicator = document.createElement('div');
         indicator.className = 'touch-indicator';

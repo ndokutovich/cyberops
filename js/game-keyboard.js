@@ -116,7 +116,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         },
         endTurn: () => { if (this.turnBasedMode && this.endTurn) this.endTurn(); },
         gridSnap: () => { if (this.toggleGridSnap) this.toggleGridSnap(); },
-        cycleSpeed: () => this.cycleGameSpeed(),
+        cycleSpeed: () => { if (this.cycleGameSpeed) this.cycleGameSpeed(); },
         quickSave: () => { if (this.quickSave) this.quickSave(); },
         quickLoad: () => { if (this.quickLoad) this.quickLoad(); }
     };
@@ -138,9 +138,6 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
             }
         }
     };
-
-    // Movement keys for 3D mode (handled separately by dispatcher)
-    this.movementKeys = ['W', 'A', 'S', 'D'];
 
     if (this.logger) this.logger.debug('🎮 Registering keyboard handlers with dispatcher...');
 
