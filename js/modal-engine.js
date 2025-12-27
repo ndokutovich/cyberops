@@ -57,21 +57,17 @@ class ModalEngine {
      * Setup keyboard handling via KeyboardDispatcherService
      */
     setupKeyboardHandling() {
-        // Try to get dispatcher - may not be available yet during init
-        // We'll check again when modals are shown
         const dispatcher = window.game?.gameServices?.keyboardDispatcher;
-
-        if (dispatcher) {
-            this.keyboardDispatcher = dispatcher;
-
-            // Register MODAL context handler
-            dispatcher.registerHandler('MODAL', '*', (e) => {
-                return this.handleKeyboardDispatcher(e);
-            });
-        } else {
-            // Fallback to direct listener (for when modal engine loads before game)
-            document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+        if (!dispatcher) {
+            throw new Error('KeyboardDispatcherService not available - required for modal keyboard handling');
         }
+
+        this.keyboardDispatcher = dispatcher;
+
+        // Register MODAL context handler
+        dispatcher.registerHandler('MODAL', '*', (e) => {
+            return this.handleKeyboardDispatcher(e);
+        });
     }
 
     /**

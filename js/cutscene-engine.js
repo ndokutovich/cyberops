@@ -27,7 +27,6 @@ class CutsceneEngine {
 
         // Bind methods
         this.handleClick = this.handleClick.bind(this);
-        this.handleKeyPress = this.handleKeyPress.bind(this);
     }
 
     /**
@@ -110,36 +109,32 @@ class CutsceneEngine {
     }
 
     /**
-     * Setup keyboard handling via dispatcher or fallback
+     * Setup keyboard handling via KeyboardDispatcherService
      */
     setupKeyboardHandling() {
-        // Get dispatcher from GameServices
         const dispatcher = window.game?.gameServices?.keyboardDispatcher;
-
-        if (dispatcher) {
-            this.keyboardDispatcher = dispatcher;
-
-            // Register CUTSCENE context handlers
-            dispatcher.registerHandler('CUTSCENE', 'Space', (e) => {
-                e.preventDefault();
-                this.advance();
-            });
-            dispatcher.registerHandler('CUTSCENE', 'Enter', (e) => {
-                e.preventDefault();
-                this.advance();
-            });
-            dispatcher.registerHandler('CUTSCENE', 'Escape', (e) => {
-                e.preventDefault();
-                this.skip();
-            });
-
-            // Activate CUTSCENE context (highest priority)
-            dispatcher.activateContext('CUTSCENE');
-        } else {
-            // Fallback to direct listener
-            document.addEventListener('keydown', this.handleKeyPress);
-            this.usedFallbackKeyboard = true;
+        if (!dispatcher) {
+            throw new Error('KeyboardDispatcherService not available - required for cutscene keyboard handling');
         }
+
+        this.keyboardDispatcher = dispatcher;
+
+        // Register CUTSCENE context handlers
+        dispatcher.registerHandler('CUTSCENE', 'Space', (e) => {
+            e.preventDefault();
+            this.advance();
+        });
+        dispatcher.registerHandler('CUTSCENE', 'Enter', (e) => {
+            e.preventDefault();
+            this.advance();
+        });
+        dispatcher.registerHandler('CUTSCENE', 'Escape', (e) => {
+            e.preventDefault();
+            this.skip();
+        });
+
+        // Activate CUTSCENE context (highest priority)
+        dispatcher.activateContext('CUTSCENE');
     }
 
     /**
@@ -153,8 +148,6 @@ class CutsceneEngine {
             this.keyboardDispatcher.unregisterHandler('CUTSCENE', 'Space');
             this.keyboardDispatcher.unregisterHandler('CUTSCENE', 'Enter');
             this.keyboardDispatcher.unregisterHandler('CUTSCENE', 'Escape');
-        } else if (this.usedFallbackKeyboard) {
-            document.removeEventListener('keydown', this.handleKeyPress);
         }
     }
 
@@ -639,20 +632,6 @@ class CutsceneEngine {
     handleClick(e) {
         e.preventDefault();
         this.advance();
-    }
-
-    /**
-     * Handle keypress event
-     * @param {KeyboardEvent} e
-     */
-    handleKeyPress(e) {
-        if (e.code === 'Space' || e.code === 'Enter') {
-            e.preventDefault();
-            this.advance();
-        } else if (e.code === 'Escape') {
-            e.preventDefault();
-            this.skip();
-        }
     }
 
     /**

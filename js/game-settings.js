@@ -15,15 +15,17 @@ CyberOpsGame.prototype.startKeyRebind = function(action) {
         throw new Error('KeybindingService not available - required for key rebinding');
     }
 
+    const dispatcher = this.gameServices?.keyboardDispatcher;
+    if (!dispatcher) {
+        throw new Error('KeyboardDispatcherService not available - required for key rebinding');
+    }
+
     const input = document.getElementById(`key-${action}`);
     if (!input) return;
 
     input.style.background = 'rgba(255, 255, 0, 0.2)';
     input.style.borderColor = '#ffff00';
     input.value = 'Press any key...';
-
-    const dispatcher = this.gameServices?.keyboardDispatcher;
-    const game = this;
 
     // Handler function for key capture
     const handleKeyCapture = (e) => {
@@ -57,30 +59,16 @@ CyberOpsGame.prototype.startKeyRebind = function(action) {
         }
 
         // Cleanup
-        if (dispatcher) {
-            dispatcher.deactivateContext('KEY_REBIND');
-            dispatcher.unregisterHandler('KEY_REBIND', '*');
-        } else {
-            document.removeEventListener('keydown', fallbackHandler);
-        }
+        dispatcher.deactivateContext('KEY_REBIND');
+        dispatcher.unregisterHandler('KEY_REBIND', '*');
 
         return true; // Consumed
     };
 
-    // Use dispatcher if available
-    if (dispatcher) {
-        // Register wildcard handler for KEY_REBIND context
-        dispatcher.registerHandler('KEY_REBIND', '*', handleKeyCapture);
-        // Activate KEY_REBIND context (blocks all others)
-        dispatcher.activateContext('KEY_REBIND');
-    } else {
-        // Fallback to direct listener
-        var fallbackHandler = (e) => {
-            e.preventDefault();
-            handleKeyCapture(e);
-        };
-        document.addEventListener('keydown', fallbackHandler);
-    }
+    // Register wildcard handler for KEY_REBIND context
+    dispatcher.registerHandler('KEY_REBIND', '*', handleKeyCapture);
+    // Activate KEY_REBIND context (blocks all others)
+    dispatcher.activateContext('KEY_REBIND');
 };
 
 // Reset key binding

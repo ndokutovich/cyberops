@@ -31,25 +31,18 @@ CyberOpsGame.prototype.setupAudioInteraction = function() {
     document.addEventListener('click', enableAudioOnClick);
     document.addEventListener('touchstart', enableAudioOnClick);
 
-    // Use keyboard dispatcher for keydown if available, otherwise fallback
+    // Use keyboard dispatcher for keydown
     const dispatcher = this.gameServices?.keyboardDispatcher;
-    if (dispatcher) {
-        // Register one-time handler via dispatcher
-        dispatcher.registerOneTimeHandler(() => {
-            if (!this.audioEnabled) {
-                this.enableAudio();
-            }
-        });
-    } else {
-        // Fallback for when dispatcher not available
-        const keyHandler = () => {
-            if (!this.audioEnabled) {
-                this.enableAudio();
-            }
-            document.removeEventListener('keydown', keyHandler);
-        };
-        document.addEventListener('keydown', keyHandler);
+    if (!dispatcher) {
+        throw new Error('KeyboardDispatcherService not available - required for audio keyboard handling');
     }
+
+    // Register one-time handler via dispatcher
+    dispatcher.registerOneTimeHandler(() => {
+        if (!this.audioEnabled) {
+            this.enableAudio();
+        }
+    });
 
     // Check if audio was previously enabled
     if (sessionStorage.getItem('audioEnabled') === 'true') {
