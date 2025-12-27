@@ -57,36 +57,25 @@ class ModalEngine {
      * Setup keyboard handling via KeyboardDispatcherService
      */
     setupKeyboardHandling() {
-        const dispatcher = window.game?.gameServices?.keyboardDispatcher;
-        if (!dispatcher) {
-            throw new Error('KeyboardDispatcherService not available - required for modal keyboard handling');
-        }
-
-        this.keyboardDispatcher = dispatcher;
-
-        // Register MODAL context handler
-        dispatcher.registerHandler('MODAL', '*', (e) => {
-            return this.handleKeyboardDispatcher(e);
-        });
+        const dispatcher = window.game.gameServices.keyboardDispatcher;
+        dispatcher.registerHandler('MODAL', '*', (e) => this.handleKeyboard(e));
     }
 
     /**
-     * Handle keyboard via dispatcher - returns true if consumed
+     * Handle keyboard - returns true if consumed
      */
-    handleKeyboardDispatcher(e) {
+    handleKeyboard(e) {
         if (this.modalStack.length === 0) return false;
 
         const topModalId = this.modalStack[this.modalStack.length - 1];
         const modal = this.activeModals.find(m => m.id === topModalId);
         if (!modal) return false;
 
-        // ESC to close
         if (e.key === 'Escape' && modal.config.closeButton) {
             modal.close();
             return true;
         }
 
-        // Number keys for NPC choices
         if (modal.config.type === 'npc' && /^[1-9]$/.test(e.key)) {
             const choiceIndex = parseInt(e.key) - 1;
             const choiceBtn = modal.element.querySelector(`[data-choice-index="${choiceIndex}"]`);
@@ -103,22 +92,14 @@ class ModalEngine {
      * Activate MODAL keyboard context
      */
     activateKeyboardContext() {
-        // Try to get dispatcher if not already set
-        if (!this.keyboardDispatcher) {
-            this.keyboardDispatcher = window.game?.gameServices?.keyboardDispatcher;
-        }
-        if (this.keyboardDispatcher) {
-            this.keyboardDispatcher.activateContext('MODAL');
-        }
+        window.game.gameServices.keyboardDispatcher.activateContext('MODAL');
     }
 
     /**
      * Deactivate MODAL keyboard context
      */
     deactivateKeyboardContext() {
-        if (this.keyboardDispatcher) {
-            this.keyboardDispatcher.deactivateContext('MODAL');
-        }
+        window.game.gameServices.keyboardDispatcher.deactivateContext('MODAL');
     }
 
     /**
@@ -634,33 +615,6 @@ class ModalEngine {
                 textElement.innerHTML = updates.text;
                 // Typing effect disabled - was causing issues
                 // this.startTypingEffect(modalId, updates.text);
-            }
-        }
-    }
-
-    /**
-     * Handle keyboard events
-     */
-    handleKeyboard(e) {
-        if (this.modalStack.length === 0) return;
-
-        const topModalId = this.modalStack[this.modalStack.length - 1];
-        const modal = this.activeModals.find(m => m.id === topModalId);
-        if (!modal) return;
-
-        // ESC to close
-        if (e.key === 'Escape' && modal.config.closeButton) {
-            modal.close();
-            e.preventDefault();
-        }
-
-        // Number keys for NPC choices
-        if (modal.config.type === 'npc' && /^[1-9]$/.test(e.key)) {
-            const choiceIndex = parseInt(e.key) - 1;
-            const choiceBtn = modal.element.querySelector(`[data-choice-index="${choiceIndex}"]`);
-            if (choiceBtn) {
-                choiceBtn.click();
-                e.preventDefault();
             }
         }
     }

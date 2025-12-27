@@ -10,15 +10,8 @@
 
 // Start key rebinding
 CyberOpsGame.prototype.startKeyRebind = function(action) {
-    const keybindingService = this.gameServices?.keybindingService;
-    if (!keybindingService) {
-        throw new Error('KeybindingService not available - required for key rebinding');
-    }
-
-    const dispatcher = this.gameServices?.keyboardDispatcher;
-    if (!dispatcher) {
-        throw new Error('KeyboardDispatcherService not available - required for key rebinding');
-    }
+    const keybindingService = this.gameServices.keybindingService;
+    const dispatcher = this.gameServices.keyboardDispatcher;
 
     const input = document.getElementById(`key-${action}`);
     if (!input) return;
@@ -27,47 +20,33 @@ CyberOpsGame.prototype.startKeyRebind = function(action) {
     input.style.borderColor = '#ffff00';
     input.value = 'Press any key...';
 
-    // Handler function for key capture
     const handleKeyCapture = (e) => {
         let key = e.key;
-
-        // Special handling for certain keys
         if (e.code === 'Space') key = ' ';
         else if (e.code.startsWith('Key')) key = e.code.substring(3);
         else if (e.code.startsWith('Digit')) key = e.code.substring(5);
 
-        // Try to update binding
         if (keybindingService.updateBinding(action, key)) {
             input.value = key;
             input.style.background = 'rgba(0, 255, 0, 0.2)';
             input.style.borderColor = '#00ff00';
-
-            setTimeout(() => {
-                input.style.background = 'rgba(0, 0, 0, 0.5)';
-                input.style.borderColor = '#444';
-            }, 1000);
         } else {
-            // Conflict detected
             input.value = keybindingService.getKey(action);
             input.style.background = 'rgba(255, 0, 0, 0.2)';
             input.style.borderColor = '#ff4444';
-
-            setTimeout(() => {
-                input.style.background = 'rgba(0, 0, 0, 0.5)';
-                input.style.borderColor = '#444';
-            }, 1000);
         }
 
-        // Cleanup
+        setTimeout(() => {
+            input.style.background = 'rgba(0, 0, 0, 0.5)';
+            input.style.borderColor = '#444';
+        }, 1000);
+
         dispatcher.deactivateContext('KEY_REBIND');
         dispatcher.unregisterHandler('KEY_REBIND', '*');
-
-        return true; // Consumed
+        return true;
     };
 
-    // Register wildcard handler for KEY_REBIND context
     dispatcher.registerHandler('KEY_REBIND', '*', handleKeyCapture);
-    // Activate KEY_REBIND context (blocks all others)
     dispatcher.activateContext('KEY_REBIND');
 };
 

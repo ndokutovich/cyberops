@@ -1263,60 +1263,49 @@ class DeclarativeDialogEngine {
     }
 
     /**
-     * Setup keyboard handling via KeyboardDispatcherService
+     * Setup keyboard handling
      */
     setupKeyboardHandling() {
-        const dispatcher = window.game?.gameServices?.keyboardDispatcher;
-        if (!dispatcher) {
-            throw new Error('KeyboardDispatcherService not available - required for dialog keyboard handling');
-        }
-
-        if (this.logger) this.logger.debug('🎮 Registering dialog keyboard handlers with dispatcher');
-
-        // Register a wildcard handler for DIALOG context that routes to our config
-        dispatcher.registerHandler('DIALOG', '*', (e) => {
-            // Check if dialog is active
-            if (this.stateStack.length === 0) return false;
-
-            const currentState = this.config.states[this.currentState];
-            if (!currentState) return false;
-
-            // Check state-specific keyboard config
-            const stateKeyboard = currentState.keyboard?.[e.key];
-            if (stateKeyboard) {
-                this.handleAction(stateKeyboard, { key: e.key });
-                return true; // Consumed
-            }
-
-            // Check global keyboard config
-            const globalKeyboard = this.config.keyboard?.global?.[e.key];
-            if (globalKeyboard) {
-                this.handleAction(globalKeyboard, { key: e.key });
-                return true; // Consumed
-            }
-
-            return false; // Not consumed
-        });
-
-        this.keyboardDispatcher = dispatcher;
+        const dispatcher = window.game.gameServices.keyboardDispatcher;
+        dispatcher.registerHandler('DIALOG', '*', (e) => this.handleKeyboard(e));
     }
 
     /**
-     * Activate DIALOG context when opening dialogs
+     * Handle keyboard - returns true if consumed
+     */
+    handleKeyboard(e) {
+        if (this.stateStack.length === 0) return false;
+
+        const currentState = this.config.states[this.currentState];
+        if (!currentState) return false;
+
+        const stateKeyboard = currentState.keyboard?.[e.key];
+        if (stateKeyboard) {
+            this.handleAction(stateKeyboard, { key: e.key });
+            return true;
+        }
+
+        const globalKeyboard = this.config.keyboard?.global?.[e.key];
+        if (globalKeyboard) {
+            this.handleAction(globalKeyboard, { key: e.key });
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Activate DIALOG context
      */
     activateKeyboardContext() {
-        if (this.keyboardDispatcher) {
-            this.keyboardDispatcher.activateContext('DIALOG');
-        }
+        window.game.gameServices.keyboardDispatcher.activateContext('DIALOG');
     }
 
     /**
-     * Deactivate DIALOG context when closing dialogs
+     * Deactivate DIALOG context
      */
     deactivateKeyboardContext() {
-        if (this.keyboardDispatcher) {
-            this.keyboardDispatcher.deactivateContext('DIALOG');
-        }
+        window.game.gameServices.keyboardDispatcher.deactivateContext('DIALOG');
     }
 
     /**

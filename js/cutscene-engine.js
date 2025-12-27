@@ -109,31 +109,13 @@ class CutsceneEngine {
     }
 
     /**
-     * Setup keyboard handling via KeyboardDispatcherService
+     * Setup keyboard handling
      */
     setupKeyboardHandling() {
-        const dispatcher = window.game?.gameServices?.keyboardDispatcher;
-        if (!dispatcher) {
-            throw new Error('KeyboardDispatcherService not available - required for cutscene keyboard handling');
-        }
-
-        this.keyboardDispatcher = dispatcher;
-
-        // Register CUTSCENE context handlers
-        dispatcher.registerHandler('CUTSCENE', 'Space', (e) => {
-            e.preventDefault();
-            this.advance();
-        });
-        dispatcher.registerHandler('CUTSCENE', 'Enter', (e) => {
-            e.preventDefault();
-            this.advance();
-        });
-        dispatcher.registerHandler('CUTSCENE', 'Escape', (e) => {
-            e.preventDefault();
-            this.skip();
-        });
-
-        // Activate CUTSCENE context (highest priority)
+        const dispatcher = window.game.gameServices.keyboardDispatcher;
+        dispatcher.registerHandler('CUTSCENE', 'Space', () => this.advance());
+        dispatcher.registerHandler('CUTSCENE', 'Enter', () => this.advance());
+        dispatcher.registerHandler('CUTSCENE', 'Escape', () => this.skip());
         dispatcher.activateContext('CUTSCENE');
     }
 
@@ -141,14 +123,11 @@ class CutsceneEngine {
      * Remove keyboard handling
      */
     removeKeyboardHandling() {
-        if (this.keyboardDispatcher) {
-            // Deactivate CUTSCENE context
-            this.keyboardDispatcher.deactivateContext('CUTSCENE');
-            // Clear handlers
-            this.keyboardDispatcher.unregisterHandler('CUTSCENE', 'Space');
-            this.keyboardDispatcher.unregisterHandler('CUTSCENE', 'Enter');
-            this.keyboardDispatcher.unregisterHandler('CUTSCENE', 'Escape');
-        }
+        const dispatcher = window.game.gameServices.keyboardDispatcher;
+        dispatcher.deactivateContext('CUTSCENE');
+        dispatcher.unregisterHandler('CUTSCENE', 'Space');
+        dispatcher.unregisterHandler('CUTSCENE', 'Enter');
+        dispatcher.unregisterHandler('CUTSCENE', 'Escape');
     }
 
     /**
