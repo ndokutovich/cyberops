@@ -107,7 +107,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         toggleFogOfWar: () => this.toggleFogOfWar(),
 
         // Game Control
-        pause: () => {
+        toggleTurnBasedMode: () => {
             if (this.currentScreen === 'game') {
                 this.toggleTurnBasedMode();
             } else {

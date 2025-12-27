@@ -67,7 +67,7 @@ class KeybindingService {
         this.registerBinding('missionProgress', 'J', 'Mission Progress', 'ui');
 
         // Game Control
-        this.registerBinding('pause', ' ', 'Pause/Turn-Based Mode', 'game');
+        this.registerBinding('toggleTurnBasedMode', ' ', 'Toggle Turn-Based Mode', 'game');
         this.registerBinding('endTurn', 'Y', 'End Turn', 'game');
         this.registerBinding('gridSnap', 'B', 'Grid Snap Toggle', 'game');
         this.registerBinding('cycleSpeed', 'Z', 'Cycle Game Speed', 'game');

@@ -77,7 +77,7 @@ All keys below can be rebound in Settings > Keyboard.
 ### Game Control
 | Key | Action | Description |
 |-----|--------|-------------|
-| `Space` | pause | Toggle turn-based mode / Pause |
+| `Space` | toggleTurnBasedMode | Toggle Turn-Based Mode |
 | `Y` | endTurn | End current turn (turn-based) |
 | `B` | gridSnap | Toggle grid snap (turn-based) |
 | `Z` | cycleSpeed | Cycle game speed (1x/2x/4x) |
