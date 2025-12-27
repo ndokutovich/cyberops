@@ -57,8 +57,14 @@ class ModalEngine {
      * Setup keyboard handling via KeyboardDispatcherService
      */
     setupKeyboardHandling() {
+        if (this._keyboardHandlingSetup) return; // Already set up
+        if (!window.game?.gameServices?.keyboardDispatcher) {
+            // Game not initialized yet, will be called later
+            return;
+        }
         const dispatcher = window.game.gameServices.keyboardDispatcher;
         dispatcher.registerHandler('MODAL', '*', (e) => this.handleKeyboard(e));
+        this._keyboardHandlingSetup = true;
     }
 
     /**
@@ -92,14 +98,16 @@ class ModalEngine {
      * Activate MODAL keyboard context
      */
     activateKeyboardContext() {
-        window.game.gameServices.keyboardDispatcher.activateContext('MODAL');
+        // Ensure keyboard handling is set up (lazy initialization)
+        this.setupKeyboardHandling();
+        window.game?.gameServices?.keyboardDispatcher?.activateContext('MODAL');
     }
 
     /**
      * Deactivate MODAL keyboard context
      */
     deactivateKeyboardContext() {
-        window.game.gameServices.keyboardDispatcher.deactivateContext('MODAL');
+        window.game?.gameServices?.keyboardDispatcher?.deactivateContext('MODAL');
     }
 
     /**
