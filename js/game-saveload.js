@@ -356,7 +356,7 @@ CyberOpsGame.prototype.returnToInitialScreen = function() {
         }
 
         // Clear session storage audio permission (will require fresh start)
-        sessionStorage.removeItem('cyberops_audio_enabled');
+        sessionStorage.removeItem('audioEnabled');
 
         // Show initial screen
         const initialScreen = document.getElementById('initialScreen');
