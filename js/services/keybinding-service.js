@@ -42,9 +42,9 @@ class KeybindingService {
         this.registerBinding('shield', 'Q', 'Activate Shield', 'abilities');
         this.registerBinding('stealth', 'E', 'Stealth Mode', 'abilities');
 
-        // Team Commands - Changed to avoid conflicts
+        // Team Commands
         this.registerBinding('teamHold', 'X', 'Team: Hold Position', 'team');
-        this.registerBinding('teamPatrol', 'C', 'Team: Patrol Area', 'team');
+        this.registerBinding('teamPatrol', 'N', 'Team: Patrol Area', 'team');
         this.registerBinding('teamFollow', 'V', 'Team: Follow Leader', 'team');
 
         // Camera & View
