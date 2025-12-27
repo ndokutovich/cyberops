@@ -159,8 +159,22 @@ class MissionService {
             }
         }
 
-        // No fallback - all validators must be registered via registerValidator()
-        if (this.logger) this.logger.error(`Validator not registered: ${objective.checkFunction}. Use registerValidator() to add custom validators.`);
+        // Check for mission-defined window functions (for mission-specific validators)
+        if (typeof window !== 'undefined' && typeof window[objective.checkFunction] === 'function') {
+            try {
+                return window[objective.checkFunction](gameState?.game, objective, this);
+            } catch (error) {
+                if (this.logger) this.logger.error(`Window validator ${objective.checkFunction} failed:`, error);
+                return false;
+            }
+        }
+
+        // Only log once per unknown validator to avoid spam
+        if (!this._unknownValidators) this._unknownValidators = new Set();
+        if (!this._unknownValidators.has(objective.checkFunction)) {
+            this._unknownValidators.add(objective.checkFunction);
+            if (this.logger) this.logger.warn(`Validator not registered: ${objective.checkFunction}`);
+        }
         return false;
     }
 
