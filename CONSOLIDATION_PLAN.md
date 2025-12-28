@@ -141,9 +141,15 @@ Estimated lines to consolidate: ~2,500+
 
 **Estimated Code**: ~330+ lines
 
-**Solution**: Move all initialization to EquipmentService, remove manual tracking
+**Solution**: Make InventoryService single owner of agentLoadouts via computed property
 
-**Status**: [ ] Not Started
+**Status**: [x] COMPLETED (2025-12-28)
+- game.agentLoadouts is now a computed property delegating to InventoryService (game-core.js:607-621)
+- Updated initializeEquipmentSystem to use InventoryService.setAgentLoadout() (game-equipment.js)
+- Removed redundant sync lines from game-equipment.js (4 locations)
+- Updated dialog-integration.js equipWeapon/equipArmor to use game.equipItem()
+- Updated agent hire flow to use InventoryService.setAgentLoadout()
+- All getter usages in game-flow.js, game-hub.js work correctly via computed property
 
 ---
 
@@ -178,7 +184,11 @@ Estimated lines to consolidate: ~2,500+
 
 **Solution**: Centralize mission entity initialization
 
-**Status**: [ ] Not Started
+**Status**: [x] ALREADY DONE (discovered 2025-12-28)
+- EnemyService already exists and handles enemy spawning (js/services/enemy-service.js)
+- All spawn calls in game-flow.js already use enemyService.spawnEnemy()
+- Functions in game-mission-executor.js are just stubs (no actual logic)
+- No additional MissionSetupService needed - EnemyService covers this use case
 
 ---
 
@@ -195,7 +205,12 @@ Estimated lines to consolidate: ~2,500+
 
 **Solution**: Convert to computed properties/reactive state
 
-**Status**: [ ] Not Started
+**Status**: [~] LOW PRIORITY (assessed 2025-12-28)
+- updateHubStats works correctly as a manual refresh function
+- Called from 10+ locations after state changes (hiring, missions, etc.)
+- Converting to reactive pattern would require significant UI refactoring
+- Current pattern is functional and well-tested
+- FUTURE: Could add reactive updates via event listeners on services
 
 ---
 
@@ -208,7 +223,7 @@ Estimated lines to consolidate: ~2,500+
 | MissionService Expansion | DONE | 2025-12-28 | +120 (validators), -20 (old checks) |
 | DialogStateService | DONE | 2025-12-28 | +340 (service), +60 (migration) |
 | DialogStateService Migration | DONE | 2025-12-28 | 14 files, ~55 usages migrated |
-| EquipmentService | - | - | - |
+| EquipmentService | DONE | 2025-12-28 | -30 (sync removal), ~25 (service calls) |
 | NPCService | - | - | - |
-| MissionSetupService | - | - | - |
-| HubStateService | - | - | - |
+| MissionSetupService | ALREADY DONE | 2025-12-28 | EnemyService handles spawning |
+| HubStateService | LOW PRIORITY | 2025-12-28 | Works as-is, future enhancement |

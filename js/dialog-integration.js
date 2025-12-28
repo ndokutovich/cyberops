@@ -3066,15 +3066,19 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
             if (success) {
                 if (this.logger) this.logger.info(`✅ Successfully hired ${agent.name} through AgentService`);
 
-                // Initialize equipment loadout for new agent
-                if (game.agentLoadouts && !game.agentLoadouts[agent.id]) {
-                    game.agentLoadouts[agent.id] = {
-                        weapon: null,
-                        armor: null,
-                        utility: null,
-                        special: null
-                    };
-                    if (this.logger) this.logger.info(`Initialized loadout for ${agent.name}`);
+                // Initialize equipment loadout for new agent via InventoryService
+                const invService = game.gameServices?.inventoryService;
+                if (invService) {
+                    const existingLoadout = invService.getAgentLoadout(agent.id);
+                    if (!existingLoadout.weapon && !existingLoadout.armor && !existingLoadout.utility) {
+                        invService.setAgentLoadout(agent.id, {
+                            weapon: null,
+                            armor: null,
+                            utility: null,
+                            special: null
+                        });
+                        if (this.logger) this.logger.info(`Initialized loadout for ${agent.name}`);
+                    }
                 }
             }
 
@@ -3258,70 +3262,29 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         game.dialogEngine.navigateTo('arsenal');
     });
 
-    // Equip weapon
+    // Equip weapon - uses game.equipItem() which delegates to InventoryService
     engine.registerAction('equipWeapon', function(params) {
         const [agentId, weaponId] = params.split(':');
 
-        if (!game.agentLoadouts) {
-            game.initializeEquipmentSystem();
-        }
-
-        // Update loadout
-        if (!game.agentLoadouts[agentId]) {
-            game.agentLoadouts[agentId] = {};
-        }
-        game.agentLoadouts[agentId].weapon = parseInt(weaponId);
-
-        // Update agent stats if needed
-        const agent = game.gameServices?.agentService?.getAgent(agentId);
-        const weapon = game.weapons.find(w => String(w.id) === String(weaponId));
-        if (agent && weapon) {
-            agent.weaponEquipped = weapon;
-        }
-
-        // If we're in a mission, also update the mission agent's weapon property
-        if (game.currentScreen === 'game' && game.agents) {
-            // Try to find the mission agent using various ID formats
-            const missionAgent = game.agents.find(a =>
-                a.name === agentId ||
-                String(a.id) === String(agentId)
-            );
-
-            if (missionAgent && weapon) {
-                missionAgent.weapon = {
-                    type: weapon.id,
-                    damage: weapon.damage,
-                    range: weapon.range || 5
-                };
-                if (game.logger) game.logger.info(`⚔️ Equipped ${weapon.name} to ${missionAgent.name} (damage: ${weapon.damage})`);
-            } else {
-                if (game.logger) game.logger.debug(`⚠️ Could not find mission agent for ID: ${agentId}`);
-            }
+        // Use game.equipItem() which properly uses InventoryService
+        // This handles: loadout update, agent stats, mission agent weapon, UI refresh
+        const success = game.equipItem(agentId, 'weapon', parseInt(weaponId));
+        if (!success) {
+            if (game.logger) game.logger.warn(`Failed to equip weapon ${weaponId} to agent ${agentId}`);
         }
 
         // Refresh the current dialog
         this.actionRegistry.get('refresh')();
     });
 
-    // Equip armor
+    // Equip armor - uses game.equipItem() which delegates to InventoryService
     engine.registerAction('equipArmor', function(params) {
         const [agentId, armorId] = params.split(':');
 
-        if (!game.agentLoadouts) {
-            game.initializeEquipmentSystem();
-        }
-
-        // Update loadout
-        if (!game.agentLoadouts[agentId]) {
-            game.agentLoadouts[agentId] = {};
-        }
-        game.agentLoadouts[agentId].armor = parseInt(armorId);
-
-        // Update agent stats if needed
-        const agent = game.gameServices?.agentService?.getAgent(agentId);
-        const armor = game.equipment.find(e => String(e.id) === String(armorId) && e.type === 'armor');
-        if (agent && armor) {
-            agent.armorEquipped = armor;
+        // Use game.equipItem() which properly uses InventoryService
+        const success = game.equipItem(agentId, 'armor', parseInt(armorId));
+        if (!success) {
+            if (game.logger) game.logger.warn(`Failed to equip armor ${armorId} to agent ${agentId}`);
         }
 
         // Refresh the current dialog

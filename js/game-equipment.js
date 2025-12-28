@@ -5,32 +5,30 @@
 
 // Initialize equipment management
 CyberOpsGame.prototype.initializeEquipmentSystem = function() {
-    // Store agent loadouts (persists between missions)
-    this.agentLoadouts = {};
-
     // Track selected agent in equipment screen
     this.selectedEquipmentAgent = null;
 
-    // Initialize loadouts for existing agents
-    this.activeAgents.forEach(agent => {
-        if (!this.agentLoadouts[agent.id]) {
-            this.agentLoadouts[agent.id] = {
-                weapon: null,
-                armor: null,
-                utility: null,
-                special: null
-            };
-            if (this.logger) {
-                this.logger.debug(`📦 Initialized loadout for agent with ID: ${agent.id}, name: ${agent.name}`);
+    // Initialize loadouts for active agents via InventoryService (single source of truth)
+    const inventoryService = this.gameServices?.inventoryService;
+    if (inventoryService) {
+        this.activeAgents.forEach(agent => {
+            const existingLoadout = inventoryService.getAgentLoadout(agent.id);
+            // Only initialize if no loadout exists (preserve existing from save/import)
+            if (!existingLoadout.weapon && !existingLoadout.armor && !existingLoadout.utility) {
+                inventoryService.setAgentLoadout(agent.id, {
+                    weapon: null,
+                    armor: null,
+                    utility: null,
+                    special: null
+                });
+                if (this.logger) {
+                    this.logger.debug(`📦 Initialized loadout for agent: ${agent.id} (${agent.name})`);
+                }
             }
-        }
-    });
-
-    // Initialize InventoryService if available
-    if (this.gameServices && this.gameServices.inventoryService) {
-        if (this.logger) this.logger.debug('🎒 Initializing InventoryService...');
-        this.gameServices.inventoryService.initializeFromGame(this);
-        if (this.logger) this.logger.info('✅ InventoryService initialized');
+        });
+        if (this.logger) this.logger.info('✅ Equipment system initialized via InventoryService');
+    } else {
+        if (this.logger) this.logger.warn('⚠️ InventoryService not available for equipment init');
     }
 
     // Add global handler for equipment dialog close buttons (fallback)
@@ -285,9 +283,6 @@ CyberOpsGame.prototype.equipItem = function(agentId, slot, itemId) {
     // ONLY use InventoryService
     const success = this.gameServices.inventoryService.equipItem(agentId, slot, itemId);
     if (success) {
-        // Sync loadouts from InventoryService
-        this.agentLoadouts = this.gameServices.inventoryService.agentLoadouts;
-
         // Apply equipment to agent if they're active
         const agent = this.activeAgents.find(a =>
             a.id === agentId || a.originalId === agentId || a.name === agentId
@@ -329,9 +324,6 @@ CyberOpsGame.prototype.unequipItem = function(agentId, slot) {
     // ONLY use InventoryService
     const success = this.gameServices.inventoryService.unequipItem(agentId, slot);
     if (success) {
-        // Sync loadouts from InventoryService
-        this.agentLoadouts = this.gameServices.inventoryService.agentLoadouts;
-
         // Update agent if they're active
         const agent = this.activeAgents.find(a =>
             a.id === agentId || a.originalId === agentId || a.name === agentId
@@ -563,9 +555,7 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         }
     });
 
-    // Sync back - but NEVER overwrite with empty arrays
-    this.agentLoadouts = invService.agentLoadouts;
-    // Only sync weapons if InventoryService has valid data
+    // Only sync weapons if InventoryService has valid data (agentLoadouts already delegated via computed property)
     if (invService.inventory.weapons && invService.inventory.weapons.length > 0) {
         this.weapons = invService.inventory.weapons;
     }
@@ -699,8 +689,7 @@ CyberOpsGame.prototype.optimizeLoadouts = function() {
         invService.applyAgentEquipment(agent);
     });
 
-    // Sync loadouts back from InventoryService
-    this.agentLoadouts = invService.agentLoadouts;
+    // agentLoadouts already delegated via computed property - no sync needed
 
     if (logger) {
         logger.info(`✅ Optimization complete. Final loadout keys: ${Object.keys(invService.agentLoadouts).join(', ')}`);
