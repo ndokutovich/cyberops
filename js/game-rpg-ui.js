@@ -962,8 +962,13 @@ CyberOpsGame.prototype.showSkillTree = function(agentId) {
         throw new Error('DialogStateService not initialized - cannot show skill tree');
     }
 
+    // Set agentId on BOTH dialogService.stateData AND engine.stateData
+    // (they are separate objects - generators read from engine.stateData)
     dialogService.stateData.agentId = agentId;
-    if (this.logger) this.logger.debug(`🎯 Set dialogService.stateData.agentId to: ${agentId}`);
+    if (dialogService.engine?.stateData) {
+        dialogService.engine.stateData.agentId = agentId;
+    }
+    if (this.logger) this.logger.debug(`🎯 Set stateData.agentId to: ${agentId}`);
     dialogService.navigateTo('skill-tree');
 };
 
@@ -1075,7 +1080,12 @@ CyberOpsGame.prototype.showPerkSelection = function(agentId) {
         throw new Error('DialogStateService not initialized - cannot show perk selection');
     }
 
+    // Set agentId on BOTH dialogService.stateData AND engine.stateData
+    // (they are separate objects - generators read from engine.stateData)
     dialogService.stateData.agentId = agentId;
+    if (dialogService.engine?.stateData) {
+        dialogService.engine.stateData.agentId = agentId;
+    }
     dialogService.navigateTo('perk-selection');
 };
 
