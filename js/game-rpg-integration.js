@@ -165,7 +165,22 @@ class RPGManager {
         if (this.logger) this.logger.debug(`   - Max AP: ${derived.maxAP}`);
 
         // Register entity
-        this.entities.set(baseAgent.id || baseAgent.name, rpgAgent);
+        const entityId = baseAgent.originalId || baseAgent.id || baseAgent.name;
+        this.entities.set(entityId, rpgAgent);
+        // Also register by name as fallback
+        if (baseAgent.name && baseAgent.name !== entityId) {
+            this.entities.set(baseAgent.name, rpgAgent);
+        }
+
+        // Apply any pending saved data (from save/load)
+        // This is critical for preserving skills/stats after quick load
+        const rpgService = window.GameServices?.rpgService;
+        if (rpgService?.applyPendingEntityData) {
+            rpgService.applyPendingEntityData(entityId, rpgAgent);
+            if (baseAgent.name && baseAgent.name !== entityId) {
+                rpgService.applyPendingEntityData(baseAgent.name, rpgAgent);
+            }
+        }
 
         return rpgAgent;
     }

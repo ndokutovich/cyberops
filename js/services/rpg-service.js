@@ -260,6 +260,14 @@ if (typeof RPGService === 'undefined') {
         const rpgEntity = this.rpgManager.createRPGAgent(agent, className);
         agent.rpgEntity = rpgEntity;
 
+        // Apply any pending saved data (from save/load)
+        const agentId = agent.originalId || agent.id || agent.name;
+        this.applyPendingEntityData(agentId, rpgEntity);
+        // Also try by name as fallback
+        if (agent.name && agent.name !== agentId) {
+            this.applyPendingEntityData(agent.name, rpgEntity);
+        }
+
         // Create inventory
         if (this.inventoryManager) {
             const derived = this.rpgManager.calculateDerivedStats(rpgEntity);
