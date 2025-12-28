@@ -481,9 +481,32 @@ Quest.prototype.checkObjective = function(objective, game) {
                 return false;
 
             case 'interact':
-                // Check for terminal hacking
+                // Check for explosive interactions
+                if (objective.target === 'explosive') {
+                    if (game.gameServices && game.gameServices.missionService) {
+                        const explosivesPlanted = game.gameServices.missionService.trackers.explosivesPlanted || 0;
+                        return explosivesPlanted >= (objective.count || 1);
+                    }
+                    return false;
+                }
+                // Check for gate interactions
+                if (objective.target === 'gate') {
+                    if (game.gameServices && game.gameServices.missionService) {
+                        const gatesBreached = game.gameServices.missionService.trackers.gatesBreached || 0;
+                        return gatesBreached >= (objective.count || 1);
+                    }
+                    return false;
+                }
+                // Check for terminal interactions
+                if (objective.target === 'terminal') {
+                    if (game.gameServices && game.gameServices.missionService) {
+                        const terminalsHacked = game.gameServices.missionService.trackers.terminalsHacked || 0;
+                        return terminalsHacked >= (objective.count || 1);
+                    }
+                    return false;
+                }
+                // Legacy: Check for terminal hacking by targetId
                 if (objective.targetId && objective.targetId.includes('terminal')) {
-                    // Check if this specific terminal is hacked
                     if (game.terminals) {
                         const terminal = game.terminals.find(t =>
                             t.id === objective.targetId ||
@@ -491,8 +514,9 @@ Quest.prototype.checkObjective = function(objective, game) {
                         );
                         return terminal && terminal.hacked;
                     }
-                    return false; // No terminal hacked
+                    return false;
                 }
+                // Check NPC interaction
                 return game.npcInteractions && game.npcInteractions.has(objective.npcId);
 
             case 'survive':
