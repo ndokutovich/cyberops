@@ -104,12 +104,18 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
                 displayText = displayText.replace('{required}', required);
             }
 
+            // Build progress string for display
+            let progressStr = '';
+            if (obj.progress !== undefined && obj.maxProgress !== undefined) {
+                progressStr = `${obj.progress}/${obj.maxProgress}`;
+            }
+
             summary.mainObjectives.push({
                 name: obj.id,
                 description: displayText,
                 completed: completed,
                 required: obj.required !== false,
-                progress: null  // Progress now embedded in description
+                progress: progressStr
             });
 
             if (completed) {
