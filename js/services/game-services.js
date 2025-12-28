@@ -83,12 +83,6 @@ if (typeof GameServices === 'undefined') {
             if (this.logger) this.logger.debug('QuestService initialized');
         }
 
-        // SaveGame service for save/load operations
-        if (window.SaveGameService) {
-            this.saveGameService = new SaveGameService(this.gameStateService);
-            if (this.logger) this.logger.debug('SaveGameService initialized');
-        }
-
         // Keybinding service for keyboard shortcut management
         if (window.KeybindingService) {
             this.keybindingService = new KeybindingService();

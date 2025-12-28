@@ -607,14 +607,29 @@ class AgentService {
             if (this.fallenAgents.length > 0) {
                 this.logger.warn(`   ⚠️ EXPORTING ${this.fallenAgents.length} FALLEN AGENTS: ${this.fallenAgents.map(a => a.name).join(', ')}`);
             }
+            // DEBUG: Log rpgEntity presence and stats for each active agent
+            this.activeAgents.forEach(a => {
+                if (a.rpgEntity) {
+                    this.logger.info(`📤 SAVE ${a.name} has rpgEntity, stats:`, JSON.stringify(a.rpgEntity.stats));
+                } else {
+                    this.logger.warn(`⚠️ SAVE ${a.name} HAS NO rpgEntity!`);
+                }
+            });
         }
 
         // CRITICAL: Create DEEP COPIES of agent arrays to prevent snapshot corruption
         // If we return references, when agents die during the mission, the snapshot will be modified!
+        // IMPORTANT: Exclude rpgEntity from spread - it's a class instance with getters that don't
+        // serialize properly through JSON. RPGService handles RPG data export/import separately.
+        const serializeAgent = (a) => {
+            const { rpgEntity, ...agentData } = a;  // Exclude rpgEntity
+            return agentData;
+        };
+
         return {
-            availableAgents: this.availableAgents.map(a => ({...a})),  // Deep copy
-            activeAgents: this.activeAgents.map(a => ({...a})),        // Deep copy
-            fallenAgents: this.fallenAgents.map(a => ({...a})),        // Deep copy
+            availableAgents: this.availableAgents.map(serializeAgent),  // Deep copy without rpgEntity
+            activeAgents: this.activeAgents.map(serializeAgent),        // Deep copy without rpgEntity
+            fallenAgents: this.fallenAgents.map(serializeAgent),        // Deep copy without rpgEntity
             selectedAgents: this.selectedAgents.map(a => a.id),
             nextAgentId: this.nextAgentId
         };
@@ -644,43 +659,88 @@ class AgentService {
         this.agentByName.clear();
 
         // Load available agents
+        // NOTE: rpgEntity is NOT saved in agent data - restore from rpgManager
         if (state.availableAgents && Array.isArray(state.availableAgents)) {
             state.availableAgents.forEach(agentData => {
                 const agent = this.createAgent({ ...agentData, hired: false });
                 this.availableAgents.push(agent);
                 this.indexAgent(agent);
+
+                // Restore rpgEntity from rpgManager if available
+                const rpgService = window.GameServices?.rpgService;
+                const rpgManager = rpgService?.rpgManager;
+                if (rpgManager?.entities) {
+                    const agentId = agent.originalId || agent.id;
+                    const rpgEntity = rpgManager.entities.get(agentId)
+                                   || rpgManager.entities.get(String(agentId))
+                                   || rpgManager.entities.get(agent.name);
+                    if (rpgEntity) {
+                        agent.rpgEntity = rpgEntity;
+                    }
+                }
             });
         }
 
         // Load active agents with RPG entity restoration
+        // NOTE: rpgEntity is NOT saved in agent data (class instance with getters doesn't serialize)
+        // RPGService handles RPG data separately. We restore rpgEntity from rpgManager after creating agent.
         if (state.activeAgents && Array.isArray(state.activeAgents)) {
             state.activeAgents.forEach(agentData => {
                 const agent = this.createAgent({ ...agentData, hired: true });
                 this.activeAgents.push(agent);
                 this.indexAgent(agent);
 
-                // Re-register and restore RPG entity
-                if (agent.rpgEntity) {
-                    this.reRegisterRPGEntity(agent);
-                    // Apply pending RPG data to ensure skills/stats are restored
-                    const rpgService = window.GameServices?.rpgService;
-                    if (rpgService?.applyPendingEntityData) {
-                        const agentId = agent.originalId || agent.id || agent.name;
-                        rpgService.applyPendingEntityData(agentId, agent.rpgEntity);
-                        if (agent.name && agent.name !== agentId) {
-                            rpgService.applyPendingEntityData(agent.name, agent.rpgEntity);
+                // Restore rpgEntity from rpgManager (RPGService already imported correct stats)
+                const rpgService = window.GameServices?.rpgService;
+                const rpgManager = rpgService?.rpgManager;
+                if (rpgManager?.entities) {
+                    // Try to find entity by various IDs
+                    const agentId = agent.originalId || agent.id;
+                    let rpgEntity = rpgManager.entities.get(agentId)
+                                 || rpgManager.entities.get(String(agentId))
+                                 || rpgManager.entities.get(agent.name);
+
+                    if (rpgEntity) {
+                        agent.rpgEntity = rpgEntity;
+                        if (this.logger) {
+                            this.logger.info(`📥 RESTORED ${agent.name} rpgEntity from rpgManager, stats:`, JSON.stringify(rpgEntity.stats));
                         }
+                    } else if (this.logger) {
+                        this.logger.warn(`⚠️ Could not find rpgEntity for ${agent.name} in rpgManager`);
+                    }
+                }
+
+                // Apply any pending RPG data (in case entity wasn't in rpgManager yet)
+                if (agent.rpgEntity && rpgService?.applyPendingEntityData) {
+                    const agentId = agent.originalId || agent.id || agent.name;
+                    rpgService.applyPendingEntityData(agentId, agent.rpgEntity);
+                    if (agent.name && agent.name !== agentId) {
+                        rpgService.applyPendingEntityData(agent.name, agent.rpgEntity);
                     }
                 }
             });
         }
 
         // Load fallen agents
+        // NOTE: rpgEntity is NOT saved in agent data - restore from rpgManager for memorial display
         if (state.fallenAgents && Array.isArray(state.fallenAgents)) {
             state.fallenAgents.forEach(agentData => {
                 const agent = this.createAgent({ ...agentData, hired: true, alive: false });
                 this.fallenAgents.push(agent);
                 this.indexAgent(agent);
+
+                // Restore rpgEntity from rpgManager if available
+                const rpgService = window.GameServices?.rpgService;
+                const rpgManager = rpgService?.rpgManager;
+                if (rpgManager?.entities) {
+                    const agentId = agent.originalId || agent.id;
+                    const rpgEntity = rpgManager.entities.get(agentId)
+                                   || rpgManager.entities.get(String(agentId))
+                                   || rpgManager.entities.get(agent.name);
+                    if (rpgEntity) {
+                        agent.rpgEntity = rpgEntity;
+                    }
+                }
             });
         }
 

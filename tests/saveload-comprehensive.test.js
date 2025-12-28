@@ -402,7 +402,11 @@ describe('AgentService exportState/importState', () => {
         assertEqual(restoredFallen.health, 0, 'fallen agent health');
     });
 
-    it('should preserve agent RPG entity data', () => {
+    it('should EXCLUDE rpgEntity from exported agent data (fix for getter serialization bug)', () => {
+        // This test verifies the fix for the bug where rpgEntity class instances
+        // with getter-based stats would be corrupted during JSON serialization.
+        // Solution: AgentService.exportState() now excludes rpgEntity entirely.
+        // RPGService handles RPG data export/import separately.
         const service = new AgentService();
 
         const agentWithRPG = {
@@ -417,27 +421,48 @@ describe('AgentService exportState/importState', () => {
                 stats: {
                     strength: 10,
                     agility: 14,
-                    intelligence: 20,
-                    endurance: 12,
-                    tech: 18,
-                    charisma: 8
-                },
-                skills: {
-                    hacking: 5,
-                    electronics: 4,
-                    programming: 3,
-                    combat: 2
-                },
-                perks: ['neural_interface', 'code_mastery', 'firewall_expert'],
-                availableStatPoints: 3,
-                availableSkillPoints: 2,
-                availablePerkPoints: 1,
-                derivedStats: {
-                    maxHealth: 120,
-                    critChance: 0.15,
-                    dodgeChance: 0.12
+                    intelligence: 20
                 }
             }
+        };
+
+        service.activeAgents = [service.createAgent(agentWithRPG)];
+        service.indexAgent(service.activeAgents[0]);
+
+        // Verify the agent HAS rpgEntity before export
+        assertTruthy(service.activeAgents[0].rpgEntity, 'agent should have rpgEntity before export');
+
+        // Export - rpgEntity should be EXCLUDED
+        const exported = service.exportState();
+
+        // Verify rpgEntity is NOT in exported data
+        assertEqual(exported.activeAgents[0].rpgEntity, undefined, 'rpgEntity should be undefined in exported data');
+
+        // After import, rpgEntity should be null (not from agent data)
+        // In real usage, rpgEntity is restored from rpgManager by AgentService.importState()
+        const restored = new AgentService();
+        restored.importState(JSON.parse(JSON.stringify(exported)));
+
+        const restoredAgent = restored.getAgent('rpg_agent');
+        assertTruthy(restoredAgent, 'agent should exist after import');
+        assertEqual(restoredAgent.rpgEntity, null, 'rpgEntity should be null (restored from rpgManager in real usage)');
+    });
+
+    it('should preserve all non-rpgEntity agent properties after roundtrip', () => {
+        const service = new AgentService();
+
+        const agentWithRPG = {
+            id: 'rpg_agent',
+            name: 'RPGMaster',
+            hired: true,
+            alive: true,
+            health: 85,
+            maxHealth: 100,
+            damage: 25,
+            level: 10,
+            xp: 50000,
+            specialization: 'tech_specialist',
+            rpgEntity: { /* this will be excluded */ }
         };
 
         service.activeAgents = [service.createAgent(agentWithRPG)];
@@ -448,14 +473,13 @@ describe('AgentService exportState/importState', () => {
         restored.importState(JSON.parse(JSON.stringify(exported)));
 
         const restoredAgent = restored.getAgent('rpg_agent');
-        assertTruthy(restoredAgent.rpgEntity, 'rpgEntity should exist');
-        assertEqual(restoredAgent.rpgEntity.level, 10, 'rpgEntity level');
-        assertEqual(restoredAgent.rpgEntity.xp, 50000, 'rpgEntity xp');
-        assertDeepEqual(restoredAgent.rpgEntity.stats, agentWithRPG.rpgEntity.stats, 'rpgEntity stats');
-        assertDeepEqual(restoredAgent.rpgEntity.skills, agentWithRPG.rpgEntity.skills, 'rpgEntity skills');
-        assertDeepEqual(restoredAgent.rpgEntity.perks, agentWithRPG.rpgEntity.perks, 'rpgEntity perks');
-        assertEqual(restoredAgent.rpgEntity.availableStatPoints, 3, 'availableStatPoints');
-        assertEqual(restoredAgent.rpgEntity.availableSkillPoints, 2, 'availableSkillPoints');
+        assertEqual(restoredAgent.name, 'RPGMaster', 'name preserved');
+        assertEqual(restoredAgent.health, 85, 'health preserved');
+        assertEqual(restoredAgent.maxHealth, 100, 'maxHealth preserved');
+        assertEqual(restoredAgent.damage, 25, 'damage preserved');
+        assertEqual(restoredAgent.level, 10, 'level preserved');
+        assertEqual(restoredAgent.xp, 50000, 'xp preserved');
+        assertEqual(restoredAgent.specialization, 'tech_specialist', 'specialization preserved');
     });
 
 });
@@ -880,6 +904,164 @@ describe('Full Integrated State Tree', () => {
         // Verify empty state preserved
         assertEqual(restoredAgentService.activeAgents.length, 0, 'no active agents');
         assertEqual(restoredAgentService.fallenAgents.length, 0, 'no fallen agents');
+    });
+
+});
+
+// ============================================================
+// TEST: RPGEntity Serialization Fix (Regression Tests)
+// ============================================================
+
+describe('RPGEntity Serialization Fix', () => {
+
+    it('should exclude rpgEntity from all agent types in export', () => {
+        const service = new AgentService();
+
+        // Create agents with rpgEntity in all categories
+        const createAgentWithRPG = (id, name, hired, alive) => ({
+            id, name, hired, alive,
+            rpgEntity: { stats: { strength: 15 } }
+        });
+
+        service.activeAgents = [service.createAgent(createAgentWithRPG('a1', 'Active', true, true))];
+        service.availableAgents = [service.createAgent(createAgentWithRPG('a2', 'Available', false, true))];
+        service.fallenAgents = [service.createAgent(createAgentWithRPG('a3', 'Fallen', true, false))];
+
+        // Verify all agents have rpgEntity before export
+        assertTruthy(service.activeAgents[0].rpgEntity, 'active should have rpgEntity');
+        assertTruthy(service.availableAgents[0].rpgEntity, 'available should have rpgEntity');
+        assertTruthy(service.fallenAgents[0].rpgEntity, 'fallen should have rpgEntity');
+
+        const exported = service.exportState();
+
+        // Verify rpgEntity is EXCLUDED from all exported agents
+        assertEqual(exported.activeAgents[0].rpgEntity, undefined, 'active should not export rpgEntity');
+        assertEqual(exported.availableAgents[0].rpgEntity, undefined, 'available should not export rpgEntity');
+        assertEqual(exported.fallenAgents[0].rpgEntity, undefined, 'fallen should not export rpgEntity');
+    });
+
+    it('should preserve all other agent properties when rpgEntity is excluded', () => {
+        const service = new AgentService();
+
+        const fullAgent = {
+            id: 'full_agent',
+            originalId: 'original_123',
+            name: 'Full Agent',
+            hired: true,
+            alive: true,
+            health: 75,
+            maxHealth: 100,
+            damage: 30,
+            speed: 6,
+            protection: 10,
+            specialization: 'infiltrator',
+            skills: ['stealth', 'hacking'],
+            cost: 5000,
+            bio: 'Test bio',
+            level: 5,
+            xp: 2500,
+            weapon: { id: 'gun1' },
+            armor: { id: 'armor1' },
+            x: 10,
+            y: 20,
+            rpgEntity: { stats: { strength: 15 } } // This should be excluded
+        };
+
+        service.activeAgents = [service.createAgent(fullAgent)];
+
+        const exported = service.exportState();
+        const exportedAgent = exported.activeAgents[0];
+
+        // Verify rpgEntity is excluded
+        assertEqual(exportedAgent.rpgEntity, undefined, 'rpgEntity excluded');
+
+        // Verify ALL other properties are preserved
+        assertEqual(exportedAgent.id, 'full_agent', 'id preserved');
+        assertEqual(exportedAgent.originalId, 'original_123', 'originalId preserved');
+        assertEqual(exportedAgent.name, 'Full Agent', 'name preserved');
+        assertEqual(exportedAgent.hired, true, 'hired preserved');
+        assertEqual(exportedAgent.alive, true, 'alive preserved');
+        assertEqual(exportedAgent.health, 75, 'health preserved');
+        assertEqual(exportedAgent.maxHealth, 100, 'maxHealth preserved');
+        assertEqual(exportedAgent.damage, 30, 'damage preserved');
+        assertEqual(exportedAgent.speed, 6, 'speed preserved');
+        assertEqual(exportedAgent.protection, 10, 'protection preserved');
+        assertEqual(exportedAgent.specialization, 'infiltrator', 'specialization preserved');
+        assertEqual(exportedAgent.cost, 5000, 'cost preserved');
+        assertEqual(exportedAgent.level, 5, 'level preserved');
+        assertEqual(exportedAgent.xp, 2500, 'xp preserved');
+        assertEqual(exportedAgent.x, 10, 'x preserved');
+        assertEqual(exportedAgent.y, 20, 'y preserved');
+    });
+
+    it('should survive full JSON roundtrip without rpgEntity corruption', () => {
+        const service = new AgentService();
+
+        // Create agent with complex rpgEntity that would cause corruption
+        // if serialized (class instance with getters)
+        const agentWithComplexRPG = {
+            id: 'complex_agent',
+            name: 'Complex',
+            hired: true,
+            alive: true,
+            health: 100,
+            // Simulate a class instance with getter
+            rpgEntity: {
+                stats: {
+                    strength: {
+                        base: 10,
+                        bonus: 5,
+                        get value() { return this.base + this.bonus; }
+                    }
+                }
+            }
+        };
+
+        service.activeAgents = [service.createAgent(agentWithComplexRPG)];
+
+        // Export (should exclude rpgEntity)
+        const exported = service.exportState();
+
+        // Full JSON roundtrip
+        const json = JSON.stringify(exported);
+        const parsed = JSON.parse(json);
+
+        // Import
+        const restored = new AgentService();
+        restored.importState(parsed);
+
+        // Agent should exist and have all non-rpgEntity data
+        const restoredAgent = restored.getAgent('complex_agent');
+        assertTruthy(restoredAgent, 'agent should exist');
+        assertEqual(restoredAgent.name, 'Complex', 'name preserved');
+        assertEqual(restoredAgent.health, 100, 'health preserved');
+
+        // rpgEntity should be null (would be restored from rpgManager in real usage)
+        assertEqual(restoredAgent.rpgEntity, null, 'rpgEntity is null after import');
+    });
+
+    it('should handle agents with null or undefined rpgEntity', () => {
+        const service = new AgentService();
+
+        const agentWithNullRPG = { id: 'null_rpg', name: 'NullRPG', hired: true, rpgEntity: null };
+        const agentWithNoRPG = { id: 'no_rpg', name: 'NoRPG', hired: true };
+
+        service.activeAgents = [
+            service.createAgent(agentWithNullRPG),
+            service.createAgent(agentWithNoRPG)
+        ];
+
+        // Should not throw
+        const exported = service.exportState();
+
+        assertEqual(exported.activeAgents[0].rpgEntity, undefined, 'null rpgEntity becomes undefined');
+        assertEqual(exported.activeAgents[1].rpgEntity, undefined, 'missing rpgEntity stays undefined');
+
+        // Roundtrip should work
+        const restored = new AgentService();
+        restored.importState(JSON.parse(JSON.stringify(exported)));
+
+        assertEqual(restored.activeAgents.length, 2, 'both agents restored');
     });
 
 });

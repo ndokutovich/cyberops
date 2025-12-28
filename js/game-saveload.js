@@ -4,7 +4,8 @@
 CyberOpsGame.prototype.showSaveList = function(mode = 'save') {
     // Set mode in state data and navigate to save-load dialog
     if (this.gameServices?.dialogStateService) {
-        this.gameServices.dialogStateService.stateData = { saveLoadMode: mode };
+        // Merge mode into stateData instead of replacing entire object
+        this.gameServices.dialogStateService.stateData.saveLoadMode = mode;
         this.gameServices.dialogStateService.navigateTo('save-load');
     }
 }
@@ -22,6 +23,10 @@ CyberOpsGame.prototype.closeSaveList = function() {
 
 CyberOpsGame.prototype.refreshSaveList = function() {
     const content = document.getElementById('saveListContent');
+    if (!content) {
+        // Using declarative dialog system - no legacy save list to refresh
+        return;
+    }
     content.innerHTML = '';
 
     // Get all saves from localStorage
@@ -271,8 +276,8 @@ CyberOpsGame.prototype.saveGame = function() {
 // Update the original loadGame to use the new system
 CyberOpsGame.prototype.loadGame = function() {
     this.clearDemosceneTimer();
-    // Use GameStateService directly
-    return this.gameServices.gameStateService.loadGame(this, 'quicksave');
+    // Show save list in load mode (not direct load!)
+    this.showSaveList('load');
 }
 
 // Legacy performLoadGame removed - loading is done directly in loadSaveSlot

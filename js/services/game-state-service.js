@@ -87,6 +87,11 @@ class GameStateService {
                 ? this.inventoryService.exportState()
                 : { weapons: [], equipment: [], agentLoadouts: {} },
 
+            // RPG state (from RPGService - character progression, stats, skills)
+            rpgState: window.GameServices?.rpgService
+                ? window.GameServices.rpgService.exportState()
+                : { entities: [], inventories: [], pendingData: [] },
+
             // Research state (from ResearchService - single source of truth)
             researchState: window.GameServices?.researchService
                 ? window.GameServices.researchService.exportState()
@@ -160,7 +165,15 @@ class GameStateService {
                 this.resourceService.importState(state.resources);
             }
 
-            // Apply agents
+            // CRITICAL: Apply RPG state BEFORE agents!
+            // RPGService.importState() populates _pendingEntityData which is
+            // applied when agents are created via applyPendingEntityData()
+            if (window.GameServices?.rpgService && state.rpgState) {
+                window.GameServices.rpgService.importState(state.rpgState);
+                if (this.logger) this.logger.debug('📊 RPG state imported (pending entity data ready)');
+            }
+
+            // Apply agents (will use pending RPG data from above)
             if (this.agentService && state.agents) {
                 this.agentService.importState(state.agents);
             }
@@ -400,12 +413,14 @@ class GameStateService {
 
     /**
      * Delete a save slot
+     * Key format: cyberops_save_slot_${slotId}
      */
-    deleteSave(slot) {
-        const saveKey = `cyberops_save_slot_${slot}`;
+    deleteSave(slotId) {
+        const saveKey = `cyberops_save_slot_${slotId}`;
         localStorage.removeItem(saveKey);
-        this.updateSaveIndex(slot, null);
-        if (this.logger) this.logger.info(`🗑️ Deleted save in slot ${slot}`);
+        this.updateSaveIndex(slotId, null);
+        this.notifyListeners('saveDeleted', { slotId });
+        if (this.logger) this.logger.info(`🗑️ Deleted save in slot ${slotId}`);
     }
 
     /**
@@ -612,12 +627,15 @@ class GameStateService {
      */
     getAllSaves() {
         const saves = [];
+        // Key format is: cyberops_save_slot_${slotId}
+        const keyPrefix = 'cyberops_save_slot_';
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key.startsWith('cyberops_save_')) {
+            if (key.startsWith(keyPrefix)) {
                 try {
                     const saveData = JSON.parse(localStorage.getItem(key));
-                    saveData.id = key.replace('cyberops_save_', '');
+                    // Extract slot ID from key (e.g., 'cyberops_save_slot_quicksave' -> 'quicksave')
+                    saveData.id = key.replace(keyPrefix, '');
                     saves.push(saveData);
                 } catch (e) {
                     if (this.logger) this.logger.error('Invalid save data:', key);
@@ -629,19 +647,11 @@ class GameStateService {
     }
 
     /**
-     * Delete a save slot
-     */
-    deleteSave(slotId) {
-        localStorage.removeItem(`cyberops_save_${slotId}`);
-        if (this.logger) this.logger.info('🗑️ Deleted save slot:', slotId);
-        this.notifyListeners('saveDeleted', { slotId });
-    }
-
-    /**
      * Rename a save slot
+     * Key format: cyberops_save_slot_${slotId}
      */
     renameSave(slotId, newName) {
-        const saveKey = `cyberops_save_${slotId}`;
+        const saveKey = `cyberops_save_slot_${slotId}`;
         const saveData = localStorage.getItem(saveKey);
         if (saveData) {
             try {

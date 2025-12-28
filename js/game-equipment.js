@@ -826,14 +826,13 @@ CyberOpsGame.prototype.applyLoadoutsToAgents = function(agents) {
 
         if (this.logger) this.logger.info(`✅ Applying loadout to ${agent.name}:`, loadout);
 
-        // Create a copy of the agent and apply equipment via InventoryService
-        let modifiedAgent = { ...agent };
-
+        // CRITICAL: Modify agent in-place, don't create a copy!
+        // Creating a copy breaks the reference chain to activeAgents,
+        // causing position updates to not propagate to the computed 'agents' property.
         // Let InventoryService handle the actual equipment application
-        // Note: applyAgentEquipment only takes the agent parameter, it looks up the loadout itself
-        inventoryService.applyAgentEquipment(modifiedAgent);
+        inventoryService.applyAgentEquipment(agent);
 
-        return modifiedAgent;
+        return agent;  // Return same reference
     });
 };
 

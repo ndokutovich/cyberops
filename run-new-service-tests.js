@@ -83,18 +83,15 @@ global.document = {
 };
 
 // Load services
-const SaveGameService = require('./js/services/save-game-service.js');
 const HUDService = require('./js/services/hud-service.js');
 const MissionStateService = require('./js/services/mission-state-service.js');
 
-global.SaveGameService = SaveGameService;
 global.HUDService = HUDService;
 global.MissionStateService = MissionStateService;
 
 console.log('\n🚀 Running New Service Tests\n');
 
 // Load test files
-require('./tests/save-game-service-tests.js');
 require('./tests/hud-service-tests.js');
 require('./tests/mission-state-service-tests.js');
 
