@@ -74,6 +74,13 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
     }
     const objectives = this.gameServices.missionService.objectives;
 
+    // DEBUG: Log objective progress values
+    if (this.logger) {
+        objectives.forEach(obj => {
+            this.logger.info(`📋 [gatherMissionSummary] Objective: ${obj.id}, progress=${obj.progress}/${obj.maxProgress}, status=${obj.status}`);
+        });
+    }
+
     if (objectives) {
         summary.totalMainObjectives = objectives.filter(o => o.required !== false).length;
         summary.totalObjectives = objectives.length;
@@ -138,15 +145,22 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
         }
     }
 
-    // Calculate rewards
-    if (victory && this.currentMissionDef && this.currentMissionDef.rewards) {
+    // Always include credits collected during mission
+    summary.totalCredits = summary.creditsCollected || 0;
+
+    // Calculate rewards (show potential rewards if not victory yet)
+    if (this.currentMissionDef && this.currentMissionDef.rewards) {
         const rewards = this.currentMissionDef.rewards;
         if (rewards.credits) {
-            summary.totalCredits = rewards.credits;
+            if (victory) {
+                summary.totalCredits += rewards.credits;
+            }
             summary.rewards.push({ icon: '💰', description: `${rewards.credits} Credits` });
         }
         if (rewards.researchPoints) {
-            summary.totalResearchPoints = rewards.researchPoints;
+            if (victory) {
+                summary.totalResearchPoints = rewards.researchPoints;
+            }
             summary.rewards.push({ icon: '🔬', description: `${rewards.researchPoints} Research Points` });
         }
         if (rewards.worldControl) {

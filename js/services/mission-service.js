@@ -856,6 +856,16 @@ class MissionService {
 
         const missionTime = Date.now() - this.missionStartTime;
 
+        // Mark extraction objective as completed (if extracted)
+        if (extracted) {
+            this.objectives.forEach(obj => {
+                if (obj.type === 'reach' && obj.target?.type === 'extraction') {
+                    obj.status = 'completed';
+                    this.completedObjectives.add(obj.id);
+                }
+            });
+        }
+
         // Calculate completion stats
         const stats = {
             missionId: this.currentMission.id,

@@ -691,7 +691,7 @@
 
         // Economy configuration
         economy: {
-            startingCredits: 5000,
+            startingCredits: 15000,
             startingResearchPoints: 500,
 
             // Mission rewards multipliers
