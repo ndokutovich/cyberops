@@ -89,24 +89,27 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
             // Check completion from MissionService (single source of truth)
             const completed = obj.status === 'completed' || this.gameServices.missionService.completedObjectives.has(obj.id);
 
-            // Build progress string for objectives with counters
-            let progress = '';
+            // Build formatted description with progress
+            let displayText = obj.displayText || obj.description || obj.id;
+
+            // Replace placeholders with actual progress values
             if (obj.progress !== undefined && obj.maxProgress !== undefined) {
-                // Use MissionService progress data if available
-                progress = `${obj.progress}/${obj.maxProgress}`;
+                displayText = displayText.replace('{current}', obj.progress);
+                displayText = displayText.replace('{required}', obj.maxProgress);
+                displayText = displayText.replace('({current}/{required})', `(${obj.progress}/${obj.maxProgress})`);
             } else if (obj.tracker && this.gameServices && this.gameServices.missionService) {
-                // Get tracker value from MissionService
                 const tracker = this.gameServices.missionService.trackers[obj.tracker] || 0;
                 const required = obj.count || 1;
-                progress = `${tracker}/${required}`;
+                displayText = displayText.replace('{current}', tracker);
+                displayText = displayText.replace('{required}', required);
             }
 
             summary.mainObjectives.push({
                 name: obj.id,
-                description: obj.description || obj.displayText || obj.id,
+                description: displayText,
                 completed: completed,
                 required: obj.required !== false,
-                progress: progress
+                progress: null  // Progress now embedded in description
             });
 
             if (completed) {

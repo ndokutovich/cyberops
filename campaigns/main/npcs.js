@@ -105,12 +105,12 @@
             quests: [
                 {
                     id: 'network_sabotage',
-                    name: 'Network Sabotage',
-                    description: 'Upload virus to disrupt government funding to Nexus Corp.',
-                    introDialog: 'I\'ve written a virus that will corrupt their financial systems and expose the money trail. Upload it to any terminal and the whole world will see where their tax money is really going. This will hurt Nexus where it counts - their wallet.',
-                    completionDialog: 'Beautiful! Their network is crashing and the transaction logs are being leaked to every news outlet. Nexus Corp is about to have some very uncomfortable questions to answer. Here\'s your cut.',
+                    name: 'Clear the Floor',
+                    description: 'Eliminate guards so Zero Cool can access the mainframe.',
+                    introDialog: 'I need to get to the central mainframe to upload my virus, but there are too many guards patrolling. Take out at least 4 of them and I can slip through to finish the job myself. I\'ll make sure the financial data gets leaked to the press.',
+                    completionDialog: 'Perfect - the path is clear. I\'m uploading the virus now... done! Transaction logs are being leaked to every news outlet. Nexus Corp is about to have some very uncomfortable questions to answer. Here\'s your cut.',
                     objectives: [
-                        { id: 'upload_virus', type: 'hack', count: 1 }
+                        { id: 'clear_guards', type: 'eliminate', count: 4 }
                     ],
                     rewards: { credits: 600, researchPoints: 15, experience: 175 },
                     plotRelevance: 'Exposes government-Nexus financial connection, creates political pressure'

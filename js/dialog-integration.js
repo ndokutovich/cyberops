@@ -2639,7 +2639,6 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                 content += `
                     <div style="margin-bottom: 8px; color: ${color};">
                         ${icon} ${obj.description || obj.name}
-                        ${obj.progress ? ` <span style="color: #00ffff;">[${obj.progress}]</span>` : ''}
                         ${!obj.required ? ' <span style="color: #888;">(Optional)</span>' : ''}
                     </div>
                 `;
