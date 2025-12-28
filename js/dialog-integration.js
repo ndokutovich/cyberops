@@ -462,17 +462,13 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Character Sheet - RPG system
     engine.registerGenerator('generateCharacterSheet', function() {
-        // In mission context, filter to only mission agents
-        if (this.currentScreen === 'game' && window.GameServices?.agentService) {
-            const serviceAgents = window.GameServices.agentService.getActiveAgents();
-            if (serviceAgents && serviceAgents.length > 0 && this.agents) {
-                // Filter to only the agents in the current mission
-                this.activeAgents = serviceAgents.filter(sa =>
-                    this.agents.some(a => a.id === sa.id || a.name === sa.name)
-                );
-                const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
-                if (logger) logger.debug('📊 Character sheet using mission agents only:', this.activeAgents.length);
-            }
+        // In mission context, use this.agents which already filters to mission agents
+        // CRITICAL: Do NOT assign to this.activeAgents - it has a setter that reinitializes AgentService!
+        // this.agents = computed property for mission agents (selectedAgents filter)
+        // this.activeAgents = computed property for ALL hired agents
+        const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+        if (this.currentScreen === 'game') {
+            if (logger) logger.debug('📊 Character sheet using mission agents (this.agents):', this.agents?.length);
         }
 
         let html = '<div class="character-sheet-content" style="display: grid; grid-template-columns: 250px 1fr; gap: 20px; height: 100%;">';
@@ -1034,33 +1030,24 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         // No need to initialize empty arrays
 
         // Services are the single source of truth - NO FALLBACKS
-        // The getters will return service data, no syncing needed
+        // CRITICAL: Do NOT assign to this.activeAgents - it has a setter that reinitializes AgentService!
+        // Use computed properties as-is:
+        // - this.agents = mission agents (filtered by selectedAgents)
+        // - this.activeAgents = ALL hired agents
+        const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
 
-        // In mission context, get agents from AgentService (single source of truth)
-        if (this.currentScreen === 'game' && window.GameServices?.agentService) {
-            // Get the mission agents from AgentService
-            // They were already re-indexed when the mission started
-            const serviceAgents = window.GameServices.agentService.getActiveAgents();
-            if (serviceAgents && serviceAgents.length > 0) {
-                // Filter to only the agents in the current mission
-                this.activeAgents = this.agents ?
-                    serviceAgents.filter(sa => this.agents.some(a =>
-                        a.id === sa.id || a.name === sa.name
-                    )) : serviceAgents;
-                const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
-                if (logger) logger.debug('📦 Using AgentService agents:', this.activeAgents.length);
-            }
-        }
-        // NO FALLBACK - AgentService is the ONLY source of truth
+        // Determine which agents to show based on context
+        const displayAgents = this.currentScreen === 'game' ? this.agents : this.activeAgents;
+        if (logger) logger.debug('📦 Equipment using agents:', displayAgents?.length, 'screen:', this.currentScreen);
 
         // Auto-select first agent if none selected
-        if (!this.selectedEquipmentAgent && this.activeAgents && this.activeAgents.length > 0) {
+        if (!this.selectedEquipmentAgent && displayAgents && displayAgents.length > 0) {
             // In game mode, try to use the currently selected agent
             if (this.currentScreen === 'game' && this._selectedAgent) {
                 // Use the agent's ID directly - unified ID system
                 this.selectedEquipmentAgent = this._selectedAgent.id || this._selectedAgent.name;
             } else {
-                this.selectedEquipmentAgent = this.activeAgents[0].id;
+                this.selectedEquipmentAgent = displayAgents[0].id;
             }
         }
 
@@ -1095,11 +1082,11 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         if (this.selectedEquipmentAgent) {
             if (this.logger) this.logger.debug('Looking for agent with ID:', this.selectedEquipmentAgent);
             if (this.logger) {
-                this.logger.debug('Available agents:', this.activeAgents.map(a => ({ id: a.id, name: a.name })));
+                this.logger.debug('Available agents:', displayAgents.map(a => ({ id: a.id, name: a.name })));
                 this.logger.debug('Selected agent ID:', this.selectedEquipmentAgent);
                 this.logger.debug('All loadouts:', Object.keys(this.agentLoadouts || {}));
             }
-            const agent = this.activeAgents.find(a =>
+            const agent = displayAgents.find(a =>
                 String(a.id) === String(this.selectedEquipmentAgent)
             );
             // Use agent ID directly - unified ID system
@@ -2676,21 +2663,50 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                     icon = '❌';
                     color = '#ff6666';
                     status = 'Failed';
-                } else {
+                } else if (quest.active) {
                     icon = '🔄';
                     color = '#ffff00';
                     status = 'In progress';
+                } else {
+                    icon = '⬜';
+                    color = '#aaaaaa';
+                    status = 'Available';
                 }
 
+                // Quest header with name and status
                 content += `
-                    <div style="margin-bottom: 8px; color: ${color}; ${!quest.discovered ? 'opacity: 0.5;' : ''}">
-                        ${icon} ${quest.discovered ? quest.name : '???'} - ${status}
-                        ${quest.discovered && quest.reward ? ` <span style="color: #ffd700;">(${quest.reward})</span>` : ''}
-                    </div>
+                    <div style="margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; border-left: 3px solid ${color};">
+                        <div style="color: ${color}; font-weight: bold; margin-bottom: 4px;">
+                            ${icon} ${quest.discovered ? quest.name : '???'} - ${status}
+                            ${quest.reward ? ` <span style="color: #ffd700; font-weight: normal; font-size: 0.9em;">(${quest.reward})</span>` : ''}
+                        </div>
                 `;
+
+                // Show quest description if discovered
+                if (quest.discovered && quest.description) {
+                    content += `
+                        <div style="color: #cccccc; font-size: 0.9em; margin-left: 20px; font-style: italic;">
+                            ${quest.description}
+                        </div>
+                    `;
+                }
+
+                // Show objectives if discovered and active
+                if (quest.discovered && quest.active && quest.objectives && quest.objectives.length > 0) {
+                    content += `<div style="margin-left: 20px; margin-top: 6px; font-size: 0.85em;">`;
+                    quest.objectives.forEach(obj => {
+                        const objDesc = obj.description || `${obj.type}: ${obj.count || 1}`;
+                        const objIcon = obj.completed ? '✓' : '○';
+                        const objColor = obj.completed ? '#00ff00' : '#888888';
+                        content += `<div style="color: ${objColor};">${objIcon} ${objDesc}</div>`;
+                    });
+                    content += `</div>`;
+                }
+
+                content += `</div>`;
             });
         } else {
-            content += '<div style="color: #888;">No quests discovered</div>';
+            content += '<div style="color: #888;">No quests available</div>';
         }
 
         content += '</div></div>';

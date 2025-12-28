@@ -37,6 +37,9 @@ class AgentService {
         this.generationConfig = null;
         this.completedMissionCount = 0;
 
+        // Mission-specific max agents (default 4, updated per mission)
+        this.maxAgentsForMission = 4;
+
         // Bind methods to instance for external access (fixes "is not a function" in tests)
         this.initialize = this.initialize.bind(this);
         this.getAgent = this.getAgent.bind(this);
@@ -405,22 +408,31 @@ class AgentService {
     toggleAgentSelection(agentId) {
         const currentIds = this.selectedAgents.map(a => a.id || a.originalId);
         const index = currentIds.indexOf(agentId);
+        const maxAgents = this.maxAgentsForMission || 4;
 
         let newSelection;
         if (index > -1) {
             // Remove agent
             newSelection = currentIds.filter(id => id !== agentId);
-        } else if (currentIds.length < 4) {
-            // Add agent (max 4)
+        } else if (currentIds.length < maxAgents) {
+            // Add agent (respects mission's max agents)
             newSelection = [...currentIds, agentId];
         } else {
             // Max reached
-            if (this.logger) this.logger.warn('⚠️ Maximum 4 agents can be selected');
+            if (this.logger) this.logger.warn(`⚠️ Maximum ${maxAgents} agents can be selected for this mission`);
             return this.selectedAgents;
         }
 
         // Update selection
         return this.selectAgentsForMission(newSelection);
+    }
+
+    /**
+     * Set maximum agents allowed for current mission
+     */
+    setMaxAgentsForMission(max) {
+        this.maxAgentsForMission = max || 4;
+        if (this.logger) this.logger.debug(`🎯 Max agents for mission set to: ${this.maxAgentsForMission}`);
     }
 
     /**
@@ -747,6 +759,91 @@ class AgentService {
         }
 
         return newAgents;
+    }
+
+    /**
+     * Load agent data from save system
+     * Restores all agent collections from saved data
+     * @param {Object} data - Saved agent data with available, active, fallen arrays
+     */
+    loadAgentData(data) {
+        if (!data) {
+            if (this.logger) this.logger.warn('⚠️ No agent data to load');
+            return;
+        }
+
+        if (this.logger) {
+            this.logger.info('📥 Loading agent data from save...');
+            this.logger.debug(`   Available: ${data.available?.length || 0}, Active: ${data.active?.length || 0}, Fallen: ${data.fallen?.length || 0}`);
+        }
+
+        // Clear current state
+        this.availableAgents = [];
+        this.activeAgents = [];
+        this.fallenAgents = [];
+        this.agentById.clear();
+        this.agentByName.clear();
+
+        // Load available agents
+        if (data.available && Array.isArray(data.available)) {
+            data.available.forEach(agentData => {
+                const agent = this.createAgent({ ...agentData, hired: false });
+                this.availableAgents.push(agent);
+                this.indexAgent(agent);
+            });
+        }
+
+        // Load active agents
+        if (data.active && Array.isArray(data.active)) {
+            data.active.forEach(agentData => {
+                const agent = this.createAgent({ ...agentData, hired: true });
+                this.activeAgents.push(agent);
+                this.indexAgent(agent);
+
+                // Re-register rpgEntity in RPGManager if present
+                if (agent.rpgEntity) {
+                    this.reRegisterRPGEntity(agent);
+                }
+            });
+        }
+
+        // Load fallen agents
+        if (data.fallen && Array.isArray(data.fallen)) {
+            data.fallen.forEach(agentData => {
+                const agent = this.createAgent({ ...agentData, hired: true, alive: false });
+                this.fallenAgents.push(agent);
+                this.indexAgent(agent);
+            });
+        }
+
+        if (this.logger) {
+            this.logger.info(`✅ Agent data loaded: ${this.activeAgents.length} active, ${this.availableAgents.length} available, ${this.fallenAgents.length} fallen`);
+        }
+    }
+
+    /**
+     * Re-register an agent's RPG entity in RPGManager
+     * Called after loading saves to ensure RPGManager.entities is updated
+     * @param {Object} agent - Agent with rpgEntity to re-register
+     */
+    reRegisterRPGEntity(agent) {
+        const rpgManager = window.GameServices?.rpgService?.rpgManager;
+        if (!rpgManager) {
+            if (this.logger) this.logger.warn('⚠️ RPGManager not available for re-registration');
+            return;
+        }
+
+        if (agent.rpgEntity) {
+            const entityId = agent.originalId || agent.id || agent.name;
+            rpgManager.entities.set(entityId, agent.rpgEntity);
+            // Also register by name as fallback
+            if (agent.name) {
+                rpgManager.entities.set(agent.name, agent.rpgEntity);
+            }
+            if (this.logger) {
+                this.logger.debug(`📇 Re-registered RPG entity: ${entityId} (Level ${agent.rpgEntity.level || 1})`);
+            }
+        }
     }
 }
 

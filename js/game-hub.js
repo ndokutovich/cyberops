@@ -164,6 +164,11 @@ CyberOpsGame.prototype.startNextMission = function() {
         if (this.gameServices?.missionService) {
             this.gameServices.missionService.setCurrentMissionIndex(nextMissionIndex);
         }
+        // Set max agents for this mission in AgentService
+        if (this.gameServices?.agentService) {
+            const maxAgents = nextMission?.agents?.max || nextMission?.maxAgents || 4;
+            this.gameServices.agentService.setMaxAgentsForMission(maxAgents);
+        }
         this.currentMission = nextMission;
         window.screenManager.navigateTo('mission-briefing', { selectedMission: nextMission });
     } else {
@@ -196,6 +201,11 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
         // Set current mission index via MissionService (single source of truth)
         if (this.gameServices?.missionService) {
             this.gameServices.missionService.setCurrentMissionIndex(missionIndex);
+        }
+        // Set max agents for this mission in AgentService
+        if (this.gameServices?.agentService) {
+            const maxAgents = mission?.agents?.max || mission?.maxAgents || 4;
+            this.gameServices.agentService.setMaxAgentsForMission(maxAgents);
         }
         this.currentMission = mission;
         window.screenManager.navigateTo('mission-briefing', { selectedMission: mission });
@@ -289,9 +299,11 @@ CyberOpsGame.prototype.applyResearchBenefits = function(project) {
     const completedResearch = researchService.getCompletedResearch();
 
     // Apply research to all active agents via ResearchService
-    this.activeAgents = this.activeAgents.map(agent =>
-        researchService.applyResearchToAgent(agent, completedResearch)
-    );
+    // NOTE: Agents are modified in-place (they're references from AgentService)
+    // Do NOT reassign this.activeAgents - it's a read-only computed property
+    this.activeAgents.forEach(agent => {
+        researchService.applyResearchToAgent(agent, completedResearch);
+    });
 
     // Special handling for Medical Systems (check by stringId or legacy id)
     if (project.stringId === 'medical_systems' || project.id === 5) {

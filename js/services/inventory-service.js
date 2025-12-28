@@ -769,6 +769,45 @@ class InventoryService {
         this.syncEquippedCounts();
         return true;
     }
+
+    /**
+     * Load inventory data from save system
+     * Restores weapons, armor, and items from saved data
+     * @param {Object} data - Saved inventory data
+     */
+    loadInventoryData(data) {
+        if (!data) {
+            if (this.logger) this.logger.warn('⚠️ No inventory data to load');
+            return;
+        }
+
+        if (this.logger) {
+            this.logger.info('📥 Loading inventory data from save...');
+            this.logger.debug(`   Weapons: ${data.weapons?.length || 0}, Armor: ${data.armor?.length || 0}, Items: ${data.items?.length || 0}`);
+        }
+
+        // Restore weapons
+        if (data.weapons && Array.isArray(data.weapons)) {
+            this.inventory.weapons = [...data.weapons];
+        }
+
+        // Restore armor
+        if (data.armor && Array.isArray(data.armor)) {
+            this.inventory.armor = [...data.armor];
+        }
+
+        // Restore items (could be utility items or other)
+        if (data.items && Array.isArray(data.items)) {
+            this.inventory.utility = [...data.items];
+        }
+
+        // Sync equipped counts
+        this.syncEquippedCounts();
+
+        if (this.logger) {
+            this.logger.info(`✅ Inventory data loaded: ${this.inventory.weapons.length} weapons, ${this.inventory.armor.length} armor`);
+        }
+    }
 }
 
 // Export for use

@@ -35,7 +35,10 @@ class MissionService {
             damageTaken: 0,
             damageDealt: 0,
             alertsTriggered: 0,
-            civiliansCasualties: 0
+            civiliansCasualties: 0,
+            explosivesPlanted: 0,
+            switchesActivated: 0,
+            gatesBreached: 0
         };
 
         // Track specific interacted objects
@@ -1773,6 +1776,42 @@ class MissionService {
         this.questProgress = new Map(state.questProgress || []);
 
         if (this.logger) this.logger.debug('Mission state imported');
+    }
+
+    /**
+     * Load mission data from save system
+     * Called by SaveGameService.applySaveData
+     * @param {Object} data - Saved mission data with current, completed, failed
+     */
+    loadMissionData(data) {
+        if (!data) {
+            if (this.logger) this.logger.warn('⚠️ No mission data to load');
+            return;
+        }
+
+        if (this.logger) {
+            this.logger.info('📥 Loading mission data from save...');
+            this.logger.debug(`   Completed: ${data.completed?.length || 0}, Failed: ${data.failed?.length || 0}`);
+        }
+
+        // Restore current mission reference
+        if (data.current) {
+            this.currentMission = data.current;
+        }
+
+        // Restore completed missions
+        if (data.completed && Array.isArray(data.completed)) {
+            this.completedMissions = [...data.completed];
+        }
+
+        // Restore failed missions
+        if (data.failed && Array.isArray(data.failed)) {
+            this.failedMissions = [...data.failed];
+        }
+
+        if (this.logger) {
+            this.logger.info(`✅ Mission data loaded: ${this.completedMissions.length} completed, ${this.failedMissions.length} failed`);
+        }
     }
 }
 

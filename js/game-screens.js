@@ -129,28 +129,31 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
         });
     }
 
-    // Gather side quests
+    // Gather side quests - show ALL quests (active, completed, and pending)
     if (this.quests) {
         for (let questId in this.quests) {
             const quest = this.quests[questId];
-            if (quest.active || quest.completed) {
-                let reward = '';
-                if (quest.rewards) {
-                    const rewards = [];
-                    if (quest.rewards.credits) rewards.push(`${quest.rewards.credits} credits`);
-                    if (quest.rewards.researchPoints) rewards.push(`${quest.rewards.researchPoints} RP`);
-                    reward = rewards.join(', ');
-                }
-
-                summary.sideQuests.push({
-                    name: quest.name || questId,
-                    completed: quest.completed || false,
-                    failed: quest.failed || false,
-                    rewardClaimed: quest.rewardClaimed || false,
-                    discovered: true,
-                    reward: reward
-                });
+            // Show ALL quests, not just active/completed ones
+            let reward = '';
+            if (quest.rewards) {
+                const rewards = [];
+                if (quest.rewards.credits) rewards.push(`${quest.rewards.credits} credits`);
+                if (quest.rewards.researchPoints) rewards.push(`${quest.rewards.researchPoints} RP`);
+                if (quest.rewards.experience) rewards.push(`${quest.rewards.experience} XP`);
+                reward = rewards.join(', ');
             }
+
+            summary.sideQuests.push({
+                name: quest.name || questId,
+                description: quest.description || '',
+                completed: quest.completed || false,
+                failed: quest.failed || false,
+                active: quest.active || false,
+                rewardClaimed: quest.rewardClaimed || false,
+                discovered: quest.active || quest.completed || false,
+                reward: reward,
+                objectives: quest.objectives || []
+            });
         }
     }
 

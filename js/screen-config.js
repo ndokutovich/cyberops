@@ -275,8 +275,8 @@ const SCREEN_CONFIG = {
             // Get active agents for squad selection
             const activeAgents = game?.activeAgents || [];
             const selectedAgents = game?.selectedAgents || [];
-            const maxAgents = mission?.agents?.max || 4; // Use mission's max agents
-            const requiredAgents = mission?.agents?.required || 1;
+            const maxAgents = mission?.maxAgents || mission?.agents?.max || mission?._campaignData?.agents?.max || 4; // Use mission's max agents
+            const requiredAgents = mission?.requiredAgents || mission?.agents?.required || mission?._campaignData?.agents?.required || 1;
 
             const squadInfo = activeAgents.length > 0 ?
                 `<div class="squad-section">
@@ -348,7 +348,7 @@ const SCREEN_CONFIG = {
             const game = window.game;
             const mission = game?.currentMission;
             const hasAgents = game?.activeAgents?.length > 0;
-            const requiredAgents = mission?.agents?.required || 1;
+            const requiredAgents = mission?.requiredAgents || mission?.agents?.required || mission?._campaignData?.agents?.required || 1;
             const hasEnoughAgents = (game?.selectedAgents?.length || 0) >= requiredAgents;
 
             if (!hasAgents) {
@@ -376,8 +376,8 @@ const SCREEN_CONFIG = {
 
             // Get mission parameters
             const mission = params?.mission || game?.currentMission;
-            const maxAgents = mission?.agents?.max || 4;
-            const requiredAgents = mission?.agents?.required || 1;
+            const maxAgents = mission?.maxAgents || mission?.agents?.max || mission?._campaignData?.agents?.max || 4;
+            const requiredAgents = mission?.requiredAgents || mission?.agents?.required || mission?._campaignData?.agents?.required || 1;
 
             // Add click handlers for agent selection
             setTimeout(() => {

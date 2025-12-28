@@ -316,11 +316,11 @@ CyberOpsGame.prototype.loadMissionData = function() {
 CyberOpsGame.prototype.initializeHub = function() {
         if (this.logger) this.logger.debug('🏢 Initializing Syndicate Hub...');
 
-        // Agents must be loaded from campaign
+        // Agents must be loaded from campaign via AgentService
         if (!this.availableAgents || this.availableAgents.length === 0) {
             if (this.logger) this.logger.warn('⚠️ No agents loaded from campaign! Campaign content required.');
-            this.availableAgents = [];
-            this.activeAgents = [];
+            // NOTE: availableAgents/activeAgents are read-only computed properties from AgentService
+            // They return empty arrays when service isn't initialized, so no action needed
         }
 
         if (this.logger) this.logger.info('✅ Active agents:', this.activeAgents.length, 'agents hired');
@@ -620,72 +620,38 @@ Object.defineProperty(CyberOpsGame.prototype, 'agentLoadouts', {
     configurable: true
 });
 
+// CRITICAL: availableAgents is READ-ONLY - use AgentService methods for modifications
+// Setter removed to enforce single source of truth (AgentService owns agent data)
 Object.defineProperty(CyberOpsGame.prototype, 'availableAgents', {
     get: function() {
         if (!this.gameServices || !this.gameServices.agentService) return [];
         return this.gameServices.agentService.getAvailableAgents();
     },
-    set: function(value) {
-        if (!this.gameServices || !this.gameServices.agentService) return;
-        // For bulk assignment, reinitialize the service
-        if (Array.isArray(value)) {
-            const allAgents = [];
-            value.forEach(agent => {
-                allAgents.push({ ...agent, hired: false });
-            });
-            // Add existing active agents
-            const active = this.gameServices.agentService.getActiveAgents();
-            active.forEach(agent => {
-                allAgents.push({ ...agent, hired: true });
-            });
-            this.gameServices.agentService.initialize(allAgents);
-        }
-    },
+    // NO SETTER - Use agentService.addAvailableAgent(), agentService.initialize(), etc.
     enumerable: true,
     configurable: true
 });
 
+// CRITICAL: activeAgents is READ-ONLY - use AgentService methods for modifications
+// Setter removed to enforce single source of truth (AgentService owns agent data)
 Object.defineProperty(CyberOpsGame.prototype, 'activeAgents', {
     get: function() {
         if (!this.gameServices || !this.gameServices.agentService) return [];
         return this.gameServices.agentService.getActiveAgents();
     },
-    set: function(value) {
-        if (!this.gameServices || !this.gameServices.agentService) return;
-        // For bulk assignment, reinitialize the service
-        if (Array.isArray(value)) {
-            const allAgents = [];
-            // Add existing available agents
-            const available = this.gameServices.agentService.getAvailableAgents();
-            available.forEach(agent => {
-                allAgents.push({ ...agent, hired: false });
-            });
-            // Add new active agents
-            value.forEach(agent => {
-                allAgents.push({ ...agent, hired: true });
-            });
-            this.gameServices.agentService.initialize(allAgents);
-        }
-    },
+    // NO SETTER - Use agentService.hireAgent(), agentService.initialize(), etc.
     enumerable: true,
     configurable: true
 });
 
+// CRITICAL: fallenAgents is READ-ONLY - use AgentService methods for modifications
+// Setter removed to enforce single source of truth (AgentService owns agent data)
 Object.defineProperty(CyberOpsGame.prototype, 'fallenAgents', {
     get: function() {
         if (!this.gameServices || !this.gameServices.agentService) return [];
         return this.gameServices.agentService.getFallenAgents();
     },
-    set: function(value) {
-        if (!this.gameServices || !this.gameServices.agentService) return;
-        // Fallen agents are managed internally by the service
-        // Setting fallen agents requires re-initializing with proper state
-        if (value && Array.isArray(value)) {
-            const currentState = this.gameServices.agentService.exportState();
-            currentState.fallenAgents = value;
-            this.gameServices.agentService.importState(currentState);
-        }
-    },
+    // NO SETTER - Use agentService.killAgent(), agentService.reviveAgent(), etc.
     enumerable: true,
     configurable: true
 });
