@@ -275,16 +275,6 @@ class GameEngine {
         }
     }
 
-    /**
-     * Render FPS counter - DEPRECATED (use renderUIOverlays)
-     */
-    renderFPS() {
-        if (this.showFPS) {
-            this.ctx.fillStyle = 'white';
-            this.ctx.font = '12px monospace';
-            this.ctx.fillText(`FPS: ${this.fps}`, 10, 20);
-        }
-    }
 
     /**
      * Play a sound effect
