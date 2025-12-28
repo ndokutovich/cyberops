@@ -212,6 +212,21 @@
                 id: 'underground_hacker',
                 spawn: { x: 10, y: 35 },  // In left office area
                 quests: ['network_sabotage']
+            },
+            {
+                id: 'whistleblower',
+                spawn: { x: 45, y: 28 },  // Near central command center
+                quests: ['secure_evidence']
+            },
+            {
+                id: 'sympathetic_guard',
+                spawn: { x: 75, y: 50 },  // In right corridor
+                quests: ['patrol_route']
+            },
+            {
+                id: 'nervous_researcher',
+                spawn: { x: 16, y: 50 },  // In left checkpoint area
+                quests: ['access_codes']
             }
         ]
     };

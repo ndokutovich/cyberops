@@ -221,7 +221,26 @@
             credits: 2500,
             researchPoints: 75,
             worldControl: 2
-        }
+        },
+
+        // NPCs
+        npcs: [
+            {
+                id: 'escaped_subject',
+                spawn: { x: 8, y: 55 },  // Near spawn, hiding
+                quests: ['map_facility']
+            },
+            {
+                id: 'security_tech',
+                spawn: { x: 25, y: 30 },  // Near central building
+                quests: ['security_gaps']
+            },
+            {
+                id: 'underground_contact',
+                spawn: { x: 55, y: 45 },  // Southeast area
+                quests: ['resistance_prep']
+            }
+        ]
     };
 
     if (typeof CampaignSystem !== 'undefined') {

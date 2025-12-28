@@ -229,8 +229,23 @@
         npcs: [
             {
                 id: 'engineer',
-                spawn: { x: 18, y: 22 },
+                spawn: { x: 18, y: 22 },  // In control room area
                 quests: ['sabotage_plan']
+            },
+            {
+                id: 'factory_foreman',
+                spawn: { x: 75, y: 22 },  // In right control room
+                quests: ['structural_weakness']
+            },
+            {
+                id: 'arms_dealer_tokyo',
+                spawn: { x: 25, y: 65 },  // Near loading docks
+                quests: []  // Shop only
+            },
+            {
+                id: 'factory_saboteur',
+                spawn: { x: 60, y: 45 },  // On factory floor
+                quests: ['inside_help']
             }
         ]
     };

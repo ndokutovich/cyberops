@@ -283,7 +283,31 @@
         },
 
         // Flag this as the campaign finale
-        isCampaignFinale: true
+        isCampaignFinale: true,
+
+        // NPCs
+        npcs: [
+            {
+                id: 'dr_chen_finale',
+                spawn: { x: 45, y: 85 },  // Near spawn, joins the assault
+                quests: ['shutdown_sequence']
+            },
+            {
+                id: 'facility_insider',
+                spawn: { x: 55, y: 75 },  // Outer perimeter
+                quests: ['gate_codes']
+            },
+            {
+                id: 'resistance_leader',
+                spawn: { x: 30, y: 70 },  // Coordinating from west
+                quests: ['coordinated_assault']
+            },
+            {
+                id: 'freed_prisoner',
+                spawn: { x: 50, y: 55 },  // Inside, after gates breached
+                quests: ['save_subjects']
+            }
+        ]
     };
 
     if (typeof CampaignSystem !== 'undefined') {

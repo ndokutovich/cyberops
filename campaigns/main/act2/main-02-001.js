@@ -181,7 +181,31 @@
             credits: 4000,
             researchPoints: 125,
             worldControl: 5
-        }
+        },
+
+        // NPCs
+        npcs: [
+            {
+                id: 'local_mother',
+                spawn: { x: 10, y: 50 },  // Near spawn, in slums
+                quests: ['find_evidence']
+            },
+            {
+                id: 'ex_gang_member',
+                spawn: { x: 35, y: 25 },  // Central area, hiding
+                quests: ['inside_info']
+            },
+            {
+                id: 'street_informant',
+                spawn: { x: 65, y: 45 },  // Street corner
+                quests: ['enemy_positions']
+            },
+            {
+                id: 'slum_merchant',
+                spawn: { x: 20, y: 35 },  // Near apartments
+                quests: []  // Shop only
+            }
+        ]
     };
 
     if (typeof CampaignSystem !== 'undefined') {
