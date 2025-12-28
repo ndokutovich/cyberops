@@ -646,8 +646,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                           window.MAIN_CAMPAIGN_CONFIG?.rpgConfig ||
                           window.RPG_CONFIG);
 
-        // Debug logging
-        const logger = window.Logger ? new window.Logger('CharacterSheet') : null;
+        // Debug logging (reuse logger from top of function)
         if (logger) {
             logger.debug('Skills check:', {
                 rpgSkills: rpg.skills,
