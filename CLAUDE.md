@@ -252,18 +252,51 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **engine-integration.js**: Bridge between content system and existing engine
 
 ### Service Layer (js/services/ directory)
+
+**Core Services:**
 - **logger-service.js**: Centralized logging system with timestamp and source tracking
-- **resource-service.js**: Centralized resource management (credits, research points, world control)
-- **agent-service.js**: Complete agent lifecycle management (hire, kill, revive, damage, user selection tracking)
-- **mission-service.js**: SINGLE SOURCE OF TRUTH for all mission tracking and objectives
-- **game-state-service.js**: Game state management and auto-save functionality
-- **event-log-service.js**: Event history and logging for gameplay events
-- **game-services.js**: Service locator pattern for dependency injection
+- **game-services.js**: Service locator pattern for dependency injection (owns all services)
 - **formula-service.js**: Centralized damage and combat formulas
-- **equipment-service.js**: Equipment management and optimization
+- **resource-service.js**: Centralized resource management (credits, research points, world control)
+- **agent-service.js**: Complete agent lifecycle management (hire, kill, revive, damage)
+
+**Mission Services:**
+- **mission-service.js**: SINGLE SOURCE OF TRUTH for all mission tracking and objectives
+- **mission-state-service.js**: Mission state isolation and pre-assault snapshots
+- **quest-service.js**: Quest and side-objective tracking
+
+**Inventory & Equipment:**
 - **inventory-service.js**: Centralized inventory and item management
-- **research-service.js**: Research tree progression
+- **equipment-service.js**: Equipment management and optimization
+- **catalog-service.js**: Item catalog (database of all available items)
+- **item-service.js**: Collectable processing and pickup handling
+- **collectable-types.js**: Collectable type definitions
+
+**RPG & Research:**
 - **rpg-service.js**: RPG system integration service with managers
+- **research-service.js**: Research tree progression
+
+**Combat & Enemy:**
+- **combat-service.js**: Centralized combat state management
+- **enemy-service.js**: Enemy lifecycle and AI management
+
+**State & Save:**
+- **game-state-service.js**: Game state collection and application
+- **save-game-service.js**: Save/load operations
+
+**Input & Settings:**
+- **keybinding-service.js**: Keyboard shortcut management
+- **keyboard-dispatcher-service.js**: Unified keyboard event handling
+- **settings-service.js**: Centralized settings management
+
+**UI & Audio:**
+- **hud-service.js**: HUD element registration and updates
+- **audio-service.js**: Music and SFX management
+- **dialog-state-service.js**: Dialog navigation state
+
+**Utility:**
+- **coordinate-service.js**: Coordinate transformations (world/iso/screen)
+- **pathfinding-service.js**: A* pathfinding algorithm
 
 ### Other Files
 - **index.html**: Main entry point with PWA support and module loading
@@ -379,19 +412,51 @@ The game uses a **clean service-oriented architecture** with complete separation
 #### GameServices System
 ```javascript
 class GameServices {
-    // Core services (no dependencies)
-    formulaService    // Centralized combat calculations
-    resourceService   // Resource management (credits, research points)
-    agentService      // Agent lifecycle management
-    missionService    // Mission tracking (single source of truth)
+    // Core Services (no dependencies)
+    formulaService        // Centralized combat calculations
+    resourceService       // Resource management (credits, research points, world control)
+    agentService          // Agent lifecycle management (hire, kill, revive, damage)
 
-    // Dependent services (use core services)
-    equipmentService  // Equipment management (uses FormulaService)
-    rpgService        // RPG integration (uses FormulaService)
-    researchService   // Tech tree (uses FormulaService)
-    inventoryService  // Inventory (uses Formula & Equipment services)
+    // Mission Services
+    missionService        // Mission tracking (single source of truth for objectives)
+    missionStateService   // Mission state isolation (pre-assault snapshots)
+    questService          // Quest and side-objective tracking
+
+    // Inventory & Equipment Services
+    inventoryService      // Inventory and item management
+    equipmentService      // Equipment optimization and loadouts
+    catalogService        // Item catalog (database of all items)
+    itemService           // Collectable processing
+
+    // RPG & Research Services
+    rpgService            // RPG integration (uses FormulaService)
+    researchService       // Tech tree progression
+
+    // Combat & Enemy Services
+    combatService         // Centralized combat state management
+    enemyService          // Enemy lifecycle and AI management
+
+    // State & Save Services
+    gameStateService      // Game state collection and application
+    saveGameService       // Save/load operations
+
+    // Input & Settings Services
+    keybindingService     // Keyboard shortcut management
+    keyboardDispatcher    // Unified keyboard event handling
+    settingsService       // Centralized settings management
+
+    // UI & Audio Services
+    hudService            // HUD element registration and updates
+    audioService          // Music and SFX management
+    dialogStateService    // Dialog navigation state
+
+    // Utility Services
+    coordinateService     // Coordinate transformations (world/iso/screen)
+    pathfindingService    // A* pathfinding algorithm
 }
 ```
+
+**Total Services: 23** (organized in 8 categories)
 
 #### Critical Architecture Rules
 - **NO Game References in Services**: Services NEVER reference the game object

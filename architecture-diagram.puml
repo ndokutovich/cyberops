@@ -56,18 +56,53 @@ class CyberOpsGame GAME {
 ' Service Layer
 ' =====================================
 class GameServices SERVICE {
+    ' Core Services (no dependencies)
     + formulaService : FormulaService
     + resourceService : ResourceService
     + agentService : AgentService
+
+    ' Mission Services
+    + missionService : MissionService
+    + missionStateService : MissionStateService
+    + questService : QuestService
+
+    ' Inventory & Equipment Services
     + inventoryService : InventoryService
     + equipmentService : EquipmentService
+    + catalogService : CatalogService
+    + itemService : ItemService
+
+    ' RPG & Research Services
     + rpgService : RPGService
     + researchService : ResearchService
-    + missionService : MissionService
+
+    ' Combat & Enemy Services
+    + combatService : CombatService
+    + enemyService : EnemyService
+
+    ' State & Save Services
     + gameStateService : GameStateService
+    + saveGameService : SaveGameService
+
+    ' Input & Settings Services
+    + keybindingService : KeybindingService
+    + keyboardDispatcher : KeyboardDispatcherService
+    + settingsService : SettingsService
+
+    ' UI & Audio Services
+    + hudService : HUDService
+    + audioService : AudioService
+    + dialogStateService : DialogStateService
+
+    ' Utility Services
+    + coordinateService : CoordinateService
+    + pathfindingService : PathfindingService
 
     + constructor()
     + initialize()
+    + initializeHUD(game)
+    + calculateAgentStats()
+    + calculateAttackDamage()
 }
 
 class FormulaService SERVICE {
@@ -209,6 +244,8 @@ class MissionService SERVICE {
     - currentMission : object
     - missionTrackers : object
     - extractionEnabled : boolean
+    - objectives : array
+    - validators : Map
     - listeners : Map
     - logger : Logger
 
@@ -219,8 +256,215 @@ class MissionService SERVICE {
     + completeMission(success)
     + trackEvent(eventName, data)
     + getMissionProgress() : object
+    + registerValidator(name, func)
+    + completeObjective(objectiveId)
     + exportState() : object
     + importState(state)
+}
+
+class MissionStateService SERVICE {
+    - preAssaultState : object
+    - missionInProgress : boolean
+    - logger : Logger
+
+    + capturePreAssaultState(game)
+    + restorePreAssaultState(game)
+    + isMissionInProgress() : boolean
+    + clearMissionState()
+}
+
+class QuestService SERVICE {
+    - activeQuests : Map
+    - completedQuests : array
+    - resourceService : ResourceService
+    - logger : Logger
+
+    + startQuest(quest)
+    + updateQuest(questId, event)
+    + completeQuest(questId) : object
+    + getActiveQuests() : array
+    + isQuestComplete(questId) : boolean
+    + getQuestProgress(questId) : object
+}
+
+class CatalogService SERVICE {
+    - weaponCatalog : Map
+    - armorCatalog : Map
+    - utilityCatalog : Map
+    - consumableCatalog : Map
+    - logger : Logger
+
+    + initialize(rpgConfig)
+    + getItemsByCategory(category) : array
+    + getItemById(category, itemId) : object
+    + getPlayerStartingInventory() : object
+    + getAllItems() : object
+}
+
+class ItemService SERVICE {
+    - resourceService : ResourceService
+    - formulaService : FormulaService
+    - inventoryService : InventoryService
+    - logger : Logger
+
+    + processCollectable(collectable, agent) : object
+    + applyItemEffect(item, agent)
+    + getItemValue(item) : number
+}
+
+class CombatService SERVICE {
+    - formulaService : FormulaService
+    - agentService : AgentService
+    - projectiles : array
+    - combatLog : array
+    - logger : Logger
+
+    + performAttack(attackerId, targetId, weaponType) : object
+    + calculateHitChance(attacker, target) : number
+    + processDamage(target, damage, source) : object
+    + addProjectile(projectile)
+    + updateProjectiles(deltaTime)
+    + getCombatLog() : array
+}
+
+class EnemyService SERVICE {
+    - enemies : array
+    - enemyTypes : Map
+    - spawnPoints : array
+    - logger : Logger
+
+    + initialize(missionDef)
+    + spawnEnemy(type, position) : object
+    + removeEnemy(enemyId)
+    + getEnemies() : array
+    + getEnemyById(id) : object
+    + updateEnemyAI(deltaTime)
+    + clearEnemies()
+}
+
+class SaveGameService SERVICE {
+    - gameStateService : GameStateService
+    - saveSlots : array
+    - autoSaveEnabled : boolean
+    - logger : Logger
+
+    + saveGame(slot, name) : boolean
+    + loadGame(slot) : boolean
+    + getSaveSlots() : array
+    + deleteSave(slot)
+    + exportSave(slot) : string
+    + importSave(data) : boolean
+    + autoSave()
+}
+
+class PathfindingService SERVICE {
+    - grid : array
+    - openSet : array
+    - closedSet : Set
+    - logger : Logger
+
+    + initialize(map)
+    + findPath(start, end) : array
+    + isWalkable(x, y) : boolean
+    + getNeighbors(node) : array
+    + heuristic(a, b) : number
+    + setObstacle(x, y, blocked)
+}
+
+class KeyboardDispatcherService SERVICE {
+    - handlers : Map
+    - activeContext : string
+    - eventListener : function
+    - logger : Logger
+
+    + initialize()
+    + registerHandler(context, key, handler)
+    + unregisterHandler(context, key)
+    + setActiveContext(context)
+    + handleKeyEvent(event)
+    + getActiveContext() : string
+}
+
+class SettingsService SERVICE {
+    - settings : object
+    - defaults : object
+    - listeners : Map
+    - logger : Logger
+
+    + initialize()
+    + get(key) : any
+    + set(key, value)
+    + reset(key)
+    + resetAll()
+    + exportSettings() : object
+    + importSettings(settings)
+    + subscribe(key, callback)
+}
+
+class HUDService SERVICE {
+    - game : CyberOpsGame
+    - elements : Map
+    - updateQueue : array
+    - logger : Logger
+
+    + registerAllElements()
+    + registerElement(id, updateFn)
+    + update(elementId)
+    + updateAll()
+    + show(elementId)
+    + hide(elementId)
+    + setVisibility(elementId, visible)
+}
+
+class AudioService SERVICE {
+    - audioContext : AudioContext
+    - tracks : Map
+    - sfxPool : Map
+    - masterVolume : number
+    - musicVolume : number
+    - sfxVolume : number
+    - currentTrack : object
+    - logger : Logger
+
+    + initialize()
+    + playMusic(trackId, options)
+    + stopMusic(fadeOut)
+    + playSFX(sfxId, options)
+    + setMasterVolume(volume)
+    + setMusicVolume(volume)
+    + setSFXVolume(volume)
+    + crossfade(fromTrack, toTrack, duration)
+}
+
+class DialogStateService SERVICE {
+    - currentState : string
+    - stateStack : array
+    - dialogEngine : DeclarativeDialogEngine
+    - logger : Logger
+
+    + navigateTo(stateId, context)
+    + back()
+    + close()
+    + getCurrentState() : string
+    + getStateStack() : array
+    + canNavigateTo(stateId) : boolean
+}
+
+class CoordinateService SERVICE {
+    - tileWidth : number
+    - tileHeight : number
+    - cameraX : number
+    - cameraY : number
+    - zoom : number
+    - logger : Logger
+
+    + initialize(config)
+    + worldToIsometric(x, y) : object
+    + isometricToWorld(isoX, isoY) : object
+    + screenToWorld(screenX, screenY) : object
+    + worldToScreen(worldX, worldY) : object
+    + setCamera(x, y)
+    + setZoom(zoom)
 }
 
 class GameStateService SERVICE {
@@ -412,27 +656,82 @@ class KeybindingService SERVICE {
 CyberOpsGame --> GameServices : uses
 CyberOpsGame --> DeclarativeDialogEngine : uses
 
-' GameServices composition
+' GameServices composition - Core Services
 GameServices *-- FormulaService : owns
 GameServices *-- ResourceService : owns
 GameServices *-- AgentService : owns
+
+' GameServices composition - Mission Services
+GameServices *-- MissionService : owns
+GameServices *-- MissionStateService : owns
+GameServices *-- QuestService : owns
+
+' GameServices composition - Inventory & Equipment
 GameServices *-- InventoryService : owns
 GameServices *-- EquipmentService : owns
+GameServices *-- CatalogService : owns
+GameServices *-- ItemService : owns
+
+' GameServices composition - RPG & Research
 GameServices *-- RPGService : owns
 GameServices *-- ResearchService : owns
-GameServices *-- MissionService : owns
-GameServices *-- GameStateService : owns
 
-' Service dependencies
+' GameServices composition - Combat & Enemy
+GameServices *-- CombatService : owns
+GameServices *-- EnemyService : owns
+
+' GameServices composition - State & Save
+GameServices *-- GameStateService : owns
+GameServices *-- SaveGameService : owns
+
+' GameServices composition - Input & Settings
+GameServices *-- KeybindingService : owns
+GameServices *-- KeyboardDispatcherService : owns
+GameServices *-- SettingsService : owns
+
+' GameServices composition - UI & Audio
+GameServices *-- HUDService : owns
+GameServices *-- AudioService : owns
+GameServices *-- DialogStateService : owns
+
+' GameServices composition - Utility
+GameServices *-- CoordinateService : owns
+GameServices *-- PathfindingService : owns
+
+' Service dependencies - Inventory & Equipment
 InventoryService --> FormulaService : uses
 InventoryService --> EquipmentService : uses
 EquipmentService --> FormulaService : uses
+ItemService --> ResourceService : uses
+ItemService --> FormulaService : uses
+ItemService --> InventoryService : uses
+
+' Service dependencies - RPG & Research
 RPGService --> FormulaService : uses
+RPGService --> ResourceService : uses
 ResearchService --> FormulaService : uses
+
+' Service dependencies - State & Save
 GameStateService --> ResourceService : uses
 GameStateService --> AgentService : uses
 GameStateService --> InventoryService : uses
 GameStateService --> MissionService : uses
+SaveGameService --> GameStateService : uses
+
+' Service dependencies - Mission & Quest
+MissionService --> ResourceService : uses
+MissionService --> AgentService : uses
+QuestService --> ResourceService : uses
+
+' Service dependencies - Combat
+CombatService --> FormulaService : uses
+CombatService --> AgentService : uses
+
+' Service dependencies - Audio
+AudioService --> KeyboardDispatcherService : uses
+
+' Service dependencies - Dialog
+DialogStateService --> DeclarativeDialogEngine : uses
 
 ' RPG System (owned by RPGService)
 RPGService *-- RPGManager : owns
@@ -463,5 +762,19 @@ RPGService --> Logger : uses
 ResearchService --> Logger : uses
 MissionService --> Logger : uses
 GameStateService --> Logger : uses
+MissionStateService --> Logger : uses
+QuestService --> Logger : uses
+CatalogService --> Logger : uses
+ItemService --> Logger : uses
+CombatService --> Logger : uses
+EnemyService --> Logger : uses
+SaveGameService --> Logger : uses
+PathfindingService --> Logger : uses
+KeyboardDispatcherService --> Logger : uses
+SettingsService --> Logger : uses
+HUDService --> Logger : uses
+AudioService --> Logger : uses
+DialogStateService --> Logger : uses
+CoordinateService --> Logger : uses
 
 @enduml
