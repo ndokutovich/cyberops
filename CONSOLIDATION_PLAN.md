@@ -167,7 +167,14 @@ Estimated lines to consolidate: ~2,500+
 
 **Solution**: Create NPCService for lifecycle; game-npc.js becomes rendering-only
 
-**Status**: [ ] Not Started
+**Status**: [x] COMPLETED (2025-12-28)
+- Created js/services/npc-service.js (320 lines)
+- Registered in GameServices
+- NPCService handles: spawn, update, query (getNearbyNPC, getNPCsForMission)
+- game-npc.js delegates lifecycle to NPCService via computed properties
+- Kept in game-npc.js (rendering/UI): renderNPCs, renderQuestMarkers, renderQuestHUD, showDialog, interactWithNPC, getContextualChoices
+- Kept in game-npc.js (not duplicates): addNotification, pauseGame, resumeGame
+- NPC and Quest classes remain in game-npc.js as data classes
 
 ---
 
@@ -224,6 +231,6 @@ Estimated lines to consolidate: ~2,500+
 | DialogStateService | DONE | 2025-12-28 | +340 (service), +60 (migration) |
 | DialogStateService Migration | DONE | 2025-12-28 | 14 files, ~55 usages migrated |
 | EquipmentService | DONE | 2025-12-28 | -30 (sync removal), ~25 (service calls) |
-| NPCService | - | - | - |
+| NPCService | DONE | 2025-12-28 | +320 (new service), game-npc.js delegates |
 | MissionSetupService | ALREADY DONE | 2025-12-28 | EnemyService handles spawning |
 | HubStateService | LOW PRIORITY | 2025-12-28 | Works as-is, future enhancement |

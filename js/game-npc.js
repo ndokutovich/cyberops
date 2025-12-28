@@ -13,13 +13,20 @@ CyberOpsGame.prototype.initNPCSystem = function() {
     if (!this.logger) {
         this.logger = window.Logger ? new window.Logger('GameNpc') : null;
     }
-    this.npcs = [];
-    this.dialogQueue = [];
-    this.quests = {}; // Keep for NPC quest definitions (dialog handled here)
-    // Quest completion tracking moved to MissionService
-    this.npcInteractionRange = 3; // Distance for interaction (same as hack/bomb)
 
-    if (this.logger) this.logger.info('💬 NPC System initialized');
+    // Initialize via NPCService if available
+    const npcService = this.gameServices?.npcService;
+    if (npcService) {
+        npcService.initialize(this);
+        if (this.logger) this.logger.info('💬 NPC System initialized via NPCService');
+    } else {
+        // Legacy fallback
+        this.npcs = [];
+        this.dialogQueue = [];
+        this.quests = {};
+        this.npcInteractionRange = 3;
+        if (this.logger) this.logger.info('💬 NPC System initialized (legacy)');
+    }
 };
 
 // NPC constructor function (not ES6 class)
@@ -504,86 +511,114 @@ Quest.prototype.getProgressString = function(game) {
     return parts.join('\n');
 };
 
-// Find a valid spawn position near the desired location
+// Computed property for npcs - delegates to NPCService
+Object.defineProperty(CyberOpsGame.prototype, 'npcs', {
+    get: function() {
+        const npcService = this.gameServices?.npcService;
+        if (npcService) {
+            return npcService.getNPCs();
+        }
+        return this._npcs || [];
+    },
+    set: function(value) {
+        const npcService = this.gameServices?.npcService;
+        if (npcService) {
+            // NPCService manages npcs internally
+            if (this.logger) this.logger.debug('⚠️ Direct npcs assignment - use NPCService methods');
+        }
+        this._npcs = value;
+    },
+    enumerable: true,
+    configurable: true
+});
+
+// Computed property for quests - delegates to NPCService
+Object.defineProperty(CyberOpsGame.prototype, 'quests', {
+    get: function() {
+        const npcService = this.gameServices?.npcService;
+        if (npcService) {
+            return npcService.getQuests();
+        }
+        return this._quests || {};
+    },
+    set: function(value) {
+        this._quests = value;
+    },
+    enumerable: true,
+    configurable: true
+});
+
+// Find a valid spawn position near the desired location - delegates to NPCService
 CyberOpsGame.prototype.findValidSpawnPosition = function(desiredX, desiredY) {
-    // First check if desired position is valid
+    const npcService = this.gameServices?.npcService;
+    if (npcService) {
+        return npcService.findValidSpawnPosition(desiredX, desiredY);
+    }
+
+    // Legacy fallback
     if (!this.isWall || !this.isWall(Math.floor(desiredX), Math.floor(desiredY))) {
         return { x: desiredX, y: desiredY };
     }
 
-    // Search in expanding circles for a valid position
     for (let radius = 1; radius <= 5; radius++) {
         for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
             const testX = desiredX + Math.cos(angle) * radius;
             const testY = desiredY + Math.sin(angle) * radius;
-
-            // Check map bounds
             const mapWidth = this.currentMap ? this.currentMap.width : 50;
             const mapHeight = this.currentMap ? this.currentMap.height : 50;
 
             if (testX >= 1 && testX < mapWidth - 1 &&
                 testY >= 1 && testY < mapHeight - 1) {
-                // Check if position is not a wall
                 if (!this.isWall || !this.isWall(Math.floor(testX), Math.floor(testY))) {
-                    if (this.logger) this.logger.debug(`📍 Adjusted NPC spawn from (${desiredX},${desiredY}) to (${testX},${testY})`);
                     return { x: testX, y: testY };
                 }
             }
         }
     }
-
-    // Must have valid spawn position from map
-    throw new Error(`No valid spawn position found near (${desiredX},${desiredY}). Check map definition.`);
+    throw new Error(`No valid spawn position found near (${desiredX},${desiredY}).`);
 };
 
-// Add NPCs to the current map
+// Add NPCs to the current map - delegates to NPCService
 CyberOpsGame.prototype.spawnNPCs = function() {
-    if (!this.npcs) this.npcs = [];
+    const npcService = this.gameServices?.npcService;
+    if (npcService) {
+        npcService.spawnNPCs(this.currentMissionDef, this.currentMissionIndex);
+        return;
+    }
 
-    // Clear existing NPCs
-    this.npcs = [];
+    // Legacy fallback
+    if (!this._npcs) this._npcs = [];
+    this._npcs = [];
 
-    if (this.logger) this.logger.debug(`👥 [LEGACY] spawnNPCs called - currentMissionIndex: ${this.currentMissionIndex}`);
-    if (this.logger) this.logger.debug(`👥 [LEGACY] currentMissionDef exists: ${!!this.currentMissionDef}`);
-    if (this.logger) this.logger.debug(`👥 [LEGACY] currentMissionDef.npcs: ${this.currentMissionDef?.npcs?.length || 0}`);
-
-    // Get NPCs for current mission/map
     const npcConfigs = this.getNPCsForMission(this.currentMissionIndex);
-
-    if (this.logger) this.logger.debug(`👥 [LEGACY] getNPCsForMission returned: ${npcConfigs.length} configs`);
-
     for (let config of npcConfigs) {
-        // Validate and adjust spawn position if needed
         const validPos = this.findValidSpawnPosition(config.x, config.y);
         config.x = validPos.x;
         config.y = validPos.y;
-
         const npc = new NPC(config);
-        this.npcs.push(npc);
+        this._npcs.push(npc);
     }
 
-    if (this.logger) this.logger.debug(`👥 Spawned ${this.npcs.length} NPCs for mission ${this.currentMissionIndex + 1}`);
-
-    // Debug: Log NPC positions
-    this.npcs.forEach(npc => {
-        if (this.logger) this.logger.debug(`  - ${npc.name} at (${npc.x}, ${npc.y}) - ${npc.sprite}`);
-    });
+    if (this.logger) this.logger.debug(`👥 Spawned ${this._npcs.length} NPCs (legacy)`);
 };
 
-// Create NPC from mission definition
+// Create NPC from mission definition - delegates to NPCService
 CyberOpsGame.prototype.createNPCFromDefinition = function(npcDef) {
-    // Get templates from campaign if available
+    const npcService = this.gameServices?.npcService;
+    if (npcService) {
+        return npcService.createNPCFromDefinition(npcDef);
+    }
+
+    // Legacy fallback
     const campaignId = this.currentCampaignId || 'main';
     const npcTemplates = window.CAMPAIGN_NPC_TEMPLATES && window.CAMPAIGN_NPC_TEMPLATES[campaignId];
 
     if (!npcTemplates || !npcTemplates[npcDef.id]) {
-        if (this.logger) this.logger.warn(`No NPC template found for: ${npcDef.id} in campaign: ${campaignId}`);
+        if (this.logger) this.logger.warn(`No NPC template found for: ${npcDef.id}`);
         return null;
     }
 
     const template = npcTemplates[npcDef.id];
-
-    // Create quests from template data
     const quests = [];
     if (template.quests && npcDef.quests) {
         template.quests.forEach(questData => {
@@ -608,13 +643,16 @@ CyberOpsGame.prototype.createNPCFromDefinition = function(npcDef) {
     };
 };
 
-// Get NPC configurations for each mission
+// Get NPC configurations for each mission - delegates to NPCService
 CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
-    const configs = [];
+    const npcService = this.gameServices?.npcService;
+    if (npcService) {
+        return npcService.getNPCsForMission(this.currentMissionDef);
+    }
 
-    // Only use NPCs from mission definition
+    // Legacy fallback
+    const configs = [];
     if (this.currentMissionDef && this.currentMissionDef.npcs) {
-        if (this.logger) this.logger.debug('📋 Loading NPCs from mission definition');
         this.currentMissionDef.npcs.forEach(npcDef => {
             const npcConfig = this.createNPCFromDefinition(npcDef);
             if (npcConfig) {
@@ -622,40 +660,29 @@ CyberOpsGame.prototype.getNPCsForMission = function(missionIndex) {
             }
         });
     }
-
-    // NPCs must come from mission files
     return configs;
 };
 
-// Check for nearby NPCs that can be interacted with
+// Check for nearby NPCs that can be interacted with - delegates to NPCService
 CyberOpsGame.prototype.getNearbyNPC = function(agent) {
-    if (!this.npcs) {
-        if (this.logger) this.logger.debug('    ❌ No NPCs array');
-        return null;
+    const npcService = this.gameServices?.npcService;
+    if (npcService) {
+        return npcService.getNearbyNPC(agent);
     }
 
-    if (this.logger) this.logger.debug(`    Checking ${this.npcs.length} NPCs, range: ${this.npcInteractionRange}`);
+    // Legacy fallback
+    if (!this.npcs) return null;
 
     for (let npc of this.npcs) {
-        if (!npc.alive) {
-            if (this.logger) this.logger.debug(`    - ${npc.name}: dead`);
-            continue;
-        }
-
+        if (!npc.alive) continue;
         const dist = Math.sqrt(
             Math.pow(npc.x - agent.x, 2) +
             Math.pow(npc.y - agent.y, 2)
         );
-
-        if (this.logger) this.logger.debug(`    - ${npc.name} at (${npc.x.toFixed(1)}, ${npc.y.toFixed(1)}): distance = ${dist.toFixed(2)}`);
-
-        if (dist <= this.npcInteractionRange) {
-            if (this.logger) this.logger.debug(`    ✓ NPC in range!`);
+        if (dist <= (this.npcInteractionRange || 3)) {
             return npc;
         }
     }
-
-    if (this.logger) this.logger.debug('    ❌ No NPC in range');
     return null;
 };
 
@@ -1053,27 +1080,28 @@ CyberOpsGame.prototype.closeNPCDialog = function() {
     this.resumeGame();
 };
 
-// Update NPCs
+// Update NPCs - delegates to NPCService
 CyberOpsGame.prototype.updateNPCs = function() {
+    const npcService = this.gameServices?.npcService;
+    if (npcService) {
+        npcService.updateNPCs();
+        return;
+    }
+
+    // Legacy fallback
     if (!this.npcs) return;
 
     for (let npc of this.npcs) {
         npc.update(this);
 
-        // Check quest completion every frame (not just on interaction)
-        if (npc.questsGiven.size > 0) {
+        if (npc.questsGiven && npc.questsGiven.size > 0) {
             for (let questId of npc.questsGiven) {
                 const quest = this.quests[questId];
-
-                // Only check active quests that haven't been completed
-                if (quest && quest.active && !this.completedQuests.has(questId)) {
-                    // Check if all objectives are complete
-                    if (quest.checkCompletion(this)) {
-                        // Mark as ready to complete (but don't auto-complete)
+                if (quest && quest.active && !this.completedQuests?.has(questId)) {
+                    if (quest.checkCompletion && quest.checkCompletion(this)) {
                         if (!quest.readyToComplete) {
                             quest.readyToComplete = true;
                             this.addNotification(`✅ Quest Complete: Return to ${npc.name} for reward`);
-                            if (this.logger) this.logger.info(`✅ Quest "${quest.name}" ready to complete`);
                         }
                     }
                 }

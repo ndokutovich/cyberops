@@ -148,6 +148,14 @@ if (typeof GameServices === 'undefined') {
             if (this.logger) this.logger.warn('DialogStateService not loaded - using legacy dialog access');
         }
 
+        // NPC service for NPC lifecycle management
+        if (window.NPCService) {
+            this.npcService = new NPCService(this.questService);
+            if (this.logger) this.logger.debug('NPCService initialized');
+        } else {
+            if (this.logger) this.logger.warn('NPCService not loaded - using legacy NPC methods');
+        }
+
         // Bind context for methods that might be called externally
         this.calculateAgentStats = this.calculateAgentStats.bind(this);
         this.applyAllModifiers = this.applyAllModifiers.bind(this);
