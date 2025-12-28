@@ -143,10 +143,12 @@ CyberOpsGame.prototype.showInventory = function(agentIdOrName) {
     }
 
     // Ensure agent has RPG entity with derived stats
+    // Use RPGService as single source of truth for rpgEntity creation
     if (!agent.rpgEntity) {
         if (this.logger) this.logger.debug('Creating RPG entity for inventory owner');
-        if (this.rpgManager) {
-            agent.rpgEntity = this.rpgManager.createRPGAgent(agent, agent.class || 'soldier');
+        const rpgService = this.gameServices?.rpgService || window.GameServices?.rpgService;
+        if (rpgService) {
+            rpgService.createRPGAgent(agent, agent.class || 'soldier');
         }
     }
 

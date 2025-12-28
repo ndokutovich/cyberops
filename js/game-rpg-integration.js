@@ -683,29 +683,29 @@ CyberOpsGame.prototype.createAgent = function(agent) {
     }
 
     // Enhance with RPG stats if system is initialized
-    if (this.rpgManager) {
+    // Use RPGService as single source of truth for rpgEntity creation
+    const rpgService = this.gameServices?.rpgService || window.GameServices?.rpgService;
+    if (rpgService) {
         // Map specialization to correct RPG class
         const rpgClass = this.mapSpecializationToClass(agent.specialization) || agent.class || 'soldier';
-        const rpgAgent = this.rpgManager.createRPGAgent(agent, rpgClass);
+        // RPGService.createRPGAgent sets agent.rpgEntity internally
+        rpgService.createRPGAgent(agent, rpgClass);
 
         // Update agent properties based on RPG stats
-        const derived = this.rpgManager.calculateDerivedStats(rpgAgent);
-        agent.maxHealth = derived.maxHealth;
+        const derived = rpgService.rpgManager?.calculateDerivedStats(agent.rpgEntity) || {};
+        agent.maxHealth = derived.maxHealth || agent.health || 100;
         // Initialize health via AgentService if available
         if (!agent.health) {
             if (this.gameServices?.agentService) {
                 this.gameServices.agentService.fullHealAgent(agent.id);
             } else {
-                agent.health = derived.maxHealth;
+                agent.health = derived.maxHealth || 100;
             }
         }
-        agent.maxAP = derived.maxAP;
-        agent.ap = agent.ap || derived.maxAP;
-        agent.critChance = derived.critChance;
-        agent.dodge = derived.dodge;
-
-        // Store RPG reference
-        agent.rpgEntity = rpgAgent;
+        agent.maxAP = derived.maxAP || 12;
+        agent.ap = agent.ap || derived.maxAP || 12;
+        agent.critChance = derived.critChance || 5;
+        agent.dodge = derived.dodge || 5;
 
         // Create inventory
         if (this.inventoryManager) {
@@ -760,24 +760,21 @@ CyberOpsGame.prototype.createNPC = function(npc) {
 
 // Upgrade existing entities to RPG system
 CyberOpsGame.prototype.upgradeExistingEntities = function() {
+    // Use RPGService as single source of truth for rpgEntity creation
+    const rpgService = this.gameServices?.rpgService || window.GameServices?.rpgService;
+
     // Upgrade agents
     if (this.agents) {
         this.agents.forEach(agent => {
-            if (!agent.rpgEntity && this.rpgManager) {
+            if (!agent.rpgEntity && rpgService) {
                 // Map specialization to correct RPG class
                 const rpgClass = this.mapSpecializationToClass(agent.specialization) || agent.class || 'soldier';
-                const rpgAgent = this.rpgManager.createRPGAgent(agent, rpgClass);
-                agent.rpgEntity = rpgAgent;
-
-                // Create inventory
-                if (this.inventoryManager) {
-                    const derived = this.rpgManager.calculateDerivedStats(rpgAgent);
-                    this.inventoryManager.createInventory(agent.id || agent.name, derived.carryWeight);
-                }
-            } else if (agent.rpgEntity && this.rpgManager) {
+                // RPGService.createRPGAgent handles entity creation AND inventory
+                rpgService.createRPGAgent(agent, rpgClass);
+            } else if (agent.rpgEntity && rpgService?.rpgManager) {
                 // Re-register existing entity in Map (for hub context)
                 const entityId = agent.originalId || agent.id || agent.name;
-                this.rpgManager.entities.set(entityId, agent.rpgEntity);
+                rpgService.rpgManager.entities.set(entityId, agent.rpgEntity);
             }
         });
     }

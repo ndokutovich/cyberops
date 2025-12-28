@@ -691,12 +691,12 @@ CyberOpsGame.prototype.initMission = function() {
                     if (this.logger) this.logger.debug(`📇 Re-registered RPG entity in RPGManager with ID: ${entityId}`);
                 }
             } else if (!agent.rpgEntity) {
-                const rpgManager = this.rpgManager || window.GameServices?.rpgService?.rpgManager;
-                if (!rpgManager) {
-                    throw new Error('RPGManager not available - required for creating agent RPG entity');
+                // Use RPGService as single source of truth for rpgEntity creation
+                const rpgService = this.gameServices?.rpgService || window.GameServices?.rpgService;
+                if (!rpgService) {
+                    throw new Error('RPGService not available - required for creating agent RPG entity');
                 }
-                const rpgAgent = rpgManager.createRPGAgent(agent, agent.class || 'soldier');
-                agent.rpgEntity = rpgAgent;
+                rpgService.createRPGAgent(agent, agent.class || 'soldier');
                 if (this.logger) this.logger.debug(`📊 Created new RPG entity for agent: ${agent.name}`);
             }
 

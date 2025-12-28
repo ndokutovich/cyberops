@@ -497,12 +497,15 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         }
 
         // Initialize RPG entity if not present
-        if (!agent.rpgEntity && this.rpgManager) {
-            // Map specialization to correct RPG class
-            const rpgClass = this.mapSpecializationToClass ?
-                            this.mapSpecializationToClass(agent.specialization) || agent.class || 'soldier' :
-                            agent.class || 'soldier';
-            agent.rpgEntity = this.rpgManager.createRPGAgent(agent, rpgClass);
+        if (!agent.rpgEntity) {
+            // Use RPGService as single source of truth for rpgEntity creation
+            const rpgService = this.gameServices?.rpgService;
+            if (rpgService) {
+                const rpgClass = this.mapSpecializationToClass ?
+                                this.mapSpecializationToClass(agent.specialization) || agent.class || 'soldier' :
+                                agent.class || 'soldier';
+                rpgService.createRPGAgent(agent, rpgClass);
+            }
         }
 
         if (!agent.rpgEntity) {
