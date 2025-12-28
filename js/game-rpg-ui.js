@@ -579,9 +579,14 @@ CyberOpsGame.prototype.showStatAllocation = function(agentId) {
         throw new Error('DialogStateService not initialized - cannot show stat allocation');
     }
 
-    // Store agentId in state data and navigate
+    // Store agentId and pendingChanges on BOTH stateData objects
+    // (dialogService.stateData and engine.stateData are separate objects - generators read from engine)
     dialogService.stateData.agentId = agentId;
-    dialogService.stateData.pendingChanges = {}; // Reset pending changes
+    dialogService.stateData.pendingChanges = {};
+    if (dialogService.engine?.stateData) {
+        dialogService.engine.stateData.agentId = agentId;
+        dialogService.engine.stateData.pendingChanges = {};
+    }
     dialogService.navigateTo('stat-allocation');
 };
 
@@ -592,7 +597,10 @@ CyberOpsGame.prototype.allocateStatDeclarative = function(agentId, stat, change)
         throw new Error('DialogStateService not initialized - cannot allocate stats');
     }
 
-    const pending = dialogService.stateData.pendingChanges || {};
+    // Read from engine.stateData (where generator writes)
+    // dialogService.stateData and engine.stateData are SEPARATE objects!
+    const engineStateData = dialogService.engine?.stateData || dialogService.stateData;
+    const pending = engineStateData.pendingChanges || {};
     const current = pending[stat] || 0;
     const newValue = current + change;
 
@@ -607,8 +615,11 @@ CyberOpsGame.prototype.allocateStatDeclarative = function(agentId, stat, change)
     if (change > 0 && pointsLeft <= 0) return;
     if (change < 0 && current <= 0) return;
 
-    // Update pending changes
+    // Update pending changes on BOTH stateData objects
     pending[stat] = Math.max(0, newValue);
+    if (dialogService.engine?.stateData) {
+        dialogService.engine.stateData.pendingChanges = pending;
+    }
     dialogService.stateData.pendingChanges = pending;
 
     // Refresh the dialog to update UI
@@ -622,16 +633,20 @@ CyberOpsGame.prototype.confirmStatAllocation = function(agentId) {
         throw new Error('DialogStateService not initialized - cannot confirm stat allocation');
     }
 
+    // Read from engine.stateData (where generator writes)
+    // dialogService.stateData and engine.stateData are SEPARATE objects!
+    const engineStateData = dialogService.engine?.stateData || dialogService.stateData;
+
     // Get agentId from state data if not provided
-    if (!agentId && dialogService.stateData?.agentId) {
-        agentId = dialogService.stateData.agentId;
+    if (!agentId && engineStateData?.agentId) {
+        agentId = engineStateData.agentId;
     }
 
     // Get pending changes from state data
-    if (!dialogService.stateData?.pendingChanges) {
-        throw new Error('DialogStateService stateData.pendingChanges not available - required for stat allocation');
+    if (!engineStateData?.pendingChanges) {
+        throw new Error('Engine stateData.pendingChanges not available - required for stat allocation');
     }
-    const pending = dialogService.stateData.pendingChanges;
+    const pending = engineStateData.pendingChanges;
 
     const agent = this.findAgentForRPG(agentId);
     if (!agent || !agent.rpgEntity) {
