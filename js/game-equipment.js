@@ -48,9 +48,9 @@ CyberOpsGame.prototype.initializeEquipmentSystem = function() {
 CyberOpsGame.prototype.closeEquipmentDialog = function() {
     if (this.logger) this.logger.debug('🔒 Closing equipment dialog...');
 
-    // Use declarative dialog system
-    if (this.dialogEngine && this.dialogEngine.close) {
-        this.dialogEngine.close();
+    // Use DialogStateService (single source of truth)
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.close();
     }
 
     // If there's an active modal from modal engine, close it too
@@ -60,8 +60,8 @@ CyberOpsGame.prototype.closeEquipmentDialog = function() {
     }
 
     // Close any declarative dialogs if open
-    if (this.dialogEngine && this.dialogEngine.currentState) {
-        this.dialogEngine.closeAll();
+    if (this.gameServices?.dialogStateService?.currentState) {
+        this.gameServices.dialogStateService.closeAll();
     }
 };
 
@@ -90,9 +90,10 @@ CyberOpsGame.prototype.refreshEquipmentUI = function() {
 CyberOpsGame.prototype.selectAgentForEquipment = function(agentId) {
     this.selectedEquipmentAgent = agentId;
 
-    // Refresh declarative dialog
-    if (this.dialogEngine && this.dialogEngine.currentState && this.dialogEngine.currentState.id === 'arsenal') {
-        this.dialogEngine.navigateTo('arsenal');
+    // Refresh declarative dialog via DialogStateService
+    const dialogService = this.gameServices?.dialogStateService;
+    if (dialogService?.currentState === 'arsenal') {
+        dialogService.navigateTo('arsenal');
     } else if (this.logger) {
         this.logger.warn('⚠️ Arsenal dialog not active, cannot refresh agent selection');
     }

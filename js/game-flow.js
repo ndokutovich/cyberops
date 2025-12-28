@@ -53,9 +53,9 @@ CyberOpsGame.prototype.startCampaign = function() {
 
 // Alias for compatibility with screen system
 CyberOpsGame.prototype.startNewGame = function() {
-    // Close any open dialogs
-    if (this.dialogEngine) {
-        this.dialogEngine.closeAll();
+    // Close any open dialogs via DialogStateService
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.closeAll();
     }
 
     // Start the campaign
@@ -68,29 +68,25 @@ CyberOpsGame.prototype.continueCampaign = function() {
 }
 
 CyberOpsGame.prototype.selectMission = function() {
-        // Use declarative dialog system for mission selection
-        if (this.dialogEngine && this.dialogEngine.navigateTo) {
+        // Use DialogStateService for mission selection
+        if (this.gameServices?.dialogStateService) {
             // Save where we came from
             this.dialogReturnScreen = 'menu';
             // Don't hide main menu - let it serve as background
             // The dialog will overlay on top of it
             // Show mission select dialog
-            this.dialogEngine.navigateTo('mission-select-hub');
+            this.gameServices.dialogStateService.navigateTo('mission-select-hub');
         } else {
-            if (this.logger) this.logger.error('Dialog engine not available for mission selection');
+            if (this.logger) this.logger.error('DialogStateService not available for mission selection');
         }
 }
 
 // Old mission select dialog functions removed - now using declarative dialog system
 
 CyberOpsGame.prototype.showMissionBriefing = function(mission) {
-    // Always use declarative dialog system
-    if (this.dialogEngine) {
-        this.currentMission = mission;
-        window.screenManager.navigateTo('mission-briefing', { selectedMission: mission });
-        return;
-    }
-    if (this.logger) this.logger.error('Dialog engine not available for mission briefing');
+    // Navigate to mission briefing screen
+    this.currentMission = mission;
+    window.screenManager.navigateTo('mission-briefing', { selectedMission: mission });
 
         // Continue main theme music during briefing (don't change music yet)
         if (this.logger) this.logger.debug('🎵 Mission briefing - keeping main theme music playing');
@@ -2036,8 +2032,8 @@ CyberOpsGame.prototype.togglePause = function() {
                 enemiesRemaining: this.enemies.filter(e => e.alive).length,
                 totalEnemies: this.enemies.length
             };
-            if (this.dialogEngine) {
-                this.dialogEngine.navigateTo('pause-menu');
+            if (this.gameServices?.dialogStateService) {
+                this.gameServices.dialogStateService.navigateTo('pause-menu');
             }
         } else {
             pauseButton.textContent = '⏸';
@@ -2047,7 +2043,7 @@ CyberOpsGame.prototype.togglePause = function() {
 }
 
 // showPauseMenu removed - now using declarative dialog system
-// All calls replaced with inline pauseMenuData setup + this.dialogEngine.navigateTo('pause-menu');
+// All calls use: this.gameServices.dialogStateService.navigateTo('pause-menu');
 
 CyberOpsGame.prototype.closePauseMenu = function() {
         this.closeDialog();
@@ -2078,7 +2074,7 @@ CyberOpsGame.prototype.surrenderMission = function() {
             'Are you sure you want to surrender this mission?<br><br><strong>Warning:</strong> You will lose all progress and return to the Syndicate Hub without rewards.',
             [
                 { text: 'CONFIRM SURRENDER', action: () => this.performSurrender() },
-                { text: 'CANCEL', action: () => this.dialogEngine.navigateTo('pause-menu') }
+                { text: 'CANCEL', action: () => this.gameServices?.dialogStateService?.navigateTo('pause-menu') }
             ]
         );
 }
@@ -2101,7 +2097,7 @@ CyberOpsGame.prototype.returnToHubFromMission = function() {
             'Return to Syndicate Hub?<br><br><strong>Note:</strong> Your mission progress will be saved and you can resume later.',
             [
                 { text: 'RETURN TO HUB', action: () => this.performReturnToHub() },
-                { text: 'CANCEL', action: () => this.dialogEngine.navigateTo('pause-menu') }
+                { text: 'CANCEL', action: () => this.gameServices?.dialogStateService?.navigateTo('pause-menu') }
             ]
         );
 }

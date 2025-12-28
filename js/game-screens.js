@@ -181,15 +181,15 @@ CyberOpsGame.prototype.gatherMissionSummary = function(victory) {
     return summary;
 }
 
-// Legacy functions that redirect to declarative system
+// Legacy functions that redirect to declarative system via DialogStateService
 CyberOpsGame.prototype.continueToNextMission = function() {
     // This is handled by the victory screen's action handlers
-    this.dialogEngine.executeAction('proceedToNextMission');
+    this.gameServices?.dialogStateService?.executeAction('proceedToNextMission');
 }
 
 CyberOpsGame.prototype.tryAgainMission = function() {
     // This is handled by the defeat screen's retry action
-    this.dialogEngine.executeAction('retryMission');
+    this.gameServices?.dialogStateService?.executeAction('retryMission');
 }
 
 CyberOpsGame.prototype.backToMainMenuFromIntermission = function() {
@@ -201,7 +201,7 @@ CyberOpsGame.prototype.backToMainMenuFromIntermission = function() {
 
 CyberOpsGame.prototype.finishCampaign = function() {
     // This is handled by the victory screen's complete campaign action
-    this.dialogEngine.executeAction('completeCampaign');
+    this.gameServices?.dialogStateService?.executeAction('completeCampaign');
 }
 
 // Apply medical healing after missions
@@ -286,27 +286,27 @@ CyberOpsGame.prototype.showGameComplete = function() {
 
 // Tutorial
 CyberOpsGame.prototype.showTutorial = function() {
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('tutorial');
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.navigateTo('tutorial');
     } else {
-        if (this.logger) this.logger.error('Dialog engine not available for tutorial');
+        if (this.logger) this.logger.error('DialogStateService not available for tutorial');
     }
 }
 
-// World map
+// World map - Note: Also exists in game-hub.js, prefer that version
 CyberOpsGame.prototype.showWorldMap = function() {
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('world-map');
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.navigateTo('world-map');
     } else {
-        if (this.logger) this.logger.error('Dialog engine not available for world map');
+        if (this.logger) this.logger.error('DialogStateService not available for world map');
     }
 }
 
 // Terminal hack
 CyberOpsGame.prototype.showTerminalHack = function(terminal) {
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('terminal-hack', { terminal: terminal });
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.navigateTo('terminal-hack', { terminal: terminal });
     } else {
-        if (this.logger) this.logger.error('Dialog engine not available for terminal hack');
+        if (this.logger) this.logger.error('DialogStateService not available for terminal hack');
     }
 }

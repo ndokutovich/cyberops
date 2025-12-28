@@ -541,7 +541,7 @@ CyberOpsGame.prototype.showLevelUpNotification = function(agent) {
                 <div>+${agent.rpgEntity.availableSkillPoints || 0} Skill Points</div>
                 ${agent.rpgEntity.availablePerkPoints > 0 ? `<div>+1 Perk Point</div>` : ''}
             </div>
-            <button onclick="game.selectedAgent = game.agents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}') || game.activeAgents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}'); game.dialogEngine?.navigateTo('character'); this.parentElement.parentElement.remove()">
+            <button onclick="game.selectedAgent = game.agents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}') || game.activeAgents?.find(a => a.id === '${agent.id || agent.name}' || a.name === '${agent.id || agent.name}'); game.gameServices?.dialogStateService?.navigateTo('character'); this.parentElement.parentElement.remove()">
                 Open Character Sheet
             </button>
         </div>

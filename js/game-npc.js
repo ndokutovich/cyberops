@@ -887,13 +887,13 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
                                 if (infoText) {
                                     // Set 'info' property so generator displays it
                                     this.currentNPC.info = infoText;
-                                    // Refresh dialog to show info
-                                    if (this.dialogEngine) {
+                                    // Refresh dialog to show info via DialogStateService
+                                    if (this.gameServices?.dialogStateService) {
                                         const context = {
                                             avatar: dialogData.npc.avatar || '👤',
                                             name: dialogData.npc.name || 'Unknown'
                                         };
-                                        this.dialogEngine.navigateTo('npc-interaction', context, true);
+                                        this.gameServices.dialogStateService.navigateTo('npc-interaction', context, true);
                                     }
                                 } else {
                                     if (this.logger) this.logger.warn('No info text found for NPC');
@@ -912,8 +912,8 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
         })) : []
     };
 
-    // Navigate to NPC interaction dialog
-    if (this.dialogEngine) {
+    // Navigate to NPC interaction dialog via DialogStateService
+    if (this.gameServices?.dialogStateService) {
         this.activeNPCModal = { close: () => this.closeNPCDialog() }; // Compatibility shim
 
         // Pass context data for layout placeholders
@@ -923,7 +923,7 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
         };
 
         try {
-            this.dialogEngine.navigateTo('npc-interaction', context);
+            this.gameServices.dialogStateService.navigateTo('npc-interaction', context);
             if (this.logger) this.logger.debug('✅ NPC dialog navigation successful');
         } catch (e) {
             if (this.logger) this.logger.error('❌ NPC dialog navigation failed:', e);
@@ -931,8 +931,8 @@ CyberOpsGame.prototype.showDialog = function(dialogData) {
             this.closeNPCDialog();
         }
     } else {
-        // No dialog engine - reset state
-        if (this.logger) this.logger.error('❌ No dialogEngine available for NPC dialog');
+        // No DialogStateService - reset state
+        if (this.logger) this.logger.error('❌ DialogStateService not available for NPC dialog');
         this.dialogActive = false;
         this.resumeGame();
     }
@@ -1033,9 +1033,9 @@ CyberOpsGame.prototype.checkObjectiveComplete = function(obj) {
 
 // Close NPC dialog - works with Modal Engine
 CyberOpsGame.prototype.closeNPCDialog = function() {
-    // Close declarative dialog engine if active
-    if (this.dialogEngine && this.dialogEngine.currentState === 'npc-interaction') {
-        this.dialogEngine.close();
+    // Close declarative dialog engine if active via DialogStateService
+    if (this.gameServices?.dialogStateService?.currentState === 'npc-interaction') {
+        this.gameServices.dialogStateService.close();
     }
 
     // Close modal engine dialog if exists (fallback for old system)

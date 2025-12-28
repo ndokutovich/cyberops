@@ -1,10 +1,12 @@
     // Save/Load System with Multiple Slots
 
-// Show save list dialog - Using declarative dialog system
+// Show save list dialog - Using DialogStateService
 CyberOpsGame.prototype.showSaveList = function(mode = 'save') {
     // Set mode in state data and navigate to save-load dialog
-    this.dialogEngine.stateData = { saveLoadMode: mode };
-    this.dialogEngine.navigateTo('save-load');
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.stateData = { saveLoadMode: mode };
+        this.gameServices.dialogStateService.navigateTo('save-load');
+    }
 }
 
 CyberOpsGame.prototype.closeSaveList = function() {
@@ -204,9 +206,9 @@ CyberOpsGame.prototype.loadSaveSlot = function(slotId) {
                 if (success) {
                     this.closeSaveList();
 
-                    // Close any open dialogs first
-                    if (this.dialogEngine && this.dialogEngine.closeAll) {
-                        this.dialogEngine.closeAll();
+                    // Close any open dialogs first via DialogStateService
+                    if (this.gameServices?.dialogStateService) {
+                        this.gameServices.dialogStateService.closeAll();
                     }
 
                     // Navigate to the screen that was saved (usually hub)
@@ -375,8 +377,8 @@ CyberOpsGame.prototype.saveGameWithName = function(name) {
     this.saveToSlot(saveId, name.trim());
 
     // Close the dialog if it's open
-    if (this.dialogEngine) {
-        this.dialogEngine.closeAll();
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.closeAll();
     }
 
     // Show confirmation

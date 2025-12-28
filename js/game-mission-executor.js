@@ -728,9 +728,9 @@ CyberOpsGame.prototype.updateObjectiveDisplay = function() {
     // Also update the mission list dialog if it's open
     const missionDialog = document.querySelector('.mission-list-dialog');
     if (missionDialog && missionDialog.style.display !== 'none') {
-        // Refresh the mission list
-        if (this.dialogEngine) {
-            this.dialogEngine.navigateTo('mission-progress');
+        // Refresh the mission list via DialogStateService
+        if (this.gameServices?.dialogStateService) {
+            this.gameServices.dialogStateService.navigateTo('mission-progress');
         }
     }
 };

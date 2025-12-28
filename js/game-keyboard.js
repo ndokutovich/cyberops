@@ -99,7 +99,7 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
         toggleHotkeyHelp: () => this.toggleHotkeyHelp(),
         characterSheet: () => this.openCharacterSheet(),
         inventory: () => this.openInventory(),
-        missionProgress: () => this.dialogEngine?.navigateTo('mission-progress'),
+        missionProgress: () => this.gameServices?.dialogStateService?.navigateTo('mission-progress'),
 
         // Debug
         togglePaths: () => this.togglePathVisualization(),
@@ -125,11 +125,11 @@ CyberOpsGame.prototype.initKeyboardHandler = function() {
     // Use e.code values for layout-independent matching
     this.specialKeyHandlers = {
         'Escape': () => {
-            if (this.dialogEngine && this.dialogEngine.stateStack && this.dialogEngine.stateStack.length > 0) {
+            if (this.gameServices?.dialogStateService?.stateStack?.length > 0) {
                 return; // Let dialog system handle it
             }
             if (this.currentScreen === 'game') {
-                this.dialogEngine.navigateTo('pause-menu');
+                this.gameServices?.dialogStateService?.navigateTo('pause-menu');
             }
         },
         'Digit0': () => {
@@ -207,7 +207,7 @@ CyberOpsGame.prototype.openCharacterSheet = function() {
         } else if (agentId && typeof agentId === 'object') {
             this._selectedAgent = agentId;
         }
-        this.dialogEngine?.navigateTo('character');
+        this.gameServices?.dialogStateService?.navigateTo('character');
     } else {
         if (this.logger) this.logger.warn('No agent available for character sheet');
     }

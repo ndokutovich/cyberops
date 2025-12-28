@@ -247,8 +247,9 @@ CyberOpsGame.prototype.setDefaultTeamMode = function(mode) {
 
 CyberOpsGame.prototype.applySettings = function() {
     // Settings are applied immediately via onchange handlers
-    if (this.dialogEngine && (this.dialogEngine.currentState === 'hub-settings' || this.dialogEngine.currentState === 'settings')) {
-        this.dialogEngine.back();
+    const dialogService = this.gameServices?.dialogStateService;
+    if (dialogService && (dialogService.currentState === 'hub-settings' || dialogService.currentState === 'settings')) {
+        dialogService.back();
     }
 };
 
@@ -275,9 +276,10 @@ CyberOpsGame.prototype.resetSettings = function() {
 
     this.updateAllMusicVolumes();
 
-    // Refresh the dialog
-    if (this.dialogEngine && (this.dialogEngine.currentState === 'hub-settings' || this.dialogEngine.currentState === 'settings')) {
-        this.dialogEngine.navigateTo(this.dialogEngine.currentState, null, true);
+    // Refresh the dialog via DialogStateService
+    const dialogService = this.gameServices?.dialogStateService;
+    if (dialogService && (dialogService.currentState === 'hub-settings' || dialogService.currentState === 'settings')) {
+        dialogService.navigateTo(dialogService.currentState, null, true);
     }
 };
 

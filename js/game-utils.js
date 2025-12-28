@@ -8,11 +8,12 @@ CyberOpsGame.prototype.selectRPGAgent = function(agentId) {
     const agent = this.gameServices?.agentService?.getAgent(agentId);
     if (agent) {
         this.selectedRPGAgent = agent;
-        // Refresh dialog if open
-        if (this.dialogEngine && this.dialogEngine.currentState) {
-            const currentStateId = this.dialogEngine.currentState.id;
-            if (currentStateId && currentStateId.includes('character')) {
-                this.dialogEngine.renderState(currentStateId, this.dialogEngine.stateData);
+        // Refresh dialog if open via DialogStateService
+        const dialogService = this.gameServices?.dialogStateService;
+        if (dialogService?.currentState) {
+            const currentStateId = dialogService.currentState.id || dialogService.currentState;
+            if (currentStateId && typeof currentStateId === 'string' && currentStateId.includes('character')) {
+                dialogService.renderState(currentStateId, dialogService.stateData);
             }
         }
     }

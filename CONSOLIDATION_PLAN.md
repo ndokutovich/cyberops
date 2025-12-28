@@ -93,24 +93,36 @@ Estimated lines to consolidate: ~2,500+
 - Added convenience methods (showSettings, showCharacter, showInventory, etc.)
 
 **Caller Migration Status**:
-- [x] game-equipment.js - refreshEquipmentUI (3 locations)
-- [x] game-settings.js - resetKeyBinding (1 location)
-- [x] game-rpg-integration.js - XP gain character refresh (1 location)
+- [x] game-equipment.js - refreshEquipmentUI (6 locations) - COMPLETE
+- [x] game-settings.js - resetKeyBinding, applySettings (4 locations) - COMPLETE
+- [x] game-rpg-integration.js - XP gain character refresh (1 location) - COMPLETE
 - [x] game-rpg-ui.js - ALL usages (15+ locations) - COMPLETE
-- [x] dialog-integration.js - rosterClickAction, saveLoadUI (2 locations)
-- [ ] game-hub.js - 12 usages remaining
-- [ ] game-flow.js - 8 usages remaining
-- [ ] game-keyboard.js - 4 usages remaining
-- [ ] game-saveload.js - 4 usages remaining
-- [ ] game-dialogs.js - 2 usages remaining
-- [ ] game-screens.js - 4 usages remaining
-- [ ] game-npc.js - 4 usages remaining
-- [ ] game-mission-executor.js - 1 usage remaining
+- [x] dialog-integration.js - rosterClickAction, saveLoadUI (2 locations) - COMPLETE
+- [x] game-hub.js - 14 usages - COMPLETE (2025-12-28)
+- [x] game-flow.js - 8 usages - COMPLETE (2025-12-28)
+- [x] game-keyboard.js - 4 usages - COMPLETE (2025-12-28)
+- [x] game-saveload.js - 4 usages - COMPLETE (2025-12-28)
+- [x] game-dialogs.js - 2 usages - COMPLETE (2025-12-28)
+- [x] game-screens.js - 7 usages - COMPLETE (2025-12-28)
+- [x] game-npc.js - 4 usages - COMPLETE (2025-12-28)
+- [x] game-mission-executor.js - 1 usage - COMPLETE (2025-12-28)
+- [x] game-utils.js - 3 usages - COMPLETE (2025-12-28)
+
+**Remaining dialogEngine usages (expected - infrastructure)**:
+- dialog-integration.js (44) - Integration adapter, must use dialogEngine
+- declarative-dialog-engine.js (5) - The engine itself
+- services/dialog-state-service.js (3) - Wrapper service
+- screen-manager.js (12) - Screen infrastructure
+- screen-config.js (7) - Configuration
+- cutscene-engine.js (2), cutscene-integration.js (2) - Cutscene system
+- modal-engine.js (1) - Cross-reference
+- test-framework.js (2) - Testing
 
 **Fallbacks Eliminated**:
 - [x] CoordinateService fallbacks removed (game-events.js, game-engine.js)
 - [x] MissionService window function fallback removed
 - [x] DialogEngine fallback patterns replaced with DialogStateService
+- [x] ALL game files migrated to use DialogStateService (2025-12-28)
 
 ---
 
@@ -194,7 +206,8 @@ Estimated lines to consolidate: ~2,500+
 | AudioService | DONE | 2025-12-28 | -415 (wrappers removed) |
 | CoordinateService | DONE | 2025-12-28 | +280 (new service) |
 | MissionService Expansion | DONE | 2025-12-28 | +120 (validators), -20 (old checks) |
-| DialogStateService | DONE | 2025-12-28 | +340 (new service) |
+| DialogStateService | DONE | 2025-12-28 | +340 (service), +60 (migration) |
+| DialogStateService Migration | DONE | 2025-12-28 | 14 files, ~55 usages migrated |
 | EquipmentService | - | - | - |
 | NPCService | - | - | - |
 | MissionSetupService | - | - | - |

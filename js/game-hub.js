@@ -133,11 +133,11 @@ CyberOpsGame.prototype.showMissionsFromHub = function() {
     // Don't hide the hub - let it serve as background
     // The dialog will overlay on top of it
 
-    // Use the declarative dialog system
-    if (this.dialogEngine && this.dialogEngine.navigateTo) {
-        this.dialogEngine.navigateTo('mission-select-hub');
+    // Use DialogStateService (single source of truth for dialog navigation)
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.navigateTo('mission-select-hub');
     } else {
-        if (this.logger) this.logger.error('Dialog engine not available for mission selection');
+        if (this.logger) this.logger.error('DialogStateService not available for mission selection');
     }
 }
 
@@ -175,7 +175,7 @@ CyberOpsGame.prototype.startNextMission = function() {
             The city is safe thanks to your efforts!<br><br>
             <div style="color: #ffa500;">Total Missions Completed: ${this.completedMissions.length}/${this.missions.length}</div>`,
             [
-                { text: 'VIEW ACHIEVEMENTS', action: () => { this.closeDialog(); if (this.dialogEngine) { this.dialogEngine.navigateTo('hall-of-glory'); } } },
+                { text: 'VIEW ACHIEVEMENTS', action: () => { this.closeDialog(); this.gameServices?.dialogStateService?.navigateTo('hall-of-glory'); } },
                 { text: 'OK', action: 'close' }
             ]
         );
@@ -184,9 +184,9 @@ CyberOpsGame.prototype.startNextMission = function() {
     
     // Fix mission briefing for hub flow
 CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
-        // Close any open dialogs first
-        if (this.dialogEngine && this.dialogEngine.closeAll) {
-            this.dialogEngine.closeAll();
+        // Close any open dialogs first via DialogStateService
+        if (this.gameServices?.dialogStateService) {
+            this.gameServices.dialogStateService.closeAll();
         }
 
         // Navigation handled by screen manager
@@ -202,13 +202,13 @@ CyberOpsGame.prototype.startMissionFromHub = function(missionIndex) {
 }
     
 // showHallOfGlory removed - now using declarative dialog system
-// All calls replaced with: this.dialogEngine.navigateTo('hall-of-glory');
+// All calls use: this.gameServices.dialogStateService.navigateTo('hall-of-glory');
 
 // Return to hub from declarative dialog
 CyberOpsGame.prototype.returnToHub = function() {
-    // Close any open dialogs
-    if (this.dialogEngine && this.dialogEngine.closeAll) {
-        this.dialogEngine.closeAll();
+    // Close any open dialogs via DialogStateService
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.closeAll();
     }
 
     // Don't restart music when returning from dialogs - let it continue playing
@@ -234,10 +234,7 @@ CyberOpsGame.prototype.returnToHub = function() {
 }
 
 // showAgentManagement, showArsenal, showResearchLab removed - now using declarative dialog system
-// All calls replaced with: this.dialogEngine.navigateTo('agent-management' / 'arsenal' / 'research-lab');
-
-// showResearchLabOld removed - now using declarative dialog system
-// All calls replaced with: this.dialogEngine.navigateTo('research-lab');
+// All calls use: this.gameServices.dialogStateService.navigateTo('agent-management' / 'arsenal' / 'research-lab');
     
 // Start research using ResearchService as single source of truth
 CyberOpsGame.prototype.startResearch = function(projectId) {
@@ -277,8 +274,8 @@ CyberOpsGame.prototype.startResearch = function(projectId) {
     this.addNotification(`📊 Benefit: ${project.description}`);
 
     // Refresh the research lab dialog to show updated state
-    if (this.dialogEngine && this.dialogEngine.currentState === 'research-lab') {
-        this.dialogEngine.navigateTo('research-lab');
+    if (this.gameServices?.dialogStateService?.currentState === 'research-lab') {
+        this.gameServices.dialogStateService.navigateTo('research-lab');
     }
 
     this.updateHubStats();
@@ -360,11 +357,11 @@ CyberOpsGame.prototype.getNextIntelThreshold = function() {
 CyberOpsGame.prototype.showHiringDialog = function() {
     if (this.logger) this.logger.debug('📋 showHiringDialog - routing to declarative hire-agents state');
 
-    // Use the declarative dialog system
-    if (this.dialogEngine && this.dialogEngine.navigateTo) {
-        this.dialogEngine.navigateTo('hire-agents');
+    // Use DialogStateService (single source of truth for dialog navigation)
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.navigateTo('hire-agents');
     } else {
-        if (this.logger) this.logger.error('Dialog engine not available for hiring dialog');
+        if (this.logger) this.logger.error('DialogStateService not available for hiring dialog');
     }
 };
 
@@ -398,7 +395,7 @@ CyberOpsGame.prototype.hireAgent = function(agentId) {
             Credits Remaining: ${this.credits.toLocaleString()}`,
             [
                 { text: 'HIRE MORE', action: () => { this.transitionDialog(() => this.showHiringDialog()); } },
-                { text: 'VIEW SQUAD', action: () => { this.closeDialog(); this.dialogEngine.navigateTo('arsenal'); } },
+                { text: 'VIEW SQUAD', action: () => { this.closeDialog(); this.gameServices?.dialogStateService?.navigateTo('arsenal'); } },
                 { text: 'BACK TO AGENTS', action: () => { this.closeDialog(); this.showAgentManagement(); } }
             ]
         );
@@ -415,7 +412,7 @@ CyberOpsGame.prototype.showSquadManagement = function() {
 
     // Close current dialog and show arsenal
     this.closeDialog();
-    this.dialogEngine.navigateTo('arsenal');
+    this.gameServices?.dialogStateService?.navigateTo('arsenal');
 }
     
 CyberOpsGame.prototype.manageAgentEquipment = function(agentId) {
@@ -424,9 +421,7 @@ CyberOpsGame.prototype.manageAgentEquipment = function(agentId) {
 
         // Set selected agent for equipment dialog and navigate to arsenal
         this.selectedAgentForEquipment = agentId;
-        if (this.dialogEngine) {
-            this.dialogEngine.navigateTo('arsenal');
-        }
+        this.gameServices?.dialogStateService?.navigateTo('arsenal');
 }
     
 CyberOpsGame.prototype.viewAgentDetails = function(agentId) {
@@ -465,10 +460,10 @@ CyberOpsGame.prototype.showSettingsFromHub = function() {
 
 // Show world map dialog - wrapper for hub card onclick
 CyberOpsGame.prototype.showWorldMap = function() {
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('world-map');
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.navigateTo('world-map');
     } else if (this.logger) {
-        this.logger.error('DialogEngine not available for world map');
+        this.logger.error('DialogStateService not available for world map');
     }
 };
 
@@ -620,8 +615,8 @@ CyberOpsGame.prototype.selectRegion = function(regionId) {
     this.closeDialog();
 
     // Open mission selection dialog with filtered missions
-    if (this.dialogEngine) {
-        this.dialogEngine.navigateTo('mission-select-hub', {
+    if (this.gameServices?.dialogStateService) {
+        this.gameServices.dialogStateService.navigateTo('mission-select-hub', {
             region: regionId,
             missions: regionMissions
         });
