@@ -123,6 +123,11 @@ class MissionService {
             return enemies.filter(e => e.alive).length === 0;
         });
 
+        // Pacifist - no kills
+        this.registerValidator('checkPacifist', (objective, gameState) => {
+            return this.trackers.enemiesEliminated === 0;
+        });
+
         if (this.logger) this.logger.debug('Built-in validators registered');
     }
 

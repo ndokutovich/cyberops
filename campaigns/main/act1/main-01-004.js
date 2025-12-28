@@ -170,6 +170,7 @@
                 type: 'custom',
                 required: true,
                 description: 'Remain undetected',
+                displayText: 'Ghost Mode: Stay undetected',
                 checkFunction: 'checkStealthObjective'
             },
             {
@@ -178,14 +179,35 @@
                 target: 'terminal',
                 count: 3,
                 required: true,
-                description: 'Hack 3 terminals'
+                description: 'Hack 3 terminals',
+                displayText: 'Terminals hacked: {current}/{required}'
             },
             {
                 id: 'extract',
                 type: 'reach',
-                target: 'extraction',
+                target: { type: 'extraction' },
                 required: true,
-                description: 'Reach extraction point'
+                description: 'Reach extraction point',
+                displayText: 'Reach extraction point'
+            },
+            {
+                id: 'pacifist',
+                type: 'custom',
+                required: false,
+                description: 'Complete without killing anyone',
+                displayText: 'Pacifist: Zero kills',
+                checkFunction: 'checkPacifist',
+                rewards: { credits: 800, researchPoints: 40 }
+            },
+            {
+                id: 'keep_agents_alive',
+                type: 'custom',
+                required: false,
+                description: 'Keep all agents alive',
+                displayText: 'Perfect extraction: All agents alive',
+                checkFunction: 'checkAgentsAlive',
+                minAgents: 3,
+                rewards: { credits: 600, researchPoints: 30 }
             }
         ],
 
