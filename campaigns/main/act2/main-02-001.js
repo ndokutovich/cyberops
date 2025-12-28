@@ -154,18 +154,20 @@
                 id: 'avoid_civilians',
                 type: 'custom',
                 required: false,
-                description: 'Avoid civilian casualties',
-                displayText: 'No civilian casualties',
-                checkFunction: 'checkNoCivilianCasualties'
+                description: 'No civilian casualties',
+                displayText: 'Clean operation: No civilian casualties',
+                checkFunction: 'checkNoCivilianCasualties',
+                rewards: { credits: 400, researchPoints: 15 }
             },
             {
                 id: 'keep_agents_alive',
                 type: 'custom',
                 required: false,
                 description: 'Keep all agents alive',
-                displayText: 'All agents survived',
+                displayText: 'Perfect extraction: All agents alive',
                 checkFunction: 'checkAgentsAlive',
-                minAgents: 2
+                minAgents: 4,
+                rewards: { credits: 750, researchPoints: 40 }
             }
         ],
 

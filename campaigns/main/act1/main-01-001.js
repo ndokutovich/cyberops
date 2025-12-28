@@ -198,7 +198,8 @@
                 required: false,
                 description: 'Eliminate all hostiles',
                 tracker: 'enemiesEliminated',
-                displayText: 'Hostiles eliminated: {current}/{required}'
+                displayText: 'Hostiles eliminated: {current}/{required}',
+                rewards: { credits: 400, researchPoints: 15 }
             },
             {
                 id: 'stealth_bonus',
@@ -207,16 +208,18 @@
                 bonus: true,
                 description: 'Complete mission without triggering alerts',
                 displayText: 'Ghost Protocol: No alerts triggered',
-                checkFunction: 'checkStealthHack'
+                checkFunction: 'checkStealthHack',
+                rewards: { credits: 600, researchPoints: 30 }
             },
             {
                 id: 'keep_agents_alive',
                 type: 'custom',
                 required: false,
                 description: 'Keep at least 2 agents alive',
-                displayText: 'Keep at least 2 agents alive',
+                displayText: 'Squad intact: 2+ agents alive',
                 checkFunction: 'checkAgentsAlive',
-                minAgents: 2
+                minAgents: 2,
+                rewards: { credits: 500, researchPoints: 25 }
             }
         ],
 
