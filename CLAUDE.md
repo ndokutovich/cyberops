@@ -421,6 +421,7 @@ class GameServices {
     missionService        // Mission tracking (single source of truth for objectives)
     missionStateService   // Mission state isolation (pre-assault snapshots)
     questService          // Quest and side-objective tracking
+    npcService            // NPC lifecycle management (spawn, update, query)
 
     // Inventory & Equipment Services
     inventoryService      // Inventory and item management
@@ -456,7 +457,7 @@ class GameServices {
 }
 ```
 
-**Total Services: 23** (organized in 8 categories)
+**Total Services: 24** (organized in 8 categories)
 
 #### Critical Architecture Rules
 - **NO Game References in Services**: Services NEVER reference the game object

@@ -342,6 +342,29 @@ class EnemyService SERVICE {
     + clearEnemies()
 }
 
+class NPCService SERVICE {
+    - npcs : array
+    - quests : object
+    - npcInteractions : Set
+    - npcInteractionRange : number
+    - questService : QuestService
+    - gameContext : CyberOpsGame
+    - logger : Logger
+
+    + initialize(gameContext)
+    + clearNPCs()
+    + getNPCs() : array
+    + getNPC(npcId) : object
+    + findValidSpawnPosition(x, y) : object
+    + spawnNPCs(missionDef, missionIndex) : array
+    + getNPCsForMission(missionDef) : array
+    + createNPCFromDefinition(npcDef) : object
+    + getNearbyNPC(agent) : object
+    + updateNPCs()
+    + saveState() : object
+    + loadState(state)
+}
+
 class SaveGameService SERVICE {
     - gameStateService : GameStateService
     - saveSlots : array
@@ -665,6 +688,7 @@ GameServices *-- AgentService : owns
 GameServices *-- MissionService : owns
 GameServices *-- MissionStateService : owns
 GameServices *-- QuestService : owns
+GameServices *-- NPCService : owns
 
 ' GameServices composition - Inventory & Equipment
 GameServices *-- InventoryService : owns
@@ -722,6 +746,7 @@ SaveGameService --> GameStateService : uses
 MissionService --> ResourceService : uses
 MissionService --> AgentService : uses
 QuestService --> ResourceService : uses
+NPCService --> QuestService : uses
 
 ' Service dependencies - Combat
 CombatService --> FormulaService : uses
@@ -768,6 +793,7 @@ CatalogService --> Logger : uses
 ItemService --> Logger : uses
 CombatService --> Logger : uses
 EnemyService --> Logger : uses
+NPCService --> Logger : uses
 SaveGameService --> Logger : uses
 PathfindingService --> Logger : uses
 KeyboardDispatcherService --> Logger : uses
