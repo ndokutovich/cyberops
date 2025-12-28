@@ -442,7 +442,10 @@ Quest.prototype.checkObjective = function(objective, game) {
 
         switch(objective.type) {
             case 'kill':
-                return (game.enemiesKilledThisMission || 0) >= objective.count;
+            case 'eliminate':
+                // Count dead enemies in current mission
+                const deadEnemies = game.enemies ? game.enemies.filter(e => !e.alive).length : 0;
+                return deadEnemies >= objective.count;
 
             case 'collect':
                 const hasItem = inventory[objective.item] >= objective.count;
