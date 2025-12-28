@@ -1799,31 +1799,32 @@ The game uses a state-machine based declarative dialog system for all UI interac
 
 ### Common Usage
 ```javascript
-// Navigate to dialog
-this.dialogEngine.navigateTo('character');
+// Navigate to dialog via DialogStateService (required pattern)
+this.gameServices?.dialogStateService?.navigateTo('character');
 
 // Refresh current dialog (e.g., after data change)
-this.dialogEngine.navigateTo('arsenal', null, true);
+this.gameServices?.dialogStateService?.navigateTo('arsenal', null, true);
 
 // Navigate back
-this.dialogEngine.back();
+this.gameServices?.dialogStateService?.back();
 
 // Close dialog
-this.dialogEngine.close();
+this.gameServices?.dialogStateService?.close();
 ```
 
-### ⚠️ Important: Cleanup Needed
-These imperative functions still exist alongside declarative versions:
-- `showCharacterSheet()` → use `navigateTo('character')`
-- `showArsenal()` → use `navigateTo('arsenal')`
-- `showPauseMenu()` → use `navigateTo('pause-menu')`
-- `showAgentManagement()` → use `navigateTo('agent-management')`
-- `showResearchLab()` → use `navigateTo('research-lab')`
-- `showHallOfGlory()` → use `navigateTo('hall-of-glory')`
-- ~~`showMissionSelectDialog()`~~ → **REMOVED** - now fully declarative
-- `showNPCDialog()` → use `navigateTo('npc-interaction')`
+### ✅ Cleanup Completed (2025-12-28)
+All imperative dialog functions have been removed. Use DialogStateService:
+- ~~`showCharacterSheet()`~~ → REMOVED - use `navigateTo('character')`
+- ~~`showArsenal()`~~ → REMOVED - use `navigateTo('arsenal')`
+- ~~`showPauseMenu()`~~ → REMOVED - use `navigateTo('pause-menu')`
+- ~~`showAgentManagement()`~~ → REMOVED - use `navigateTo('agent-management')`
+- ~~`showResearchLab()`~~ → REMOVED - use `navigateTo('research-lab')`
+- ~~`showHallOfGlory()`~~ → REMOVED - use `navigateTo('hall-of-glory')`
+- ~~`showMissionSelectDialog()`~~ → REMOVED - use `navigateTo('mission-select-hub')`
+- ~~`showNPCDialog()`~~ → REMOVED - use `navigateTo('npc-interaction')`
+- ~~`showWorldMap()` (game-screens.js)~~ → REMOVED - use game-hub.js version
 
-See GAME_STATE_REFERENCE.md Section "Cleanup Tasks" for complete list.
+All 14 game files now use `DialogStateService` as the single source of truth.
 
 ## Automated Testing Framework
 

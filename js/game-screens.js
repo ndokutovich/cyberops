@@ -293,14 +293,7 @@ CyberOpsGame.prototype.showTutorial = function() {
     }
 }
 
-// World map - Note: Also exists in game-hub.js, prefer that version
-CyberOpsGame.prototype.showWorldMap = function() {
-    if (this.gameServices?.dialogStateService) {
-        this.gameServices.dialogStateService.navigateTo('world-map');
-    } else {
-        if (this.logger) this.logger.error('DialogStateService not available for world map');
-    }
-}
+// showWorldMap removed - duplicate of game-hub.js version
 
 // Terminal hack
 CyberOpsGame.prototype.showTerminalHack = function(terminal) {
