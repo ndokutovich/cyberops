@@ -97,28 +97,6 @@ class InventoryService {
     }
 
     /**
-     * @deprecated Use initialize() instead
-     */
-    initializeFromGame(game) {
-        if (this.logger) this.logger.warn('DEPRECATED: initializeFromGame called, use initialize() instead');
-
-        // CRITICAL FIX: Check for circular reference
-        // If game.weapons is already the same array as inventory.weapons, skip re-initialization
-        if (game.weapons === this.inventory.weapons) {
-            if (this.logger) this.logger.warn('⚠️ Skipping re-initialization - circular reference detected (game.weapons === inventory.weapons)');
-            return;
-        }
-
-        // Extract data from game object for backward compatibility
-        this.initialize({
-            weapons: game.weapons,
-            equipment: game.equipment,
-            agentLoadouts: game.agentLoadouts,
-            intel: game.intel
-        });
-    }
-
-    /**
      * Get item category based on type/slot
      */
     getItemCategory(type) {

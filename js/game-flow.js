@@ -236,12 +236,7 @@ CyberOpsGame.prototype.startMission = function() {
                 }));
                 if (this.logger) this.logger.info(`📦 Synced ${this.weapons.length} weapons to InventoryService for mission`);
             }
-            // Also sync equipment
-            if (this.equipment && this.equipment.length > 0) {
-                // Re-initialize to ensure all data is synced
-                this.gameServices.inventoryService.initializeFromGame(this);
-                if (this.logger) this.logger.info(`📦 Re-initialized InventoryService with game state`);
-            }
+            // Equipment already synced via computed properties (game.weapons → inventoryService.getWeapons())
 
             // Debug: Log agent loadouts status
             if (this.logger && this.agentLoadouts) {

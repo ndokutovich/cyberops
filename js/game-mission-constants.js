@@ -52,19 +52,6 @@ const OBJECTIVE_HANDLERS = {
         }
 
         return text;
-    },
-
-    // Interaction handling is now done through MissionService.trackEvent
-    handleInteraction: function(agent, targetType, targetId, game) {
-        // This function is deprecated - use MissionService.trackEvent instead
-        return false;
     }
-};
-
-// Helper object for mission interaction handling
-const MissionHelpers = {
-    // Handle interaction based on objective
-    handleInteraction: function(agent, targetType, targetId, game) {
-        return OBJECTIVE_HANDLERS.handleInteraction(agent, targetType, targetId, game);
-    }
+    // handleInteraction removed - use MissionService.trackEvent instead
 };

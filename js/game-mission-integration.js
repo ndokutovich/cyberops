@@ -390,9 +390,6 @@ CyberOpsGame.prototype.hackNearestTerminal = function(agent) {
         // Sound effect
         this.gameServices?.audioService?.playSound('hack', 0.5);
 
-        // Handle interaction for objectives
-        OBJECTIVE_HANDLERS.handleInteraction(agent, INTERACTION_TARGETS.TERMINAL, nearestTerminal.id || 'terminal', this);
-
         return true;
     }
 
