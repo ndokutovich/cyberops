@@ -234,7 +234,7 @@
             },
             {
                 id: 'factory_foreman',
-                spawn: { x: 75, y: 22 },  // In right control room
+                spawn: { x: 80, y: 15 },  // In right control room
                 quests: ['structural_weakness']
             },
             {
