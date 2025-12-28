@@ -349,8 +349,12 @@ if (typeof RPGService === 'undefined') {
             inventories: []
         };
 
+        if (logger) logger.info(`📤 Saving RPG data, entities in rpgManager: ${this.rpgManager.entities.size}`);
+
         // Export all entities from RPGManager
         this.rpgManager.entities.forEach((entity, id) => {
+            if (logger) logger.debug(`   Saving entity: ${id} (${entity.name})`);
+            if (logger) logger.debug(`   - Level: ${entity.level}, Skills: ${JSON.stringify(entity.skills)}`);
             data.entities.push({
                 id: id,
                 name: entity.name,
@@ -402,8 +406,14 @@ if (typeof RPGService === 'undefined') {
 
         // Load entities into RPGManager
         if (data.entities && Array.isArray(data.entities)) {
+            if (logger) logger.info(`📥 Loading ${data.entities.length} RPG entities from save...`);
             data.entities.forEach(entityData => {
+                if (logger) logger.debug(`   Processing entity: ${entityData.id} (${entityData.name})`);
+                if (logger) logger.debug(`   - Level: ${entityData.level}, Skills: ${JSON.stringify(entityData.skills)}`);
+
                 const existingEntity = this.rpgManager.entities.get(entityData.id);
+                if (logger) logger.debug(`   - Existing entity in rpgManager: ${!!existingEntity}`);
+
                 if (existingEntity) {
                     // Update existing entity
                     existingEntity.level = entityData.level;
@@ -416,17 +426,19 @@ if (typeof RPGService === 'undefined') {
                     existingEntity.availableSkillPoints = entityData.availableSkillPoints || 0;
                     existingEntity.availablePerkPoints = entityData.availablePerkPoints || 0;
                     if (entityData.derivedStats) existingEntity.derivedStats = { ...entityData.derivedStats };
-                    if (logger) logger.debug(`   ✓ Updated entity: ${entityData.id} (Level ${entityData.level})`);
+                    if (logger) logger.info(`   ✅ Updated existing entity: ${entityData.id} (Level ${entityData.level})`);
                 } else {
-                    // Entity doesn't exist yet - need to recreate it
-                    // This happens when loading a save after a fresh game start
-                    if (logger) logger.debug(`   ⚠️ Entity ${entityData.id} not found in RPGManager - will be recreated when agent loads`);
-                    // Store data for later recreation
+                    // Entity doesn't exist yet - store for later
+                    if (logger) logger.info(`   📋 Storing pending data for: ${entityData.id} (will apply when agent created)`);
                     if (!this._pendingEntityData) this._pendingEntityData = new Map();
                     this._pendingEntityData.set(entityData.id, entityData);
+                    // Also store by name as fallback
+                    if (entityData.name) {
+                        this._pendingEntityData.set(entityData.name, entityData);
+                    }
                 }
             });
-            if (logger) logger.info(`📊 Loaded ${data.entities.length} RPG entities`);
+            if (logger) logger.info(`📊 Processed ${data.entities.length} RPG entities, pending: ${this._pendingEntityData?.size || 0}`);
         }
 
         // Load inventories into InventoryManager
@@ -450,10 +462,23 @@ if (typeof RPGService === 'undefined') {
      * @param {Object} entity - The RPG entity to update
      */
     applyPendingEntityData(agentId, entity) {
+        if (logger) logger.debug(`🔍 applyPendingEntityData called for: ${agentId}`);
+        if (logger) logger.debug(`   _pendingEntityData exists: ${!!this._pendingEntityData}`);
+        if (this._pendingEntityData) {
+            if (logger) logger.debug(`   _pendingEntityData keys: ${Array.from(this._pendingEntityData.keys()).join(', ')}`);
+        }
+
         if (!this._pendingEntityData) return;
 
         const pendingData = this._pendingEntityData.get(agentId);
+        if (logger) logger.debug(`   pendingData found: ${!!pendingData}`);
+
         if (pendingData && entity) {
+            if (logger) logger.info(`📊 Applying pending RPG data to ${agentId}:`);
+            if (logger) logger.debug(`   Level: ${pendingData.level}, XP: ${pendingData.xp}`);
+            if (logger) logger.debug(`   Skills: ${JSON.stringify(pendingData.skills)}`);
+            if (logger) logger.debug(`   Stats: ${JSON.stringify(pendingData.stats)}`);
+
             entity.level = pendingData.level;
             entity.xp = pendingData.xp;
             entity.experience = pendingData.experience;
@@ -466,7 +491,7 @@ if (typeof RPGService === 'undefined') {
             if (pendingData.derivedStats) entity.derivedStats = { ...pendingData.derivedStats };
 
             this._pendingEntityData.delete(agentId);
-            if (logger) logger.debug(`   ✓ Applied pending RPG data to ${agentId}`);
+            if (logger) logger.info(`   ✅ Applied pending RPG data to ${agentId}`);
         }
     }
     }; // End of RPGService class definition

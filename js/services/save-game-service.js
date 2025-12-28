@@ -387,7 +387,13 @@ class SaveGameService {
                 }
             }
 
-            // Restore agents
+            // IMPORTANT: Load RPG data FIRST to populate _pendingEntityData
+            // This must happen before agents are loaded so pending data can be applied
+            if (services.rpgService && saveData.rpg) {
+                services.rpgService.loadAllCharacterData(saveData.rpg);
+            }
+
+            // Restore agents (will apply pending RPG data from above)
             if (services.agentService && saveData.agents) {
                 services.agentService.loadAgentData(saveData.agents);
             }
@@ -400,11 +406,6 @@ class SaveGameService {
             // Restore research
             if (services.researchService && saveData.research) {
                 services.researchService.loadResearchData(saveData.research);
-            }
-
-            // Restore RPG data
-            if (services.rpgService && saveData.rpg) {
-                services.rpgService.loadAllCharacterData(saveData.rpg);
             }
 
             // Restore mission progress

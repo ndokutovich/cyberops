@@ -803,6 +803,16 @@ class AgentService {
                 // Re-register rpgEntity in RPGManager if present
                 if (agent.rpgEntity) {
                     this.reRegisterRPGEntity(agent);
+                    // Also apply any pending RPG data to ensure skills/stats are restored
+                    // (rpgEntity from JSON may be incomplete/plain object)
+                    const rpgService = window.GameServices?.rpgService;
+                    if (rpgService?.applyPendingEntityData) {
+                        const agentId = agent.originalId || agent.id || agent.name;
+                        rpgService.applyPendingEntityData(agentId, agent.rpgEntity);
+                        if (agent.name && agent.name !== agentId) {
+                            rpgService.applyPendingEntityData(agent.name, agent.rpgEntity);
+                        }
+                    }
                 }
             });
         }
