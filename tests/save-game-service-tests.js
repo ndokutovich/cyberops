@@ -48,40 +48,39 @@ if (typeof window !== 'undefined') {
     }
 
     // Mock all services that SaveGameService uses
+    // UNIFIED exportState/importState pattern ONLY - no legacy methods
     const mockServices = {
         inventoryService: {
-            getWeapons: () => [],
-            getArmor: () => [],
-            getItems: () => [],
-            loadInventoryData: (data) => { /* mock */ }
+            exportState: () => ({ weapons: [], armor: [], items: [], loadouts: {} }),
+            importState: (state) => { /* mock */ }
         },
         researchService: {
-            getCompletedResearch: () => [],
-            getInProgressResearch: () => [],
-            loadResearchData: (data) => { /* mock */ }
+            exportState: () => ({ completed: [], inProgress: [] }),
+            importState: (state) => { /* mock */ }
         },
         resourceService: {
-            getCredits: () => 0,
-            getResearchPoints: () => 0,
-            getWorldControl: () => 0,
-            setCredits: (value) => { /* mock */ },
-            setResearchPoints: (value) => { /* mock */ }
+            exportState: () => ({ credits: 0, researchPoints: 0, worldControl: 0 }),
+            importState: (state) => { /* mock */ }
         },
         agentService: {
-            getAvailableAgents: () => [],
-            getActiveAgents: () => [],
-            getFallenAgents: () => [],
-            loadAgentData: (data) => { /* mock */ }
+            exportState: () => ({ availableAgents: [], activeAgents: [], fallenAgents: [] }),
+            importState: (state) => { /* mock */ }
         },
         rpgService: {
-            getAllCharacterData: () => ({}),
-            loadAllCharacterData: (data) => { /* mock */ }
+            exportState: () => ({ entities: [], inventories: [], pendingData: [] }),
+            importState: (state) => { /* mock */ }
         },
         missionService: {
-            getCurrentMission: () => null,
-            getCompletedMissions: () => [],
-            getFailedMissions: () => [],
-            loadMissionData: (data) => { /* mock */ }
+            exportState: () => ({ current: null, completed: [], failed: [] }),
+            importState: (state) => { /* mock */ }
+        },
+        questService: {
+            exportState: () => ({ activeQuests: [], completedQuests: [], questInventory: {} }),
+            importState: (state) => { /* mock */ }
+        },
+        audioService: {
+            exportState: () => ({ currentTrack: null, volume: 1.0 }),
+            importState: (state) => { /* mock */ }
         }
     };
 

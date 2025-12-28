@@ -82,5 +82,33 @@ try {
     console.log('✗ CombatService failed:', e.message);
 }
 
+try {
+    services.InventoryService = loadService('js/services/inventory-service.js');
+    console.log('✓ InventoryService loaded');
+} catch (e) {
+    console.log('✗ InventoryService failed:', e.message);
+}
+
+try {
+    services.ResearchService = loadService('js/services/research-service.js');
+    console.log('✓ ResearchService loaded');
+} catch (e) {
+    console.log('✗ ResearchService failed:', e.message);
+}
+
+try {
+    services.QuestService = loadService('js/services/quest-service.js');
+    console.log('✓ QuestService loaded');
+} catch (e) {
+    console.log('✗ QuestService failed:', e.message);
+}
+
+try {
+    services.RPGService = loadService('js/services/rpg-service.js');
+    console.log('✓ RPGService loaded');
+} catch (e) {
+    console.log('✗ RPGService failed:', e.message);
+}
+
 // Export loaded services
 module.exports = services;

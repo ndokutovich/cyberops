@@ -88,49 +88,57 @@ class AgentService {
 
     /**
      * Create a standardized agent object
+     * Uses nullish coalescing (??) instead of || to preserve falsy values like 0
      */
     createAgent(data) {
         const agent = {
             // Core identity
-            id: data.id || this.nextAgentId++,
-            originalId: data.originalId || data.id,
-            name: data.name || `Agent ${data.id}`,
+            id: data.id ?? this.nextAgentId++,
+            originalId: data.originalId ?? data.id,
+            name: data.name ?? `Agent ${data.id}`,
 
-            // Status
-            hired: data.hired || false,
-            alive: data.alive !== undefined ? data.alive : true,
-            health: data.health || 100,
-            maxHealth: data.maxHealth || data.health || 100,
+            // Status - use ?? to preserve falsy values (0 health, false hired)
+            hired: data.hired ?? false,
+            alive: data.alive ?? true,
+            health: data.health ?? 100,
+            maxHealth: data.maxHealth ?? data.health ?? 100,
 
-            // Combat stats
-            damage: data.damage || 10,
-            speed: data.speed || 5,
-            protection: data.protection || 0,
+            // Combat stats - use ?? to preserve 0 values
+            damage: data.damage ?? 10,
+            speed: data.speed ?? 5,
+            protection: data.protection ?? 0,
 
             // Specialization
-            specialization: data.specialization || 'soldier',
-            skills: data.skills || [],
+            specialization: data.specialization ?? 'soldier',
+            skills: data.skills ?? [],
 
             // Cost and bio
-            cost: data.cost || 1000,
-            bio: data.bio || 'No biography available',
+            cost: data.cost ?? 1000,
+            bio: data.bio ?? 'No biography available',
 
             // RPG integration
-            level: data.level || 1,
-            xp: data.xp || 0,
-            rpgEntity: data.rpgEntity || null,
+            level: data.level ?? 1,
+            xp: data.xp ?? 0,
+            rpgEntity: data.rpgEntity ?? null,
 
             // Equipment (managed by InventoryService)
-            weapon: data.weapon || null,
-            armor: data.armor || null,
-            utility: data.utility || null,
+            weapon: data.weapon ?? null,
+            armor: data.armor ?? null,
+            utility: data.utility ?? null,
 
-            // Mission state
-            x: data.x || 0,
-            y: data.y || 0,
-            moveTarget: data.moveTarget || null,
-            cooldowns: data.cooldowns || []
+            // Mission state - use ?? to preserve 0 coordinates
+            x: data.x ?? 0,
+            y: data.y ?? 0,
+            moveTarget: data.moveTarget ?? null,
+            cooldowns: data.cooldowns ?? []
         };
+
+        // Preserve any additional custom properties from data
+        Object.keys(data).forEach(key => {
+            if (!(key in agent)) {
+                agent[key] = data[key];
+            }
+        });
 
         return agent;
     }
@@ -149,23 +157,9 @@ class AgentService {
             this.agentById.set(String(agent.originalId), agent);
         }
 
-        // Ensure agent is in activeAgents if not already there
-        // This is important for mission agents that get re-indexed with new IDs
-        if (!this.activeAgents.includes(agent)) {
-            // Check if we already have this agent with different ID
-            const existingIndex = this.activeAgents.findIndex(a =>
-                (a.originalId && a.originalId === agent.originalId) ||
-                a.name === agent.name
-            );
-
-            if (existingIndex >= 0) {
-                // Replace existing agent with the re-indexed one
-                this.activeAgents[existingIndex] = agent;
-            } else if (agent.hired !== false) {
-                // Add new agent if it's hired (not in availableAgents)
-                this.activeAgents.push(agent);
-            }
-        }
+        // DON'T auto-add to activeAgents here - this was causing bugs
+        // where fallen agents were being added to activeAgents
+        // Let the calling code manage array membership explicitly
     }
 
     /**
@@ -627,31 +621,71 @@ class AgentService {
     }
 
     /**
-     * Import state from save
+     * Import state from save - UNIFIED PATTERN
+     * Single method for all state restoration
      */
     importState(state) {
-        // CRITICAL: Log state BEFORE import to detect issues
+        if (!state) {
+            if (this.logger) this.logger.warn('⚠️ importState called with null/undefined state');
+            return;
+        }
+
         if (this.logger) {
             this.logger.debug(`📥 BEFORE importState:`);
             this.logger.debug(`   Current active: ${this.activeAgents.length}, available: ${this.availableAgents.length}, fallen: ${this.fallenAgents.length}`);
-            if (this.fallenAgents.length > 0) {
-                this.logger.debug(`   Current fallen agents: ${this.fallenAgents.map(a => a.name).join(', ')}`);
-            }
             this.logger.debug(`   Snapshot active: ${state.activeAgents?.length || 0}, available: ${state.availableAgents?.length || 0}, fallen: ${state.fallenAgents?.length || 0}`);
-            if (state.fallenAgents && state.fallenAgents.length > 0) {
-                this.logger.debug(`   Snapshot fallen agents: ${state.fallenAgents.map(a => a.name).join(', ')}`);
-            }
         }
 
-        if (state.availableAgents) this.availableAgents = state.availableAgents.map(a => this.createAgent(a));
-        if (state.activeAgents) this.activeAgents = state.activeAgents.map(a => this.createAgent(a));
-        if (state.fallenAgents) this.fallenAgents = state.fallenAgents.map(a => this.createAgent(a));
-        if (state.nextAgentId) this.nextAgentId = state.nextAgentId;
-
-        // Re-index all agents
+        // Clear current state
+        this.availableAgents = [];
+        this.activeAgents = [];
+        this.fallenAgents = [];
         this.agentById.clear();
         this.agentByName.clear();
-        [...this.availableAgents, ...this.activeAgents, ...this.fallenAgents].forEach(a => this.indexAgent(a));
+
+        // Load available agents
+        if (state.availableAgents && Array.isArray(state.availableAgents)) {
+            state.availableAgents.forEach(agentData => {
+                const agent = this.createAgent({ ...agentData, hired: false });
+                this.availableAgents.push(agent);
+                this.indexAgent(agent);
+            });
+        }
+
+        // Load active agents with RPG entity restoration
+        if (state.activeAgents && Array.isArray(state.activeAgents)) {
+            state.activeAgents.forEach(agentData => {
+                const agent = this.createAgent({ ...agentData, hired: true });
+                this.activeAgents.push(agent);
+                this.indexAgent(agent);
+
+                // Re-register and restore RPG entity
+                if (agent.rpgEntity) {
+                    this.reRegisterRPGEntity(agent);
+                    // Apply pending RPG data to ensure skills/stats are restored
+                    const rpgService = window.GameServices?.rpgService;
+                    if (rpgService?.applyPendingEntityData) {
+                        const agentId = agent.originalId || agent.id || agent.name;
+                        rpgService.applyPendingEntityData(agentId, agent.rpgEntity);
+                        if (agent.name && agent.name !== agentId) {
+                            rpgService.applyPendingEntityData(agent.name, agent.rpgEntity);
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load fallen agents
+        if (state.fallenAgents && Array.isArray(state.fallenAgents)) {
+            state.fallenAgents.forEach(agentData => {
+                const agent = this.createAgent({ ...agentData, hired: true, alive: false });
+                this.fallenAgents.push(agent);
+                this.indexAgent(agent);
+            });
+        }
+
+        // Restore nextAgentId
+        if (state.nextAgentId) this.nextAgentId = state.nextAgentId;
 
         // Restore selected agents
         if (state.selectedAgents) {
@@ -659,12 +693,7 @@ class AgentService {
         }
 
         if (this.logger) {
-            this.logger.info('👥 AgentService state imported');
-            this.logger.debug(`📥 AFTER importState:`);
-            this.logger.debug(`   Active: ${this.activeAgents.length}, available: ${this.availableAgents.length}, fallen: ${this.fallenAgents.length}`);
-            if (this.fallenAgents.length > 0) {
-                this.logger.debug(`   Fallen agents: ${this.fallenAgents.map(a => a.name).join(', ')}`);
-            }
+            this.logger.info(`✅ AgentService state imported: ${this.activeAgents.length} active, ${this.availableAgents.length} available, ${this.fallenAgents.length} fallen`);
         }
     }
 
@@ -759,76 +788,6 @@ class AgentService {
         }
 
         return newAgents;
-    }
-
-    /**
-     * Load agent data from save system
-     * Restores all agent collections from saved data
-     * @param {Object} data - Saved agent data with available, active, fallen arrays
-     */
-    loadAgentData(data) {
-        if (!data) {
-            if (this.logger) this.logger.warn('⚠️ No agent data to load');
-            return;
-        }
-
-        if (this.logger) {
-            this.logger.info('📥 Loading agent data from save...');
-            this.logger.debug(`   Available: ${data.available?.length || 0}, Active: ${data.active?.length || 0}, Fallen: ${data.fallen?.length || 0}`);
-        }
-
-        // Clear current state
-        this.availableAgents = [];
-        this.activeAgents = [];
-        this.fallenAgents = [];
-        this.agentById.clear();
-        this.agentByName.clear();
-
-        // Load available agents
-        if (data.available && Array.isArray(data.available)) {
-            data.available.forEach(agentData => {
-                const agent = this.createAgent({ ...agentData, hired: false });
-                this.availableAgents.push(agent);
-                this.indexAgent(agent);
-            });
-        }
-
-        // Load active agents
-        if (data.active && Array.isArray(data.active)) {
-            data.active.forEach(agentData => {
-                const agent = this.createAgent({ ...agentData, hired: true });
-                this.activeAgents.push(agent);
-                this.indexAgent(agent);
-
-                // Re-register rpgEntity in RPGManager if present
-                if (agent.rpgEntity) {
-                    this.reRegisterRPGEntity(agent);
-                    // Also apply any pending RPG data to ensure skills/stats are restored
-                    // (rpgEntity from JSON may be incomplete/plain object)
-                    const rpgService = window.GameServices?.rpgService;
-                    if (rpgService?.applyPendingEntityData) {
-                        const agentId = agent.originalId || agent.id || agent.name;
-                        rpgService.applyPendingEntityData(agentId, agent.rpgEntity);
-                        if (agent.name && agent.name !== agentId) {
-                            rpgService.applyPendingEntityData(agent.name, agent.rpgEntity);
-                        }
-                    }
-                }
-            });
-        }
-
-        // Load fallen agents
-        if (data.fallen && Array.isArray(data.fallen)) {
-            data.fallen.forEach(agentData => {
-                const agent = this.createAgent({ ...agentData, hired: true, alive: false });
-                this.fallenAgents.push(agent);
-                this.indexAgent(agent);
-            });
-        }
-
-        if (this.logger) {
-            this.logger.info(`✅ Agent data loaded: ${this.activeAgents.length} active, ${this.availableAgents.length} available, ${this.fallenAgents.length} fallen`);
-        }
     }
 
     /**

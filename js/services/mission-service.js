@@ -1119,36 +1119,6 @@ class MissionService {
     }
 
     /**
-     * Export state
-     */
-    exportState() {
-        return {
-            currentMission: this.currentMission,
-            currentMissionIndex: this.currentMissionIndex,
-            missionStatus: this.missionStatus,
-            missionTimer: this.missionTimer,
-            completedMissions: [...this.completedMissions],
-            failedMissions: [...this.failedMissions],
-            missionStats: Array.from(this.missionStats.entries())
-        };
-    }
-
-    /**
-     * Import state
-     */
-    importState(state) {
-        if (state.currentMission) this.currentMission = state.currentMission;
-        if (state.currentMissionIndex !== undefined) this.currentMissionIndex = state.currentMissionIndex;
-        if (state.missionStatus) this.missionStatus = state.missionStatus;
-        if (state.missionTimer !== undefined) this.missionTimer = state.missionTimer;
-        if (state.completedMissions) this.completedMissions = [...state.completedMissions];
-        if (state.failedMissions) this.failedMissions = [...state.failedMissions];
-        if (state.missionStats) {
-            this.missionStats = new Map(state.missionStats);
-        }
-    }
-
-    /**
      * Add event listener
      */
     addListener(eventType, callback) {
@@ -1338,6 +1308,7 @@ class MissionService {
         return {
             // Current mission
             currentMission: this.currentMission,
+            currentMissionIndex: this.currentMissionIndex,  // CRITICAL: index for mission progression
             missionStatus: this.missionStatus,
             missionTimer: this.missionTimer,
 
@@ -1350,8 +1321,8 @@ class MissionService {
             trackers: { ...this.trackers },
 
             // History
-            completedMissions: this.completedMissions,
-            failedMissions: this.failedMissions,
+            completedMissions: [...this.completedMissions],
+            failedMissions: [...this.failedMissions],
             missionStats: Array.from(this.missionStats.entries()),
 
             // Extraction
@@ -1748,71 +1719,37 @@ class MissionService {
     importState(state) {
         if (!state) return;
 
-        // Current mission
-        this.currentMission = state.currentMission || null;
-        this.missionStatus = state.missionStatus || 'idle';
-        this.missionTimer = state.missionTimer || 0;
+        // Current mission - use ?? to preserve 0 values
+        this.currentMission = state.currentMission ?? null;
+        this.currentMissionIndex = state.currentMissionIndex ?? 0;  // CRITICAL: preserve index for progression
+        this.missionStatus = state.missionStatus ?? 'idle';
+        this.missionTimer = state.missionTimer ?? 0;
 
         // Objectives
-        this.objectives = state.objectives || [];
-        this.completedObjectives = new Set(state.completedObjectives || []);
-        this.failedObjectives = new Set(state.failedObjectives || []);
+        this.objectives = state.objectives ?? [];
+        this.completedObjectives = new Set(state.completedObjectives ?? []);
+        this.failedObjectives = new Set(state.failedObjectives ?? []);
 
         // Trackers
-        this.trackers = { ...this.trackers, ...(state.trackers || {}) };
+        this.trackers = { ...this.trackers, ...(state.trackers ?? {}) };
 
         // History
-        this.completedMissions = state.completedMissions || [];
-        this.failedMissions = state.failedMissions || [];
-        this.missionStats = new Map(state.missionStats || []);
+        this.completedMissions = state.completedMissions ?? [];
+        this.failedMissions = state.failedMissions ?? [];
+        this.missionStats = new Map(state.missionStats ?? []);
 
-        // Extraction
-        this.extractionEnabled = state.extractionEnabled || false;
-        this.extractionPoint = state.extractionPoint || null;
+        // Extraction - use ?? for booleans
+        this.extractionEnabled = state.extractionEnabled ?? false;
+        this.extractionPoint = state.extractionPoint ?? null;
 
         // Quests
-        this.activeQuests = new Map(state.activeQuests || []);
-        this.completedQuests = new Set(state.completedQuests || []);
-        this.questProgress = new Map(state.questProgress || []);
+        this.activeQuests = new Map(state.activeQuests ?? []);
+        this.completedQuests = new Set(state.completedQuests ?? []);
+        this.questProgress = new Map(state.questProgress ?? []);
 
         if (this.logger) this.logger.debug('Mission state imported');
     }
 
-    /**
-     * Load mission data from save system
-     * Called by SaveGameService.applySaveData
-     * @param {Object} data - Saved mission data with current, completed, failed
-     */
-    loadMissionData(data) {
-        if (!data) {
-            if (this.logger) this.logger.warn('⚠️ No mission data to load');
-            return;
-        }
-
-        if (this.logger) {
-            this.logger.info('📥 Loading mission data from save...');
-            this.logger.debug(`   Completed: ${data.completed?.length || 0}, Failed: ${data.failed?.length || 0}`);
-        }
-
-        // Restore current mission reference
-        if (data.current) {
-            this.currentMission = data.current;
-        }
-
-        // Restore completed missions
-        if (data.completed && Array.isArray(data.completed)) {
-            this.completedMissions = [...data.completed];
-        }
-
-        // Restore failed missions
-        if (data.failed && Array.isArray(data.failed)) {
-            this.failedMissions = [...data.failed];
-        }
-
-        if (this.logger) {
-            this.logger.info(`✅ Mission data loaded: ${this.completedMissions.length} completed, ${this.failedMissions.length} failed`);
-        }
-    }
 }
 
 // Export for use in other modules

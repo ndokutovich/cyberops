@@ -605,106 +605,159 @@ class QuestService {
         return `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
+    // ========================================
+    // UNIFIED STATE EXPORT/IMPORT (for save system)
+    // ========================================
+
     /**
-     * Save quest state
+     * Export complete quest state for save system
+     * Unified pattern - all services use exportState()/importState()
      */
-    saveState() {
+    exportState() {
+        // Sync quest inventory from game.inventory if available
+        if (window.game && window.game.inventory) {
+            this.questInventory = { ...window.game.inventory };
+        }
+
         return {
-            activeQuests: Array.from(this.activeQuests.entries()),
+            // Active quests with full data
+            activeQuests: Array.from(this.activeQuests.entries()).map(([id, quest]) => ({
+                id: id,
+                ...quest
+            })),
+
+            // Completed and failed quest IDs
             completedQuests: Array.from(this.completedQuests),
             failedQuests: Array.from(this.failedQuests),
-            questProgress: Array.from(this.questProgress.entries()),
+
+            // Progress data for all quests
+            questProgress: Array.from(this.questProgress.entries()).map(([id, progress]) => ({
+                id: id,
+                ...progress
+            })),
+
+            // NPC associations
+            npcQuests: Array.from(this.npcQuests.entries()),
+            questGivers: Array.from(this.questGivers.entries()),
+
+            // Quest chains and prerequisites
+            questChains: Array.from(this.questChains.entries()),
+            questPrerequisites: Array.from(this.questPrerequisites.entries()),
+
+            // Dialog history
             dialogHistory: Array.from(this.dialogHistory.entries()),
+
+            // Rewards
             pendingRewards: this.pendingRewards,
+            claimedRewards: Array.from(this.claimedRewards),
+
+            // Quest item inventory
             questInventory: this.questInventory
         };
     }
 
     /**
-     * Load quest state
+     * Import complete quest state from save system
+     * Unified pattern - all services use exportState()/importState()
      */
-    loadState(state) {
-        if (!state) return;
-
-        this.activeQuests = new Map(state.activeQuests || []);
-        this.completedQuests = new Set(state.completedQuests || []);
-        this.failedQuests = new Set(state.failedQuests || []);
-        this.questProgress = new Map(state.questProgress || []);
-        this.dialogHistory = new Map(state.dialogHistory || []);
-        this.pendingRewards = state.pendingRewards || [];
-        this.questInventory = state.questInventory || {};
-
-        if (this.logger) this.logger.info('Quest state loaded');
-    }
-
-    /**
-     * Get quest inventory (for save system)
-     */
-    getQuestInventory() {
-        // Sync from game.inventory if available
-        if (window.game && window.game.inventory) {
-            this.questInventory = { ...window.game.inventory };
-        }
-        return this.questInventory;
-    }
-
-    /**
-     * Set quest inventory item
-     */
-    setQuestItem(itemId, count) {
-        this.questInventory[itemId] = count;
-        // Sync to game.inventory
-        if (window.game) {
-            window.game.inventory = window.game.inventory || {};
-            window.game.inventory[itemId] = count;
-        }
-    }
-
-    /**
-     * Add quest item
-     */
-    addQuestItem(itemId, count = 1) {
-        this.questInventory[itemId] = (this.questInventory[itemId] || 0) + count;
-        // Sync to game.inventory
-        if (window.game) {
-            window.game.inventory = window.game.inventory || {};
-            window.game.inventory[itemId] = (window.game.inventory[itemId] || 0) + count;
-        }
-        if (this.logger) this.logger.info(`Quest item added: ${itemId} x${count}`);
-    }
-
-    /**
-     * Load quest data from save (for save-game-service)
-     */
-    loadQuestData(data) {
-        if (!data) return;
-
-        // Load quest inventory
-        if (data.questInventory) {
-            this.questInventory = data.questInventory;
-            // Sync to game.inventory
-            if (window.game) {
-                window.game.inventory = { ...data.questInventory };
-            }
+    importState(state) {
+        if (!state) {
+            if (this.logger) this.logger.warn('importState called with null/undefined state');
+            return;
         }
 
-        // Load active/completed quests
-        if (data.active) {
-            this.activeQuests = new Map(data.active.map(q => [q.id, q]));
+        // Clear existing state
+        this.activeQuests.clear();
+        this.completedQuests.clear();
+        this.failedQuests.clear();
+        this.questProgress.clear();
+        this.npcQuests.clear();
+        this.questGivers.clear();
+        this.questChains.clear();
+        this.questPrerequisites.clear();
+        this.dialogHistory.clear();
+        this.pendingRewards = [];
+        this.claimedRewards.clear();
+        this.questInventory = {};
+
+        // Restore active quests
+        if (state.activeQuests && Array.isArray(state.activeQuests)) {
+            state.activeQuests.forEach(quest => {
+                this.activeQuests.set(quest.id, quest);
+            });
         }
-        if (data.completed) {
-            this.completedQuests = new Set(data.completed);
+
+        // Restore completed and failed quests
+        if (state.completedQuests) {
+            this.completedQuests = new Set(state.completedQuests);
             // Sync to game.completedQuests
             if (window.game) {
-                window.game.completedQuests = new Set(data.completed);
+                window.game.completedQuests = new Set(state.completedQuests);
+            }
+        }
+        if (state.failedQuests) {
+            this.failedQuests = new Set(state.failedQuests);
+        }
+
+        // Restore progress
+        if (state.questProgress && Array.isArray(state.questProgress)) {
+            state.questProgress.forEach(progress => {
+                this.questProgress.set(progress.id, progress);
+            });
+        }
+
+        // Restore NPC associations
+        if (state.npcQuests) {
+            this.npcQuests = new Map(state.npcQuests);
+        }
+        if (state.questGivers) {
+            this.questGivers = new Map(state.questGivers);
+        }
+
+        // Restore chains and prerequisites
+        if (state.questChains) {
+            this.questChains = new Map(state.questChains);
+        }
+        if (state.questPrerequisites) {
+            this.questPrerequisites = new Map(state.questPrerequisites);
+        }
+
+        // Restore dialog history
+        if (state.dialogHistory) {
+            this.dialogHistory = new Map(state.dialogHistory);
+        }
+
+        // Restore rewards
+        if (state.pendingRewards) {
+            this.pendingRewards = state.pendingRewards;
+        }
+        if (state.claimedRewards) {
+            this.claimedRewards = new Set(state.claimedRewards);
+        }
+
+        // Restore quest inventory
+        if (state.questInventory) {
+            this.questInventory = state.questInventory;
+            // Sync to game.inventory
+            if (window.game) {
+                window.game.inventory = { ...state.questInventory };
             }
         }
 
-        if (this.logger) this.logger.info('Quest data loaded from save');
+        if (this.logger) this.logger.info('Quest state imported', {
+            activeQuests: this.activeQuests.size,
+            completedQuests: this.completedQuests.size,
+            questItems: Object.keys(this.questInventory).length
+        });
     }
 }
 
 // Export for use
 if (typeof window !== 'undefined') {
     window.QuestService = QuestService;
+}
+
+// Node.js export
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = QuestService;
 }

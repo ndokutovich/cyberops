@@ -523,39 +523,6 @@ class ResearchService {
         }
     }
 
-    /**
-     * Load research data from save system
-     * Called by SaveGameService.applySaveData
-     * @param {Object} data - Saved research data with completed and inProgress
-     */
-    loadResearchData(data) {
-        if (!data) {
-            if (this.logger) this.logger.warn('⚠️ No research data to load');
-            return;
-        }
-
-        if (this.logger) {
-            this.logger.info('📥 Loading research data from save...');
-            this.logger.debug(`   Completed: ${data.completed?.length || 0}, In Progress: ${data.inProgress?.length || 0}`);
-        }
-
-        // Restore completed research
-        if (data.completed && Array.isArray(data.completed)) {
-            this.completedResearch = [...data.completed];
-        }
-
-        // Restore in-progress research (if supported)
-        if (data.inProgress && this.currentResearch !== undefined) {
-            // If there's in-progress research, restore it
-            if (data.inProgress.length > 0) {
-                this.currentResearch = data.inProgress[0]; // Only one research at a time
-            }
-        }
-
-        if (this.logger) {
-            this.logger.info(`✅ Research data loaded: ${this.completedResearch.length} completed`);
-        }
-    }
 }
 
 // Export

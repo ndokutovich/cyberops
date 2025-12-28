@@ -245,7 +245,7 @@ class SaveGameService {
     }
 
     /**
-     * Gather save data from all game systems
+     * Gather save data from all game systems using unified exportState() pattern
      * @param {Object} game - Game instance passed as parameter (unidirectional)
      */
     async gatherSaveData(game) {
@@ -270,90 +270,72 @@ class SaveGameService {
             };
         }
 
-        // Get data from services
+        // ============================================================
+        // UNIFIED exportState() PATTERN FOR ALL SERVICES
+        // Each service exports its complete state as simple JSON
+        // ============================================================
         if (window.GameServices) {
             const services = window.GameServices;
 
-            // Resource data
-            if (services.resourceService) {
-                // Check if methods exist before calling
-                if (typeof services.resourceService.getCredits === 'function' &&
-                    typeof services.resourceService.getResearchPoints === 'function' &&
-                    typeof services.resourceService.getWorldControl === 'function') {
-
-                    saveData.resources = {
-                        credits: services.resourceService.getCredits(),
-                        researchPoints: services.resourceService.getResearchPoints(),
-                        worldControl: services.resourceService.getWorldControl()
-                    };
-                } else {
-                    if (this.logger) {
-                        this.logger.error('ResourceService methods not available', {
-                            hasGetCredits: typeof services.resourceService.getCredits,
-                            hasGetResearchPoints: typeof services.resourceService.getResearchPoints,
-                            hasGetWorldControl: typeof services.resourceService.getWorldControl,
-                            serviceType: typeof services.resourceService,
-                            serviceKeys: Object.keys(services.resourceService || {})
-                        });
-                    }
-                }
+            // Resource state (credits, research points, world control)
+            if (services.resourceService?.exportState) {
+                saveData.resources = services.resourceService.exportState();
             }
 
-            // Agent data
-            if (services.agentService) {
-                saveData.agents = {
-                    available: services.agentService.getAvailableAgents(),
-                    active: services.agentService.getActiveAgents(),
-                    fallen: services.agentService.getFallenAgents()
-                };
+            // Agent state (available, active, fallen agents with full data)
+            if (services.agentService?.exportState) {
+                saveData.agents = services.agentService.exportState();
             }
 
-            // Inventory data
-            if (services.inventoryService) {
-                saveData.inventory = {
-                    weapons: services.inventoryService.getWeapons(),
-                    armor: services.inventoryService.getArmor(),
-                    items: services.inventoryService.getItems()
-                };
+            // Inventory state (weapons, armor, items, loadouts)
+            if (services.inventoryService?.exportState) {
+                saveData.inventory = services.inventoryService.exportState();
             }
 
-            // Research data
-            if (services.researchService) {
-                saveData.research = {
-                    completed: services.researchService.getCompletedResearch(),
-                    inProgress: services.researchService.getInProgressResearch()
-                };
+            // Research state (completed, in-progress research)
+            if (services.researchService?.exportState) {
+                saveData.research = services.researchService.exportState();
             }
 
-            // RPG data
-            if (services.rpgService) {
-                saveData.rpg = services.rpgService.getAllCharacterData();
+            // RPG state (entities, skills, stats, perks, inventories)
+            // CRITICAL: Must be loaded BEFORE agents in applySaveData
+            if (services.rpgService?.exportState) {
+                saveData.rpg = services.rpgService.exportState();
             }
 
-            // Mission progress
-            if (services.missionService) {
-                saveData.missions = {
-                    current: services.missionService.getCurrentMission(),
-                    completed: services.missionService.getCompletedMissions(),
-                    failed: services.missionService.getFailedMissions()
-                };
+            // Mission state (current, completed, failed missions)
+            if (services.missionService?.exportState) {
+                saveData.missions = services.missionService.exportState();
             }
 
-            // Quest data (NPC quests and quest item inventory)
-            if (services.questService) {
-                saveData.quests = {
-                    active: services.questService.getActiveQuests(),
-                    completed: services.questService.getCompletedQuests(),
-                    questInventory: services.questService.getQuestInventory()
-                };
+            // Quest state (active, completed quests, quest items)
+            if (services.questService?.exportState) {
+                saveData.quests = services.questService.exportState();
             }
+
+            // Audio state (current track, volume settings)
+            if (services.audioService?.exportState) {
+                saveData.audio = services.audioService.exportState();
+            }
+        }
+
+        if (this.logger) {
+            this.logger.debug('Save data gathered using unified exportState()', {
+                hasResources: !!saveData.resources,
+                hasAgents: !!saveData.agents,
+                hasInventory: !!saveData.inventory,
+                hasResearch: !!saveData.research,
+                hasRpg: !!saveData.rpg,
+                hasMissions: !!saveData.missions,
+                hasQuests: !!saveData.quests
+            });
         }
 
         return saveData;
     }
 
     /**
-     * Apply save data to game systems
+     * Apply save data to game systems using unified importState() pattern
      * @param {Object} game - Game instance passed as parameter (unidirectional)
      * @param {Object} saveData - Save data to apply
      */
@@ -369,53 +351,66 @@ class SaveGameService {
             Object.assign(facade, saveData.facade);
         }
 
-        // Apply to services
+        // ============================================================
+        // UNIFIED importState() PATTERN FOR ALL SERVICES
+        // CRITICAL: Load order matters! RPG must be before Agents
+        // ============================================================
         if (window.GameServices && saveData) {
             const services = window.GameServices;
 
-            // Restore resources
-            if (services.resourceService && saveData.resources) {
-                services.resourceService.setCredits(saveData.resources.credits);
-                services.resourceService.setResearchPoints(saveData.resources.researchPoints);
-                // Note: setWorldControl doesn't exist, use add/spend pattern
-                const currentWorldControl = services.resourceService.getWorldControl();
-                const diff = saveData.resources.worldControl - currentWorldControl;
-                if (diff > 0) {
-                    services.resourceService.add('worldControl', diff, 'load save');
-                } else if (diff < 0) {
-                    services.resourceService.spend('worldControl', -diff, 'load save');
-                }
+            // 1. FIRST: Load RPG state to populate _pendingEntityData
+            //    This MUST happen before agents so pending data can be applied
+            if (services.rpgService?.importState && saveData.rpg) {
+                if (this.logger) this.logger.debug('Loading RPG state FIRST (before agents)');
+                services.rpgService.importState(saveData.rpg);
             }
 
-            // IMPORTANT: Load RPG data FIRST to populate _pendingEntityData
-            // This must happen before agents are loaded so pending data can be applied
-            if (services.rpgService && saveData.rpg) {
-                services.rpgService.loadAllCharacterData(saveData.rpg);
+            // 2. Resources (no dependencies)
+            if (services.resourceService?.importState && saveData.resources) {
+                services.resourceService.importState(saveData.resources);
             }
 
-            // Restore agents (will apply pending RPG data from above)
-            if (services.agentService && saveData.agents) {
-                services.agentService.loadAgentData(saveData.agents);
+            // 3. Agents (will apply pending RPG data from step 1)
+            if (services.agentService?.importState && saveData.agents) {
+                if (this.logger) this.logger.debug('Loading agents (will apply pending RPG data)');
+                services.agentService.importState(saveData.agents);
             }
 
-            // Restore inventory
-            if (services.inventoryService && saveData.inventory) {
-                services.inventoryService.loadInventoryData(saveData.inventory);
+            // 4. Inventory (after agents to link loadouts)
+            if (services.inventoryService?.importState && saveData.inventory) {
+                services.inventoryService.importState(saveData.inventory);
             }
 
-            // Restore research
-            if (services.researchService && saveData.research) {
-                services.researchService.loadResearchData(saveData.research);
+            // 5. Research (no dependencies)
+            if (services.researchService?.importState && saveData.research) {
+                services.researchService.importState(saveData.research);
             }
 
-            // Restore mission progress
-            if (services.missionService && saveData.missions) {
-                services.missionService.loadMissionData(saveData.missions);
+            // 6. Missions (no dependencies)
+            if (services.missionService?.importState && saveData.missions) {
+                services.missionService.importState(saveData.missions);
             }
 
-            // Restore quest data (NPC quests and quest item inventory)
-            if (services.questService && saveData.quests) {
-                services.questService.loadQuestData(saveData.quests);
+            // 7. Quests (no dependencies)
+            if (services.questService?.importState && saveData.quests) {
+                services.questService.importState(saveData.quests);
+            }
+
+            // 8. Audio (no dependencies)
+            if (services.audioService?.importState && saveData.audio) {
+                services.audioService.importState(saveData.audio);
+            }
+
+            if (this.logger) {
+                this.logger.info('Save data applied using unified importState()', {
+                    rpgLoaded: !!saveData.rpg,
+                    resourcesLoaded: !!saveData.resources,
+                    agentsLoaded: !!saveData.agents,
+                    inventoryLoaded: !!saveData.inventory,
+                    researchLoaded: !!saveData.research,
+                    missionsLoaded: !!saveData.missions,
+                    questsLoaded: !!saveData.quests
+                });
             }
         }
     }

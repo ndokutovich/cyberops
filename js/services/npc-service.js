@@ -324,9 +324,9 @@ class NPCService {
     }
 
     /**
-     * Save state for save/load system
+     * Export state for save/load system (unified pattern)
      */
-    saveState() {
+    exportState() {
         return {
             npcInteractions: Array.from(this.npcInteractions),
             quests: this.quests,
@@ -344,9 +344,9 @@ class NPCService {
     }
 
     /**
-     * Load state from save
+     * Import state from save (unified pattern)
      */
-    loadState(state) {
+    importState(state) {
         if (!state) return;
 
         this.npcInteractions = new Set(state.npcInteractions || []);

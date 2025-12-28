@@ -334,128 +334,6 @@ if (typeof RPGService === 'undefined') {
     }
 
     /**
-     * Get all character data for save system
-     * Returns serializable data for all RPG entities
-     * @returns {Object} Character data object for serialization
-     */
-    getAllCharacterData() {
-        if (!this.rpgManager) {
-            if (logger) logger.warn('⚠️ RPGManager not available for getAllCharacterData');
-            return null;
-        }
-
-        const data = {
-            entities: [],
-            inventories: []
-        };
-
-        if (logger) logger.info(`📤 Saving RPG data, entities in rpgManager: ${this.rpgManager.entities.size}`);
-
-        // Export all entities from RPGManager
-        this.rpgManager.entities.forEach((entity, id) => {
-            if (logger) logger.debug(`   Saving entity: ${id} (${entity.name})`);
-            if (logger) logger.debug(`   - Level: ${entity.level}, Skills: ${JSON.stringify(entity.skills)}`);
-            data.entities.push({
-                id: id,
-                name: entity.name,
-                class: entity.class,
-                level: entity.level,
-                xp: entity.xp,
-                experience: entity.experience,
-                stats: entity.stats ? { ...entity.stats } : {},
-                skills: entity.skills ? { ...entity.skills } : {},
-                perks: entity.perks ? [...entity.perks] : [],
-                availableStatPoints: entity.availableStatPoints || 0,
-                availableSkillPoints: entity.availableSkillPoints || 0,
-                availablePerkPoints: entity.availablePerkPoints || 0,
-                derivedStats: entity.derivedStats ? { ...entity.derivedStats } : {}
-            });
-        });
-
-        // Export inventories from InventoryManager
-        if (this.inventoryManager) {
-            this.inventoryManager.inventories.forEach((inventory, id) => {
-                data.inventories.push({
-                    id: id,
-                    maxWeight: inventory.maxWeight,
-                    items: inventory.items ? [...inventory.items] : [],
-                    equipped: inventory.equipped ? { ...inventory.equipped } : {}
-                });
-            });
-        }
-
-        if (logger) logger.debug(`📊 getAllCharacterData: ${data.entities.length} entities, ${data.inventories.length} inventories`);
-        return data;
-    }
-
-    /**
-     * Load all character data from save system
-     * Restores RPG entities and inventories from saved data
-     * @param {Object} data - Character data object from save
-     */
-    loadAllCharacterData(data) {
-        if (!data) {
-            if (logger) logger.warn('⚠️ No RPG data to load');
-            return;
-        }
-
-        if (!this.rpgManager) {
-            if (logger) logger.error('❌ RPGManager not available for loadAllCharacterData');
-            return;
-        }
-
-        // Load entities into RPGManager
-        if (data.entities && Array.isArray(data.entities)) {
-            if (logger) logger.info(`📥 Loading ${data.entities.length} RPG entities from save...`);
-            data.entities.forEach(entityData => {
-                if (logger) logger.debug(`   Processing entity: ${entityData.id} (${entityData.name})`);
-                if (logger) logger.debug(`   - Level: ${entityData.level}, Skills: ${JSON.stringify(entityData.skills)}`);
-
-                const existingEntity = this.rpgManager.entities.get(entityData.id);
-                if (logger) logger.debug(`   - Existing entity in rpgManager: ${!!existingEntity}`);
-
-                if (existingEntity) {
-                    // Update existing entity
-                    existingEntity.level = entityData.level;
-                    existingEntity.xp = entityData.xp;
-                    existingEntity.experience = entityData.experience;
-                    if (entityData.stats) existingEntity.stats = { ...entityData.stats };
-                    if (entityData.skills) existingEntity.skills = { ...entityData.skills };
-                    if (entityData.perks) existingEntity.perks = [...entityData.perks];
-                    existingEntity.availableStatPoints = entityData.availableStatPoints || 0;
-                    existingEntity.availableSkillPoints = entityData.availableSkillPoints || 0;
-                    existingEntity.availablePerkPoints = entityData.availablePerkPoints || 0;
-                    if (entityData.derivedStats) existingEntity.derivedStats = { ...entityData.derivedStats };
-                    if (logger) logger.info(`   ✅ Updated existing entity: ${entityData.id} (Level ${entityData.level})`);
-                } else {
-                    // Entity doesn't exist yet - store for later
-                    if (logger) logger.info(`   📋 Storing pending data for: ${entityData.id} (will apply when agent created)`);
-                    if (!this._pendingEntityData) this._pendingEntityData = new Map();
-                    this._pendingEntityData.set(entityData.id, entityData);
-                    // Also store by name as fallback
-                    if (entityData.name) {
-                        this._pendingEntityData.set(entityData.name, entityData);
-                    }
-                }
-            });
-            if (logger) logger.info(`📊 Processed ${data.entities.length} RPG entities, pending: ${this._pendingEntityData?.size || 0}`);
-        }
-
-        // Load inventories into InventoryManager
-        if (data.inventories && Array.isArray(data.inventories) && this.inventoryManager) {
-            data.inventories.forEach(invData => {
-                let inventory = this.inventoryManager.inventories.get(invData.id);
-                if (!inventory) {
-                    inventory = this.inventoryManager.createInventory(invData.id, invData.maxWeight || 100);
-                }
-                if (invData.items) inventory.items = [...invData.items];
-                if (invData.equipped) inventory.equipped = { ...invData.equipped };
-            });
-            if (logger) logger.info(`📦 Loaded ${data.inventories.length} inventories`);
-        }
-    }
-
-    /**
      * Apply pending entity data when an agent is created
      * Called after agent load to restore saved RPG state
      * @param {string} agentId - Agent ID to check for pending data
@@ -493,6 +371,129 @@ if (typeof RPGService === 'undefined') {
             this._pendingEntityData.delete(agentId);
             if (logger) logger.info(`   ✅ Applied pending RPG data to ${agentId}`);
         }
+    }
+
+    /**
+     * Export complete RPG state for save system
+     * Simple JSON-serializable snapshot of all RPG data
+     * @returns {Object} Complete RPG state
+     */
+    exportState() {
+        const state = {
+            entities: [],
+            inventories: [],
+            pendingData: []
+        };
+
+        // Export all entities from RPGManager
+        if (this.rpgManager?.entities) {
+            this.rpgManager.entities.forEach((entity, id) => {
+                state.entities.push({
+                    id: id,
+                    name: entity.name,
+                    class: entity.class,
+                    level: entity.level,
+                    xp: entity.xp,
+                    experience: entity.experience,
+                    stats: entity.stats ? { ...entity.stats } : {},
+                    skills: entity.skills ? { ...entity.skills } : {},
+                    perks: entity.perks ? [...entity.perks] : [],
+                    availableStatPoints: entity.availableStatPoints || 0,
+                    availableSkillPoints: entity.availableSkillPoints || 0,
+                    availablePerkPoints: entity.availablePerkPoints || 0,
+                    derivedStats: entity.derivedStats ? { ...entity.derivedStats } : {}
+                });
+            });
+        }
+
+        // Export inventories from InventoryManager
+        if (this.inventoryManager?.inventories) {
+            this.inventoryManager.inventories.forEach((inventory, id) => {
+                state.inventories.push({
+                    id: id,
+                    maxWeight: inventory.maxWeight,
+                    items: inventory.items ? [...inventory.items] : [],
+                    equipped: inventory.equipped ? { ...inventory.equipped } : {}
+                });
+            });
+        }
+
+        // Export pending entity data (for entities not yet created)
+        if (this._pendingEntityData) {
+            this._pendingEntityData.forEach((data, id) => {
+                state.pendingData.push({ id, ...data });
+            });
+        }
+
+        if (logger) logger.info(`📤 RPGService.exportState: ${state.entities.length} entities, ${state.inventories.length} inventories`);
+        return state;
+    }
+
+    /**
+     * Import complete RPG state from save system
+     * Restores all RPG data from a saved snapshot
+     * @param {Object} state - Complete RPG state from save
+     */
+    importState(state) {
+        if (!state) {
+            if (logger) logger.warn('⚠️ No RPG state to import');
+            return;
+        }
+
+        if (logger) logger.info(`📥 RPGService.importState: ${state.entities?.length || 0} entities, ${state.inventories?.length || 0} inventories`);
+
+        // Clear and rebuild pending data first (for entities not yet created)
+        this._pendingEntityData = new Map();
+        if (state.pendingData && Array.isArray(state.pendingData)) {
+            state.pendingData.forEach(data => {
+                const { id, ...entityData } = data;
+                this._pendingEntityData.set(id, entityData);
+            });
+        }
+
+        // Import entities - store as pending (will be applied when agents are created)
+        if (state.entities && Array.isArray(state.entities)) {
+            state.entities.forEach(entityData => {
+                // Check if entity already exists in rpgManager
+                const existingEntity = this.rpgManager?.entities?.get(entityData.id);
+                if (existingEntity) {
+                    // Update existing entity directly
+                    existingEntity.level = entityData.level;
+                    existingEntity.xp = entityData.xp;
+                    existingEntity.experience = entityData.experience;
+                    if (entityData.stats) existingEntity.stats = { ...entityData.stats };
+                    if (entityData.skills) existingEntity.skills = { ...entityData.skills };
+                    if (entityData.perks) existingEntity.perks = [...entityData.perks];
+                    existingEntity.availableStatPoints = entityData.availableStatPoints || 0;
+                    existingEntity.availableSkillPoints = entityData.availableSkillPoints || 0;
+                    existingEntity.availablePerkPoints = entityData.availablePerkPoints || 0;
+                    if (entityData.derivedStats) existingEntity.derivedStats = { ...entityData.derivedStats };
+                    if (logger) logger.debug(`   ✅ Updated existing entity: ${entityData.id}`);
+                } else {
+                    // Store as pending - will be applied when agent is created
+                    this._pendingEntityData.set(entityData.id, entityData);
+                    if (entityData.name && entityData.name !== entityData.id) {
+                        this._pendingEntityData.set(entityData.name, entityData);
+                    }
+                    if (logger) logger.debug(`   📋 Stored pending data for: ${entityData.id}`);
+                }
+            });
+        }
+
+        // Import inventories
+        if (state.inventories && Array.isArray(state.inventories) && this.inventoryManager) {
+            state.inventories.forEach(invData => {
+                let inventory = this.inventoryManager.inventories.get(invData.id);
+                if (!inventory) {
+                    inventory = this.inventoryManager.createInventory(invData.id, invData.maxWeight || 100);
+                }
+                if (invData.items) inventory.items = [...invData.items];
+                if (invData.equipped) inventory.equipped = { ...invData.equipped };
+            });
+            if (logger) logger.debug(`   📦 Imported ${state.inventories.length} inventories`);
+        }
+
+        if (logger) logger.info(`✅ RPGService.importState complete, pending: ${this._pendingEntityData.size}`);
     }
     }; // End of RPGService class definition
 

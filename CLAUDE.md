@@ -159,6 +159,93 @@ If you're about to write `agents.find(a => a.id === x)`, STOP. Use `agentService
 
 ---
 
+## 💾 CORE ARCHITECTURE PRINCIPLE #4: UNIFIED exportState/importState PATTERN
+
+### This is THE FOURTH MOST IMPORTANT RULE
+
+**ALL services use the unified `exportState()`/`importState()` pattern for save/load.** This is non-negotiable.
+
+#### Architecture Philosophy
+1. **UNIFIED PATTERN**: Every service exports/imports state the same way
+2. **JSON-SERIALIZABLE**: All exported state must survive `JSON.stringify()` → `JSON.parse()` roundtrip
+3. **COMPLETE STATE**: Export contains ALL data needed to fully restore service state
+4. **NULLISH COALESCING**: Use `??` not `||` to preserve falsy values (0, false, "")
+5. **NO LEGACY METHODS**: No `saveState()`, `loadState()`, `getData()`, `loadXxxData()` methods
+
+#### The Golden Rule
+```javascript
+// ✅ CORRECT - Unified pattern with nullish coalescing
+exportState() {
+    return {
+        value: this.value,           // Preserves 0, false, ""
+        items: [...this.items],      // Clone arrays
+        map: Array.from(this.map.entries())  // Serialize Maps
+    };
+}
+
+importState(state) {
+    if (!state) return;
+    this.value = state.value ?? 0;   // Use ?? to preserve falsy values
+    this.items = state.items ?? [];
+    this.map = new Map(state.map ?? []);
+}
+
+// ❌ WRONG - Legacy method names
+saveState() { ... }     // NO! Use exportState()
+loadState() { ... }     // NO! Use importState()
+loadAgentData() { ... } // NO! Use importState()
+getAllData() { ... }    // NO! Use exportState()
+
+// ❌ WRONG - Using || instead of ??
+this.health = state.health || 100;  // BUG: health=0 becomes 100!
+this.hired = state.hired || false;  // BUG: Always false!
+```
+
+#### Services Using This Pattern (10 total)
+| Service | exportState() | importState() |
+|---------|--------------|---------------|
+| ResourceService | ✅ | ✅ |
+| AgentService | ✅ | ✅ |
+| InventoryService | ✅ | ✅ |
+| ResearchService | ✅ | ✅ |
+| MissionService | ✅ | ✅ |
+| QuestService | ✅ | ✅ |
+| RPGService | ✅ | ✅ |
+| AudioService | ✅ | ✅ |
+| NPCService | ✅ | ✅ |
+
+#### SaveGameService Load Order (Critical)
+```javascript
+// Order matters! RPG data must load BEFORE agents
+1. rpgService.importState()      // Populates _pendingEntityData
+2. resourceService.importState() // No dependencies
+3. agentService.importState()    // Applies pending RPG data
+4. inventoryService.importState()// After agents (links loadouts)
+5. researchService.importState() // No dependencies
+6. missionService.importState()  // No dependencies
+7. questService.importState()    // No dependencies
+8. audioService.importState()    // No dependencies
+```
+
+#### Enforcement
+- **NEVER** create methods named `saveState()`, `loadState()`, `loadXxxData()`
+- **NEVER** use `||` for default values in importState (use `??`)
+- **NEVER** store non-JSON-serializable data (functions, DOM refs, circular refs)
+- **ALWAYS** use `exportState()` and `importState()` method names
+- **ALWAYS** clone arrays and convert Maps to arrays for export
+- **ALWAYS** test roundtrip: `export → JSON.stringify → JSON.parse → import → export → compare`
+
+#### Testing Save/Load
+Run comprehensive tests with Node.js:
+```bash
+node tests/saveload-comprehensive.test.js
+```
+
+If you're about to create `saveState()`, STOP. Use `exportState()` instead.
+If you're about to use `state.value || default`, STOP. Use `state.value ?? default` instead.
+
+---
+
 #### Critical Update (2025-01): Proxy Setters Removed
 
 **Properties are now READ-ONLY.** Direct assignment no longer works:
@@ -232,6 +319,8 @@ The game uses a modular JavaScript architecture with the main `CyberOpsGame` cla
 - **tests/state-machine-tests.js**: State machine transition validation
 - **tests/dialog-state-audit.js**: Complete state and transition coverage audit
 - **tests/dialog-state-full-coverage.js**: 100% coverage with mock data
+- **tests/load-services.js**: Node.js service loader for console tests
+- **tests/saveload-comprehensive.test.js**: Complete save/load roundtrip tests (18 tests)
 - **test-runner.html**: Test runner with visual interface
 
 ### Campaign Files (campaigns/ directory)
