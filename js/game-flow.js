@@ -1218,6 +1218,22 @@ CyberOpsGame.prototype.useAbilityForAllSelected = function(abilityIndex) {
 
         // UNIDIRECTIONAL: Use isAgentSelected() instead of checking .selected flag
         const selectedAgents = this.agents.filter(a => this.isAgentSelected(a) && a.alive);
+
+        // DEBUG: Log selection state for ability usage
+        if (this.logger && abilityIndex === 3) {
+            this.logger.debug(`🔍 useAbilityForAllSelected(3) - Hack ability:`);
+            this.logger.debug(`   this.agents.length: ${this.agents?.length || 0}`);
+            this.logger.debug(`   selectedAgents.length: ${selectedAgents.length}`);
+            this.logger.debug(`   _selectedAgent: ${this._selectedAgent?.name || 'null'} (id: ${this._selectedAgent?.id || 'null'})`);
+            this.logger.debug(`   _selectedAgentIds: ${JSON.stringify(this._selectedAgentIds)}`);
+            if (this.agents && this.agents.length > 0) {
+                this.agents.forEach((a, i) => {
+                    const isSelected = this.isAgentSelected(a);
+                    this.logger.debug(`   Agent ${i}: ${a.name} (id: ${a.id}) - isAgentSelected: ${isSelected}, alive: ${a.alive}`);
+                });
+            }
+        }
+
         if (selectedAgents.length === 0) return;
 
         let anyUsed = false;
