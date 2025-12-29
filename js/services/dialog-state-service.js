@@ -16,14 +16,40 @@ class DialogStateService {
         // Cached engine reference
         this._engine = null;
 
-        // State data cache for dialogs
-        this.stateData = {};
+        // NO separate stateData - use engine.stateData as single source of truth
+        // Fallback only used before engine is set
+        this._fallbackStateData = {};
 
         // Navigation history for debugging
         this.navigationHistory = [];
         this.maxHistorySize = 50;
 
         if (this.logger) this.logger.debug('DialogStateService initialized');
+    }
+
+    /**
+     * stateData getter - returns engine's stateData (single source of truth)
+     * Falls back to local object only if engine not yet initialized
+     */
+    get stateData() {
+        if (this._engine?.stateData) {
+            return this._engine.stateData;
+        }
+        // Fallback before engine is set - data will be migrated when engine is set
+        return this._fallbackStateData;
+    }
+
+    /**
+     * stateData setter - writes to engine's stateData
+     * Should rarely be used - prefer property assignment on stateData object
+     */
+    set stateData(value) {
+        if (this._engine?.stateData) {
+            // Merge into engine stateData instead of replacing
+            Object.assign(this._engine.stateData, value);
+        } else {
+            this._fallbackStateData = value;
+        }
     }
 
     /**
@@ -51,6 +77,14 @@ class DialogStateService {
      */
     setEngine(engine) {
         this._engine = engine;
+
+        // Migrate any fallback data to engine's stateData
+        if (engine?.stateData && Object.keys(this._fallbackStateData).length > 0) {
+            Object.assign(engine.stateData, this._fallbackStateData);
+            this._fallbackStateData = {}; // Clear fallback
+            if (this.logger) this.logger.debug('Migrated fallback stateData to engine');
+        }
+
         if (this.logger) this.logger.debug('Dialog engine set');
     }
 
@@ -70,12 +104,9 @@ class DialogStateService {
             return false;
         }
 
-        // Store data for the dialog
+        // Store data for the dialog (stateData getter returns engine.stateData - single source)
         if (data) {
             this.stateData[stateId] = data;
-            if (engine.stateData) {
-                engine.stateData[stateId] = data;
-            }
         }
 
         // Track navigation
@@ -172,19 +203,18 @@ class DialogStateService {
 
     /**
      * Get data for a specific dialog state
+     * (stateData getter returns engine.stateData - single source)
      */
     getStateData(stateId) {
-        return this.stateData[stateId] || this.engine?.stateData?.[stateId] || null;
+        return this.stateData[stateId] || null;
     }
 
     /**
      * Set data for a specific dialog state
+     * (stateData getter returns engine.stateData - single source)
      */
     setStateData(stateId, data) {
         this.stateData[stateId] = data;
-        if (this.engine?.stateData) {
-            this.engine.stateData[stateId] = data;
-        }
     }
 
     /**

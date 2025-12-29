@@ -157,8 +157,16 @@
 
         engine.registerAction('loadLastSave', function() {
             this.closeAll();
-            if (game && game.loadGame) {
-                game.loadGame(0); // Load auto-save slot
+            // Load most recent save directly via GameStateService
+            if (game?.gameServices?.gameStateService) {
+                const saves = game.gameServices.gameStateService.getAllSaves();
+                if (saves.length > 0) {
+                    // Load most recent save (first in sorted list)
+                    game.gameServices.gameStateService.loadGame(game, saves[0].id);
+                } else if (game.quickLoad) {
+                    // Fallback to quickLoad
+                    game.quickLoad();
+                }
             }
         });
 

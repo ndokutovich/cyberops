@@ -246,6 +246,57 @@ If you're about to use `state.value || default`, STOP. Use `state.value ?? defau
 
 ---
 
+## 🔄 CORE ARCHITECTURE PRINCIPLE #5: SINGLE stateData SOURCE (CONSOLIDATED)
+
+### This is THE FIFTH MOST IMPORTANT RULE
+
+**Dialog state uses engine.stateData as the SINGLE source of truth.** This is non-negotiable.
+
+#### Architecture Philosophy
+1. **SINGLE SOURCE**: `dialogService.stateData` IS `engine.stateData` (via getter)
+2. **NO DUPLICATION**: DialogStateService proxies to engine, doesn't copy
+3. **PROPERTY MERGE**: Never replace entire stateData object
+4. **CONSISTENT ACCESS**: Always use `game.gameServices.dialogStateService` for access
+
+#### Implementation Details
+```javascript
+// DialogStateService.stateData is a GETTER that returns engine.stateData:
+get stateData() {
+    return this._engine?.stateData || this._fallbackStateData;
+}
+```
+
+This means:
+- `dialogService.stateData` === `dialogService.engine.stateData`
+- There's only ONE object - no sync needed
+- Generators, actions, and buttons all access the SAME data
+
+#### The Golden Rule
+```javascript
+// ✅ CORRECT - Set on dialogService.stateData (proxies to engine)
+const dialogService = game.gameServices?.dialogStateService;
+dialogService.stateData.agentId = agentId;
+dialogService.stateData.pendingChanges = {};
+dialogService.navigateTo('stat-allocation');
+
+// ✅ CORRECT - Read from dialogService.stateData (proxies to engine)
+const agentId = dialogService?.stateData?.agentId;
+
+// ❌ WRONG - Replacing entire stateData object (loses other properties!)
+dialogService.stateData = { mode: 'save' };  // NO! Merge instead
+
+// ✅ CORRECT - Merge properties
+dialogService.stateData.mode = 'save';  // Preserves other properties
+```
+
+#### Enforcement
+- **NEVER** replace entire stateData object (use property merge)
+- **NEVER** access stateData via `window.declarativeDialogEngine.stateData` directly
+- **ALWAYS** use `game.gameServices.dialogStateService.stateData` for access
+- **ALWAYS** set individual properties, not entire object
+
+---
+
 #### Critical Update (2025-01): Proxy Setters Removed
 
 **Properties are now READ-ONLY.** Direct assignment no longer works:

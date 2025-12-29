@@ -566,15 +566,19 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                     <button class="dialog-button" onclick="(function() {
                         const logger = window.Logger ? new window.Logger('AllocateButton') : null;
                         if (logger) logger.debug('Allocate button clicked for:', '${agentIdForAllocation}');
-                        if (!game.dialogEngine) {
-                            throw new Error('DialogEngine not available - required for stat allocation');
+                        const dialogService = game.gameServices?.dialogStateService;
+                        if (!dialogService) {
+                            throw new Error('DialogStateService not available - required for stat allocation');
                         }
-                        // Store agent ID and reset pending changes in state data
-                        game.dialogEngine.stateData = {
-                            agentId: '${agentIdForAllocation}',
-                            pendingChanges: {}
-                        };
-                        game.dialogEngine.navigateTo('stat-allocation');
+                        // Store agent ID and reset pending changes on BOTH stateData objects
+                        // (dialogService.stateData and engine.stateData are separate - generators read from engine)
+                        dialogService.stateData.agentId = '${agentIdForAllocation}';
+                        dialogService.stateData.pendingChanges = {};
+                        if (dialogService.engine?.stateData) {
+                            dialogService.engine.stateData.agentId = '${agentIdForAllocation}';
+                            dialogService.engine.stateData.pendingChanges = {};
+                        }
+                        dialogService.navigateTo('stat-allocation');
                     })()">
                         Allocate Points
                     </button>
@@ -776,9 +780,12 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
     // Stat Allocation Generator
     engine.registerGenerator('generateStatAllocation', function() {
         const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+        const dialogService = this.gameServices?.dialogStateService;
 
-        // Get the agent ID from the dialog state data
-        const agentId = this.dialogEngine?.stateData?.agentId;
+        // Get the agent ID from EITHER engine.stateData or dialogService.stateData
+        // (they are separate objects - button sets both, generators may read from either)
+        const engineStateData = dialogService?.engine?.stateData;
+        const agentId = engineStateData?.agentId || dialogService?.stateData?.agentId;
         if (!agentId) {
             return '<div style="color: #ff6666; text-align: center; padding: 40px;">Error: No agent selected for stat allocation</div>';
         }
@@ -793,11 +800,12 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             return '<div style="color: #888; text-align: center; padding: 40px;">No stat points available</div>';
         }
 
-        // Initialize pending changes if not set
-        if (!this.dialogEngine.stateData.pendingChanges) {
-            this.dialogEngine.stateData.pendingChanges = {};
+        // Initialize pending changes if not set (use engine stateData if available)
+        const stateData = engineStateData || dialogService?.stateData || {};
+        if (!stateData.pendingChanges) {
+            stateData.pendingChanges = {};
         }
-        const pending = this.dialogEngine.stateData.pendingChanges;
+        const pending = stateData.pendingChanges;
 
         let html = '<div class="stat-allocation-content" style="padding: 20px;">';
 
@@ -853,9 +861,10 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
     // Perk Selection Generator
     engine.registerGenerator('generatePerkSelection', function() {
         const logger = window.Logger ? new window.Logger('DialogIntegration') : null;
+        const dialogService = this.gameServices?.dialogStateService;
 
-        // Get the agent ID from the dialog state data
-        const agentId = this.dialogEngine?.stateData?.agentId;
+        // Get the agent ID from EITHER engine.stateData or dialogService.stateData
+        const agentId = this.dialogEngine?.stateData?.agentId || dialogService?.stateData?.agentId;
         if (!agentId) {
             return '<div style="color: #ff6666; text-align: center; padding: 40px;">Error: No agent selected for perk selection</div>';
         }
@@ -2189,7 +2198,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Weapon selection
     engine.registerGenerator('generateWeaponSelection', function() {
-        const agentId = window.declarativeDialogEngine.stateData['agent-equipment']?.dynamicId;
+        const dialogService = this.gameServices?.dialogStateService;
+        const agentId = dialogService?.stateData?.['agent-equipment']?.dynamicId;
         if (!agentId) return '<p style="color: #888;">No agent selected</p>';
 
         const agent = this.gameServices?.agentService?.getAgent(agentId);
@@ -2237,7 +2247,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Armor selection
     engine.registerGenerator('generateArmorSelection', function() {
-        const agentId = window.declarativeDialogEngine.stateData['agent-equipment']?.dynamicId;
+        const dialogService = this.gameServices?.dialogStateService;
+        const agentId = dialogService?.stateData?.['agent-equipment']?.dynamicId;
         if (!agentId) return '<p style="color: #888;">No agent selected</p>';
 
         const agent = this.gameServices?.agentService?.getAgent(agentId);
@@ -2287,7 +2298,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // Agent equipment
     engine.registerGenerator('generateAgentEquipment', function() {
-        const agentId = window.declarativeDialogEngine.stateData['agent-equipment']?.dynamicId;
+        const dialogService = this.gameServices?.dialogStateService;
+        const agentId = dialogService?.stateData?.['agent-equipment']?.dynamicId;
 
         if (!agentId) {
             return '<p style="color: #888;">No agent selected</p>';
@@ -2757,7 +2769,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
     // RPG Shop generator
     engine.registerGenerator('generateRPGShop', function() {
-        const shopId = this.dialogEngine?.stateData?.shopId || 'black_market';
+        const dialogService = this.gameServices?.dialogStateService;
+        const shopId = this.dialogEngine?.stateData?.shopId || dialogService?.stateData?.shopId || 'black_market';
 
         // Access shopManager through gameServices
         const shopManager = this.gameServices?.rpgService?.shopManager;
@@ -2787,8 +2800,8 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
             return '<div style="color: #ff6666; text-align: center; padding: 40px;">Shop not available</div>';
         }
 
-        // Get current tab (default to 'buy')
-        const currentTab = this.dialogEngine?.stateData?.shopTab || 'buy';
+        // Get current tab (default to 'buy') - check both stateData sources
+        const currentTab = this.dialogEngine?.stateData?.shopTab || dialogService?.stateData?.shopTab || 'buy';
 
         // Get credits from ResourceService (team credits, not individual agent)
         const agentCredits = this.gameServices?.resourceService?.get('credits') || this.credits || 0;
@@ -2917,16 +2930,16 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         let html = '<div class="save-load-ui" style="max-width: 800px; margin: 0 auto;">';
 
-        // Mode tabs
+        // Mode tabs - use dialogStateService.stateData for consistency
         html += `
             <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.2);">
                 <button class="dialog-button"
-                        onclick="game.dialogEngine.stateData = { saveLoadMode: 'save' }; game.dialogEngine.navigateTo('save-load', null, true);"
+                        onclick="game.gameServices.dialogStateService.stateData.saveLoadMode = 'save'; game.gameServices.dialogStateService.navigateTo('save-load', null, true);"
                         style="flex: 1; background: ${mode === 'save' ? 'rgba(0,255,0,0.2)' : 'transparent'}; border-bottom: ${mode === 'save' ? '3px solid #00ff00' : 'none'};">
                     💾 SAVE GAME
                 </button>
                 <button class="dialog-button"
-                        onclick="game.dialogEngine.stateData = { saveLoadMode: 'load' }; game.dialogEngine.navigateTo('save-load', null, true);"
+                        onclick="game.gameServices.dialogStateService.stateData.saveLoadMode = 'load'; game.gameServices.dialogStateService.navigateTo('save-load', null, true);"
                         style="flex: 1; background: ${mode === 'load' ? 'rgba(0,255,255,0.2)' : 'transparent'}; border-bottom: ${mode === 'load' ? '3px solid #00ffff' : 'none'};">
                     📁 LOAD GAME
                 </button>
@@ -2937,7 +2950,7 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
         if (mode === 'save') {
             html += `
                 <div style="margin-bottom: 20px;">
-                    <button class="dialog-button" onclick="game.createNewSave(); game.dialogEngine.navigateTo('save-load', null, true);"
+                    <button class="dialog-button" onclick="game.createNewSave(); game.gameServices.dialogStateService.navigateTo('save-load', null, true);"
                             style="width: 100%; background: rgba(0,255,0,0.1); border: 2px solid #00ff00; font-weight: bold;">
                         ➕ CREATE NEW SAVE
                     </button>
@@ -2979,12 +2992,12 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
                             </div>
                             <div style="display: flex; gap: 10px;">
                                 <button class="dialog-button"
-                                        onclick="game.${mode === 'save' ? 'overwriteSave' : 'loadSaveSlot'}('${save.id}'); ${mode === 'load' ? 'game.dialogEngine.closeAll();' : 'game.dialogEngine.navigateTo(\'save-load\', null, true);'}"
+                                        onclick="game.${mode === 'save' ? 'overwriteSave' : 'loadSaveSlot'}('${save.id}'); ${mode === 'load' ? 'game.gameServices.dialogStateService.closeAll();' : 'game.gameServices.dialogStateService.navigateTo(\'save-load\', null, true);'}"
                                         style="background: ${mode === 'save' ? 'rgba(255,165,0,0.2)' : 'rgba(0,255,0,0.2)'}; border-color: ${mode === 'save' ? '#ffa500' : '#00ff00'}; min-width: 100px;">
                                     ${mode === 'save' ? '⚠️ OVERWRITE' : '✓ LOAD'}
                                 </button>
                                 <button class="dialog-button"
-                                        onclick="game.deleteSave('${save.id}'); game.dialogEngine.navigateTo('save-load', null, true);"
+                                        onclick="game.deleteSave('${save.id}'); game.gameServices.dialogStateService.navigateTo('save-load', null, true);"
                                         style="background: rgba(255,0,0,0.2); border-color: #ff0000; min-width: 80px;">
                                     🗑️ DELETE
                                 </button>
@@ -2997,14 +3010,14 @@ CyberOpsGame.prototype.registerDialogGenerators = function(engine) {
 
         html += '</div>'; // Close scrollable list
 
-        // Quick save/load buttons at bottom
+        // Quick save/load buttons at bottom - use quickSave/quickLoad methods directly
         html += `
             <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid rgba(255,255,255,0.2); display: flex; gap: 10px;">
-                <button class="dialog-button" onclick="game.saveGame('quicksave'); game.dialogEngine.navigateTo('save-load', null, true);"
+                <button class="dialog-button" onclick="game.quickSave(); game.gameServices.dialogStateService.navigateTo('save-load', null, true);"
                         style="flex: 1; background: rgba(255,215,0,0.1); border-color: #ffd700;">
                     ⚡ QUICK SAVE
                 </button>
-                <button class="dialog-button" onclick="game.loadGame('quicksave'); game.dialogEngine.closeAll();"
+                <button class="dialog-button" onclick="game.quickLoad(); game.gameServices.dialogStateService.closeAll();"
                         style="flex: 1; background: rgba(255,215,0,0.1); border-color: #ffd700;">
                     ⚡ QUICK LOAD
                 </button>
@@ -3035,12 +3048,14 @@ CyberOpsGame.prototype.registerDialogValidators = function(engine) {
 
     // Agent selected
     engine.registerValidator('agentSelected', function() {
-        return window.declarativeDialogEngine.stateData.selectedAgent != null;
+        const dialogService = this.gameServices?.dialogStateService;
+        return dialogService?.stateData?.selectedAgent != null;
     });
 
     // Can afford selected item
     engine.registerValidator('canAffordSelectedItem', function() {
-        const item = window.declarativeDialogEngine.stateData.selectedItem;
+        const dialogService = this.gameServices?.dialogStateService;
+        const item = dialogService?.stateData?.selectedItem;
         return item && this.credits >= item.price;
     });
 };
@@ -3309,10 +3324,10 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         this.actionRegistry.get('refresh')();
     });
 
-    // Quick save
+    // Quick save - use quickSave() which actually saves to quicksave slot
     engine.registerAction('quickSave', function() {
-        if (game.saveGame) {
-            game.saveGame('quicksave');
+        if (game.quickSave) {
+            game.quickSave();
             // Show notification
             const notification = document.createElement('div');
             notification.style.cssText = `
@@ -3334,10 +3349,10 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         }
     });
 
-    // Quick load
+    // Quick load - use quickLoad() which actually loads from quicksave slot
     engine.registerAction('quickLoad', function() {
-        if (game.loadGame) {
-            game.loadGame('quicksave');
+        if (game.quickLoad) {
+            game.quickLoad();
             this.closeAll();
         }
     });
@@ -3345,8 +3360,11 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
     // Confirm stat allocation
     engine.registerAction('confirmStatAllocation', function() {
         if (game.confirmStatAllocation) {
-            // Get agentId from state data
-            const agentId = this.stateData?.agentId;
+            // Get agentId from EITHER engine.stateData or dialogStateService.stateData
+            // (they are separate objects - button sets both, generators read from engine)
+            const dialogService = game.gameServices?.dialogStateService;
+            const engineStateData = dialogService?.engine?.stateData;
+            const agentId = engineStateData?.agentId || dialogService?.stateData?.agentId;
             game.confirmStatAllocation(agentId);
         }
     });
@@ -3355,9 +3373,11 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
     engine.registerGenerator('generateSkillTree', function() {
         // 'this' is game, but we can access dialog engine via _dialogEngineContext
         const dialogEngine = this._dialogEngineContext || this.dialogEngine;
+        const dialogService = this.gameServices?.dialogStateService;
         if (this.logger) this.logger.debug(`🎯 generateSkillTree called, stateData:`, dialogEngine?.stateData);
 
-        const agentId = dialogEngine?.stateData?.agentId;
+        // Get agentId from EITHER engine.stateData or dialogService.stateData
+        const agentId = dialogEngine?.stateData?.agentId || dialogService?.stateData?.agentId;
         if (!agentId) {
             if (this.logger) this.logger.error(`❌ No agentId in stateData:`, dialogEngine?.stateData);
             return '<p style="color: #ff0000;">No agent selected</p>';
@@ -3476,9 +3496,14 @@ CyberOpsGame.prototype.registerDialogActions = function(engine) {
         if (game.learnSkill) {
             const success = game.learnSkill(agentId, skillId);
             if (success) {
-                // Re-set the agentId in state data for refresh
+                // Re-set the agentId in BOTH stateData objects for refresh
+                // (engine.stateData and dialogService.stateData are separate)
                 this.stateData = this.stateData || {};
                 this.stateData.agentId = agentId;
+                const dialogService = game.gameServices?.dialogStateService;
+                if (dialogService?.stateData) {
+                    dialogService.stateData.agentId = agentId;
+                }
 
                 // Always refresh the skill tree to show the updated skills
                 // User can manually navigate back when done
