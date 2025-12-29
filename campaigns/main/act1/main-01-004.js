@@ -139,11 +139,6 @@
                 ], 
                 spawn: { x: 2, y: 68 },
                 extraction: { x: 68, y: 2 },
-                items: [
-                    { type: 'terminal', x: 35, y: 35, id: 0 },
-                    { type: 'terminal', x: 15, y: 15, id: 1 },
-                    { type: 'terminal', x: 55, y: 55, id: 2 }
-                ],
                 doors: [],
                 coverCount: 50
             },

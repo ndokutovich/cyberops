@@ -1131,7 +1131,6 @@ CyberOpsGame.prototype.loadMapFromEmbeddedTiles = function(mapDef) {
         spawn: mapDef.embedded.spawn || mapDef.spawn,
         extraction: mapDef.embedded.extraction || mapDef.extraction,
         tiles: [],
-        items: [],
         doors: mapDef.embedded.doors || mapDef.doors || [],
         terminals: mapDef.embedded.terminals || mapDef.terminals || [],
         collectables: mapDef.embedded.collectables || mapDef.collectables || [],
@@ -1204,22 +1203,6 @@ CyberOpsGame.prototype.loadMapFromEmbeddedTiles = function(mapDef) {
         }
     }
 
-    // Add items from embedded data (terminals, explosives, etc)
-    if (mapDef.embedded.items) {
-        mapDef.embedded.items.forEach(item => {
-            if (item.type === 'terminal') {
-                map.terminals.push({
-                    x: item.x,
-                    y: item.y,
-                    hacked: false,
-                    id: item.id
-                });
-            }
-            // Store other items too
-            map.items.push(item);
-        });
-    }
-
     if (this.logger) this.logger.info('✅ Map loaded from embedded tiles');
     return map;
 };
@@ -1240,7 +1223,6 @@ CyberOpsGame.prototype.generateMapFromEmbeddedDefinition = function(mapDef) {
         spawn: mapDef.spawn,
         extraction: mapDef.extraction,
         tiles: [],
-        items: [],
         doors: mapDef.doors || [],
         terminals: mapDef.terminals || [],
         explosiveTargets: mapDef.explosiveTargets || [],

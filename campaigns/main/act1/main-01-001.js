@@ -121,12 +121,6 @@
                 ], 
                 spawn: { x: 2, y: 78 },
                 extraction: { x: 78, y: 2 },
-                items: [
-                    { type: 'terminal', x: 20, y: 20, id: 0 },
-                    { type: 'terminal', x: 60, y: 20, id: 1 },
-                    { type: 'terminal', x: 40, y: 40, id: 2 },
-                    { type: 'marker', x: 72, y: 70, id: 'maintenance_tunnel', name: 'Maintenance Tunnel', sprite: '🚪', questRequired: 'secret_passage', hidden: true }
-                ],
                 collectables: [
                     // Regular collectables - always visible
                     { type: 'collectable', x: 10, y: 10, id: 'credits_northwest', name: 'Credits Stash', sprite: '💰', credits: 100 },

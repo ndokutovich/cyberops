@@ -818,24 +818,8 @@ class GameEngine {
             this.renderingHelpers.renderExtractionPoint(map.extraction.x, map.extraction.y, extractionEnabled, this.ctx, (x, y) => this.worldToIsometric(x, y));
         }
 
-        // Delegate other map elements to legacy game for now
-        if (map.items) {
-            map.items.forEach(item => {
-                if (this.shouldRenderInFog(item.x, item.y)) {
-                    if (item.type === 'marker') {
-                        // Check if marker requires a quest to be visible
-                        if (item.questRequired && item.hidden) {
-                            const missionQuestActive = this.facade.activeQuests && this.facade.activeQuests[item.questRequired];
-                            const npcQuestActive = this.facade.npcActiveQuests && this.facade.npcActiveQuests.some(q => q.id === item.questRequired);
-                            const questActive = missionQuestActive || npcQuestActive;
-                            if (!questActive) return; // Don't render if quest not active
-                        }
-
-                        this.renderingHelpers.renderMarker(item.x, item.y, item.sprite || '📍', item.name, this.ctx, (x, y) => this.worldToIsometric(x, y));
-                    }
-                }
-            });
-        }
+        // Quest markers are rendered by renderQuestMarkers() in game-npc.js
+        // using quest objective data as single source of truth
 
         if (map.explosiveTargets) {
             map.explosiveTargets.forEach(target => {

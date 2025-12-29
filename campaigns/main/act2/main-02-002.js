@@ -158,12 +158,6 @@
                 ], 
                 spawn: { x: 50, y: 95 },
                 extraction: { x: 50, y: 5 },
-                items: [
-                    { type: 'gate', x: 50, y: 10, id: 0 },
-                    { type: 'gate', x: 50, y: 25, id: 1 },
-                    { type: 'gate', x: 50, y: 40, id: 2 },
-                    { type: 'terminal', x: 50, y: 50, id: 'mainframe', name: 'Central Mainframe', sprite: '🖥️' }
-                ],
                 doors: [],
                 coverCount: 120
             },

@@ -145,11 +145,6 @@
                 ], 
                 spawn: { x: 50, y: 78 },
                 extraction: { x: 50, y: 2 },
-                items: [
-                    { type: 'explosive', x: 35, y: 30, id: 0 },
-                    { type: 'explosive', x: 50, y: 40, id: 1 },
-                    { type: 'explosive', x: 65, y: 50, id: 2 }
-                ],
                 doors: [],
                 coverCount: 100
             },

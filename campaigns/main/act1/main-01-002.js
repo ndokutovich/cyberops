@@ -108,11 +108,6 @@
                 ], 
                 spawn: { x: 2, y: 68 },
                 extraction: { x: 88, y: 2 },
-                items: [
-                    { type: 'terminal', x: 15, y: 15, id: 0 },  // In top-left checkpoint
-                    { type: 'terminal', x: 75, y: 15, id: 1 },  // In top-right checkpoint
-                    { type: 'terminal', x: 45, y: 35, id: 2 }   // In central command center
-                ],
                 doors: [
                     { x: 21, y: 15, locked: false },  // Door to left checkpoint
                     { x: 69, y: 15, locked: false },  // Door to right checkpoint

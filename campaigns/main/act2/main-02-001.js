@@ -117,7 +117,6 @@
                 ],
                 spawn: { x: 2, y: 58 },
                 extraction: { x: 88, y: 2 },
-                items: [],
                 doors: [],
                 coverCount: 60
             },
