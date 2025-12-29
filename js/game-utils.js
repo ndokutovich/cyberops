@@ -135,7 +135,12 @@ CyberOpsGame.prototype.isAgentSelected = function(agent) {
     }
     // Fallback to checking against _selectedAgent (for single selection)
     if (!this._selectedAgent) return false;
-    return agent.id === this._selectedAgent.id || agent.name === this._selectedAgent.name;
+
+    // Use string comparison for IDs to handle type mismatches (string vs number)
+    const idMatch = String(agent.id) === String(this._selectedAgent.id);
+    const nameMatch = agent.name === this._selectedAgent.name;
+
+    return idMatch || nameMatch;
 };
 
 CyberOpsGame.prototype.resizeCanvas = function() {
