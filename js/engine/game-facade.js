@@ -1845,6 +1845,14 @@ class GameFacade {
                             if (damageResult.isDead) {
                                 game.totalEnemiesDefeated++;
 
+                                // CRITICAL: Mark enemy as dead via EnemyService (single source of truth)
+                                if (this.services.enemyService) {
+                                    this.services.enemyService.killEnemy(enemy.id, 'projectile');
+                                } else {
+                                    // Fallback: set alive directly if service unavailable
+                                    enemy.alive = false;
+                                }
+
                                 if (this.logger) this.logger.debug(`⚔️ ENEMY KILLED! Details:`, {
                                     enemyType: enemy.type,
                                     enemyHasRPG: !!enemy.rpgEntity,
@@ -1917,6 +1925,14 @@ class GameFacade {
 
                             if (damageResult.isDead) {
                                 game.totalEnemiesDefeated++;
+
+                                // CRITICAL: Mark enemy as dead via EnemyService (single source of truth)
+                                if (this.services.enemyService) {
+                                    this.services.enemyService.killEnemy(closestEnemy.id, 'projectile');
+                                } else {
+                                    // Fallback: set alive directly if service unavailable
+                                    closestEnemy.alive = false;
+                                }
 
                                 // Track enemy elimination for mission objectives
                                 if (game.onEnemyEliminated) {
